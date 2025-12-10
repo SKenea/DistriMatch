@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="SnackMatch - Trouvez les distributeurs alimentaires près de chez vous">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SnackMatch">
+
+    <title>SnackMatch - Côte Basque</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <!-- Navigation Top -->
+    <nav class="top-nav">
+        <h1 class="logo" data-view="explorer" style="cursor:pointer;">🍿 SnackMatch</h1>
+        <div class="nav-actions">
+            <button class="icon-btn" id="search-toggle" aria-label="Rechercher">🔍</button>
+            <button class="icon-btn nav-icon-btn" data-view="favorites" aria-label="Favoris">
+                ❤️
+                <span class="nav-badge" id="favorites-badge" style="display: none;">0</span>
+            </button>
+            <button class="icon-btn nav-icon-btn" data-view="profile" aria-label="Profil">
+                👤
+            </button>
+        </div>
+    </nav>
+
+    <!-- Overlay de recherche -->
+    <div id="search-overlay" class="search-overlay">
+        <div class="search-container-clean">
+            <input type="text" id="quick-search" placeholder="Chercher un produit ou distributeur..." autofocus />
+            <button class="close-search" id="close-search">✕</button>
+        </div>
+        <div id="search-results" class="search-results-clean"></div>
+    </div>
+
+    <!-- ============================================
+         PAGE EXPLORER (Swipe cards)
+         ============================================ -->
+    <main id="explorer-view" class="view-page view-active">
+        <div class="swipe-area" id="swipe-area">
+            <!-- Card injectée dynamiquement -->
+            <div id="card-container"></div>
+
+            <!-- Indicateur de swipe -->
+            <div class="swipe-indicator" id="swipe-indicator"></div>
+        </div>
+
+        <!-- Info contexte -->
+        <div class="context-info">
+            <span id="distance-info">Chargement...</span>
+            <span id="remaining-info">0 à découvrir</span>
+        </div>
+    </main>
+
+    <!-- ============================================
+         PAGE MA SÉLECTION
+         ============================================ -->
+    <div id="selection-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <h2>✓ Ma Sélection</h2>
+            <span class="header-count" id="selection-count">0 distributeur(s)</span>
+        </div>
+        <div id="selection-list" class="items-list">
+            <!-- Distributeurs sélectionnés injectés ici -->
+        </div>
+        <div id="selection-empty" class="empty-state" style="display: none;">
+            <div class="empty-icon">📋</div>
+            <h3>Aucune sélection</h3>
+            <p>Swipez vers la droite sur un distributeur qui vous intéresse pour l'ajouter à votre sélection.</p>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE MES FAVORIS
+         ============================================ -->
+    <div id="favorites-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <h2>❤️ Mes Favoris</h2>
+            <span class="header-count" id="favorites-count">0 favori(s)</span>
+        </div>
+        <div id="favorites-list" class="items-list">
+            <!-- Favoris injectés ici -->
+        </div>
+        <div id="favorites-empty" class="empty-state" style="display: none;">
+            <div class="empty-icon">💔</div>
+            <h3>Aucun favori</h3>
+            <p>Ajoutez des distributeurs en favoris depuis votre sélection pour les retrouver ici.</p>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE PROFIL
+         ============================================ -->
+    <div id="profile-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <h2>👤 Mon Profil</h2>
+        </div>
+        <div class="profile-card">
+            <div class="profile-avatar" id="profile-avatar">😊</div>
+            <h3 id="profile-name">Utilisateur</h3>
+            <div class="profile-badge">
+                <span class="badge bronze" id="profile-badge">🥉 Explorateur</span>
+            </div>
+            <div class="profile-points">
+                <span class="points-value" id="profile-points">0</span>
+                <span class="points-label">points</span>
+            </div>
+        </div>
+        <div class="profile-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-selections">0</div>
+                <div class="stat-label">Sélections</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-favorites">0</div>
+                <div class="stat-label">Favoris</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-reports">0</div>
+                <div class="stat-label">Signalements</div>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <button class="btn-secondary-clean" id="clear-data-btn">🗑️ Effacer mes données</button>
+        </div>
+    </div>
+
+    <!-- ============================================
+         MODAL DÉTAILS DISTRIBUTEUR
+         ============================================ -->
+    <div id="detail-modal" class="modal-clean">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="close-detail">✕</button>
+
+            <div class="detail-header-clean">
+                <div class="detail-type" id="detail-type"></div>
+                <h2 id="detail-name">Nom du distributeur</h2>
+                <p id="detail-address">Adresse</p>
+                <div class="detail-meta">
+                    <span class="rating-clean" id="detail-rating">★★★★☆</span>
+                    <span class="reviews-clean" id="detail-reviews">(0 avis)</span>
+                    <span class="distance-clean" id="detail-distance">0 km</span>
+                </div>
+            </div>
+
+            <div class="products-section-clean">
+                <h3>🛒 Produits disponibles</h3>
+                <div id="products-list"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-secondary-clean" id="get-directions">
+                    🗺️ Itinéraire
+                </button>
+                <button class="btn-primary-clean" id="modal-action-btn">
+                    ✓ Sélectionner
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         MODAL SIGNALEMENT
+         ============================================ -->
+    <div id="report-modal" class="modal-clean">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="close-report">✕</button>
+            <h2>⚠️ Signaler un problème</h2>
+            <div class="report-distributor-info" id="report-info">
+                <strong id="report-name"></strong>
+                <small id="report-address"></small>
+            </div>
+            <div class="report-types">
+                <button class="report-type-btn" data-type="out_of_stock">
+                    <span class="report-icon">❌</span>
+                    <span class="report-label">Rupture de stock</span>
+                </button>
+                <button class="report-type-btn" data-type="machine_down">
+                    <span class="report-icon">⚠️</span>
+                    <span class="report-label">Machine en panne</span>
+                </button>
+                <button class="report-type-btn" data-type="price_change">
+                    <span class="report-icon">💰</span>
+                    <span class="report-label">Prix modifié</span>
+                </button>
+                <button class="report-type-btn" data-type="verified">
+                    <span class="report-icon">✅</span>
+                    <span class="report-label">Tout est OK</span>
+                </button>
+            </div>
+            <div id="report-product-select" style="display: none;">
+                <label for="report-product">Quel produit ?</label>
+                <select id="report-product"></select>
+            </div>
+            <button class="btn-primary-clean" id="submit-report" disabled>
+                Envoyer le signalement
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================
+         PAGE CARTE (Vue dédiée)
+         ============================================ -->
+    <div id="map-view" class="view-page view-hidden">
+        <div id="main-map"></div>
+        <button class="btn-center-map" id="center-map" aria-label="Centrer sur ma position">
+            📍
+        </button>
+    </div>
+
+    <!-- Navigation Bottom (Footer) -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-view="explorer">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Explorer</span>
+        </button>
+        <button class="nav-item" data-view="map">
+            <span class="nav-icon">🗺️</span>
+            <span class="nav-label">Carte</span>
+        </button>
+        <button class="nav-item" data-view="selection">
+            <span class="nav-icon">✓</span>
+            <span class="nav-label">Sélection</span>
+            <span class="nav-badge" id="selection-badge-bottom" style="display: none;">0</span>
+        </button>
+    </nav>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js?v=5"></script>
+
+    <!-- Enregistrement Service Worker (désactivé temporairement pour dev) -->
+    <script>
+        // Désinstaller l'ancien SW pour forcer le rechargement des fichiers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('SW désinstallé pour mise à jour');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

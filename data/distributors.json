@@ -1,0 +1,574 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-12-06",
+  "zone": "Côte Basque - Hasparren",
+  "distributors": [
+    {
+      "id": "dist-001",
+      "name": "Pizza Express Biarritz",
+      "type": "pizza",
+      "emoji": "🍕",
+      "address": "12 Avenue de la Grande Plage, 64200 Biarritz",
+      "city": "Biarritz",
+      "lat": 43.4832,
+      "lng": -1.5586,
+      "rating": 4.5,
+      "reviewCount": 127,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Pizza Margherita", "price": 8.50, "available": true },
+        { "name": "Pizza 4 Fromages", "price": 10.00, "available": true },
+        { "name": "Pizza Basque (piment)", "price": 11.00, "available": true },
+        { "name": "Pizza Végétarienne", "price": 9.50, "available": false }
+      ]
+    },
+    {
+      "id": "dist-002",
+      "name": "Le Taloa du Fronton",
+      "type": "bakery",
+      "emoji": "🥖",
+      "address": "Place du Fronton, 64250 Espelette",
+      "city": "Espelette",
+      "lat": 43.3411,
+      "lng": -1.4486,
+      "rating": 4.8,
+      "reviewCount": 89,
+      "status": "verified",
+      "lastVerified": "2025-12-04",
+      "priceRange": "€",
+      "products": [
+        { "name": "Taloa nature", "price": 2.50, "available": true },
+        { "name": "Taloa jambon-fromage", "price": 4.50, "available": true },
+        { "name": "Taloa chorizo", "price": 4.00, "available": true },
+        { "name": "Gâteau Basque", "price": 3.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-003",
+      "name": "Frites Fraîches Anglet",
+      "type": "fries",
+      "emoji": "🍟",
+      "address": "Centre Commercial BAB2, 64600 Anglet",
+      "city": "Anglet",
+      "lat": 43.4784,
+      "lng": -1.5147,
+      "rating": 4.2,
+      "reviewCount": 56,
+      "status": "verified",
+      "lastVerified": "2025-12-03",
+      "priceRange": "€",
+      "products": [
+        { "name": "Cornet de frites", "price": 3.50, "available": true },
+        { "name": "Grande barquette", "price": 5.00, "available": true },
+        { "name": "Frites sauce fromage", "price": 5.50, "available": true },
+        { "name": "Frites piment d'Espelette", "price": 4.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-004",
+      "name": "Fromages de Brebis Urrugne",
+      "type": "cheese",
+      "emoji": "🧀",
+      "address": "Route de Saint-Jean-de-Luz, 64122 Urrugne",
+      "city": "Urrugne",
+      "lat": 43.3628,
+      "lng": -1.6997,
+      "rating": 4.9,
+      "reviewCount": 203,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€€€",
+      "products": [
+        { "name": "Ossau-Iraty AOP (250g)", "price": 8.00, "available": true },
+        { "name": "Tome de brebis (500g)", "price": 12.00, "available": true },
+        { "name": "Fromage frais", "price": 4.50, "available": true },
+        { "name": "Crottin de brebis", "price": 3.00, "available": false }
+      ]
+    },
+    {
+      "id": "dist-005",
+      "name": "Plats Cuisinés Bayonne",
+      "type": "meals",
+      "emoji": "🍽️",
+      "address": "15 Rue Port-Neuf, 64100 Bayonne",
+      "city": "Bayonne",
+      "lat": 43.4929,
+      "lng": -1.4748,
+      "rating": 4.3,
+      "reviewCount": 78,
+      "status": "verified",
+      "lastVerified": "2025-12-02",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Axoa de veau", "price": 9.50, "available": true },
+        { "name": "Poulet basquaise", "price": 8.50, "available": true },
+        { "name": "Piperade aux oeufs", "price": 7.00, "available": true },
+        { "name": "Chipirons à l'encre", "price": 11.00, "available": false }
+      ]
+    },
+    {
+      "id": "dist-006",
+      "name": "Lait Frais Hasparren",
+      "type": "dairy",
+      "emoji": "🥛",
+      "address": "Chemin de la Ferme, 64240 Hasparren",
+      "city": "Hasparren",
+      "lat": 43.3842,
+      "lng": -1.3056,
+      "rating": 4.6,
+      "reviewCount": 42,
+      "status": "verified",
+      "lastVerified": "2025-12-06",
+      "priceRange": "€",
+      "products": [
+        { "name": "Lait frais entier (1L)", "price": 1.80, "available": true },
+        { "name": "Yaourt nature (x4)", "price": 3.20, "available": true },
+        { "name": "Fromage blanc", "price": 2.50, "available": true },
+        { "name": "Beurre fermier (250g)", "price": 4.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-007",
+      "name": "Légumes Bio Cambo",
+      "type": "agricultural",
+      "emoji": "🥕",
+      "address": "Route des Thermes, 64250 Cambo-les-Bains",
+      "city": "Cambo-les-Bains",
+      "lat": 43.3592,
+      "lng": -1.4003,
+      "rating": 4.7,
+      "reviewCount": 91,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Panier légumes saison", "price": 12.00, "available": true },
+        { "name": "Pommes de terre (2kg)", "price": 4.50, "available": true },
+        { "name": "Carottes (1kg)", "price": 3.00, "available": true },
+        { "name": "Salades (lot de 2)", "price": 3.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-008",
+      "name": "Charcuterie Aldudes",
+      "type": "meat",
+      "emoji": "🥩",
+      "address": "Place de l'Église, 64430 Les Aldudes",
+      "city": "Les Aldudes",
+      "lat": 43.0972,
+      "lng": -1.4306,
+      "rating": 4.8,
+      "reviewCount": 156,
+      "status": "verified",
+      "lastVerified": "2025-12-04",
+      "priceRange": "€€€",
+      "products": [
+        { "name": "Jambon de Bayonne (200g)", "price": 9.00, "available": true },
+        { "name": "Saucisson sec", "price": 7.50, "available": true },
+        { "name": "Ventrèche", "price": 6.00, "available": true },
+        { "name": "Pâté basque", "price": 5.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-009",
+      "name": "Miel & Terroir Ainhoa",
+      "type": "terroir",
+      "emoji": "🍯",
+      "address": "Rue Principale, 64250 Ainhoa",
+      "city": "Ainhoa",
+      "lat": 43.3047,
+      "lng": -1.4722,
+      "rating": 4.9,
+      "reviewCount": 67,
+      "status": "verified",
+      "lastVerified": "2025-12-03",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Miel de montagne (500g)", "price": 12.00, "available": true },
+        { "name": "Confiture de cerises", "price": 5.50, "available": true },
+        { "name": "Piment d'Espelette AOP", "price": 8.00, "available": true },
+        { "name": "Gelée de coing", "price": 4.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-010",
+      "name": "Distributeur Mixte St-Jean",
+      "type": "general",
+      "emoji": "🏪",
+      "address": "Boulevard Thiers, 64500 Saint-Jean-de-Luz",
+      "city": "Saint-Jean-de-Luz",
+      "lat": 43.3883,
+      "lng": -1.6603,
+      "rating": 4.1,
+      "reviewCount": 234,
+      "status": "verified",
+      "lastVerified": "2025-12-06",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Sandwich jambon-beurre", "price": 4.50, "available": true },
+        { "name": "Salade composée", "price": 6.00, "available": true },
+        { "name": "Boisson fraîche", "price": 2.00, "available": true },
+        { "name": "Fruit frais", "price": 1.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-011",
+      "name": "Pizza Guéthary Plage",
+      "type": "pizza",
+      "emoji": "🍕",
+      "address": "Avenue du Général de Gaulle, 64210 Guéthary",
+      "city": "Guéthary",
+      "lat": 43.4242,
+      "lng": -1.6097,
+      "rating": 4.4,
+      "reviewCount": 98,
+      "status": "verified",
+      "lastVerified": "2025-12-04",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Pizza Royale", "price": 11.00, "available": true },
+        { "name": "Pizza Surfeur", "price": 12.00, "available": true },
+        { "name": "Pizza Calzone", "price": 10.50, "available": false },
+        { "name": "Pizza Jambon", "price": 9.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-012",
+      "name": "Boulangerie Auto Bidart",
+      "type": "bakery",
+      "emoji": "🥖",
+      "address": "Avenue de la Plage, 64210 Bidart",
+      "city": "Bidart",
+      "lat": 43.4375,
+      "lng": -1.5917,
+      "rating": 4.6,
+      "reviewCount": 145,
+      "status": "warning",
+      "lastVerified": "2025-11-28",
+      "priceRange": "€",
+      "products": [
+        { "name": "Baguette tradition", "price": 1.40, "available": true },
+        { "name": "Croissant pur beurre", "price": 1.30, "available": true },
+        { "name": "Pain au chocolat", "price": 1.40, "available": true },
+        { "name": "Brioche", "price": 2.50, "available": false }
+      ]
+    },
+    {
+      "id": "dist-013",
+      "name": "Cidre Fermier Irouléguy",
+      "type": "terroir",
+      "emoji": "🍯",
+      "address": "Chemin des Vignes, 64220 Irouléguy",
+      "city": "Irouléguy",
+      "lat": 43.1633,
+      "lng": -1.2333,
+      "rating": 4.7,
+      "reviewCount": 54,
+      "status": "verified",
+      "lastVerified": "2025-12-02",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Cidre basque (75cl)", "price": 6.50, "available": true },
+        { "name": "Vin Irouléguy rouge", "price": 12.00, "available": true },
+        { "name": "Vin Irouléguy blanc", "price": 11.00, "available": true },
+        { "name": "Patxaran", "price": 15.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-014",
+      "name": "Oeufs Frais Ustaritz",
+      "type": "agricultural",
+      "emoji": "🥕",
+      "address": "Route de Bayonne, 64480 Ustaritz",
+      "city": "Ustaritz",
+      "lat": 43.3969,
+      "lng": -1.4556,
+      "rating": 4.5,
+      "reviewCount": 73,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€",
+      "products": [
+        { "name": "Oeufs fermiers (x6)", "price": 3.00, "available": true },
+        { "name": "Oeufs fermiers (x12)", "price": 5.50, "available": true },
+        { "name": "Oeufs bio (x6)", "price": 4.00, "available": true },
+        { "name": "Poule pondeuse", "price": 15.00, "available": false }
+      ]
+    },
+    {
+      "id": "dist-015",
+      "name": "Poissonnerie Express Socoa",
+      "type": "meat",
+      "emoji": "🐟",
+      "address": "Port de Socoa, 64122 Ciboure",
+      "city": "Ciboure",
+      "lat": 43.3897,
+      "lng": -1.6803,
+      "rating": 4.8,
+      "reviewCount": 112,
+      "status": "verified",
+      "lastVerified": "2025-12-06",
+      "priceRange": "€€€",
+      "products": [
+        { "name": "Thon rouge (200g)", "price": 14.00, "available": true },
+        { "name": "Chipirons frais (300g)", "price": 9.00, "available": true },
+        { "name": "Merlu (pièce)", "price": 8.00, "available": true },
+        { "name": "Crevettes (200g)", "price": 7.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-016",
+      "name": "Snack Bayonne Centre",
+      "type": "general",
+      "emoji": "🏪",
+      "address": "Rue d'Espagne, 64100 Bayonne",
+      "city": "Bayonne",
+      "lat": 43.4889,
+      "lng": -1.4756,
+      "rating": 3.9,
+      "reviewCount": 189,
+      "status": "warning",
+      "lastVerified": "2025-11-25",
+      "priceRange": "€",
+      "products": [
+        { "name": "Sandwich baguette", "price": 4.00, "available": true },
+        { "name": "Chips", "price": 1.50, "available": true },
+        { "name": "Canette soda", "price": 1.80, "available": true },
+        { "name": "Chocolat", "price": 1.20, "available": true }
+      ]
+    },
+    {
+      "id": "dist-017",
+      "name": "Fromagerie Larressore",
+      "type": "cheese",
+      "emoji": "🧀",
+      "address": "Place du Village, 64480 Larressore",
+      "city": "Larressore",
+      "lat": 43.3694,
+      "lng": -1.4389,
+      "rating": 4.6,
+      "reviewCount": 48,
+      "status": "verified",
+      "lastVerified": "2025-12-03",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Tomme fermière", "price": 10.00, "available": true },
+        { "name": "Fromage affiné 6 mois", "price": 14.00, "available": true },
+        { "name": "Fromage piment", "price": 12.00, "available": true },
+        { "name": "Caillé de brebis", "price": 5.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-018",
+      "name": "Pizza Nocturne Anglet",
+      "type": "pizza",
+      "emoji": "🍕",
+      "address": "Boulevard de la Mer, 64600 Anglet",
+      "city": "Anglet",
+      "lat": 43.5025,
+      "lng": -1.5253,
+      "rating": 4.0,
+      "reviewCount": 167,
+      "status": "verified",
+      "lastVerified": "2025-12-01",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Pizza Classique", "price": 8.00, "available": true },
+        { "name": "Pizza Spéciale", "price": 10.50, "available": true },
+        { "name": "Pizza du Chef", "price": 12.00, "available": true },
+        { "name": "Pizza XXL", "price": 15.00, "available": false }
+      ]
+    },
+    {
+      "id": "dist-019",
+      "name": "Légumes Sare",
+      "type": "agricultural",
+      "emoji": "🥕",
+      "address": "Route du Col de Lizarrieta, 64310 Sare",
+      "city": "Sare",
+      "lat": 43.3131,
+      "lng": -1.5800,
+      "rating": 4.9,
+      "reviewCount": 36,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Potimarron", "price": 4.00, "available": true },
+        { "name": "Courge butternut", "price": 3.50, "available": true },
+        { "name": "Betteraves", "price": 2.50, "available": true },
+        { "name": "Haricots verts", "price": 5.00, "available": false }
+      ]
+    },
+    {
+      "id": "dist-020",
+      "name": "Plats Maison Hendaye",
+      "type": "meals",
+      "emoji": "🍽️",
+      "address": "Boulevard de la Plage, 64700 Hendaye",
+      "city": "Hendaye",
+      "lat": 43.3617,
+      "lng": -1.7739,
+      "rating": 4.4,
+      "reviewCount": 82,
+      "status": "verified",
+      "lastVerified": "2025-12-04",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Marmitako", "price": 10.00, "available": true },
+        { "name": "Ttoro (soupe de poisson)", "price": 12.00, "available": true },
+        { "name": "Merlu koskera", "price": 11.00, "available": true },
+        { "name": "Pintxos variés (x6)", "price": 8.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-021",
+      "name": "Boulangerie 24h Mouguerre",
+      "type": "bakery",
+      "emoji": "🥖",
+      "address": "Zone Industrielle, 64990 Mouguerre",
+      "city": "Mouguerre",
+      "lat": 43.4728,
+      "lng": -1.4378,
+      "rating": 4.2,
+      "reviewCount": 95,
+      "status": "verified",
+      "lastVerified": "2025-12-06",
+      "priceRange": "€",
+      "products": [
+        { "name": "Pain de campagne", "price": 2.80, "available": true },
+        { "name": "Baguette", "price": 1.20, "available": true },
+        { "name": "Viennoiseries (lot 4)", "price": 4.50, "available": true },
+        { "name": "Tourte aux pommes", "price": 12.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-022",
+      "name": "Viande Basque Mendionde",
+      "type": "meat",
+      "emoji": "🥩",
+      "address": "Route de Louhossoa, 64240 Mendionde",
+      "city": "Mendionde",
+      "lat": 43.3369,
+      "lng": -1.2947,
+      "rating": 4.7,
+      "reviewCount": 61,
+      "status": "verified",
+      "lastVerified": "2025-12-02",
+      "priceRange": "€€€",
+      "products": [
+        { "name": "Côtes d'agneau (4 pcs)", "price": 16.00, "available": true },
+        { "name": "Saucisses fraîches", "price": 8.00, "available": true },
+        { "name": "Rôti de porc", "price": 12.00, "available": true },
+        { "name": "Boudin basque", "price": 7.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-023",
+      "name": "Yaourts Ferme Itxassou",
+      "type": "dairy",
+      "emoji": "🥛",
+      "address": "Quartier Église, 64250 Itxassou",
+      "city": "Itxassou",
+      "lat": 43.3297,
+      "lng": -1.4056,
+      "rating": 4.8,
+      "reviewCount": 77,
+      "status": "verified",
+      "lastVerified": "2025-12-05",
+      "priceRange": "€",
+      "products": [
+        { "name": "Yaourt nature (x4)", "price": 3.50, "available": true },
+        { "name": "Yaourt cerise noire", "price": 4.00, "available": true },
+        { "name": "Fromage blanc (500g)", "price": 3.80, "available": true },
+        { "name": "Faisselle", "price": 3.00, "available": true }
+      ]
+    },
+    {
+      "id": "dist-024",
+      "name": "Frites Gare Bayonne",
+      "type": "fries",
+      "emoji": "🍟",
+      "address": "Place de la Gare, 64100 Bayonne",
+      "city": "Bayonne",
+      "lat": 43.4958,
+      "lng": -1.4722,
+      "rating": 3.8,
+      "reviewCount": 203,
+      "status": "warning",
+      "lastVerified": "2025-11-20",
+      "priceRange": "€",
+      "products": [
+        { "name": "Frites classiques", "price": 3.00, "available": true },
+        { "name": "Frites XL", "price": 4.50, "available": true },
+        { "name": "Nuggets (x6)", "price": 4.00, "available": false },
+        { "name": "Sauce au choix", "price": 0.50, "available": true }
+      ]
+    },
+    {
+      "id": "dist-025",
+      "name": "Confitures Ascain",
+      "type": "terroir",
+      "emoji": "🍯",
+      "address": "Rue du Bourg, 64310 Ascain",
+      "city": "Ascain",
+      "lat": 43.3450,
+      "lng": -1.6214,
+      "rating": 4.6,
+      "reviewCount": 52,
+      "status": "verified",
+      "lastVerified": "2025-12-03",
+      "priceRange": "€€",
+      "products": [
+        { "name": "Confiture cerise noire", "price": 6.50, "available": true },
+        { "name": "Confiture figue", "price": 5.50, "available": true },
+        { "name": "Gelée de piment", "price": 5.00, "available": true },
+        { "name": "Miel de châtaignier", "price": 10.00, "available": true }
+      ]
+    }
+  ],
+  "typeConfig": {
+    "pizza": {
+      "label": "Pizza fraîche",
+      "gradient": "linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)"
+    },
+    "bakery": {
+      "label": "Boulangerie & Taloa",
+      "gradient": "linear-gradient(135deg, #cd853f 0%, #daa520 100%)"
+    },
+    "fries": {
+      "label": "Frites fraîches",
+      "gradient": "linear-gradient(135deg, #f9ca24 0%, #f0932b 100%)"
+    },
+    "meals": {
+      "label": "Plats cuisinés",
+      "gradient": "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)"
+    },
+    "cheese": {
+      "label": "Fromage fermier",
+      "gradient": "linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)"
+    },
+    "dairy": {
+      "label": "Produits laitiers",
+      "gradient": "linear-gradient(135deg, #81ecec 0%, #74b9ff 100%)"
+    },
+    "agricultural": {
+      "label": "Produits agricoles",
+      "gradient": "linear-gradient(135deg, #00b894 0%, #55efc4 100%)"
+    },
+    "meat": {
+      "label": "Viande & Charcuterie",
+      "gradient": "linear-gradient(135deg, #d63031 0%, #e17055 100%)"
+    },
+    "terroir": {
+      "label": "Terroir local",
+      "gradient": "linear-gradient(135deg, #e17055 0%, #fdcb6e 100%)"
+    },
+    "general": {
+      "label": "Distributeur mixte",
+      "gradient": "linear-gradient(135deg, #636e72 0%, #b2bec3 100%)"
+    }
+  }
+}

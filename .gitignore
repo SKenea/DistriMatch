@@ -1,0 +1,19 @@
+# IDE et éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers de test temporaires
+test-*.html
+test_*.txt
+
+# Fichiers de session/logs temporaires
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (si utilisé plus tard)
+node_modules/

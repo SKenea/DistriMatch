@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(start \"\" \"c:\\Users\\Stephane (NoAdmin)\\Documents\\Stephane\\Personnel\\SKenea\\StreetFoodGeoEvaluator\\index.html\")",
+      "Bash(wc:*)",
+      "Bash(awk:*)",
+      "Bash(start chrome --new-window --auto-open-devtools-for-tabs index.html)",
+      "Bash(start chrome:*)",
+      "Bash(del:*)",
+      "Bash(node:*)",
+      "Bash(start \"\" \"c:\\Users\\Stephane (NoAdmin)\\Documents\\Stephane\\Personnel\\SKenea\\StreetFoodGeoEvaluator\\test-favorites.html\")",
+      "Bash(start http://localhost:8080)",
+      "Bash(if not exist icons mkdir icons)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
