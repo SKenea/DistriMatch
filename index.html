@@ -4,30 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#6366f1">
-    <meta name="description" content="SnackMatch - Trouvez les distributeurs alimentaires près de chez vous">
+    <meta name="description" content="SnackMatch - Trouvez les distributeurs alimentaires pres de chez vous">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="SnackMatch">
 
-    <title>SnackMatch - Côte Basque</title>
+    <title>SnackMatch - Cote Basque</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=13">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
     <!-- Navigation Top -->
     <nav class="top-nav">
-        <h1 class="logo" data-view="explorer" style="cursor:pointer;">🍿 SnackMatch</h1>
+        <div class="nav-left">
+            <button class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="Menu">
+                <span class="hamburger-icon"></span>
+            </button>
+            <h1 class="logo" id="logo-home">SnackMatch</h1>
+        </div>
         <div class="nav-actions">
-            <button class="icon-btn" id="search-toggle" aria-label="Rechercher">🔍</button>
+            <button class="icon-btn" id="search-toggle" aria-label="Rechercher">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+            </button>
             <button class="icon-btn nav-icon-btn" data-view="favorites" aria-label="Favoris">
-                ❤️
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
                 <span class="nav-badge" id="favorites-badge" style="display: none;">0</span>
             </button>
             <button class="icon-btn nav-icon-btn" data-view="profile" aria-label="Profil">
-                👤
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
             </button>
         </div>
     </nav>
@@ -36,45 +51,121 @@
     <div id="search-overlay" class="search-overlay">
         <div class="search-container-clean">
             <input type="text" id="quick-search" placeholder="Chercher un produit ou distributeur..." autofocus />
-            <button class="close-search" id="close-search">✕</button>
+            <button class="close-search" id="close-search">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
         </div>
         <div id="search-results" class="search-results-clean"></div>
     </div>
 
     <!-- ============================================
-         PAGE EXPLORER (Swipe cards)
+         CONTAINER PRINCIPAL (Sidebar + Carte)
          ============================================ -->
-    <main id="explorer-view" class="view-page view-active">
-        <div class="swipe-area" id="swipe-area">
-            <!-- Card injectée dynamiquement -->
-            <div id="card-container"></div>
+    <div class="app-container">
+        <!-- Sidebar gauche - Mes conversations -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Mes conversations</span>
+            </div>
 
-            <!-- Indicateur de swipe -->
-            <div class="swipe-indicator" id="swipe-indicator"></div>
-        </div>
+            <!-- Liste des conversations -->
+            <div class="conversations-list" id="conversations-list">
+                <div class="empty-conversations">
+                    <div class="empty-icon">💬</div>
+                    <p>Aucune conversation</p>
+                    <small>Clique sur un distributeur sur la carte pour lui parler</small>
+                </div>
+            </div>
+        </aside>
 
-        <!-- Info contexte -->
-        <div class="context-info">
-            <span id="distance-info">Chargement...</span>
-            <span id="remaining-info">0 à découvrir</span>
-        </div>
-    </main>
+        <!-- Overlay sombre pour mobile -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Zone carte principale -->
+        <main class="map-zone" id="map-zone">
+            <!-- Filter chips bar -->
+            <div class="filter-bar" id="filter-bar">
+                <button class="filter-chip active" data-type="all">
+                    <span class="chip-emoji">📍</span>
+                    <span class="chip-label">Tous</span>
+                </button>
+                <button class="filter-chip" data-type="pizza">
+                    <span class="chip-emoji">🍕</span>
+                    <span class="chip-label">Pizza</span>
+                </button>
+                <button class="filter-chip" data-type="bakery">
+                    <span class="chip-emoji">🥖</span>
+                    <span class="chip-label">Boulangerie</span>
+                </button>
+                <button class="filter-chip" data-type="fries">
+                    <span class="chip-emoji">🍟</span>
+                    <span class="chip-label">Frites</span>
+                </button>
+                <button class="filter-chip" data-type="meals">
+                    <span class="chip-emoji">🍱</span>
+                    <span class="chip-label">Plats</span>
+                </button>
+                <button class="filter-chip" data-type="cheese">
+                    <span class="chip-emoji">🧀</span>
+                    <span class="chip-label">Fromage</span>
+                </button>
+                <button class="filter-chip" data-type="meat">
+                    <span class="chip-emoji">🥩</span>
+                    <span class="chip-label">Viande</span>
+                </button>
+                <button class="filter-chip" data-type="dairy">
+                    <span class="chip-emoji">🥛</span>
+                    <span class="chip-label">Laitier</span>
+                </button>
+                <button class="filter-chip" data-type="terroir">
+                    <span class="chip-emoji">🏠</span>
+                    <span class="chip-label">Terroir</span>
+                </button>
+            </div>
+            <div id="main-map"></div>
+            <button class="btn-center-map" id="center-map" aria-label="Centrer sur ma position">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4m0 12v4m-10-10h4m12 0h4"/>
+                </svg>
+            </button>
+        </main>
+    </div>
 
     <!-- ============================================
-         PAGE MA SÉLECTION
+         MODAL CHAT (fenetre de conversation)
          ============================================ -->
-    <div id="selection-view" class="view-page view-hidden">
-        <div class="page-header-inner">
-            <h2>✓ Ma Sélection</h2>
-            <span class="header-count" id="selection-count">0 distributeur(s)</span>
+    <div class="chat-modal" id="chat-modal">
+        <div class="chat-header">
+            <button class="chat-back" id="chat-back" aria-label="Retour">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="chat-bot-info">
+                <span class="chat-avatar" id="chat-avatar">🍕</span>
+                <div class="chat-bot-details">
+                    <span class="chat-name" id="chat-name">PizzaBot</span>
+                    <span class="chat-status" id="chat-status">En ligne</span>
+                </div>
+            </div>
+            <button class="chat-close" id="chat-close" aria-label="Fermer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
         </div>
-        <div id="selection-list" class="items-list">
-            <!-- Distributeurs sélectionnés injectés ici -->
-        </div>
-        <div id="selection-empty" class="empty-state" style="display: none;">
-            <div class="empty-icon">📋</div>
-            <h3>Aucune sélection</h3>
-            <p>Swipez vers la droite sur un distributeur qui vous intéresse pour l'ajouter à votre sélection.</p>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-quick-replies" id="chat-quick-replies"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Ecrire un message..." />
+            <button id="chat-send" aria-label="Envoyer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -83,16 +174,25 @@
          ============================================ -->
     <div id="favorites-view" class="view-page view-hidden">
         <div class="page-header-inner">
-            <h2>❤️ Mes Favoris</h2>
+            <button class="back-btn" id="back-from-favorites">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Mes Favoris</h2>
             <span class="header-count" id="favorites-count">0 favori(s)</span>
         </div>
         <div id="favorites-list" class="items-list">
-            <!-- Favoris injectés ici -->
+            <!-- Favoris injectes ici -->
         </div>
         <div id="favorites-empty" class="empty-state" style="display: none;">
-            <div class="empty-icon">💔</div>
+            <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
             <h3>Aucun favori</h3>
-            <p>Ajoutez des distributeurs en favoris depuis votre sélection pour les retrouver ici.</p>
+            <p>Discute avec un distributeur et ajoute-le en favori !</p>
         </div>
     </div>
 
@@ -101,13 +201,23 @@
          ============================================ -->
     <div id="profile-view" class="view-page view-hidden">
         <div class="page-header-inner">
-            <h2>👤 Mon Profil</h2>
+            <button class="back-btn" id="back-from-profile">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Mon Profil</h2>
         </div>
         <div class="profile-card">
-            <div class="profile-avatar" id="profile-avatar">😊</div>
+            <div class="profile-avatar" id="profile-avatar">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </div>
             <h3 id="profile-name">Utilisateur</h3>
             <div class="profile-badge">
-                <span class="badge bronze" id="profile-badge">🥉 Explorateur</span>
+                <span class="badge bronze" id="profile-badge">Explorateur</span>
             </div>
             <div class="profile-points">
                 <span class="points-value" id="profile-points">0</span>
@@ -116,10 +226,6 @@
         </div>
         <div class="profile-stats">
             <div class="stat-card">
-                <div class="stat-value" id="stat-selections">0</div>
-                <div class="stat-label">Sélections</div>
-            </div>
-            <div class="stat-card">
                 <div class="stat-value" id="stat-favorites">0</div>
                 <div class="stat-label">Favoris</div>
             </div>
@@ -127,41 +233,62 @@
                 <div class="stat-value" id="stat-reports">0</div>
                 <div class="stat-label">Signalements</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-conversations">0</div>
+                <div class="stat-label">Discussions</div>
+            </div>
+        </div>
+        <div class="profile-preferences">
+            <h4>Tes preferences detectees</h4>
+            <div id="profile-preferences-list" class="preferences-list">
+                <!-- Preferences implicites affichees ici -->
+            </div>
         </div>
         <div class="profile-actions">
-            <button class="btn-secondary-clean" id="clear-data-btn">🗑️ Effacer mes données</button>
+            <button class="btn-secondary-clean" id="clear-data-btn">Effacer mes donnees</button>
         </div>
     </div>
 
     <!-- ============================================
-         MODAL DÉTAILS DISTRIBUTEUR
+         MODAL DETAILS DISTRIBUTEUR
          ============================================ -->
     <div id="detail-modal" class="modal-clean">
         <div class="modal-content-clean">
-            <button class="close-modal" id="close-detail">✕</button>
+            <button class="close-modal" id="close-detail">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
 
             <div class="detail-header-clean">
                 <div class="detail-type" id="detail-type"></div>
                 <h2 id="detail-name">Nom du distributeur</h2>
                 <p id="detail-address">Adresse</p>
                 <div class="detail-meta">
-                    <span class="rating-clean" id="detail-rating">★★★★☆</span>
+                    <span class="rating-clean" id="detail-rating"></span>
                     <span class="reviews-clean" id="detail-reviews">(0 avis)</span>
                     <span class="distance-clean" id="detail-distance">0 km</span>
                 </div>
             </div>
 
             <div class="products-section-clean">
-                <h3>🛒 Produits disponibles</h3>
+                <h3>Produits disponibles</h3>
                 <div id="products-list"></div>
             </div>
 
             <div class="modal-actions">
-                <button class="btn-secondary-clean" id="get-directions">
-                    🗺️ Itinéraire
+                <button class="btn-icon-action" id="btn-report" aria-label="Signaler">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
                 </button>
-                <button class="btn-primary-clean" id="modal-action-btn">
-                    ✓ Sélectionner
+                <button class="btn-secondary-clean" id="get-directions">
+                    Itineraire
+                </button>
+                <button class="btn-primary-clean" id="btn-favorite">
+                    Favori
                 </button>
             </div>
         </div>
@@ -172,27 +299,31 @@
          ============================================ -->
     <div id="report-modal" class="modal-clean">
         <div class="modal-content-clean">
-            <button class="close-modal" id="close-report">✕</button>
-            <h2>⚠️ Signaler un problème</h2>
+            <button class="close-modal" id="close-report">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+            <h2>Signaler un probleme</h2>
             <div class="report-distributor-info" id="report-info">
                 <strong id="report-name"></strong>
                 <small id="report-address"></small>
             </div>
             <div class="report-types">
                 <button class="report-type-btn" data-type="out_of_stock">
-                    <span class="report-icon">❌</span>
+                    <span class="report-icon">X</span>
                     <span class="report-label">Rupture de stock</span>
                 </button>
                 <button class="report-type-btn" data-type="machine_down">
-                    <span class="report-icon">⚠️</span>
+                    <span class="report-icon">!</span>
                     <span class="report-label">Machine en panne</span>
                 </button>
                 <button class="report-type-btn" data-type="price_change">
-                    <span class="report-icon">💰</span>
-                    <span class="report-label">Prix modifié</span>
+                    <span class="report-icon">$</span>
+                    <span class="report-label">Prix modifie</span>
                 </button>
                 <button class="report-type-btn" data-type="verified">
-                    <span class="report-icon">✅</span>
+                    <span class="report-icon">OK</span>
                     <span class="report-label">Tout est OK</span>
                 </button>
             </div>
@@ -206,51 +337,11 @@
         </div>
     </div>
 
-    <!-- ============================================
-         PAGE CARTE (Vue dédiée)
-         ============================================ -->
-    <div id="map-view" class="view-page view-hidden">
-        <div id="main-map"></div>
-        <button class="btn-center-map" id="center-map" aria-label="Centrer sur ma position">
-            📍
-        </button>
-    </div>
-
-    <!-- Navigation Bottom (Footer) -->
-    <nav class="bottom-nav">
-        <button class="nav-item active" data-view="explorer">
-            <span class="nav-icon">🏠</span>
-            <span class="nav-label">Explorer</span>
-        </button>
-        <button class="nav-item" data-view="map">
-            <span class="nav-icon">🗺️</span>
-            <span class="nav-label">Carte</span>
-        </button>
-        <button class="nav-item" data-view="selection">
-            <span class="nav-icon">✓</span>
-            <span class="nav-label">Sélection</span>
-            <span class="nav-badge" id="selection-badge-bottom" style="display: none;">0</span>
-        </button>
-    </nav>
-
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js?v=5"></script>
-
-    <!-- Enregistrement Service Worker (désactivé temporairement pour dev) -->
-    <script>
-        // Désinstaller l'ancien SW pour forcer le rechargement des fichiers
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                    console.log('SW désinstallé pour mise à jour');
-                }
-            });
-        }
-    </script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>
