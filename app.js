@@ -1,5 +1,6 @@
 /**
- * SnackMatch V4.5 - Code Review Fixes
+ * SnackMatch V5.0 - Waze Edition
+ * Bottom Navigation + Activity Feed + 6 Report Types
  * Sidebar + Carte + Modal Chat par distributeur
  * Filter chips style Google Maps
  */
@@ -25,6 +26,12 @@ const Conversations = {
     active: null,           // ID du distributeur en cours
     history: {},            // { distributorId: [messages] }
     list: []                // IDs des conversations ouvertes (ordre recent)
+};
+
+// Feed d'activite communautaire
+const ActivityFeed = {
+    items: [],              // Liste des activites
+    filter: 'all'           // Filtre actif: all, reports, favorites
 };
 
 // Profil implicite de l'utilisateur
@@ -56,10 +63,34 @@ let distributorMarkers = [];  // Map<distributorId, marker>
 let userMarker = null;
 let selectedReportType = null;
 
+// Etat pour mode ajout distributeur
+const AddMode = {
+    active: false,
+    marker: null,
+    lat: null,
+    lng: null
+};
+
+// Types de distributeurs disponibles
+const DISTRIBUTOR_TYPES = [
+    { id: 'pizza', emoji: '🍕', name: 'Pizza' },
+    { id: 'bakery', emoji: '🥖', name: 'Boulangerie' },
+    { id: 'fries', emoji: '🍟', name: 'Frites' },
+    { id: 'meals', emoji: '🍽️', name: 'Plats cuisines' },
+    { id: 'cheese', emoji: '🧀', name: 'Fromage' },
+    { id: 'dairy', emoji: '🥛', name: 'Produits laitiers' },
+    { id: 'meat', emoji: '🥩', name: 'Viande' },
+    { id: 'terroir', emoji: '🍯', name: 'Terroir' },
+    { id: 'general', emoji: '🏪', name: 'Mixte' }
+];
+
 // Cles localStorage
 const STORAGE_KEY = 'snackmatch_user';
 const PROFILE_KEY = 'snackmatch_profile';
 const CONVERSATIONS_KEY = 'snackmatch_conversations';
+const ACTIVITY_KEY = 'snackmatch_activity';
+const VOTES_KEY = 'snackmatch_votes';
+const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
 
 // ============================================
 // UTILITAIRES
@@ -308,19 +339,86 @@ function getTopPreferredTypes(limit = 3) {
 // CHARGEMENT DES DONNEES
 // ============================================
 
+// Donnees embarquees pour fonctionner sans serveur (mode file://)
+const EMBEDDED_DATA = {
+    distributors: [
+        { id: "dist-001", name: "Pizza Express Biarritz", type: "pizza", emoji: "🍕", address: "12 Avenue de la Grande Plage, 64200 Biarritz", city: "Biarritz", lat: 43.4832, lng: -1.5586, rating: 4.5, reviewCount: 127, status: "verified", priceRange: "€€", products: [{ name: "Pizza Margherita", price: 8.50, available: true }, { name: "Pizza 4 Fromages", price: 10.00, available: true }, { name: "Pizza Basque", price: 11.00, available: true }, { name: "Pizza Vegetarienne", price: 9.50, available: false }] },
+        { id: "dist-002", name: "Le Taloa du Fronton", type: "bakery", emoji: "🥖", address: "Place du Fronton, 64250 Espelette", city: "Espelette", lat: 43.3411, lng: -1.4486, rating: 4.8, reviewCount: 89, status: "verified", priceRange: "€", products: [{ name: "Taloa nature", price: 2.50, available: true }, { name: "Taloa jambon-fromage", price: 4.50, available: true }, { name: "Gateau Basque", price: 3.50, available: true }] },
+        { id: "dist-003", name: "Frites Fraiches Anglet", type: "fries", emoji: "🍟", address: "Centre Commercial BAB2, 64600 Anglet", city: "Anglet", lat: 43.4784, lng: -1.5147, rating: 4.2, reviewCount: 56, status: "verified", priceRange: "€", products: [{ name: "Cornet de frites", price: 3.50, available: true }, { name: "Grande barquette", price: 5.00, available: true }] },
+        { id: "dist-004", name: "Fromages de Brebis Urrugne", type: "cheese", emoji: "🧀", address: "Route de Saint-Jean-de-Luz, 64122 Urrugne", city: "Urrugne", lat: 43.3628, lng: -1.6997, rating: 4.9, reviewCount: 203, status: "verified", priceRange: "€€€", products: [{ name: "Ossau-Iraty AOP", price: 8.00, available: true }, { name: "Tome de brebis", price: 12.00, available: true }] },
+        { id: "dist-005", name: "Plats Cuisines Bayonne", type: "meals", emoji: "🍽️", address: "15 Rue Port-Neuf, 64100 Bayonne", city: "Bayonne", lat: 43.4929, lng: -1.4748, rating: 4.3, reviewCount: 78, status: "verified", priceRange: "€€", products: [{ name: "Axoa de veau", price: 9.50, available: true }, { name: "Poulet basquaise", price: 8.50, available: true }] },
+        { id: "dist-006", name: "Lait Frais Hasparren", type: "dairy", emoji: "🥛", address: "Chemin de la Ferme, 64240 Hasparren", city: "Hasparren", lat: 43.3842, lng: -1.3056, rating: 4.6, reviewCount: 42, status: "verified", priceRange: "€", products: [{ name: "Lait frais entier", price: 1.80, available: true }, { name: "Yaourt nature (x4)", price: 3.20, available: true }] },
+        { id: "dist-007", name: "Legumes Bio Cambo", type: "agricultural", emoji: "🥕", address: "Route des Thermes, 64250 Cambo-les-Bains", city: "Cambo-les-Bains", lat: 43.3592, lng: -1.4003, rating: 4.7, reviewCount: 91, status: "verified", priceRange: "€€", products: [{ name: "Panier legumes saison", price: 12.00, available: true }, { name: "Pommes de terre", price: 4.50, available: true }] },
+        { id: "dist-008", name: "Charcuterie Aldudes", type: "meat", emoji: "🥩", address: "Place de l'Eglise, 64430 Les Aldudes", city: "Les Aldudes", lat: 43.0972, lng: -1.4306, rating: 4.8, reviewCount: 156, status: "verified", priceRange: "€€€", products: [{ name: "Jambon de Bayonne", price: 9.00, available: true }, { name: "Saucisson sec", price: 7.50, available: true }] },
+        { id: "dist-009", name: "Miel & Terroir Ainhoa", type: "terroir", emoji: "🍯", address: "Rue Principale, 64250 Ainhoa", city: "Ainhoa", lat: 43.3047, lng: -1.4722, rating: 4.9, reviewCount: 67, status: "verified", priceRange: "€€", products: [{ name: "Miel de montagne", price: 12.00, available: true }, { name: "Piment d'Espelette AOP", price: 8.00, available: true }] },
+        { id: "dist-010", name: "Distributeur Mixte St-Jean", type: "general", emoji: "🏪", address: "Boulevard Thiers, 64500 Saint-Jean-de-Luz", city: "Saint-Jean-de-Luz", lat: 43.3883, lng: -1.6603, rating: 4.1, reviewCount: 234, status: "verified", priceRange: "€€", products: [{ name: "Sandwich jambon-beurre", price: 4.50, available: true }, { name: "Salade composee", price: 6.00, available: true }] },
+        { id: "dist-011", name: "Pizza Guethary Plage", type: "pizza", emoji: "🍕", address: "Avenue du General de Gaulle, 64210 Guethary", city: "Guethary", lat: 43.4242, lng: -1.6097, rating: 4.4, reviewCount: 98, status: "verified", priceRange: "€€", products: [{ name: "Pizza Royale", price: 11.00, available: true }, { name: "Pizza Surfeur", price: 12.00, available: true }] },
+        { id: "dist-012", name: "Boulangerie Auto Bidart", type: "bakery", emoji: "🥖", address: "Avenue de la Plage, 64210 Bidart", city: "Bidart", lat: 43.4375, lng: -1.5917, rating: 4.6, reviewCount: 145, status: "warning", priceRange: "€", products: [{ name: "Baguette tradition", price: 1.40, available: true }, { name: "Croissant pur beurre", price: 1.30, available: true }] },
+        { id: "dist-015", name: "Poissonnerie Express Socoa", type: "meat", emoji: "🐟", address: "Port de Socoa, 64122 Ciboure", city: "Ciboure", lat: 43.3897, lng: -1.6803, rating: 4.8, reviewCount: 112, status: "verified", priceRange: "€€€", products: [{ name: "Thon rouge", price: 14.00, available: true }, { name: "Chipirons frais", price: 9.00, available: true }] },
+        { id: "dist-017", name: "Fromagerie Larressore", type: "cheese", emoji: "🧀", address: "Place du Village, 64480 Larressore", city: "Larressore", lat: 43.3694, lng: -1.4389, rating: 4.6, reviewCount: 48, status: "verified", priceRange: "€€", products: [{ name: "Tomme fermiere", price: 10.00, available: true }, { name: "Fromage affine 6 mois", price: 14.00, available: true }] },
+        { id: "dist-020", name: "Plats Maison Hendaye", type: "meals", emoji: "🍽️", address: "Boulevard de la Plage, 64700 Hendaye", city: "Hendaye", lat: 43.3617, lng: -1.7739, rating: 4.4, reviewCount: 82, status: "verified", priceRange: "€€", products: [{ name: "Marmitako", price: 10.00, available: true }, { name: "Ttoro", price: 12.00, available: true }] },
+        { id: "dist-024", name: "Frites Gare Bayonne", type: "fries", emoji: "🍟", address: "Place de la Gare, 64100 Bayonne", city: "Bayonne", lat: 43.4958, lng: -1.4722, rating: 3.8, reviewCount: 203, status: "warning", priceRange: "€", products: [{ name: "Frites classiques", price: 3.00, available: true }, { name: "Frites XL", price: 4.50, available: true }] }
+    ],
+    typeConfig: {
+        pizza: { label: "Pizza fraiche", gradient: "linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)" },
+        bakery: { label: "Boulangerie & Taloa", gradient: "linear-gradient(135deg, #cd853f 0%, #daa520 100%)" },
+        fries: { label: "Frites fraiches", gradient: "linear-gradient(135deg, #f9ca24 0%, #f0932b 100%)" },
+        meals: { label: "Plats cuisines", gradient: "linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)" },
+        cheese: { label: "Fromage fermier", gradient: "linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)" },
+        dairy: { label: "Produits laitiers", gradient: "linear-gradient(135deg, #81ecec 0%, #74b9ff 100%)" },
+        agricultural: { label: "Produits agricoles", gradient: "linear-gradient(135deg, #00b894 0%, #55efc4 100%)" },
+        meat: { label: "Viande & Charcuterie", gradient: "linear-gradient(135deg, #d63031 0%, #e17055 100%)" },
+        terroir: { label: "Terroir local", gradient: "linear-gradient(135deg, #e17055 0%, #fdcb6e 100%)" },
+        general: { label: "Distributeur mixte", gradient: "linear-gradient(135deg, #636e72 0%, #b2bec3 100%)" }
+    }
+};
+
 async function loadDistributors() {
     try {
+        // Essayer fetch, sinon utiliser les donnees embarquees
         const response = await fetch('data/distributors.json');
+        if (!response.ok) throw new Error('Fetch failed');
         const data = await response.json();
         AppState.distributors = data.distributors;
         AppState.typeConfig = data.typeConfig;
-
-        if (AppState.userLocation) {
-            sortByDistance();
-        }
+        console.log('[SnackMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
     } catch (error) {
-        console.error('Erreur chargement distributeurs:', error);
-        showToast('Erreur de chargement des donnees', 'error');
+        console.log('[SnackMatch] Mode fichier local - utilisation des donnees embarquees');
+        AppState.distributors = EMBEDDED_DATA.distributors;
+        AppState.typeConfig = EMBEDDED_DATA.typeConfig;
+        console.log('[SnackMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
+    }
+
+    // Ajouter les distributeurs utilisateur
+    const userDistributors = loadUserDistributors();
+    if (userDistributors.length > 0) {
+        AppState.distributors = [...AppState.distributors, ...userDistributors];
+        console.log('[SnackMatch] Distributeurs utilisateur:', userDistributors.length);
+    }
+
+    if (AppState.userLocation) {
+        sortByDistance();
+    }
+}
+
+// Charger les distributeurs ajoutes par l'utilisateur
+function loadUserDistributors() {
+    try {
+        return JSON.parse(localStorage.getItem(USER_DISTRIBUTORS_KEY)) || [];
+    } catch (e) {
+        console.error('Erreur chargement distributeurs utilisateur:', e);
+        return [];
+    }
+}
+
+// Sauvegarder un distributeur utilisateur
+function saveUserDistributor(distributor) {
+    const existing = loadUserDistributors();
+    existing.push(distributor);
+    try {
+        localStorage.setItem(USER_DISTRIBUTORS_KEY, JSON.stringify(existing));
+    } catch (e) {
+        console.error('Erreur sauvegarde distributeur:', e);
     }
 }
 
@@ -407,7 +505,7 @@ function initMainMap() {
     }
 
     updateMapMarkers();
-    console.log('Carte initialisee');
+    console.log('[SnackMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
 }
 
 function updateMapMarkers(fitBounds = true) {
@@ -580,6 +678,9 @@ function displayChatModal(bot) {
     });
 
     modal.classList.add('active');
+
+    // Mettre a jour le bouton favori
+    updateChatFavoriteButton(bot.id);
 
     // Scroll en bas
     setTimeout(() => {
@@ -949,15 +1050,18 @@ function toggleFavorite(id, event) {
     if (index === -1) {
         AppState.favorites.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
+        addActivityItem('favorite', id);
         showToast(`${distributor?.name || 'Distributeur'} ajoute aux favoris`, 'success');
     } else {
         AppState.favorites.splice(index, 1);
+        addActivityItem('unfavorite', id);
         showToast(`${distributor?.name || 'Distributeur'} retire des favoris`, 'default');
     }
 
     saveToLocalStorage();
     updateBadges();
     updateMapMarkers();
+    updateActivityBadge();
 
     if (document.getElementById('favorites-view').classList.contains('view-active')) {
         displayFavorites();
@@ -972,6 +1076,23 @@ function toggleFavoriteFromModal() {
     if (AppState.currentDistributor) {
         toggleFavorite(AppState.currentDistributor.id);
     }
+}
+
+function toggleChatFavorite() {
+    if (!Conversations.active) return;
+
+    const id = Conversations.active;
+    toggleFavorite(id);
+    updateChatFavoriteButton(id);
+}
+
+function updateChatFavoriteButton(distributorId) {
+    const btn = document.getElementById('chat-favorite');
+    if (!btn) return;
+
+    const isFavorite = AppState.favorites.includes(distributorId);
+    btn.classList.toggle('is-favorite', isFavorite);
+    btn.setAttribute('aria-label', isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
 }
 
 function displayFavorites() {
@@ -1075,6 +1196,10 @@ function switchView(viewName) {
         document.getElementById('profile-view').classList.remove('view-hidden');
         document.getElementById('profile-view').classList.add('view-active');
         updateProfileStats();
+    } else if (viewName === 'activity') {
+        document.getElementById('activity-view').classList.remove('view-hidden');
+        document.getElementById('activity-view').classList.add('view-active');
+        displayActivityFeed();
     }
 }
 
@@ -1082,6 +1207,11 @@ function goBackToMap() {
     document.querySelectorAll('.view-page').forEach(v => {
         v.classList.remove('view-active');
         v.classList.add('view-hidden');
+    });
+
+    // Mettre a jour la bottom nav
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === 'explore');
     });
 
     if (mainMap) {
@@ -1161,7 +1291,13 @@ function performSearch(query) {
 // SIGNALEMENT
 // ============================================
 
-let selectedReportType = null;
+function openReportFromChat() {
+    if (!Conversations.active) return;
+    const distributor = AppState.distributors.find(d => d.id === Conversations.active);
+    if (!distributor) return;
+    AppState.currentDistributor = distributor;
+    openReportModal();
+}
 
 function openReportModal() {
     if (!AppState.currentDistributor) return;
@@ -1195,15 +1331,438 @@ function selectReportType(type) {
 function submitReport() {
     if (!selectedReportType || !AppState.currentDistributor) return;
 
+    // Obtenir les points du bouton selectionne
+    const selectedBtn = document.querySelector(`.report-type-btn[data-type="${selectedReportType}"]`);
+    const points = parseInt(selectedBtn?.dataset.points || '10');
+
     AppState.reports++;
-    AppState.points += 10;
+    AppState.points += points;
     saveToLocalStorage();
     updateProfileStats();
 
-    showToast('Merci pour ton signalement ! +10 points', 'success');
+    // Ajouter a l'activite
+    addActivityItem('report', AppState.currentDistributor.id, {
+        type: selectedReportType,
+        points: points
+    });
+
+    showToast(`Merci pour ton signalement ! +${points} points`, 'success');
 
     document.getElementById('report-modal').classList.remove('active');
     selectedReportType = null;
+    updateActivityBadge();
+}
+
+// ============================================
+// FEED ACTIVITE
+// ============================================
+
+function saveActivityFeed() {
+    try {
+        localStorage.setItem(ACTIVITY_KEY, JSON.stringify(ActivityFeed.items));
+    } catch (e) {
+        console.error('Erreur sauvegarde activite:', e);
+    }
+}
+
+function loadActivityFeed() {
+    try {
+        const data = localStorage.getItem(ACTIVITY_KEY);
+        if (data) {
+            ActivityFeed.items = JSON.parse(data) || [];
+        }
+    } catch (e) {
+        console.error('Erreur chargement activite:', e);
+        ActivityFeed.items = [];
+    }
+}
+
+function addActivityItem(type, distributorId, details = {}) {
+    const d = AppState.distributors.find(dist => dist.id === distributorId);
+    if (!d) return;
+
+    const item = {
+        id: Date.now(),
+        type: type,  // 'report', 'favorite', 'unfavorite'
+        distributorId: distributorId,
+        distributorName: d.name,
+        distributorEmoji: d.emoji,
+        details: details,
+        timestamp: Date.now(),
+        // Champs votes (pour reports uniquement)
+        confirmations: 0,
+        denials: 0,
+        userVote: null,  // 'confirm' | 'deny' | null
+        resolved: false
+    };
+
+    ActivityFeed.items.unshift(item);
+
+    // Garder les 50 derniers
+    if (ActivityFeed.items.length > 50) {
+        ActivityFeed.items = ActivityFeed.items.slice(0, 50);
+    }
+
+    saveActivityFeed();
+}
+
+function getReportLabel(type) {
+    const labels = {
+        'out_of_stock': 'Rupture de stock',
+        'machine_down': 'Machine en panne',
+        'price_change': 'Prix modifie',
+        'new_product': 'Nouveau produit',
+        'closed': 'Ferme',
+        'verified': 'Tout est OK'
+    };
+    return labels[type] || type;
+}
+
+function displayActivityFeed() {
+    const list = document.getElementById('activity-list');
+    const empty = document.getElementById('activity-empty');
+    const count = document.getElementById('activity-count');
+
+    // Filtrer selon le filtre actif
+    let filtered = ActivityFeed.items;
+    if (ActivityFeed.filter === 'reports') {
+        filtered = ActivityFeed.items.filter(i => i.type === 'report');
+    } else if (ActivityFeed.filter === 'favorites') {
+        filtered = ActivityFeed.items.filter(i => i.type === 'favorite' || i.type === 'unfavorite');
+    }
+
+    count.textContent = `${filtered.length} action(s)`;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'flex';
+        return;
+    }
+
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(item => {
+        let icon = '';
+        let iconClass = '';
+        let text = '';
+
+        if (item.type === 'report') {
+            icon = '⚠️';
+            iconClass = item.details.type === 'verified' ? 'verified' : 'report';
+            text = `Signalement <strong>${getReportLabel(item.details.type)}</strong> sur ${escapeHTML(item.distributorName)}`;
+        } else if (item.type === 'favorite') {
+            icon = '❤️';
+            iconClass = 'favorite';
+            text = `Ajoute <strong>${escapeHTML(item.distributorName)}</strong> en favoris`;
+        } else if (item.type === 'unfavorite') {
+            icon = '💔';
+            iconClass = 'favorite';
+            text = `Retire <strong>${escapeHTML(item.distributorName)}</strong> des favoris`;
+        } else if (item.type === 'new_distributor') {
+            icon = '📍';
+            iconClass = 'verified';
+            text = `Nouveau distributeur <strong>${escapeHTML(item.details.name || item.distributorName)}</strong> ajoute`;
+        }
+
+        const pointsHtml = item.details.points ? `<span class="activity-points">+${item.details.points} pts</span>` : '';
+
+        // Boutons de vote uniquement pour les reports non resolus
+        let votesHtml = '';
+        if (item.type === 'report' && !item.resolved) {
+            const confirmClass = item.userVote === 'confirm' ? 'voted' : '';
+            const denyClass = item.userVote === 'deny' ? 'voted' : '';
+            votesHtml = `
+                <div class="activity-votes">
+                    <button class="vote-btn confirm ${confirmClass}" onclick="voteOnReport(${item.id}, 'confirm')" ${item.userVote ? 'disabled' : ''}>
+                        Confirmer <span>${item.confirmations || 0}</span>
+                    </button>
+                    <button class="vote-btn deny ${denyClass}" onclick="voteOnReport(${item.id}, 'deny')" ${item.userVote ? 'disabled' : ''}>
+                        Infirmer <span>${item.denials || 0}</span>
+                    </button>
+                </div>
+            `;
+        } else if (item.type === 'report' && item.resolved) {
+            const result = item.confirmations >= item.denials ? 'Confirme' : 'Infirme';
+            const resultClass = item.confirmations >= item.denials ? 'confirmed' : 'denied';
+            votesHtml = `<div class="activity-resolved ${resultClass}">${result} par la communaute</div>`;
+        }
+
+        return `
+            <div class="activity-item" data-id="${item.id}">
+                <div class="activity-icon ${iconClass}">${icon}</div>
+                <div class="activity-content">
+                    <div class="activity-text">${text}</div>
+                    <div class="activity-meta">
+                        <span class="activity-time">${formatTime(item.timestamp)}</span>
+                        ${pointsHtml}
+                    </div>
+                    ${votesHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateActivityBadge() {
+    const badge = document.getElementById('activity-badge');
+    const recentCount = ActivityFeed.items.filter(i =>
+        Date.now() - i.timestamp < 24 * 60 * 60 * 1000
+    ).length;
+
+    if (recentCount > 0) {
+        badge.textContent = recentCount > 9 ? '9+' : recentCount;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function setActivityFilter(filter) {
+    ActivityFeed.filter = filter;
+
+    // Update active state
+    document.querySelectorAll('.activity-filter').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+
+    displayActivityFeed();
+}
+
+function voteOnReport(activityId, voteType) {
+    const item = ActivityFeed.items.find(i => i.id === activityId);
+    if (!item || item.userVote || item.resolved) return;
+
+    // Enregistrer le vote
+    item.userVote = voteType;
+    if (voteType === 'confirm') {
+        item.confirmations = (item.confirmations || 0) + 1;
+    } else {
+        item.denials = (item.denials || 0) + 1;
+    }
+
+    // Verifier si le signalement est resolu (3+ votes d'un cote)
+    checkReportResolution(item);
+
+    // Donner des points pour le vote
+    AppState.points += 2;
+    saveToLocalStorage();
+
+    saveActivityFeed();
+    displayActivityFeed();
+    showToast(`Vote enregistre ! +2 points`, 'success');
+}
+
+function checkReportResolution(item) {
+    const THRESHOLD = 3;
+
+    if (item.confirmations >= THRESHOLD) {
+        item.resolved = true;
+        showToast(`Signalement confirme par la communaute !`, 'success');
+    } else if (item.denials >= THRESHOLD) {
+        item.resolved = true;
+        showToast(`Signalement infirme par la communaute`, 'warning');
+    }
+}
+
+function getUnverifiedReportsForDistributor(distributorId) {
+    return ActivityFeed.items.filter(item =>
+        item.type === 'report' &&
+        item.distributorId === distributorId &&
+        !item.resolved
+    ).length;
+}
+
+// ============================================
+// AJOUT DISTRIBUTEUR
+// ============================================
+
+function toggleAddMode() {
+    if (AddMode.active) {
+        cancelAddDistributor();
+        return;
+    }
+
+    AddMode.active = true;
+    document.getElementById('btn-add-distributor').classList.add('active');
+    document.getElementById('placement-hint').classList.add('visible');
+    document.getElementById('main-map').style.cursor = 'crosshair';
+
+    // Ecouter le clic sur la carte
+    mainMap.once('click', onMapClickForPlacement);
+}
+
+function onMapClickForPlacement(e) {
+    if (!AddMode.active) return;
+
+    AddMode.lat = e.latlng.lat;
+    AddMode.lng = e.latlng.lng;
+
+    // Creer marker temporaire
+    AddMode.marker = L.marker(e.latlng, {
+        icon: L.divIcon({
+            className: 'new-distributor-marker',
+            html: '📍',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        }),
+        draggable: true
+    }).addTo(mainMap);
+
+    // Ouvrir popup avec formulaire
+    AddMode.marker.bindPopup(getAddPopupContent(), {
+        closeOnClick: false,
+        autoClose: false,
+        minWidth: 250
+    }).openPopup();
+
+    // Mettre a jour coords si marker deplace
+    AddMode.marker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        AddMode.lat = pos.lat;
+        AddMode.lng = pos.lng;
+    });
+
+    // Cacher le hint
+    document.getElementById('placement-hint').classList.remove('visible');
+    document.getElementById('main-map').style.cursor = '';
+}
+
+function getAddPopupContent() {
+    const options = DISTRIBUTOR_TYPES.map(t =>
+        `<option value="${t.id}">${t.emoji} ${t.name}</option>`
+    ).join('');
+
+    return `
+        <div class="add-distributor-popup">
+            <h4>Nouveau distributeur</h4>
+            <select id="new-dist-type">${options}</select>
+            <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required>
+            <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)">
+            <div class="popup-actions">
+                <button class="btn-cancel" onclick="cancelAddDistributor()">Annuler</button>
+                <button class="btn-confirm" onclick="confirmAddDistributor()">Ajouter</button>
+            </div>
+        </div>
+    `;
+}
+
+function cancelAddDistributor() {
+    if (AddMode.marker) {
+        mainMap.removeLayer(AddMode.marker);
+    }
+    AddMode.active = false;
+    AddMode.marker = null;
+    AddMode.lat = null;
+    AddMode.lng = null;
+
+    // Reset UI
+    document.getElementById('btn-add-distributor').classList.remove('active');
+    document.getElementById('placement-hint').classList.remove('visible');
+    document.getElementById('main-map').style.cursor = '';
+    mainMap.off('click', onMapClickForPlacement);
+}
+
+function confirmAddDistributor() {
+    const typeSelect = document.getElementById('new-dist-type');
+    const nameInput = document.getElementById('new-dist-name');
+    const addressInput = document.getElementById('new-dist-address');
+
+    if (!typeSelect || !nameInput) return;
+
+    const type = typeSelect.value;
+    const name = nameInput.value.trim();
+    const address = addressInput ? addressInput.value.trim() : '';
+
+    if (!name) {
+        showToast('Nom requis', 'error');
+        return;
+    }
+
+    const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
+
+    const newDistributor = {
+        id: `user-${Date.now()}`,
+        name: name,
+        type: type,
+        emoji: typeInfo?.emoji || '🏪',
+        lat: AddMode.lat,
+        lng: AddMode.lng,
+        address: address || 'Adresse a completer',
+        city: 'A verifier',
+        rating: 5.0,
+        reviewCount: 0,
+        products: [],
+        isUserAdded: true,
+        addedAt: Date.now(),
+        addedBy: 'user'
+    };
+
+    // Sauvegarder en localStorage
+    saveUserDistributor(newDistributor);
+
+    // Ajouter a la liste en memoire
+    AppState.distributors.push(newDistributor);
+
+    // Calculer distance si position disponible
+    if (AppState.userLocation) {
+        newDistributor.distance = calculateDistance(
+            AppState.userLocation.lat,
+            AppState.userLocation.lng,
+            newDistributor.lat,
+            newDistributor.lng
+        );
+    }
+
+    // Supprimer le marker temporaire et rafraichir la carte
+    mainMap.removeLayer(AddMode.marker);
+    updateMapMarkers(false);
+
+    // Reset mode
+    AddMode.active = false;
+    AddMode.marker = null;
+    AddMode.lat = null;
+    AddMode.lng = null;
+
+    document.getElementById('btn-add-distributor').classList.remove('active');
+
+    // Feedback
+    showToast(`${escapeHTML(newDistributor.name)} ajoute !`, 'success');
+
+    // Points pour l'ajout
+    AppState.points += 20;
+
+    // Ajouter a l'activite
+    addActivityItem('new_distributor', newDistributor.id, { name: newDistributor.name, points: 20 });
+    saveToLocalStorage();
+    updateActivityBadge();
+}
+
+// ============================================
+// BOTTOM NAVIGATION
+// ============================================
+
+function switchTab(tabName) {
+    // Update tab active state
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    // Handle view switching
+    if (tabName === 'explore') {
+        // Fermer toutes les vues, retour carte
+        document.querySelectorAll('.view-page').forEach(v => {
+            v.classList.remove('view-active');
+            v.classList.add('view-hidden');
+        });
+
+        // Rafraichir la carte
+        if (mainMap) {
+            setTimeout(() => mainMap.invalidateSize(), 100);
+        }
+    } else if (tabName === 'activity') {
+        switchView('activity');
+        displayActivityFeed();
+    }
 }
 
 // ============================================
@@ -1217,6 +1776,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadFromLocalStorage();
     loadProfile();
     loadConversations();
+    loadActivityFeed();
 
     // Obtenir la geolocalisation
     await getUserLocation();
@@ -1250,9 +1810,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Boutons retour
     document.getElementById('back-from-favorites')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
+
+    // Bottom navigation
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // Activity filters
+    document.querySelectorAll('.activity-filter').forEach(btn => {
+        btn.addEventListener('click', () => setActivityFilter(btn.dataset.filter));
+    });
+
+    // Update activity badge
+    updateActivityBadge();
 
     // Centrer la carte
     document.getElementById('center-map').addEventListener('click', centerMapOnUser);
+
+    // Ajout distributeur
+    document.getElementById('btn-add-distributor')?.addEventListener('click', toggleAddMode);
+    document.getElementById('placement-cancel')?.addEventListener('click', cancelAddDistributor);
 
     // Recherche
     document.getElementById('search-toggle').addEventListener('click', openSearch);
@@ -1264,6 +1842,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Chat modal
     document.getElementById('chat-close').addEventListener('click', closeChatModal);
     document.getElementById('chat-back').addEventListener('click', closeChatModal);
+    document.getElementById('chat-favorite').addEventListener('click', toggleChatFavorite);
+    document.getElementById('chat-report').addEventListener('click', openReportFromChat);
 
     document.getElementById('chat-send').addEventListener('click', () => {
         const input = document.getElementById('chat-input');

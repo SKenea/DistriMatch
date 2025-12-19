@@ -19,7 +19,15 @@
       "Bash(dir:*)",
       "Bash(powershell -Command:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: SnackMatch V3.0 - Application PWA complète\n\nApplication de découverte de distributeurs alimentaires (Côte Basque)\n\nNavigation restructurée:\n- Top-nav: Logo + Recherche + Favoris + Profil\n- Bottom-nav (footer): Explorer | Carte | Sélection\n- Carte Leaflet en vue dédiée avec lazy loading\n\nFonctionnalités:\n- Système de swipe cards (Tinder-like)\n- Sélection et favoris persistés en localStorage\n- Modal détails avec liste produits\n- Signalements communautaires\n- Recherche rapide\n- Géolocalisation et tri par distance\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git config:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: SnackMatch V3.0 - Application PWA complete\n\nApplication de decouverte de distributeurs alimentaires (Cote Basque)\n\nNavigation restructuree:\n- Top-nav: Logo + Recherche + Favoris + Profil\n- Bottom-nav (footer): Explorer | Carte | Selection\n- Carte Leaflet en vue dediee avec lazy loading\n\nFonctionnalites:\n- Systeme de swipe cards (Tinder-like)\n- Selection et favoris persistes en localStorage\n- Modal details avec liste produits\n- Signalements communautaires\n- Recherche rapide\n- Geolocalisation et tri par distance\n\nGenerated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git remote:*)",
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(timeout /t 3 /nobreak)"
     ],
     "deny": [],
     "ask": []

@@ -13,7 +13,7 @@
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=16">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -131,6 +131,18 @@
                     <path d="M12 2v4m0 12v4m-10-10h4m12 0h4"/>
                 </svg>
             </button>
+            <!-- Bouton ajout distributeur -->
+            <button class="btn-add-distributor" id="btn-add-distributor" aria-label="Ajouter un distributeur">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <!-- Message mode placement -->
+            <div class="placement-hint" id="placement-hint">
+                <span>Cliquez sur la carte pour placer le distributeur</span>
+                <button class="placement-cancel" id="placement-cancel">Annuler</button>
+            </div>
         </main>
     </div>
 
@@ -151,6 +163,18 @@
                     <span class="chat-status" id="chat-status">En ligne</span>
                 </div>
             </div>
+            <button class="chat-favorite" id="chat-favorite" aria-label="Ajouter aux favoris">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </button>
+            <button class="chat-report" id="chat-report" aria-label="Signaler">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </button>
             <button class="chat-close" id="chat-close" aria-label="Fermer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -310,21 +334,35 @@
                 <small id="report-address"></small>
             </div>
             <div class="report-types">
-                <button class="report-type-btn" data-type="out_of_stock">
+                <button class="report-type-btn" data-type="out_of_stock" data-points="10">
                     <span class="report-icon">X</span>
                     <span class="report-label">Rupture de stock</span>
+                    <span class="report-points">+10 pts</span>
                 </button>
-                <button class="report-type-btn" data-type="machine_down">
+                <button class="report-type-btn" data-type="machine_down" data-points="15">
                     <span class="report-icon">!</span>
                     <span class="report-label">Machine en panne</span>
+                    <span class="report-points">+15 pts</span>
                 </button>
-                <button class="report-type-btn" data-type="price_change">
+                <button class="report-type-btn" data-type="price_change" data-points="10">
                     <span class="report-icon">$</span>
                     <span class="report-label">Prix modifie</span>
+                    <span class="report-points">+10 pts</span>
                 </button>
-                <button class="report-type-btn" data-type="verified">
-                    <span class="report-icon">OK</span>
+                <button class="report-type-btn" data-type="new_product" data-points="15">
+                    <span class="report-icon">+</span>
+                    <span class="report-label">Nouveau produit</span>
+                    <span class="report-points">+15 pts</span>
+                </button>
+                <button class="report-type-btn" data-type="closed" data-points="10">
+                    <span class="report-icon">🔒</span>
+                    <span class="report-label">Ferme</span>
+                    <span class="report-points">+10 pts</span>
+                </button>
+                <button class="report-type-btn" data-type="verified" data-points="5">
+                    <span class="report-icon">✓</span>
                     <span class="report-label">Tout est OK</span>
+                    <span class="report-points">+5 pts</span>
                 </button>
             </div>
             <div id="report-product-select" style="display: none;">
@@ -337,11 +375,60 @@
         </div>
     </div>
 
+    <!-- ============================================
+         PAGE ACTIVITE (Feed communautaire)
+         ============================================ -->
+    <div id="activity-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <button class="back-btn" id="back-from-activity">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Activite</h2>
+            <span class="header-count" id="activity-count">0 action(s)</span>
+        </div>
+        <div class="activity-filters">
+            <button class="activity-filter active" data-filter="all">Tout</button>
+            <button class="activity-filter" data-filter="reports">Signalements</button>
+            <button class="activity-filter" data-filter="favorites">Favoris</button>
+        </div>
+        <div id="activity-list" class="activity-list">
+            <!-- Activites injectees ici -->
+        </div>
+        <div id="activity-empty" class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h3>Aucune activite</h3>
+            <p>Tes signalements et favoris apparaitront ici</p>
+        </div>
+    </div>
+
+    <!-- ============================================
+         BOTTOM NAVIGATION (2 tabs)
+         ============================================ -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-tab active" data-tab="explore" aria-label="Explorer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+            </svg>
+            <span>Explorer</span>
+        </button>
+        <button class="nav-tab" data-tab="activity" aria-label="Activite">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Activite</span>
+            <span class="nav-tab-badge" id="activity-badge" style="display: none;">0</span>
+        </button>
+    </nav>
+
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=19"></script>
 </body>
 </html>
