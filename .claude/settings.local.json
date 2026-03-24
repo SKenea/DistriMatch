@@ -27,7 +27,22 @@
       "Bash(git push:*)",
       "Bash(git remote:*)",
       "Bash(timeout /t 2 /nobreak)",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_click",
+      "mcp__puppeteer__puppeteer_fill",
+      "mcp__puppeteer__puppeteer_select",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "mcp__puppeteer__puppeteer_hover",
+      "Bash(curl:*)",
+      "Bash(npx http-server -p 8080 -c-1)",
+      "Bash(where:*)",
+      "Bash(npx ngrok:*)",
+      "Bash(npx localtunnel --port 8080)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npx cloudflared:*)"
     ],
     "deny": [],
     "ask": []

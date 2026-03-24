@@ -1,8 +1,8 @@
 /**
- * SnackMatch V5.0 - Waze Edition
- * Bottom Navigation + Activity Feed + 6 Report Types
+ * SnackMatch V7.0 - Smart Notifications Edition
+ * Systeme d'abonnements avec robots proactifs
+ * Notifications intelligentes: geofencing, heures calmes, alertes produits
  * Sidebar + Carte + Modal Chat par distributeur
- * Filter chips style Google Maps
  */
 
 // ============================================
@@ -10,7 +10,7 @@
 // ============================================
 const AppState = {
     distributors: [],
-    favorites: [],
+    subscriptions: [],  // Anciennement favorites - IDs des distributeurs abonnes
     userLocation: null,
     currentDistributor: null,
     typeConfig: {},
@@ -21,17 +21,18 @@ const AppState = {
     activeFilters: []  // Filtres actifs: tableau vide = tous, sinon liste des types
 };
 
-// Systeme de conversations
+// Systeme de conversations avec notifications
 const Conversations = {
     active: null,           // ID du distributeur en cours
     history: {},            // { distributorId: [messages] }
-    list: []                // IDs des conversations ouvertes (ordre recent)
+    list: [],               // IDs des conversations ouvertes (ordre recent)
+    unreadCounts: {}        // { distributorId: number } - Messages non lus par conversation
 };
 
 // Feed d'activite communautaire
 const ActivityFeed = {
     items: [],              // Liste des activites
-    filter: 'all'           // Filtre actif: all, reports, favorites
+    filter: 'all'           // Filtre actif: all, reports, subscriptions
 };
 
 // Profil implicite de l'utilisateur
@@ -44,7 +45,7 @@ const UserProfile = {
     },
     stats: {
         totalViews: 0,
-        totalFavorites: 0,
+        totalSubscriptions: 0,
         detailsViewed: 0,
         searchQueries: [],
         conversationsStarted: 0
@@ -91,6 +92,108 @@ const CONVERSATIONS_KEY = 'snackmatch_conversations';
 const ACTIVITY_KEY = 'snackmatch_activity';
 const VOTES_KEY = 'snackmatch_votes';
 const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
+const NOTIFICATION_PREFS_KEY = 'snackmatch_notification_prefs';
+const NOTIFICATION_QUEUE_KEY = 'snackmatch_notification_queue';
+
+// ============================================
+// SYSTEME DE NOTIFICATIONS INTELLIGENTES
+// ============================================
+
+// Preferences de notifications
+const NotificationPrefs = {
+    enabled: true,
+    quietHours: {
+        enabled: true,
+        start: 22,  // 22h
+        end: 8      // 8h
+    },
+    geofence: {
+        enabled: true,
+        radius: 1000  // metres
+    },
+    perDistributor: {},  // { distributorId: { proximity: true, stock: true, promo: true } }
+    followedProducts: [], // ["pizza", "croissant", ...]
+    lastNotifications: {} // { distributorId: timestamp } - pour cooldown
+};
+
+// File d'attente des notifications
+const NotificationQueue = {
+    pending: [],  // Notifications en attente (heures calmes)
+    history: []   // Historique des 50 dernieres
+};
+
+// Types de notifications disponibles
+const NOTIFICATION_TYPES = {
+    proximity: {
+        icon: '📍',
+        title: 'Tu es proche !',
+        template: '{name} est a {distance}m de toi'
+    },
+    stock: {
+        icon: '📦',
+        title: 'Produit disponible !',
+        template: '{product} est dispo chez {name}'
+    },
+    promo: {
+        icon: '🎉',
+        title: 'Promo !',
+        template: 'Offre speciale chez {name}'
+    }
+};
+
+// ============================================
+// MESSAGES PROACTIFS DES ROBOTS
+// ============================================
+
+// Messages de salutation selon l'heure
+const GREETING_MESSAGES = {
+    morning: [
+        "Bonjour ! Envie d'un petit-dejeuner ?",
+        "Hello ! Je suis ouvert, passe me voir !",
+        "Bien dormi ? Un cafe et une viennoiserie ?",
+        "Salut ! Commence bien ta journee avec moi !"
+    ],
+    lunch: [
+        "C'est l'heure du dejeuner ! J'ai ce qu'il te faut.",
+        "Pause dejeuner ? Viens faire le plein !",
+        "Tu as faim ? Je t'attends !",
+        "Hey ! Parfait pour un bon repas de midi."
+    ],
+    afternoon: [
+        "Un petit gouter ? Je suis la !",
+        "Envie d'un snack ? Passe me voir !",
+        "Petit creux de l'apres-midi ?"
+    ],
+    evening: [
+        "Bonsoir ! Une petite faim en rentrant ?",
+        "Hey ! Parfait pour un snack du soir.",
+        "Tu passes ce soir ? J'ai des nouveautes !"
+    ],
+    night: [
+        "Envie d'un encas nocturne ? Je suis 24h/24 !",
+        "Fringale de minuit ? Je suis la !",
+        "Nuit blanche ? J'ai de quoi te sustenter !"
+    ]
+};
+
+// Messages d'alerte (stock, prix, nouveautes)
+const ALERT_MESSAGES = {
+    stock_back: [
+        "Bonne nouvelle ! {product} est de retour en stock !",
+        "Tu attendais {product} ? C'est dispo maintenant !",
+        "Alerte restock : {product} est la !"
+    ],
+    price_drop: [
+        "Promo flash ! {product} a {newPrice} EUR au lieu de {oldPrice} EUR",
+        "Prix reduit sur {product} ! Profites-en vite.",
+        "Offre speciale : {product} en promo !"
+    ],
+    new_product: [
+        "Nouveau ! Decouvre {product} a {price} EUR",
+        "J'ai une nouveaute pour toi : {product}",
+        "Exclusivite : {product} vient d'arriver !"
+    ]
+};
 
 // ============================================
 // UTILITAIRES
@@ -144,8 +247,8 @@ function showToast(message, type = 'default') {
 
 function getTimeSlot() {
     const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 14) return 'lunch';
+    if (hour >= 6 && hour < 11) return 'morning';
+    if (hour >= 11 && hour < 14) return 'lunch';
     if (hour >= 14 && hour < 18) return 'afternoon';
     if (hour >= 18 && hour < 22) return 'evening';
     return 'night';
@@ -176,7 +279,7 @@ function getFilteredDistributors() {
 
 function saveToLocalStorage() {
     const data = {
-        favorites: AppState.favorites,
+        subscriptions: AppState.subscriptions,  // Anciennement favorites
         reports: AppState.reports,
         points: AppState.points,
         lastUpdated: new Date().toISOString()
@@ -193,14 +296,19 @@ function loadFromLocalStorage() {
         const data = localStorage.getItem(STORAGE_KEY);
         if (data) {
             const parsed = JSON.parse(data);
-            AppState.favorites = parsed.favorites || [];
+            // Migration automatique favorites -> subscriptions
+            if (parsed.favorites && !parsed.subscriptions) {
+                parsed.subscriptions = parsed.favorites;
+                delete parsed.favorites;
+            }
+            AppState.subscriptions = parsed.subscriptions || [];
             AppState.reports = parsed.reports || 0;
             AppState.points = parsed.points || 0;
             updateBadges();
         }
     } catch (e) {
         console.error('Erreur chargement localStorage:', e);
-        AppState.favorites = [];
+        AppState.subscriptions = [];
     }
 }
 
@@ -228,7 +336,8 @@ function saveConversations() {
     try {
         const data = {
             list: Conversations.list,
-            history: Conversations.history
+            history: Conversations.history,
+            unreadCounts: Conversations.unreadCounts  // Nouveaux messages non lus
         };
         localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(data));
     } catch (e) {
@@ -243,9 +352,51 @@ function loadConversations() {
             const parsed = JSON.parse(data);
             Conversations.list = parsed.list || [];
             Conversations.history = parsed.history || {};
+            Conversations.unreadCounts = parsed.unreadCounts || {};
         }
     } catch (e) {
         console.error('Erreur chargement conversations:', e);
+    }
+}
+
+function saveNotificationPrefs() {
+    try {
+        localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(NotificationPrefs));
+    } catch (e) {
+        console.error('Erreur sauvegarde prefs notifications:', e);
+    }
+}
+
+function loadNotificationPrefs() {
+    try {
+        const data = localStorage.getItem(NOTIFICATION_PREFS_KEY);
+        if (data) {
+            const parsed = JSON.parse(data);
+            Object.assign(NotificationPrefs, parsed);
+        }
+    } catch (e) {
+        console.error('Erreur chargement prefs notifications:', e);
+    }
+}
+
+function saveNotificationQueue() {
+    try {
+        localStorage.setItem(NOTIFICATION_QUEUE_KEY, JSON.stringify(NotificationQueue));
+    } catch (e) {
+        console.error('Erreur sauvegarde queue notifications:', e);
+    }
+}
+
+function loadNotificationQueue() {
+    try {
+        const data = localStorage.getItem(NOTIFICATION_QUEUE_KEY);
+        if (data) {
+            const parsed = JSON.parse(data);
+            NotificationQueue.pending = parsed.pending || [];
+            NotificationQueue.history = parsed.history || [];
+        }
+    } catch (e) {
+        console.error('Erreur chargement queue notifications:', e);
     }
 }
 
@@ -254,15 +405,28 @@ function clearUserData() {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PROFILE_KEY);
         localStorage.removeItem(CONVERSATIONS_KEY);
-        AppState.favorites = [];
+        localStorage.removeItem(NOTIFICATION_PREFS_KEY);
+        localStorage.removeItem(NOTIFICATION_QUEUE_KEY);
+        AppState.subscriptions = [];
         AppState.reports = 0;
         AppState.points = 0;
         Conversations.list = [];
         Conversations.history = {};
         Conversations.active = null;
+        // Reset notification prefs
+        Object.assign(NotificationPrefs, {
+            enabled: true,
+            quietHours: { enabled: true, start: 22, end: 8 },
+            geofence: { enabled: true, radius: 1000 },
+            perDistributor: {},
+            followedProducts: [],
+            lastNotifications: {}
+        });
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
         Object.assign(UserProfile, {
             preferences: { types: {}, maxDistance: null, priceRange: null, timeSlots: {} },
-            stats: { totalViews: 0, totalFavorites: 0, detailsViewed: 0, searchQueries: [], conversationsStarted: 0 },
+            stats: { totalViews: 0, totalSubscriptions: 0, detailsViewed: 0, searchQueries: [], conversationsStarted: 0 },
             history: { lastTypes: [], lastVisit: null, visitedIds: [] },
             confidence: 0
         });
@@ -294,7 +458,7 @@ function updateImplicitProfile(action, data) {
             break;
 
         case 'add_favorite':
-            UserProfile.stats.totalFavorites++;
+            UserProfile.stats.totalSubscriptions++;
             if (data.type) {
                 UserProfile.preferences.types[data.type] = (UserProfile.preferences.types[data.type] || 0) + 3;
             }
@@ -319,7 +483,7 @@ function updateImplicitProfile(action, data) {
     }
 
     const actions = UserProfile.stats.detailsViewed +
-                   UserProfile.stats.totalFavorites * 2 +
+                   UserProfile.stats.totalSubscriptions * 2 +
                    UserProfile.stats.conversationsStarted;
     UserProfile.confidence = Math.min(100, Math.round(actions * 5));
 
@@ -518,11 +682,11 @@ function updateMapMarkers(fitBounds = true) {
     const filteredDistributors = getFilteredDistributors();
 
     filteredDistributors.forEach(d => {
-        const isFavorite = AppState.favorites.includes(d.id);
+        const isSubscribed = AppState.subscriptions.includes(d.id);
         const hasConversation = Conversations.list.includes(d.id);
 
         const marker = L.marker([d.lat, d.lng], {
-            icon: createDistributorIcon(d, isFavorite)
+            icon: createDistributorIcon(d, isSubscribed)
         }).addTo(mainMap);
 
         // Stocker l'ID pour recherche rapide
@@ -543,8 +707,8 @@ function updateMapMarkers(fitBounds = true) {
     }
 }
 
-function createDistributorIcon(d, isFavorite) {
-    const color = isFavorite ? '#ef4444' : '#6366f1';
+function createDistributorIcon(d, isSubscribed) {
+    const color = isSubscribed ? '#ef4444' : '#6366f1';
 
     return L.divIcon({
         className: 'distributor-marker-container',
@@ -557,14 +721,14 @@ function createDistributorIcon(d, isFavorite) {
 
 function createPopupContent(d, hasConversation) {
     const distance = d.distance ? formatDistance(d.distance) : '';
-    const isFavorite = AppState.favorites.includes(d.id);
+    const isSubscribed = AppState.subscriptions.includes(d.id);
 
     return `
         <div class="map-popup">
             <strong>${d.emoji} ${escapeHTML(d.name)}</strong>
             <p>${escapeHTML(d.address)}</p>
             <p>★ ${d.rating} ${distance ? '- ' + distance : ''}</p>
-            ${isFavorite ? '<p style="color:#ef4444;font-weight:600;">Favori</p>' : ''}
+            ${isSubscribed ? '<p style="color:#6366f1;font-weight:600;">🔔 Abonne</p>' : ''}
             <button onclick="openConversation('${d.id}')" class="btn-popup-chat" aria-label="${hasConversation ? 'Reprendre la conversation avec' : 'Discuter avec'} ${escapeHTML(d.name)}">
                 ${hasConversation ? 'Reprendre' : 'Discuter'}
             </button>
@@ -644,6 +808,10 @@ function openConversation(distributorId) {
 
     saveConversations();
     displayChatModal(bot);
+
+    // Marquer les messages comme lus a l'ouverture
+    markConversationAsRead(distributorId);
+
     updateConversationsList();
     closeSidebar();
 }
@@ -680,7 +848,7 @@ function displayChatModal(bot) {
     modal.classList.add('active');
 
     // Mettre a jour le bouton favori
-    updateChatFavoriteButton(bot.id);
+    updateChatSubscribeButton(bot.id);
 
     // Scroll en bas
     setTimeout(() => {
@@ -773,7 +941,7 @@ function handleDistributorAction(action, bot) {
                 getDirectionsTo(d);
                 newReplies = [
                     { text: 'Produits', action: 'products' },
-                    { text: 'Favori', action: 'favorite' }
+                    { text: 'Abonnement', action: 'subscribe' }
                 ];
                 break;
 
@@ -786,11 +954,11 @@ function handleDistributorAction(action, bot) {
                 ];
                 break;
 
-            case 'favorite':
-            case 'Favori':
-                toggleFavorite(distributorId);
-                const isFav = AppState.favorites.includes(distributorId);
-                response = isFav ? 'Ajoute a tes favoris !' : 'Retire de tes favoris.';
+            case 'subscribe':
+            case 'Abonnement':
+                toggleSubscription(distributorId);
+                const isSub = AppState.subscriptions.includes(distributorId);
+                response = isSub ? 'Tu es maintenant abonne ! Je t\'enverrai des alertes.' : 'Tu ne recevras plus mes alertes.';
                 newReplies = [
                     { text: 'Produits', action: 'products' },
                     { text: 'Itineraire', action: 'directions' }
@@ -869,7 +1037,24 @@ function updateConversationsList() {
         return;
     }
 
-    list.innerHTML = Conversations.list.map(id => {
+    // Trier: abonnes en premier, puis par message le plus recent
+    const sortedList = [...Conversations.list].sort((a, b) => {
+        const aSubscribed = AppState.subscriptions.includes(a);
+        const bSubscribed = AppState.subscriptions.includes(b);
+
+        // Abonnes en premier
+        if (aSubscribed && !bSubscribed) return -1;
+        if (!aSubscribed && bSubscribed) return 1;
+
+        // Puis par message le plus recent
+        const aHistory = Conversations.history[a] || [];
+        const bHistory = Conversations.history[b] || [];
+        const aLast = aHistory[aHistory.length - 1]?.timestamp || 0;
+        const bLast = bHistory[bHistory.length - 1]?.timestamp || 0;
+        return bLast - aLast;
+    });
+
+    list.innerHTML = sortedList.map(id => {
         const d = AppState.distributors.find(dist => dist.id === id);
         if (!d) return '';
 
@@ -878,16 +1063,22 @@ function updateConversationsList() {
         const preview = lastMsg ? lastMsg.text.substring(0, 25) + (lastMsg.text.length > 25 ? '...' : '') : 'Nouvelle conversation';
         const time = lastMsg ? formatTime(lastMsg.timestamp) : '';
         const isActive = Conversations.active === id;
+        const isSubscribed = AppState.subscriptions.includes(id);
+        const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="conversation-item ${isActive ? 'active' : ''}" onclick="openConversation('${id}')">
+            <div class="conversation-item ${isActive ? 'active' : ''} ${isSubscribed ? 'subscribed' : ''}" onclick="openConversation('${id}')">
                 <div class="conversation-avatar">${d.emoji}</div>
                 <div class="conversation-info">
-                    <div class="conversation-name">${escapeHTML(d.name)}</div>
-                    <div class="conversation-preview">${escapeHTML(preview)}</div>
+                    <div class="conversation-name">
+                        ${escapeHTML(d.name)}
+                        ${isSubscribed ? '<span class="subscribed-icon">🔔</span>' : ''}
+                    </div>
+                    <div class="conversation-preview ${unreadCount > 0 ? 'unread' : ''}">${escapeHTML(preview)}</div>
                 </div>
                 <div class="conversation-meta">
                     <span class="conversation-time">${time}</span>
+                    ${unreadCount > 0 ? `<span class="conversation-badge">${unreadCount}</span>` : ''}
                 </div>
             </div>
         `;
@@ -1012,10 +1203,10 @@ function showDetails(id) {
         </div>
     `).join('');
 
-    const favBtn = document.getElementById('btn-favorite');
-    const isFavorite = AppState.favorites.includes(distributor.id);
-    favBtn.textContent = isFavorite ? 'Retirer' : 'Favori';
-    favBtn.className = isFavorite ? 'btn-primary-clean favorite-active' : 'btn-primary-clean';
+    const subBtn = document.getElementById('btn-subscribe');
+    const isSubscribed = AppState.subscriptions.includes(distributor.id);
+    subBtn.textContent = isSubscribed ? 'Abonne' : "S'abonner";
+    subBtn.className = isSubscribed ? 'btn-primary-clean subscribed-active' : 'btn-primary-clean';
 
     modal.classList.add('active');
 }
@@ -1038,33 +1229,35 @@ function getDirections() {
 }
 
 // ============================================
-// FAVORIS
+// ABONNEMENTS (ex-FAVORIS)
 // ============================================
 
-function toggleFavorite(id, event) {
+function toggleSubscription(id, event) {
     if (event) event.stopPropagation();
 
-    const index = AppState.favorites.indexOf(id);
+    const index = AppState.subscriptions.indexOf(id);
     const distributor = AppState.distributors.find(d => d.id === id);
 
     if (index === -1) {
-        AppState.favorites.push(id);
+        AppState.subscriptions.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
-        addActivityItem('favorite', id);
-        showToast(`${distributor?.name || 'Distributeur'} ajoute aux favoris`, 'success');
+        addActivityItem('subscription', id);
+        showToast(`Tu es maintenant abonne a ${distributor?.name || 'ce distributeur'}`, 'success');
+        // Generer un message de bienvenue du robot
+        generateWelcomeMessage(id);
     } else {
-        AppState.favorites.splice(index, 1);
-        addActivityItem('unfavorite', id);
-        showToast(`${distributor?.name || 'Distributeur'} retire des favoris`, 'default');
+        AppState.subscriptions.splice(index, 1);
+        addActivityItem('unsubscription', id);
+        showToast(`Tu ne recevras plus d'alertes de ${distributor?.name || 'ce distributeur'}`, 'default');
     }
 
     saveToLocalStorage();
     updateBadges();
-    updateMapMarkers();
+    updateMapMarkers(false);
     updateActivityBadge();
 
-    if (document.getElementById('favorites-view').classList.contains('view-active')) {
-        displayFavorites();
+    if (document.getElementById('subscriptions-view').classList.contains('view-active')) {
+        displaySubscriptions();
     }
 
     if (AppState.currentDistributor && AppState.currentDistributor.id === id) {
@@ -1072,68 +1265,72 @@ function toggleFavorite(id, event) {
     }
 }
 
-function toggleFavoriteFromModal() {
+function toggleSubscriptionFromModal() {
     if (AppState.currentDistributor) {
-        toggleFavorite(AppState.currentDistributor.id);
+        toggleSubscription(AppState.currentDistributor.id);
     }
 }
 
-function toggleChatFavorite() {
+function toggleChatSubscription() {
     if (!Conversations.active) return;
 
     const id = Conversations.active;
-    toggleFavorite(id);
-    updateChatFavoriteButton(id);
+    toggleSubscription(id);
+    updateChatSubscribeButton(id);
 }
 
-function updateChatFavoriteButton(distributorId) {
-    const btn = document.getElementById('chat-favorite');
+function updateChatSubscribeButton(distributorId) {
+    const btn = document.getElementById('chat-subscribe');
     if (!btn) return;
 
-    const isFavorite = AppState.favorites.includes(distributorId);
-    btn.classList.toggle('is-favorite', isFavorite);
-    btn.setAttribute('aria-label', isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    const isSubscribed = AppState.subscriptions.includes(distributorId);
+    btn.classList.toggle('is-subscribed', isSubscribed);
+    btn.setAttribute('aria-label', isSubscribed ? 'Se desabonner' : "S'abonner");
 }
 
-function displayFavorites() {
-    const list = document.getElementById('favorites-list');
-    const empty = document.getElementById('favorites-empty');
-    const count = document.getElementById('favorites-count');
+function displaySubscriptions() {
+    const list = document.getElementById('subscriptions-list');
+    const empty = document.getElementById('subscriptions-empty');
+    const count = document.getElementById('subscriptions-count');
 
-    if (AppState.favorites.length === 0) {
+    if (AppState.subscriptions.length === 0) {
         list.style.display = 'none';
         empty.style.display = 'flex';
-        count.textContent = '0 favori';
+        count.textContent = '0 abonnement';
         return;
     }
 
     list.style.display = 'block';
     empty.style.display = 'none';
-    count.textContent = `${AppState.favorites.length} favori(s)`;
+    count.textContent = `${AppState.subscriptions.length} abonnement(s)`;
 
-    list.innerHTML = AppState.favorites.map(id => {
+    list.innerHTML = AppState.subscriptions.map(id => {
         const d = AppState.distributors.find(dist => dist.id === id);
         if (!d) return '';
 
         const distance = d.distance ? formatDistance(d.distance) : '';
         const typeConfig = AppState.typeConfig[d.type] || {};
+        const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="favorite-card" onclick="openConversation('${d.id}'); goBackToMap();">
-                <div class="favorite-image" style="background: ${typeConfig.gradient || '#6366f1'}">
-                    <span class="favorite-emoji">${d.emoji}</span>
+            <div class="subscription-card" onclick="openConversation('${d.id}'); goBackToMap();">
+                ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
+                <div class="subscription-image" style="background: ${typeConfig.gradient || '#6366f1'}">
+                    <span class="subscription-emoji">${d.emoji}</span>
                 </div>
-                <div class="favorite-content">
-                    <h3 class="favorite-title">${escapeHTML(d.name)}</h3>
-                    <p class="favorite-address">${escapeHTML(d.address)}</p>
-                    <div class="favorite-meta">
-                        <span class="favorite-distance">${distance}</span>
-                        <span class="favorite-rating">${generateStars(d.rating)} ${d.rating}</span>
+                <div class="subscription-content">
+                    <h3 class="subscription-title">${escapeHTML(d.name)} <span class="subscribed-icon">🔔</span></h3>
+                    <p class="subscription-address">${escapeHTML(d.address)}</p>
+                    <div class="subscription-meta">
+                        <span class="subscription-distance">${distance}</span>
+                        <span class="subscription-rating">${generateStars(d.rating)} ${d.rating}</span>
                     </div>
                 </div>
-                <button class="btn-unfavorite" onclick="toggleFavorite('${d.id}', event)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                <button class="btn-unsubscribe" onclick="toggleSubscription('${d.id}', event)" title="Se desabonner">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
                     </svg>
                 </button>
             </div>
@@ -1142,16 +1339,174 @@ function displayFavorites() {
 }
 
 // ============================================
+// MESSAGES PROACTIFS ET NOTIFICATIONS
+// ============================================
+
+// Calculer le nombre total de messages non lus
+function getTotalUnreadCount() {
+    return Object.values(Conversations.unreadCounts).reduce((sum, count) => sum + count, 0);
+}
+
+// Mettre a jour les compteurs de messages non lus
+function updateUnreadCounts() {
+    Conversations.unreadCounts = {};
+
+    Object.keys(Conversations.history).forEach(distributorId => {
+        const messages = Conversations.history[distributorId];
+        const unread = messages.filter(m => m.type === 'bot' && m.read === false).length;
+        if (unread > 0) {
+            Conversations.unreadCounts[distributorId] = unread;
+        }
+    });
+}
+
+// Marquer une conversation comme lue
+function markConversationAsRead(distributorId) {
+    const messages = Conversations.history[distributorId] || [];
+    messages.forEach(m => {
+        if (m.type === 'bot') m.read = true;
+    });
+    delete Conversations.unreadCounts[distributorId];
+    saveConversations();
+    updateConversationsBadge();
+}
+
+// Mettre a jour le badge global des conversations
+function updateConversationsBadge() {
+    const total = getTotalUnreadCount();
+    const sidebarTitle = document.querySelector('.sidebar-title');
+
+    if (sidebarTitle) {
+        if (total > 0) {
+            sidebarTitle.innerHTML = `Mes conversations <span class="sidebar-badge">${total}</span>`;
+        } else {
+            sidebarTitle.textContent = 'Mes conversations';
+        }
+    }
+}
+
+// Generer un message de bienvenue lors de l'abonnement
+function generateWelcomeMessage(distributorId) {
+    const distributor = AppState.distributors.find(d => d.id === distributorId);
+    if (!distributor) return;
+
+    const welcomeMessages = [
+        `Super ! Tu es maintenant abonne. Je t'enverrai des alertes sur les nouveautes et les promos !`,
+        `Bienvenue ! Je te tiendrai au courant des stocks et des bonnes affaires.`,
+        `Merci de t'abonner ! Tu seras le premier informe des nouveaux produits.`
+    ];
+
+    const text = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+    addProactiveMessage(distributorId, { text, category: 'welcome' });
+}
+
+// Ajouter un message proactif a une conversation
+function addProactiveMessage(distributorId, messageData) {
+    const distributor = AppState.distributors.find(d => d.id === distributorId);
+    if (!distributor) return;
+
+    const msg = {
+        type: 'bot',
+        text: messageData.text,
+        timestamp: Date.now(),
+        read: false,
+        proactive: true,
+        category: messageData.category || 'info'
+    };
+
+    if (!Conversations.history[distributorId]) {
+        Conversations.history[distributorId] = [];
+    }
+    Conversations.history[distributorId].push(msg);
+
+    // Ajouter a la liste des conversations si pas present
+    if (!Conversations.list.includes(distributorId)) {
+        Conversations.list.unshift(distributorId);
+    } else {
+        // Remonter en haut de la liste
+        Conversations.list = Conversations.list.filter(id => id !== distributorId);
+        Conversations.list.unshift(distributorId);
+    }
+
+    // Mettre a jour le compteur non lus
+    Conversations.unreadCounts[distributorId] = (Conversations.unreadCounts[distributorId] || 0) + 1;
+
+    saveConversations();
+    updateConversationsList();
+    updateConversationsBadge();
+}
+
+// Generer les messages proactifs pour tous les abonnements
+function generateProactiveMessages() {
+    const now = Date.now();
+    const timeSlot = getTimeSlot();
+
+    AppState.subscriptions.forEach(distributorId => {
+        const distributor = AppState.distributors.find(d => d.id === distributorId);
+        if (!distributor) return;
+
+        const history = Conversations.history[distributorId] || [];
+        const lastMessage = history[history.length - 1];
+        const lastMessageTime = lastMessage?.timestamp || 0;
+        const hoursSinceLastMessage = (now - lastMessageTime) / (1000 * 60 * 60);
+
+        // Generer un message de salutation si pas de message depuis 4h+
+        if (hoursSinceLastMessage >= 4) {
+            const greeting = generateGreetingMessage(distributor, timeSlot);
+            if (greeting) {
+                addProactiveMessage(distributorId, greeting);
+            }
+        }
+
+        // Simuler une alerte stock (30% de chance pour la demo)
+        if (Math.random() < 0.3 && hoursSinceLastMessage >= 2) {
+            const alert = generateStockAlert(distributor);
+            if (alert) {
+                addProactiveMessage(distributorId, alert);
+            }
+        }
+    });
+}
+
+// Generer un message de salutation contextuel
+function generateGreetingMessage(distributor, timeSlot) {
+    const messages = GREETING_MESSAGES[timeSlot] || GREETING_MESSAGES.morning;
+    const text = messages[Math.floor(Math.random() * messages.length)];
+    return { text, category: `greeting_${timeSlot}` };
+}
+
+// Generer une alerte stock simulee
+function generateStockAlert(distributor) {
+    if (!distributor.products || distributor.products.length === 0) return null;
+
+    // Choisir un produit au hasard
+    const product = distributor.products[Math.floor(Math.random() * distributor.products.length)];
+
+    // Simuler differents types d'alertes
+    const alertTypes = ['stock_back', 'new_product'];
+    const alertType = alertTypes[Math.floor(Math.random() * alertTypes.length)];
+
+    const templates = ALERT_MESSAGES[alertType];
+    if (!templates) return null;
+
+    let text = templates[Math.floor(Math.random() * templates.length)];
+    text = text.replace('{product}', product.name);
+    text = text.replace('{price}', product.price || '?');
+
+    return { text, category: alertType };
+}
+
+// ============================================
 // PROFIL
 // ============================================
 
 function updateProfileStats() {
-    const statFavorites = document.getElementById('stat-favorites');
+    const statSubscriptions = document.getElementById('stat-subscriptions');
     const statReports = document.getElementById('stat-reports');
     const statConversations = document.getElementById('stat-conversations');
     const pointsValue = document.getElementById('profile-points');
 
-    if (statFavorites) statFavorites.textContent = AppState.favorites.length;
+    if (statSubscriptions) statSubscriptions.textContent = AppState.subscriptions.length;
     if (statReports) statReports.textContent = AppState.reports;
     if (statConversations) statConversations.textContent = Conversations.list.length;
     if (pointsValue) pointsValue.textContent = AppState.points;
@@ -1188,10 +1543,10 @@ function switchView(viewName) {
         v.classList.add('view-hidden');
     });
 
-    if (viewName === 'favorites') {
-        document.getElementById('favorites-view').classList.remove('view-hidden');
-        document.getElementById('favorites-view').classList.add('view-active');
-        displayFavorites();
+    if (viewName === 'subscriptions') {
+        document.getElementById('subscriptions-view').classList.remove('view-hidden');
+        document.getElementById('subscriptions-view').classList.add('view-active');
+        displaySubscriptions();
     } else if (viewName === 'profile') {
         document.getElementById('profile-view').classList.remove('view-hidden');
         document.getElementById('profile-view').classList.add('view-active');
@@ -1200,6 +1555,9 @@ function switchView(viewName) {
         document.getElementById('activity-view').classList.remove('view-hidden');
         document.getElementById('activity-view').classList.add('view-active');
         displayActivityFeed();
+    } else if (viewName === 'notification-settings') {
+        document.getElementById('notification-settings').classList.remove('view-hidden');
+        document.getElementById('notification-settings').classList.add('view-active');
     }
 }
 
@@ -1220,16 +1578,19 @@ function goBackToMap() {
 }
 
 function updateBadges() {
-    const favoritesBadge = document.getElementById('favorites-badge');
+    const subscriptionsBadge = document.getElementById('subscriptions-badge');
 
-    if (favoritesBadge) {
-        if (AppState.favorites.length > 0) {
-            favoritesBadge.textContent = AppState.favorites.length;
-            favoritesBadge.style.display = 'flex';
+    if (subscriptionsBadge) {
+        if (AppState.subscriptions.length > 0) {
+            subscriptionsBadge.textContent = AppState.subscriptions.length;
+            subscriptionsBadge.style.display = 'flex';
         } else {
-            favoritesBadge.style.display = 'none';
+            subscriptionsBadge.style.display = 'none';
         }
     }
+
+    // Mettre a jour le badge des conversations avec messages non lus
+    updateConversationsBadge();
 }
 
 // ============================================
@@ -1427,8 +1788,8 @@ function displayActivityFeed() {
     let filtered = ActivityFeed.items;
     if (ActivityFeed.filter === 'reports') {
         filtered = ActivityFeed.items.filter(i => i.type === 'report');
-    } else if (ActivityFeed.filter === 'favorites') {
-        filtered = ActivityFeed.items.filter(i => i.type === 'favorite' || i.type === 'unfavorite');
+    } else if (ActivityFeed.filter === 'subscriptions') {
+        filtered = ActivityFeed.items.filter(i => i.type === 'subscription' || i.type === 'unsubscription' || i.type === 'favorite' || i.type === 'unfavorite');
     }
 
     count.textContent = `${filtered.length} action(s)`;
@@ -1450,14 +1811,14 @@ function displayActivityFeed() {
             icon = '⚠️';
             iconClass = item.details.type === 'verified' ? 'verified' : 'report';
             text = `Signalement <strong>${getReportLabel(item.details.type)}</strong> sur ${escapeHTML(item.distributorName)}`;
-        } else if (item.type === 'favorite') {
-            icon = '❤️';
-            iconClass = 'favorite';
-            text = `Ajoute <strong>${escapeHTML(item.distributorName)}</strong> en favoris`;
-        } else if (item.type === 'unfavorite') {
-            icon = '💔';
-            iconClass = 'favorite';
-            text = `Retire <strong>${escapeHTML(item.distributorName)}</strong> des favoris`;
+        } else if (item.type === 'subscription' || item.type === 'favorite') {
+            icon = '🔔';
+            iconClass = 'subscription';
+            text = `Abonne a <strong>${escapeHTML(item.distributorName)}</strong>`;
+        } else if (item.type === 'unsubscription' || item.type === 'unfavorite') {
+            icon = '🔕';
+            iconClass = 'subscription';
+            text = `Desabonne de <strong>${escapeHTML(item.distributorName)}</strong>`;
         } else if (item.type === 'new_distributor') {
             icon = '📍';
             iconClass = 'verified';
@@ -1766,17 +2127,324 @@ function switchTab(tabName) {
 }
 
 // ============================================
+// SYSTEME DE NOTIFICATIONS INTELLIGENTES
+// ============================================
+
+// Verification si on est dans les heures calmes
+function isQuietHours() {
+    if (!NotificationPrefs.quietHours.enabled) return false;
+
+    const now = new Date();
+    const hour = now.getHours();
+    const { start, end } = NotificationPrefs.quietHours;
+
+    // Gere le cas ou start > end (ex: 22h - 8h)
+    if (start > end) {
+        return hour >= start || hour < end;
+    }
+    return hour >= start && hour < end;
+}
+
+// Verification cooldown anti-spam (1h entre notifications pour meme distributeur)
+function canNotify(distributorId) {
+    const lastNotif = NotificationPrefs.lastNotifications[distributorId];
+    if (!lastNotif) return true;
+
+    const hoursSince = (Date.now() - lastNotif) / (1000 * 60 * 60);
+    return hoursSince >= 1; // 1 heure minimum entre notifications
+}
+
+// Marquer comme notifie
+function markNotified(distributorId) {
+    NotificationPrefs.lastNotifications[distributorId] = Date.now();
+    saveNotificationPrefs();
+}
+
+// Mettre en file d'attente (heures calmes)
+function queueNotification(notification) {
+    NotificationQueue.pending.push({
+        ...notification,
+        queuedAt: Date.now()
+    });
+    saveNotificationQueue();
+}
+
+// Traiter les notifications en attente
+function processQueuedNotifications() {
+    if (isQuietHours()) return;
+
+    const pending = [...NotificationQueue.pending];
+    NotificationQueue.pending = [];
+
+    pending.forEach(notif => {
+        // Ne pas envoyer si trop vieux (> 12h)
+        if (Date.now() - notif.queuedAt < 12 * 60 * 60 * 1000) {
+            sendNotification(notif);
+        }
+    });
+
+    saveNotificationQueue();
+}
+
+// Demarrer la surveillance geofence
+function startGeofenceMonitoring() {
+    if (!navigator.geolocation) {
+        console.log('Geolocalisation non supportee');
+        return;
+    }
+
+    if (!NotificationPrefs.enabled || !NotificationPrefs.geofence.enabled) {
+        console.log('Geofencing desactive');
+        return;
+    }
+
+    // Surveiller position toutes les 30 secondes
+    setInterval(() => {
+        if (!NotificationPrefs.enabled || !NotificationPrefs.geofence.enabled) return;
+        if (isQuietHours()) return;
+
+        navigator.geolocation.getCurrentPosition(
+            checkNearbySubscriptions,
+            (err) => console.log('Erreur geoloc pour geofence:', err.message),
+            { enableHighAccuracy: false, timeout: 10000 }
+        );
+    }, 30000);
+
+    console.log('Surveillance geofence demarree');
+}
+
+// Verifier distributeurs proches
+function checkNearbySubscriptions(position) {
+    const userLat = position.coords.latitude;
+    const userLng = position.coords.longitude;
+
+    AppState.subscriptions.forEach(id => {
+        const dist = AppState.distributors.find(d => d.id === id);
+        if (!dist) return;
+
+        // Verifier si notifications activees pour ce distributeur
+        const prefs = NotificationPrefs.perDistributor[id];
+        if (prefs && prefs.proximity === false) return;
+
+        const distance = calculateDistance(userLat, userLng, dist.lat, dist.lng);
+        const distanceMeters = distance * 1000;
+
+        if (distanceMeters <= NotificationPrefs.geofence.radius) {
+            if (canNotify(id)) {
+                triggerProximityNotification(dist, Math.round(distanceMeters));
+            }
+        }
+    });
+}
+
+// Declencher notification de proximite
+function triggerProximityNotification(distributor, distanceMeters) {
+    const notification = {
+        type: 'proximity',
+        distributorId: distributor.id,
+        distributorName: distributor.name,
+        message: `${distributor.name} est a ${distanceMeters}m de toi`,
+        timestamp: Date.now()
+    };
+
+    if (isQuietHours()) {
+        queueNotification(notification);
+        return;
+    }
+
+    sendNotification(notification);
+}
+
+// Suivre un produit
+function followProduct(productName) {
+    const normalized = productName.toLowerCase().trim();
+    if (!NotificationPrefs.followedProducts.includes(normalized)) {
+        NotificationPrefs.followedProducts.push(normalized);
+        saveNotificationPrefs();
+        showToast(`Tu seras notifie pour "${productName}"`, 'success');
+        updateFollowedProductsList();
+    }
+}
+
+// Ne plus suivre un produit
+function unfollowProduct(productName) {
+    const normalized = productName.toLowerCase().trim();
+    NotificationPrefs.followedProducts = NotificationPrefs.followedProducts
+        .filter(p => p !== normalized);
+    saveNotificationPrefs();
+    showToast(`Produit "${productName}" retire`, 'info');
+    updateFollowedProductsList();
+}
+
+// Mettre a jour la liste des produits suivis dans l'UI
+function updateFollowedProductsList() {
+    const container = document.getElementById('followed-products-list');
+    if (!container) return;
+
+    if (NotificationPrefs.followedProducts.length === 0) {
+        container.innerHTML = '<p class="empty-message">Aucun produit suivi</p>';
+        return;
+    }
+
+    container.innerHTML = NotificationPrefs.followedProducts.map(product => {
+        const safeAttr = escapeHTML(product).replace(/'/g, '&#39;');
+        return `
+        <span class="followed-product-chip">
+            ${escapeHTML(product)}
+            <button class="remove-btn" onclick="unfollowProduct('${safeAttr}')">&times;</button>
+        </span>
+    `;
+    }).join('');
+}
+
+// Declencher notification produit disponible
+function triggerProductNotification(distributor, product) {
+    const notification = {
+        type: 'stock',
+        distributorId: distributor.id,
+        distributorName: distributor.name,
+        product: product,
+        message: `${product} est dispo chez ${distributor.name}`,
+        timestamp: Date.now()
+    };
+
+    if (isQuietHours()) {
+        queueNotification(notification);
+        return;
+    }
+
+    sendNotification(notification);
+}
+
+// Envoyer une notification
+function sendNotification(notif) {
+    if (!NotificationPrefs.enabled) return;
+
+    // Ajouter a l'historique
+    NotificationQueue.history.unshift(notif);
+    if (NotificationQueue.history.length > 50) {
+        NotificationQueue.history.pop();
+    }
+    saveNotificationQueue();
+
+    // Afficher dans l'app
+    showNotificationBanner(notif);
+
+    // Vibration legere si supporte
+    if (navigator.vibrate) {
+        navigator.vibrate(200);
+    }
+
+    // Marquer comme notifie
+    markNotified(notif.distributorId);
+
+    // Ajouter au feed d'activite
+    addActivityItem('notification', notif.distributorId, {
+        subtype: notif.type,
+        message: notif.message
+    });
+}
+
+// Afficher banner de notification
+function showNotificationBanner(notif) {
+    const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
+
+    const banner = document.createElement('div');
+    banner.className = 'notification-banner';
+    banner.innerHTML = `
+        <span class="notif-icon">${typeInfo.icon}</span>
+        <div class="notif-content">
+            <strong>${typeInfo.title}</strong>
+            <p>${escapeHTML(notif.message)}</p>
+        </div>
+        <button class="notif-action" onclick="openConversation('${notif.distributorId}'); this.closest('.notification-banner').remove();">
+            Voir
+        </button>
+        <button class="notif-close" onclick="this.closest('.notification-banner').remove();">&times;</button>
+    `;
+
+    document.body.appendChild(banner);
+
+    // Animation entree
+    setTimeout(() => banner.classList.add('show'), 10);
+
+    // Auto-disparition apres 5s
+    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.classList.remove('show');
+            setTimeout(() => {
+                if (banner.parentNode) banner.remove();
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Ouvrir les parametres de notifications
+function openNotificationSettings() {
+    const settingsView = document.getElementById('notification-settings');
+    if (!settingsView) return;
+
+    // Remplir les valeurs actuelles
+    document.getElementById('notif-enabled').checked = NotificationPrefs.enabled;
+    document.getElementById('quiet-hours-enabled').checked = NotificationPrefs.quietHours.enabled;
+    document.getElementById('quiet-start').value = `${String(NotificationPrefs.quietHours.start).padStart(2, '0')}:00`;
+    document.getElementById('quiet-end').value = `${String(NotificationPrefs.quietHours.end).padStart(2, '0')}:00`;
+    document.getElementById('geofence-enabled').checked = NotificationPrefs.geofence.enabled;
+    document.getElementById('geofence-radius').value = NotificationPrefs.geofence.radius;
+    document.getElementById('radius-value').textContent = `${NotificationPrefs.geofence.radius / 1000} km`;
+
+    // Mettre a jour la liste des produits suivis
+    updateFollowedProductsList();
+
+    // Afficher la vue
+    switchView('notification-settings');
+}
+
+// Sauvegarder les parametres depuis l'UI
+function saveNotificationSettingsFromUI() {
+    NotificationPrefs.enabled = document.getElementById('notif-enabled').checked;
+    NotificationPrefs.quietHours.enabled = document.getElementById('quiet-hours-enabled').checked;
+
+    const startTime = document.getElementById('quiet-start').value;
+    const endTime = document.getElementById('quiet-end').value;
+    NotificationPrefs.quietHours.start = parseInt(startTime.split(':')[0]);
+    NotificationPrefs.quietHours.end = parseInt(endTime.split(':')[0]);
+
+    NotificationPrefs.geofence.enabled = document.getElementById('geofence-enabled').checked;
+    NotificationPrefs.geofence.radius = parseInt(document.getElementById('geofence-radius').value);
+
+    saveNotificationPrefs();
+    showToast('Parametres sauvegardes', 'success');
+}
+
+// Mettre a jour l'affichage du rayon
+function updateRadiusDisplay() {
+    const value = document.getElementById('geofence-radius').value;
+    document.getElementById('radius-value').textContent = `${value / 1000} km`;
+}
+
+// Ajouter un produit a suivre via prompt
+function promptAddProductFollow() {
+    const product = prompt('Quel produit veux-tu suivre ?');
+    if (product && product.trim()) {
+        followProduct(product.trim());
+    }
+}
+
+// ============================================
 // INITIALISATION
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('SnackMatch V4.5 - Initialisation...');
+    console.log('SnackMatch V7.0 - Smart Notifications Edition - Initialisation...');
 
     // Charger les donnees
     loadFromLocalStorage();
     loadProfile();
     loadConversations();
     loadActivityFeed();
+    loadNotificationPrefs();
+    loadNotificationQueue();
 
     // Obtenir la geolocalisation
     await getUserLocation();
@@ -1790,8 +2458,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialiser les filtres
     initFilterChips();
 
+    // Mettre a jour les compteurs de messages non lus
+    updateUnreadCounts();
+
     // Mettre a jour la liste des conversations
     updateConversationsList();
+
+    // Generer les messages proactifs pour les abonnements
+    if (AppState.subscriptions.length > 0) {
+        setTimeout(() => {
+            generateProactiveMessages();
+        }, 2000); // Attendre 2s pour que tout soit charge
+    }
+
+    // Demarrer la surveillance geofence
+    startGeofenceMonitoring();
+
+    // Traiter les notifications en attente (si fin heures calmes)
+    processQueuedNotifications();
+
+    // Mettre a jour le badge des conversations
+    updateConversationsBadge();
 
     // Event listeners navigation
     document.querySelectorAll('.nav-icon-btn').forEach(btn => {
@@ -1808,9 +2495,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
 
     // Boutons retour
-    document.getElementById('back-from-favorites')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-subscriptions')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('profile'));
+
+    // Bouton parametres notifications depuis profil
+    document.getElementById('notification-settings-btn')?.addEventListener('click', openNotificationSettings);
 
     // Bottom navigation
     document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -1842,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Chat modal
     document.getElementById('chat-close').addEventListener('click', closeChatModal);
     document.getElementById('chat-back').addEventListener('click', closeChatModal);
-    document.getElementById('chat-favorite').addEventListener('click', toggleChatFavorite);
+    document.getElementById('chat-subscribe').addEventListener('click', toggleChatSubscription);
     document.getElementById('chat-report').addEventListener('click', openReportFromChat);
 
     document.getElementById('chat-send').addEventListener('click', () => {
@@ -1861,7 +2552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Modals details
     document.getElementById('close-detail').addEventListener('click', closeDetailModal);
     document.getElementById('get-directions').addEventListener('click', getDirections);
-    document.getElementById('btn-favorite').addEventListener('click', toggleFavoriteFromModal);
+    document.getElementById('btn-subscribe').addEventListener('click', toggleSubscriptionFromModal);
     document.getElementById('btn-report').addEventListener('click', openReportModal);
 
     document.getElementById('close-report').addEventListener('click', () => {
@@ -1889,5 +2580,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    console.log('SnackMatch V4.5 - Pret !');
+    console.log('SnackMatch V7.0 - Pret !');
 });
