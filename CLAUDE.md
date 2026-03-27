@@ -1,82 +1,113 @@
-# SnackMatch - Project Configuration
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
 
-PWA de decouverte de distributeurs automatiques (Cote Basque).
-Style "Waze des distributeurs" avec interface chatbot par distributeur.
+SnackMatch - PWA "Waze des distributeurs automatiques" pour la Cote Basque.
+Interface carte Leaflet + chatbot par distributeur avec robots proactifs et notifications intelligentes.
 
 ## Stack
 
-- HTML5, CSS3, Vanilla JavaScript (ES6+)
+- HTML5, CSS3, Vanilla JavaScript (ES6+) - **pas de frameworks, pas de build system**
 - Leaflet.js 1.9.4 + OpenStreetMap
-- LocalStorage API
-- PWA (manifest.json + Service Worker)
+- LocalStorage pour la persistance
+- PWA (manifest.json, service worker desactive en dev)
 
 ## Architecture
 
+Application single-page en 3 fichiers principaux :
+
+- `index.html` - Structure HTML unique, charge Leaflet CDN + `styles.css` + `app.js`
+- `styles.css` - CSS variables, mobile-first, ~1800 lignes
+- `app.js` - Toute la logique JS dans un seul fichier, ~2500 lignes
+- `data/distributors.json` - Donnees des distributeurs (id, type, lat/lng, produits, prix)
+- `sw.js` - Service Worker (desactive, se desinstalle automatiquement)
+
+### Structure de app.js (sections dans l'ordre)
+
 ```
-index.html      # Structure HTML unique
-styles.css      # CSS (variables, mobile-first)
-app.js          # Logique application (single file)
-data/           # JSON (distributeurs, config)
+ETAT GLOBAL        - AppState, Conversations, ActivityFeed, UserProfile, AddMode
+CONSTANTES         - DISTRIBUTOR_TYPES, cles localStorage (STORAGE_KEY, etc.)
+NOTIFICATIONS      - NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES
+MESSAGES PROACTIFS - GREETING_MESSAGES (par creneau horaire), ALERT_MESSAGES
+UTILITAIRES        - escapeHTML(), showToast(), getTimeSlot(), calculateDistance()
+PERSISTANCE        - save/load LocalStorage, profil, conversations, activite, votes
+GEOLOCALISATION    - getUserLocation(), watchPosition
+CHARGEMENT DONNEES - loadDistributors() (donnees embarquees en fallback file://)
+CARTE LEAFLET      - initMainMap(), addDistributorMarkers(), marqueurs custom
+CONVERSATIONS      - openConversation(), addMessage(), reponses bot contextuelles
+FILTRES            - initFilterChips(), toggleFilter() par type de distributeur
+SIDEBAR            - toggleSidebar(), closeSidebar()
+MODAL DETAILS      - openDistributorDetails(), signalements, votes
+ABONNEMENTS        - toggleSubscription(), messages proactifs a l'abonnement
+NOTIFICATIONS      - geofencing, heures calmes, cooldown, produits suivis
+PROFIL             - switchView(), stats utilisateur
+RECHERCHE          - recherche par nom/ville/type
+SIGNALEMENT        - 6 types (rupture stock, panne, prix incorrect, etc.)
+FEED ACTIVITE      - activites communautaires, filtres
+AJOUT DISTRIBUTEUR - mode ajout avec clic carte
+INITIALISATION     - DOMContentLoaded, event listeners, demarrage geofence
 ```
 
-## Principes
+### Objets d'etat globaux cles
 
-1. **Vanilla JS uniquement** - Pas de frameworks
-2. **Single file app.js** - Code JS dans un seul fichier
-3. **Mobile-first** - Design responsive, touch-friendly
-4. **UX Gen Z** - Interface directe, pas d'intermediaires
-5. **Francais** - UI en francais (sans accents dans le code)
+- **AppState** : distributeurs charges, abonnements, position, filtres actifs
+- **Conversations** : historique messages par distributeur, compteurs non lus
+- **NotificationPrefs** : heures calmes (22h-8h), rayon geofence, produits suivis
+- **UserProfile** : preferences implicites, stats, historique (pas d'authentification)
+
+### Persistance LocalStorage
+
+7 cles distinctes : `snackmatch_user`, `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_activity`, `snackmatch_votes`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`
+
+Migration automatique `favorites` -> `subscriptions` dans `loadFromLocalStorage()`.
 
 ## Conventions
 
 ### Nommage
-- Fonctions : `camelCase`
-- Constantes : `UPPER_SNAKE_CASE`
-- CSS/IDs : `kebab-case`
+- Fonctions JS : `camelCase`
+- Constantes JS : `UPPER_SNAKE_CASE`
+- CSS classes/IDs : `kebab-case`
 
 ### JavaScript
-- `const` pour immutables, `let` pour mutables, jamais `var`
+- `const`/`let` uniquement, jamais `var`
 - Fonctions nommees (pas arrow pour les declarations)
 - Early return pour lisibilite
-- Try/catch pour localStorage et fetch
+- Try/catch obligatoire pour localStorage et fetch
 
 ### Securite
-- **XSS** : Toujours `escapeHTML()` pour contenu utilisateur
+- **XSS** : Toujours `escapeHTML()` pour tout contenu utilisateur affiche dans le DOM
 - Valider les donnees externes avant utilisation
 
 ### Performance
-- Batch DOM updates (pas de innerHTML += en boucle)
+- Batch DOM updates (pas de `innerHTML +=` en boucle)
 - Event delegation sur conteneurs
-- Stocker ID sur marqueurs Leaflet (pas de comparaison lat/lng)
+- Stocker ID sur marqueurs Leaflet (`marker.distributorId`), pas de comparaison lat/lng
+
+### UI
+- Francais pour l'interface (sans accents dans le code source)
+- Mobile-first, touch-friendly
+- Toasts pour le feedback utilisateur (`showToast()`)
 
 ## Commandes
 
 ```bash
+# Lancer en local (pas de build)
+# Ouvrir index.html dans Chrome, ou :
+npx http-server -p 8080 -c-1
+
+# Tester
+# DevTools > Console (erreurs JS)
+# DevTools > Application > LocalStorage (donnees persistees)
+
 # Git
-git checkout -b feature/nom    # Nouvelle feature
-git commit -m "feat: desc"     # Commit
-
-# Test
-# Ouvrir index.html dans Chrome
-# DevTools > Console (erreurs)
-# DevTools > Application > LocalStorage
+git checkout -b feature/nom
+git commit -m "feat: description"
 ```
 
-## Structure app.js
+## Points d'attention
 
-```
-// ETAT GLOBAL (AppState, Conversations, UserProfile)
-// VARIABLES GLOBALES
-// UTILITAIRES
-// PERSISTANCE
-// GEOLOCALISATION
-// CHARGEMENT DONNEES
-// CARTE LEAFLET
-// CONVERSATIONS
-// MODALS
-// FAVORIS
-// FILTRES
-// INITIALISATION
-```
+- Le service worker est volontairement desactive (`sw.js` se desinstalle). Ne pas le reactiver sans plan de cache.
+- Les donnees distributeurs sont embarquees en dur dans `loadDistributors()` comme fallback pour le mode `file://`. Le JSON dans `data/distributors.json` est la source de verite mais n'est charge que via fetch.
+- Le dossier `js/` contient des fichiers legacy non utilises par l'app actuelle (tout est dans `app.js`).

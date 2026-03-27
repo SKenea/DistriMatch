@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Stephane \\(NoAdmin\\)/Documents/Stephane/Personnel/SKenea/StreetFoodGeoEvaluator/$APPDATA/Claude/**)",
+      "Read(//c/Users/Stephane \\(NoAdmin\\)/Documents/Stephane/Personnel/SKenea/StreetFoodGeoEvaluator/$HOME/.claude/**)",
+      "Read(//c/Users/Stephane \\(NoAdmin\\)/Documents/Stephane/Personnel/SKenea/StreetFoodGeoEvaluator/$HOME/**)",
+      "Bash(npx @playwright/mcp@latest --help)",
+      "Read(//c/Users/Stephane \\(NoAdmin\\)/Documents/Stephane/Personnel/SKenea/StreetFoodGeoEvaluator/**)"
+    ]
+  }
+}
