@@ -19,10 +19,11 @@ Interface carte Leaflet + chatbot par distributeur avec robots proactifs et noti
 Application single-page en 3 fichiers principaux :
 
 - `index.html` - Structure HTML unique, charge Leaflet CDN + `styles.css` + `app.js`
-- `styles.css` - CSS variables, mobile-first, ~1800 lignes
+- `styles.css` - CSS variables, mobile-first, ~2500 lignes
 - `app.js` - Toute la logique JS dans un seul fichier, ~2500 lignes
-- `data/distributors.json` - Donnees des distributeurs (id, type, lat/lng, produits, prix)
+- `data/distributors.json` - Donnees des distributeurs (source de verite)
 - `sw.js` - Service Worker (desactive, se desinstalle automatiquement)
+- `js/` - Fichiers legacy non utilises (tout est dans `app.js`)
 
 ### Structure de app.js (sections dans l'ordre)
 
@@ -59,9 +60,17 @@ INITIALISATION     - DOMContentLoaded, event listeners, demarrage geofence
 
 ### Persistance LocalStorage
 
-7 cles distinctes : `snackmatch_user`, `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_activity`, `snackmatch_votes`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`
+8 cles distinctes : `snackmatch_user`, `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_activity`, `snackmatch_votes`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`
 
 Migration automatique `favorites` -> `subscriptions` dans `loadFromLocalStorage()`.
+
+### Types de distributeurs
+
+9 types avec filtres : `pizza`, `bakery`, `fries`, `meals`, `cheese`, `dairy`, `meat`, `terroir`, `general`. Chaque type a un emoji, un label et un gradient CSS definis dans `data/distributors.json` (champ `typeConfig`).
+
+### Donnees distributeurs (format JSON)
+
+Chaque distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `lng`, `rating`, `reviewCount`, `status` (verified/warning), `priceRange`, `products[]` (name, price, available).
 
 ## Conventions
 
@@ -97,7 +106,11 @@ Migration automatique `favorites` -> `subscriptions` dans `loadFromLocalStorage(
 # Ouvrir index.html dans Chrome, ou :
 npx http-server -p 8080 -c-1
 
-# Tester
+# Tester avec Playwright MCP
+# Naviguer vers http://localhost:8080 via browser_navigate
+# Utiliser browser_snapshot et browser_screenshot pour verifier l'UI
+
+# Debug
 # DevTools > Console (erreurs JS)
 # DevTools > Application > LocalStorage (donnees persistees)
 
@@ -110,4 +123,4 @@ git commit -m "feat: description"
 
 - Le service worker est volontairement desactive (`sw.js` se desinstalle). Ne pas le reactiver sans plan de cache.
 - Les donnees distributeurs sont embarquees en dur dans `loadDistributors()` comme fallback pour le mode `file://`. Le JSON dans `data/distributors.json` est la source de verite mais n'est charge que via fetch.
-- Le dossier `js/` contient des fichiers legacy non utilises par l'app actuelle (tout est dans `app.js`).
+- Le `README.md` decrit la V3.0 et est obsolete (swipe cards, bottom nav 4 onglets). Ne pas s'en inspirer pour l'architecture actuelle.

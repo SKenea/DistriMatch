@@ -15,5 +15,11 @@ test_*.txt
 .DS_Store
 Thumbs.db
 
+# Playwright MCP
+.playwright-mcp/
+
+# Artefacts Windows
+nul
+
 # Node (si utilisé plus tard)
 node_modules/
