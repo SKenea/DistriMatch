@@ -1,6 +1,6 @@
 {
-  "name": "SnackMatch - Distributeurs Alimentaires",
-  "short_name": "SnackMatch",
+  "name": "DistriMatch - Distributeurs Alimentaires",
+  "short_name": "DistriMatch",
   "description": "Trouvez les meilleurs distributeurs alimentaires près de chez vous - Côte Basque",
   "start_url": "/index.html",
   "display": "standalone",

@@ -1,5 +1,5 @@
 /**
- * SnackMatch V7.0 - Smart Notifications Edition
+ * DistriMatch V7.0 - Smart Notifications Edition
  * Systeme d'abonnements avec robots proactifs
  * Notifications intelligentes: geofencing, heures calmes, alertes produits
  * Sidebar + Carte + Modal Chat par distributeur
@@ -545,19 +545,19 @@ async function loadDistributors() {
         const data = await response.json();
         AppState.distributors = data.distributors;
         AppState.typeConfig = data.typeConfig;
-        console.log('[SnackMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
+        console.log('[DistriMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
     } catch (error) {
-        console.log('[SnackMatch] Mode fichier local - utilisation des donnees embarquees');
+        console.log('[DistriMatch] Mode fichier local - utilisation des donnees embarquees');
         AppState.distributors = EMBEDDED_DATA.distributors;
         AppState.typeConfig = EMBEDDED_DATA.typeConfig;
-        console.log('[SnackMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
+        console.log('[DistriMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
     }
 
     // Ajouter les distributeurs utilisateur
     const userDistributors = loadUserDistributors();
     if (userDistributors.length > 0) {
         AppState.distributors = [...AppState.distributors, ...userDistributors];
-        console.log('[SnackMatch] Distributeurs utilisateur:', userDistributors.length);
+        console.log('[DistriMatch] Distributeurs utilisateur:', userDistributors.length);
     }
 
     if (AppState.userLocation) {
@@ -669,7 +669,7 @@ function initMainMap() {
     }
 
     updateMapMarkers();
-    console.log('[SnackMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
+    console.log('[DistriMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
 }
 
 function updateMapMarkers(fitBounds = true) {
@@ -729,6 +729,9 @@ function createPopupContent(d, hasConversation) {
             <p>${escapeHTML(d.address)}</p>
             <p>★ ${d.rating} ${distance ? '- ' + distance : ''}</p>
             ${isSubscribed ? '<p style="color:#6366f1;font-weight:600;">🔔 Abonne</p>' : ''}
+            <button onclick="showDetails('${d.id}')" class="btn-popup-details" aria-label="Voir la fiche de ${escapeHTML(d.name)}">
+                Voir la fiche
+            </button>
             <button onclick="openConversation('${d.id}')" class="btn-popup-chat" aria-label="${hasConversation ? 'Reprendre la conversation avec' : 'Discuter avec'} ${escapeHTML(d.name)}">
                 ${hasConversation ? 'Reprendre' : 'Discuter'}
             </button>
@@ -2436,7 +2439,7 @@ function promptAddProductFollow() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('SnackMatch V7.0 - Smart Notifications Edition - Initialisation...');
+    console.log('DistriMatch V7.0 - Smart Notifications Edition - Initialisation...');
 
     // Charger les donnees
     loadFromLocalStorage();
@@ -2580,5 +2583,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    console.log('SnackMatch V7.0 - Pret !');
+    console.log('DistriMatch V7.0 - Pret !');
 });
