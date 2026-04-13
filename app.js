@@ -2231,7 +2231,7 @@ function cancelAddDistributor() {
     mainMap.off('click', onMapClickForPlacement);
 }
 
-function confirmAddDistributor() {
+async function confirmAddDistributor() {
     const typeSelect = document.getElementById('new-dist-type');
     const nameInput = document.getElementById('new-dist-name');
     const addressInput = document.getElementById('new-dist-address');
@@ -2249,8 +2249,9 @@ function confirmAddDistributor() {
 
     const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
 
+    const distId = `user-${Date.now()}`;
     const newDistributor = {
-        id: `user-${Date.now()}`,
+        id: distId,
         name: name,
         type: type,
         emoji: typeInfo?.emoji || '🏪',
@@ -2266,7 +2267,35 @@ function confirmAddDistributor() {
         addedBy: 'user'
     };
 
-    // Sauvegarder en localStorage
+    // Sauvegarder vers Supabase si disponible
+    if (supabaseClient) {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userId = session?.user?.id || null;
+            const { error } = await supabaseClient.from('distributors').insert({
+                id: distId,
+                name: name,
+                type: type,
+                emoji: typeInfo?.emoji || '🏪',
+                lat: AddMode.lat,
+                lng: AddMode.lng,
+                address: address || 'Adresse a completer',
+                city: 'A verifier',
+                rating: 5.0,
+                review_count: 0,
+                status: 'verified',
+                price_range: '€',
+                is_user_added: true,
+                added_by: userId
+            });
+            if (error) throw error;
+            console.log('[DistriMatch] Distributeur ajoute sur Supabase:', distId);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur ajout Supabase:', e.message);
+        }
+    }
+
+    // Sauvegarder en localStorage (fallback)
     saveUserDistributor(newDistributor);
 
     // Ajouter a la liste en memoire
