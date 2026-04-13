@@ -378,7 +378,15 @@
             </div>
 
             <div class="products-section-clean">
-                <h3>Produits disponibles</h3>
+                <div class="products-header-clean">
+                    <h3>Produits disponibles</h3>
+                    <button class="btn-add-product" id="btn-add-product" onclick="toggleAddProductForm()">+ Ajouter</button>
+                </div>
+                <div id="add-product-form" class="add-product-form" style="display:none">
+                    <input type="text" id="detail-product-name" placeholder="Nom du produit">
+                    <input type="number" id="detail-product-price" placeholder="Prix" step="0.10" min="0">
+                    <button class="btn-confirm-small" onclick="submitDetailProduct()">OK</button>
+                </div>
                 <div id="products-list"></div>
             </div>
 

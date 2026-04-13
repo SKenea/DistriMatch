@@ -1285,15 +1285,7 @@ function showDetails(id) {
     document.getElementById('detail-reviews').textContent = `(${distributor.reviewCount} avis)`;
     document.getElementById('detail-distance').textContent = distance;
 
-    const productsList = document.getElementById('products-list');
-    productsList.innerHTML = distributor.products.map(p => `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}">
-            <div class="product-info-clean">
-                <div class="product-name-clean">${escapeHTML(p.name)}</div>
-            </div>
-            <div class="product-price-clean">${p.price.toFixed(2)}€</div>
-        </div>
-    `).join('');
+    renderProductsList(distributor);
 
     const subBtn = document.getElementById('btn-subscribe');
     const isSubscribed = AppState.subscriptions.includes(distributor.id);
@@ -1320,7 +1312,205 @@ function showDetails(id) {
 
 function closeDetailModal() {
     document.getElementById('detail-modal').classList.remove('active');
+    document.getElementById('add-product-form').style.display = 'none';
     AppState.currentDistributor = null;
+}
+
+// ============================================
+// CRUD PRODUITS
+// ============================================
+
+function renderProductsList(distributor) {
+    const productsList = document.getElementById('products-list');
+    if (!distributor || !productsList) return;
+
+    productsList.innerHTML = distributor.products.map((p, index) => `
+        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
+            <div class="product-info-clean">
+                <div class="product-name-clean">${escapeHTML(p.name)}</div>
+            </div>
+            <div class="product-actions-clean">
+                <div class="product-price-clean">${p.price.toFixed(2)}€</div>
+                <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
+                    ${p.available ? '✓' : '✗'}
+                </button>
+                <button class="product-btn-edit" onclick="editProduct(${index})" title="Modifier">✎</button>
+                <button class="product-btn-delete" onclick="deleteProduct(${index})" title="Supprimer">×</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleAddProductForm() {
+    const form = document.getElementById('add-product-form');
+    form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+    if (form.style.display === 'flex') {
+        document.getElementById('detail-product-name').value = '';
+        document.getElementById('detail-product-price').value = '';
+        document.getElementById('detail-product-name').focus();
+    }
+}
+
+// CREATE
+async function submitDetailProduct() {
+    const name = document.getElementById('detail-product-name').value.trim();
+    const price = parseFloat(document.getElementById('detail-product-price').value) || 0;
+
+    if (!name || !AppState.currentDistributor) return;
+
+    const product = { name, price, available: true };
+
+    if (supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient.from('products').insert({
+                distributor_id: AppState.currentDistributor.id,
+                name: name,
+                price: price,
+                available: true
+            }).select('id').single();
+            if (error) throw error;
+            product.dbId = data.id;
+            console.log('[DistriMatch] Produit ajoute sur Supabase:', name);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur ajout produit Supabase:', e.message);
+        }
+    }
+
+    AppState.currentDistributor.products.push(product);
+    renderProductsList(AppState.currentDistributor);
+
+    document.getElementById('detail-product-name').value = '';
+    document.getElementById('detail-product-price').value = '';
+    document.getElementById('add-product-form').style.display = 'none';
+
+    showToast(`${escapeHTML(name)} ajoute !`, 'success');
+}
+
+// UPDATE - ouvrir l'edition inline
+function editProduct(index) {
+    const distributor = AppState.currentDistributor;
+    if (!distributor) return;
+    const product = distributor.products[index];
+    if (!product) return;
+
+    const productsList = document.getElementById('products-list');
+    const item = productsList.querySelectorAll('.product-item-clean')[index];
+    if (!item) return;
+
+    item.innerHTML = `
+        <div class="product-edit-row">
+            <input type="text" class="product-edit-name" value="${escapeHTML(product.name)}">
+            <input type="number" class="product-edit-price" value="${product.price}" step="0.10" min="0">
+            <button class="product-btn-save" onclick="saveProduct(${index})">✓</button>
+            <button class="product-btn-cancel-edit" onclick="renderProductsList(AppState.currentDistributor)">✗</button>
+        </div>
+    `;
+    item.querySelector('.product-edit-name').focus();
+}
+
+// UPDATE - sauvegarder
+async function saveProduct(index) {
+    const distributor = AppState.currentDistributor;
+    if (!distributor) return;
+    const product = distributor.products[index];
+    if (!product) return;
+
+    const productsList = document.getElementById('products-list');
+    const item = productsList.querySelectorAll('.product-item-clean')[index];
+    const newName = item.querySelector('.product-edit-name').value.trim();
+    const newPrice = parseFloat(item.querySelector('.product-edit-price').value) || 0;
+
+    if (!newName) return;
+
+    // Mettre a jour en Supabase
+    if (supabaseClient && product.dbId) {
+        try {
+            const { error } = await supabaseClient.from('products')
+                .update({ name: newName, price: newPrice })
+                .eq('id', product.dbId);
+            if (error) throw error;
+            console.log('[DistriMatch] Produit modifie sur Supabase:', newName);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur modification produit:', e.message);
+        }
+    } else if (supabaseClient) {
+        // Pas de dbId : chercher par distributor_id + ancien nom
+        try {
+            const { error } = await supabaseClient.from('products')
+                .update({ name: newName, price: newPrice })
+                .eq('distributor_id', distributor.id)
+                .eq('name', product.name);
+            if (error) throw error;
+            console.log('[DistriMatch] Produit modifie sur Supabase:', newName);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur modification produit:', e.message);
+        }
+    }
+
+    product.name = newName;
+    product.price = newPrice;
+    renderProductsList(distributor);
+    showToast('Produit modifie', 'success');
+}
+
+// UPDATE - toggle disponibilite
+async function toggleProductAvailability(index) {
+    const distributor = AppState.currentDistributor;
+    if (!distributor) return;
+    const product = distributor.products[index];
+    if (!product) return;
+
+    const newAvailable = !product.available;
+
+    if (supabaseClient) {
+        try {
+            if (product.dbId) {
+                await supabaseClient.from('products')
+                    .update({ available: newAvailable })
+                    .eq('id', product.dbId);
+            } else {
+                await supabaseClient.from('products')
+                    .update({ available: newAvailable })
+                    .eq('distributor_id', distributor.id)
+                    .eq('name', product.name);
+            }
+            console.log('[DistriMatch] Disponibilite modifiee:', product.name, newAvailable);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur toggle disponibilite:', e.message);
+        }
+    }
+
+    product.available = newAvailable;
+    renderProductsList(distributor);
+    showToast(newAvailable ? 'Produit disponible' : 'Produit indisponible', 'default');
+}
+
+// DELETE
+async function deleteProduct(index) {
+    const distributor = AppState.currentDistributor;
+    if (!distributor) return;
+    const product = distributor.products[index];
+    if (!product) return;
+
+    if (supabaseClient) {
+        try {
+            if (product.dbId) {
+                await supabaseClient.from('products').delete().eq('id', product.dbId);
+            } else {
+                await supabaseClient.from('products')
+                    .delete()
+                    .eq('distributor_id', distributor.id)
+                    .eq('name', product.name);
+            }
+            console.log('[DistriMatch] Produit supprime sur Supabase:', product.name);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur suppression produit:', e.message);
+        }
+    }
+
+    distributor.products.splice(index, 1);
+    renderProductsList(distributor);
+    showToast('Produit supprime', 'default');
 }
 
 function getDirectionsTo(distributor) {
@@ -2222,6 +2412,13 @@ function getAddPopupContent() {
             <select id="new-dist-type">${options}</select>
             <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required>
             <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)">
+            <div class="add-products-section">
+                <div class="add-products-header">
+                    <span>Produits</span>
+                    <button type="button" class="btn-add-product-row" onclick="addProductRow()">+ Ajouter</button>
+                </div>
+                <div id="add-products-list"></div>
+            </div>
             <div class="photo-upload-section">
                 <label class="photo-upload-label" for="new-dist-photos">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2240,6 +2437,47 @@ function getAddPopupContent() {
             </div>
         </div>
     `;
+}
+
+// Gestion des produits dans le formulaire d'ajout
+let addProductCounter = 0;
+
+function addProductRow() {
+    const list = document.getElementById('add-products-list');
+    if (!list) return;
+    const count = list.querySelectorAll('.product-row').length;
+    if (count >= 10) {
+        showToast('Maximum 10 produits', 'warning');
+        return;
+    }
+    const id = addProductCounter++;
+    const row = document.createElement('div');
+    row.className = 'product-row';
+    row.dataset.rowId = id;
+    row.innerHTML = `
+        <input type="text" class="product-name-input" placeholder="Nom du produit" required>
+        <input type="number" class="product-price-input" placeholder="Prix" step="0.10" min="0">
+        <button type="button" class="product-remove-row" onclick="removeProductRow(${id})">&times;</button>
+    `;
+    list.appendChild(row);
+}
+
+function removeProductRow(id) {
+    const row = document.querySelector(`.product-row[data-row-id="${id}"]`);
+    if (row) row.remove();
+}
+
+function getProductsFromForm() {
+    const rows = document.querySelectorAll('#add-products-list .product-row');
+    const products = [];
+    rows.forEach(row => {
+        const name = row.querySelector('.product-name-input')?.value.trim();
+        const price = parseFloat(row.querySelector('.product-price-input')?.value) || 0;
+        if (name) {
+            products.push({ name, price, available: true });
+        }
+    });
+    return products;
 }
 
 // Preview des photos avant upload
@@ -2384,6 +2622,7 @@ async function confirmAddDistributor() {
     }
 
     const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
+    const products = getProductsFromForm();
 
     const distId = `user-${Date.now()}`;
     const newDistributor = {
@@ -2397,7 +2636,7 @@ async function confirmAddDistributor() {
         city: 'A verifier',
         rating: 5.0,
         reviewCount: 0,
-        products: [],
+        products: products,
         isUserAdded: true,
         addedAt: Date.now(),
         addedBy: 'user'
@@ -2426,6 +2665,22 @@ async function confirmAddDistributor() {
             });
             if (error) throw error;
             console.log('[DistriMatch] Distributeur ajoute sur Supabase:', distId);
+
+            // Inserer les produits dans Supabase
+            if (products.length > 0) {
+                const productRows = products.map(p => ({
+                    distributor_id: distId,
+                    name: p.name,
+                    price: p.price,
+                    available: true
+                }));
+                const { error: prodError } = await supabaseClient.from('products').insert(productRows);
+                if (prodError) {
+                    console.warn('[DistriMatch] Erreur ajout produits:', prodError.message);
+                } else {
+                    console.log('[DistriMatch] Produits ajoutes:', products.length);
+                }
+            }
 
             // Uploader les photos si presentes
             if (AddMode.photos && AddMode.photos.length > 0) {

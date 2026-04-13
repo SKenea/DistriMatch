@@ -633,6 +633,216 @@ body {
     background: var(--primary-dark);
 }
 
+/* Produits dans popup ajout */
+.add-products-section {
+    margin-bottom: 0.5rem;
+}
+
+.add-products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.375rem;
+}
+
+.add-products-header span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-dark);
+}
+
+.btn-add-product-row {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.product-row {
+    display: flex;
+    gap: 0.375rem;
+    margin-bottom: 0.375rem;
+    align-items: center;
+}
+
+.product-name-input {
+    flex: 2;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.product-price-input {
+    flex: 1;
+    max-width: 70px;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.product-remove-row {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--light);
+    border: none;
+    color: var(--gray);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Actions produits dans fiche details */
+.product-actions-clean {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.product-btn-toggle,
+.product-btn-edit,
+.product-btn-delete {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: var(--light);
+    color: var(--gray-dark);
+}
+
+.product-btn-toggle:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.product-btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.product-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Edition inline produit */
+.product-edit-row {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    width: 100%;
+}
+
+.product-edit-name {
+    flex: 2;
+    padding: 0.375rem 0.5rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.product-edit-price {
+    flex: 1;
+    max-width: 70px;
+    padding: 0.375rem 0.5rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.product-btn-save {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.product-btn-cancel-edit {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--light);
+    color: var(--gray-dark);
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.products-header-clean {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-add-product {
+    background: none;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-product:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.add-product-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.add-product-form input {
+    padding: 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.add-product-form input[type="text"] {
+    flex: 2;
+}
+
+.add-product-form input[type="number"] {
+    flex: 1;
+    max-width: 80px;
+}
+
+.btn-confirm-small {
+    padding: 0.5rem 0.75rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 /* Upload photo dans popup ajout */
 .photo-upload-section {
     margin-bottom: 0.5rem;
