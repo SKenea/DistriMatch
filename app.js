@@ -1,5 +1,6 @@
 /**
- * DistriMatch V7.0 - Smart Notifications Edition
+ * DistriMatch V8.0 - Supabase Edition
+ * Backend Supabase: auth anonyme, donnees partagees, signalements communautaires
  * Systeme d'abonnements avec robots proactifs
  * Notifications intelligentes: geofencing, heures calmes, alertes produits
  * Sidebar + Carte + Modal Chat par distributeur
@@ -94,6 +95,47 @@ const VOTES_KEY = 'snackmatch_votes';
 const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
 const NOTIFICATION_PREFS_KEY = 'snackmatch_notification_prefs';
 const NOTIFICATION_QUEUE_KEY = 'snackmatch_notification_queue';
+
+// ============================================
+// SUPABASE
+// ============================================
+const SUPABASE_URL = 'https://qtpgdkipweivjxcremsk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0cGdka2lwd2Vpdmp4Y3JlbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTYwMjUsImV4cCI6MjA5MTY3MjAyNX0.Uz5GhGwJ5CIgoy3n6t6_2g1kE8N35msmeHfpMSFeEuc';
+
+let supabaseClient = null;
+
+function initSupabase() {
+    try {
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('[DistriMatch] Supabase initialise');
+            return true;
+        }
+    } catch (e) {
+        console.warn('[DistriMatch] Supabase non disponible:', e.message);
+    }
+    supabaseClient = null;
+    console.log('[DistriMatch] Mode hors-ligne (pas de Supabase)');
+    return false;
+}
+
+async function signInAnonymously() {
+    if (!supabaseClient) return null;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            console.log('[DistriMatch] Session existante');
+            return session.user;
+        }
+        const { data, error } = await supabaseClient.auth.signInAnonymously();
+        if (error) throw error;
+        console.log('[DistriMatch] Connexion anonyme OK');
+        return data.user;
+    } catch (e) {
+        console.warn('[DistriMatch] Auth anonyme echouee:', e.message);
+        return null;
+    }
+}
 
 // ============================================
 // SYSTEME DE NOTIFICATIONS INTELLIGENTES
@@ -537,23 +579,70 @@ const EMBEDDED_DATA = {
     }
 };
 
-async function loadDistributors() {
+async function loadDistributorsFromSupabase() {
+    if (!supabaseClient) return null;
     try {
-        // Essayer fetch, sinon utiliser les donnees embarquees
-        const response = await fetch('data/distributors.json');
-        if (!response.ok) throw new Error('Fetch failed');
-        const data = await response.json();
-        AppState.distributors = data.distributors;
-        AppState.typeConfig = data.typeConfig;
-        console.log('[DistriMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
-    } catch (error) {
-        console.log('[DistriMatch] Mode fichier local - utilisation des donnees embarquees');
-        AppState.distributors = EMBEDDED_DATA.distributors;
+        const { data, error } = await supabaseClient
+            .from('distributors')
+            .select('*, products(name, price, available)');
+        if (error) throw error;
+        if (!data || data.length === 0) return null;
+
+        // Mapper snake_case DB vers camelCase app
+        return data.map(d => ({
+            id: d.id,
+            name: d.name,
+            type: d.type,
+            emoji: d.emoji,
+            address: d.address,
+            city: d.city,
+            lat: d.lat,
+            lng: d.lng,
+            rating: parseFloat(d.rating) || 0,
+            reviewCount: d.review_count || 0,
+            status: d.status || 'verified',
+            lastVerified: d.last_verified,
+            priceRange: d.price_range,
+            isUserAdded: d.is_user_added || false,
+            products: (d.products || []).map(p => ({
+                name: p.name,
+                price: parseFloat(p.price) || 0,
+                available: p.available
+            }))
+        }));
+    } catch (e) {
+        console.warn('[DistriMatch] Erreur chargement Supabase:', e.message);
+        return null;
+    }
+}
+
+async function loadDistributors() {
+    // 1) Essayer Supabase en priorite
+    const supabaseData = await loadDistributorsFromSupabase();
+    if (supabaseData) {
+        AppState.distributors = supabaseData;
+        // typeConfig reste en local (pas en DB)
         AppState.typeConfig = EMBEDDED_DATA.typeConfig;
-        console.log('[DistriMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
+        console.log('[DistriMatch] Donnees chargees via Supabase:', AppState.distributors.length, 'distributeurs');
+    } else {
+        // 2) Fallback: fetch JSON local
+        try {
+            const response = await fetch('data/distributors.json');
+            if (!response.ok) throw new Error('Fetch failed');
+            const data = await response.json();
+            AppState.distributors = data.distributors;
+            AppState.typeConfig = data.typeConfig;
+            console.log('[DistriMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
+        } catch (error) {
+            // 3) Fallback ultime: donnees embarquees
+            console.log('[DistriMatch] Mode fichier local - utilisation des donnees embarquees');
+            AppState.distributors = EMBEDDED_DATA.distributors;
+            AppState.typeConfig = EMBEDDED_DATA.typeConfig;
+            console.log('[DistriMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
+        }
     }
 
-    // Ajouter les distributeurs utilisateur
+    // Ajouter les distributeurs utilisateur (localStorage)
     const userDistributors = loadUserDistributors();
     if (userDistributors.length > 0) {
         AppState.distributors = [...AppState.distributors, ...userDistributors];
@@ -1692,22 +1781,41 @@ function selectReportType(type) {
     document.getElementById('submit-report').disabled = false;
 }
 
-function submitReport() {
+async function submitReport() {
     if (!selectedReportType || !AppState.currentDistributor) return;
 
     // Obtenir les points du bouton selectionne
     const selectedBtn = document.querySelector(`.report-type-btn[data-type="${selectedReportType}"]`);
     const points = parseInt(selectedBtn?.dataset.points || '10');
 
+    // Envoyer vers Supabase si disponible
+    let supabaseReportId = null;
+    if (supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient.rpc('submit_report', {
+                p_distributor_id: AppState.currentDistributor.id,
+                p_report_type: selectedReportType,
+                p_product_name: null,
+                p_points: points
+            });
+            if (error) throw error;
+            supabaseReportId = data;
+            console.log('[DistriMatch] Signalement envoye sur Supabase, id:', supabaseReportId);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur signalement Supabase:', e.message);
+        }
+    }
+
     AppState.reports++;
     AppState.points += points;
     saveToLocalStorage();
     updateProfileStats();
 
-    // Ajouter a l'activite
+    // Ajouter a l'activite locale
     addActivityItem('report', AppState.currentDistributor.id, {
         type: selectedReportType,
-        points: points
+        points: points,
+        supabaseId: supabaseReportId
     });
 
     showToast(`Merci pour ton signalement ! +${points} points`, 'success');
@@ -1720,6 +1828,89 @@ function submitReport() {
 // ============================================
 // FEED ACTIVITE
 // ============================================
+
+async function loadReportsFromSupabase() {
+    if (!supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('reports')
+            .select('id, distributor_id, report_type, product_name, points, confirmations, denials, resolved, created_at')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        if (!data || data.length === 0) return;
+
+        // Charger les votes de l'utilisateur courant
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        let userVotes = {};
+        if (session) {
+            const { data: votes } = await supabaseClient
+                .from('votes')
+                .select('report_id, vote_type')
+                .eq('user_id', session.user.id);
+            if (votes) {
+                votes.forEach(v => { userVotes[v.report_id] = v.vote_type; });
+            }
+        }
+
+        // Fusionner avec le feed local : ajouter les signalements Supabase non presents
+        const existingSupabaseIds = new Set(
+            ActivityFeed.items
+                .filter(i => i.details?.supabaseId)
+                .map(i => i.details.supabaseId)
+        );
+
+        data.forEach(report => {
+            if (existingSupabaseIds.has(report.id)) {
+                // Mettre a jour les compteurs du signalement existant
+                const existing = ActivityFeed.items.find(i => i.details?.supabaseId === report.id);
+                if (existing) {
+                    existing.confirmations = report.confirmations || 0;
+                    existing.denials = report.denials || 0;
+                    existing.resolved = report.resolved || false;
+                    if (userVotes[report.id]) {
+                        existing.userVote = userVotes[report.id];
+                    }
+                }
+                return;
+            }
+
+            const d = AppState.distributors.find(dist => dist.id === report.distributor_id);
+            if (!d) return;
+
+            ActivityFeed.items.push({
+                id: report.id,
+                type: 'report',
+                distributorId: report.distributor_id,
+                distributorName: d.name,
+                distributorEmoji: d.emoji,
+                details: {
+                    type: report.report_type,
+                    points: report.points || 10,
+                    supabaseId: report.id
+                },
+                timestamp: new Date(report.created_at).getTime(),
+                confirmations: report.confirmations || 0,
+                denials: report.denials || 0,
+                userVote: userVotes[report.id] || null,
+                resolved: report.resolved || false
+            });
+        });
+
+        // Trier par date decroissante
+        ActivityFeed.items.sort((a, b) => b.timestamp - a.timestamp);
+
+        // Garder les 50 derniers
+        if (ActivityFeed.items.length > 50) {
+            ActivityFeed.items = ActivityFeed.items.slice(0, 50);
+        }
+
+        saveActivityFeed();
+        console.log('[DistriMatch] Signalements Supabase charges:', data.length);
+    } catch (e) {
+        console.warn('[DistriMatch] Erreur chargement signalements Supabase:', e.message);
+    }
+}
 
 function saveActivityFeed() {
     try {
@@ -1892,11 +2083,25 @@ function setActivityFilter(filter) {
     displayActivityFeed();
 }
 
-function voteOnReport(activityId, voteType) {
+async function voteOnReport(activityId, voteType) {
     const item = ActivityFeed.items.find(i => i.id === activityId);
     if (!item || item.userVote || item.resolved) return;
 
-    // Enregistrer le vote
+    // Envoyer le vote vers Supabase si disponible
+    if (supabaseClient && item.details?.supabaseId) {
+        try {
+            const { error } = await supabaseClient.rpc('cast_vote', {
+                p_report_id: item.details.supabaseId,
+                p_vote_type: voteType
+            });
+            if (error) throw error;
+            console.log('[DistriMatch] Vote envoye sur Supabase');
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur vote Supabase:', e.message);
+        }
+    }
+
+    // Enregistrer le vote localement
     item.userVote = voteType;
     if (voteType === 'confirm') {
         item.confirmations = (item.confirmations || 0) + 1;
@@ -2439,9 +2644,13 @@ function promptAddProductFollow() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DistriMatch V7.0 - Smart Notifications Edition - Initialisation...');
+    console.log('DistriMatch V8.0 - Supabase Edition - Initialisation...');
 
-    // Charger les donnees
+    // Initialiser Supabase
+    initSupabase();
+    await signInAnonymously();
+
+    // Charger les donnees locales
     loadFromLocalStorage();
     loadProfile();
     loadConversations();
@@ -2452,8 +2661,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Obtenir la geolocalisation
     await getUserLocation();
 
-    // Charger les distributeurs
+    // Charger les distributeurs (Supabase > fetch JSON > embarque)
     await loadDistributors();
+
+    // Charger les signalements communautaires depuis Supabase
+    await loadReportsFromSupabase();
 
     // Initialiser la carte
     initMainMap();
@@ -2583,5 +2795,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    console.log('DistriMatch V7.0 - Pret !');
+    console.log('DistriMatch V8.0 - Pret !');
 });

@@ -17,6 +17,7 @@ Thumbs.db
 
 # Playwright MCP
 .playwright-mcp/
+screenshot-*.png
 
 # Artefacts Windows
 nul
