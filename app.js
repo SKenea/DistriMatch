@@ -1300,6 +1300,21 @@ function showDetails(id) {
     subBtn.textContent = isSubscribed ? 'Abonne' : "S'abonner";
     subBtn.className = isSubscribed ? 'btn-primary-clean subscribed-active' : 'btn-primary-clean';
 
+    // Charger les photos
+    const photosSection = document.getElementById('detail-photos');
+    const photosGallery = document.getElementById('detail-photos-gallery');
+    photosSection.style.display = 'none';
+    photosGallery.innerHTML = '';
+
+    loadDistributorPhotos(distributor.id).then(photos => {
+        if (photos.length > 0) {
+            photosGallery.innerHTML = photos.map(p =>
+                `<div class="photo-gallery-item"><img src="${p.url}" alt="Photo distributeur" loading="lazy"></div>`
+            ).join('');
+            photosSection.style.display = 'block';
+        }
+    });
+
     modal.classList.add('active');
 }
 
@@ -2207,12 +2222,133 @@ function getAddPopupContent() {
             <select id="new-dist-type">${options}</select>
             <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required>
             <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)">
+            <div class="photo-upload-section">
+                <label class="photo-upload-label" for="new-dist-photos">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    Photos (max 3)
+                </label>
+                <input type="file" id="new-dist-photos" accept="image/*" multiple style="display:none" onchange="previewAddPhotos(this)">
+                <div id="photo-preview-container" class="photo-preview-container"></div>
+            </div>
             <div class="popup-actions">
                 <button class="btn-cancel" onclick="cancelAddDistributor()">Annuler</button>
                 <button class="btn-confirm" onclick="confirmAddDistributor()">Ajouter</button>
             </div>
         </div>
     `;
+}
+
+// Preview des photos avant upload
+function previewAddPhotos(input) {
+    const container = document.getElementById('photo-preview-container');
+    if (!container) return;
+
+    const files = Array.from(input.files).slice(0, 3);
+    // Stocker les fichiers dans AddMode
+    AddMode.photos = files;
+
+    container.innerHTML = files.map((file, i) => {
+        const url = URL.createObjectURL(file);
+        return `
+            <div class="photo-preview-item">
+                <img src="${url}" alt="Photo ${i + 1}">
+                <button class="photo-remove-btn" onclick="removeAddPhoto(${i})" type="button">&times;</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function removeAddPhoto(index) {
+    if (!AddMode.photos) return;
+    AddMode.photos.splice(index, 1);
+
+    // Reconstruire la preview
+    const container = document.getElementById('photo-preview-container');
+    if (!container) return;
+
+    container.innerHTML = AddMode.photos.map((file, i) => {
+        const url = URL.createObjectURL(file);
+        return `
+            <div class="photo-preview-item">
+                <img src="${url}" alt="Photo ${i + 1}">
+                <button class="photo-remove-btn" onclick="removeAddPhoto(${i})" type="button">&times;</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Upload photos vers Supabase Storage
+async function uploadDistributorPhotos(distributorId, files) {
+    if (!supabaseClient || !files || files.length === 0) return [];
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return [];
+
+    const uploadedPaths = [];
+
+    for (let i = 0; i < Math.min(files.length, 3); i++) {
+        try {
+            const file = files[i];
+            const ext = file.name.split('.').pop().toLowerCase();
+            const path = `${session.user.id}/${distributorId}_${Date.now()}_${i}.${ext}`;
+
+            const { error } = await supabaseClient.storage
+                .from('distributor-photos')
+                .upload(path, file, { contentType: file.type });
+
+            if (error) throw error;
+
+            // Enregistrer dans la table de metadonnees
+            await supabaseClient.from('distributor_photos').insert({
+                distributor_id: distributorId,
+                user_id: session.user.id,
+                storage_path: path,
+                status: 'approved'
+            });
+
+            uploadedPaths.push(path);
+            console.log('[DistriMatch] Photo uploadee:', path);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur upload photo:', e.message);
+        }
+    }
+
+    return uploadedPaths;
+}
+
+// Recuperer l'URL publique d'une photo
+function getPhotoUrl(storagePath) {
+    if (!supabaseClient) return '';
+    const { data } = supabaseClient.storage
+        .from('distributor-photos')
+        .getPublicUrl(storagePath);
+    return data?.publicUrl || '';
+}
+
+// Charger les photos d'un distributeur
+async function loadDistributorPhotos(distributorId) {
+    if (!supabaseClient) return [];
+    try {
+        const { data, error } = await supabaseClient
+            .from('distributor_photos')
+            .select('storage_path, status, created_at')
+            .eq('distributor_id', distributorId)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: true })
+            .limit(3);
+        if (error) throw error;
+        return (data || []).map(p => ({
+            url: getPhotoUrl(p.storage_path),
+            path: p.storage_path
+        }));
+    } catch (e) {
+        console.warn('[DistriMatch] Erreur chargement photos:', e.message);
+        return [];
+    }
 }
 
 function cancelAddDistributor() {
@@ -2290,10 +2426,18 @@ async function confirmAddDistributor() {
             });
             if (error) throw error;
             console.log('[DistriMatch] Distributeur ajoute sur Supabase:', distId);
+
+            // Uploader les photos si presentes
+            if (AddMode.photos && AddMode.photos.length > 0) {
+                await uploadDistributorPhotos(distId, AddMode.photos);
+            }
         } catch (e) {
             console.warn('[DistriMatch] Erreur ajout Supabase:', e.message);
         }
     }
+
+    // Reset photos
+    AddMode.photos = null;
 
     // Sauvegarder en localStorage (fallback)
     saveUserDistributor(newDistributor);
