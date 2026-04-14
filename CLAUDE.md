@@ -16,40 +16,30 @@ Interface carte Leaflet + chatbot par distributeur avec robots proactifs et noti
 
 ## Architecture
 
-Application single-page en 3 fichiers principaux :
+Application single-page modulaire en ES modules (`<script type="module">`) :
 
-- `index.html` - Structure HTML unique, charge Leaflet CDN + `styles.css` + `app.js`
+- `index.html` - Structure HTML, charge Leaflet/Supabase CDN + `styles.css` + `js/app.js`
 - `styles.css` - CSS variables, mobile-first, ~2500 lignes
-- `app.js` - Toute la logique JS dans un seul fichier, ~2500 lignes
 - `data/distributors.json` - Donnees des distributeurs (source de verite)
 - `sw.js` - Service Worker (desactive, se desinstalle automatiquement)
-- `js/` - Fichiers legacy non utilises (tout est dans `app.js`)
+- `supabase/` - Schemas SQL (001_schema, 002_seed, 003_photos)
 
-### Structure de app.js (sections dans l'ordre)
+### Modules JS (`js/`)
 
 ```
-ETAT GLOBAL        - AppState, Conversations, ActivityFeed, UserProfile, AddMode
-CONSTANTES         - DISTRIBUTOR_TYPES, cles localStorage (STORAGE_KEY, etc.)
-NOTIFICATIONS      - NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES
-MESSAGES PROACTIFS - GREETING_MESSAGES (par creneau horaire), ALERT_MESSAGES
-UTILITAIRES        - escapeHTML(), showToast(), getTimeSlot(), calculateDistance()
-PERSISTANCE        - save/load LocalStorage, profil, conversations, activite, votes
-GEOLOCALISATION    - getUserLocation(), watchPosition
-CHARGEMENT DONNEES - loadDistributors() (donnees embarquees en fallback file://)
-CARTE LEAFLET      - initMainMap(), addDistributorMarkers(), marqueurs custom
-CONVERSATIONS      - openConversation(), addMessage(), reponses bot contextuelles
-FILTRES            - initFilterChips(), toggleFilter() par type de distributeur
-SIDEBAR            - toggleSidebar(), closeSidebar()
-MODAL DETAILS      - openDistributorDetails(), signalements, votes
-ABONNEMENTS        - toggleSubscription(), messages proactifs a l'abonnement
-NOTIFICATIONS      - geofencing, heures calmes, cooldown, produits suivis
-PROFIL             - switchView(), stats utilisateur
-RECHERCHE          - recherche par nom/ville/type
-SIGNALEMENT        - 6 types (rupture stock, panne, prix incorrect, etc.)
-FEED ACTIVITE      - activites communautaires, filtres
-AJOUT DISTRIBUTEUR - mode ajout avec clic carte
-INITIALISATION     - DOMContentLoaded, event listeners, demarrage geofence
+js/app.js             - Point d'entree, Supabase init, chargement donnees, event listeners, window globals
+js/state.js           - Etat global (AppState, Conversations, UserProfile...), constantes, donnees embarquees
+js/utils.js           - Utilitaires (escapeHTML, calculateDistance, showToast...), persistance localStorage, profil implicite, geolocalisation
+js/map.js             - Carte Leaflet (initMainMap, updateMapMarkers, popups, centrage)
+js/navigation.js      - Navigation (switchTab, switchView, VIEW_CONFIG), sidebar, recherche, filtres, profil stats
+js/distributor.js     - Page distributeur (showDetails), CRUD produits, photos, abonnements, itineraire
+js/chat.js            - Conversations (openConversation, messages bot), messages proactifs, non lus
+js/activity.js        - Feed activite, signalements (openReportModal, submitReport), votes communautaires
+js/notifications.js   - Geofencing, heures calmes, cooldown, produits suivis, parametres UI
+js/add-distributor.js - Mode ajout distributeur (clic carte, formulaire, photos, upload Supabase)
 ```
+
+Les fonctions appelees depuis `onclick` inline dans le HTML dynamique sont exposees sur `window` dans `js/app.js`.
 
 ### Objets d'etat globaux cles
 
@@ -122,5 +112,4 @@ git commit -m "feat: description"
 ## Points d'attention
 
 - Le service worker est volontairement desactive (`sw.js` se desinstalle). Ne pas le reactiver sans plan de cache.
-- Les donnees distributeurs sont embarquees en dur dans `loadDistributors()` comme fallback pour le mode `file://`. Le JSON dans `data/distributors.json` est la source de verite mais n'est charge que via fetch.
-- Le `README.md` decrit la V3.0 et est obsolete (swipe cards, bottom nav 4 onglets). Ne pas s'en inspirer pour l'architecture actuelle.
+- Les donnees distributeurs sont embarquees en dur dans `js/state.js` (EMBEDDED_DATA) comme fallback pour le mode `file://`. Le JSON dans `data/distributors.json` est la source de verite mais n'est charge que via fetch. Supabase est prioritaire quand disponible.

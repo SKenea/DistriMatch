@@ -37,6 +37,10 @@
     --light: #f3f4f6;
     --lighter: #f9fafb;
     --white: #ffffff;
+    --gray-dark: #374151;
+    --light-gray: #e5e7eb;
+    --text-secondary: #6b7280;
+    --radius-md: 12px;
 
     /* Layout */
     --nav-height: 56px;
@@ -1409,7 +1413,7 @@ body {
     top: var(--nav-height);
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: 60px;
     background: var(--light);
     z-index: var(--z-overlay);
     overflow-y: auto;
@@ -1922,11 +1926,41 @@ body {
     font-size: 0.9rem;
 }
 
-/* Actions modal */
-.modal-actions {
+/* ==========================================
+   PAGE DISTRIBUTEUR (detail pleine page)
+   ========================================== */
+
+.distributor-page-content {
+    padding: 1.25rem 1rem 2rem;
+}
+
+.distributor-page-content .detail-header-clean {
+    padding-right: 0;
+}
+
+.distributor-actions {
     display: flex;
     gap: 0.625rem;
     align-items: center;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--light);
+}
+
+.empty-state-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--text-secondary);
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-state-page p {
+    font-size: 0.95rem;
 }
 
 .btn-icon-action {
@@ -2310,6 +2344,11 @@ body {
     stroke: var(--primary);
 }
 
+.nav-tab.nav-tab-disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .nav-tab-badge {
     position: absolute;
     top: 0;
@@ -2537,10 +2576,6 @@ body {
 @media (min-width: 769px) {
     .bottom-nav {
         left: var(--sidebar-width);
-    }
-
-    .app-container {
-        padding-bottom: 60px;
     }
 }
 
