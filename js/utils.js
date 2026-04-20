@@ -273,10 +273,9 @@ export function getTopPreferredTypes(limit = 3) {
 // ============================================
 
 export function getUserLocation() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-            AppState.userLocation = { lat: 43.4929, lng: -1.4748 };
-            resolve(AppState.userLocation);
+            reject(new Error('Geolocalisation non supportee'));
             return;
         }
 
@@ -288,11 +287,8 @@ export function getUserLocation() {
                 };
                 resolve(AppState.userLocation);
             },
-            () => {
-                AppState.userLocation = { lat: 43.4929, lng: -1.4748 };
-                resolve(AppState.userLocation);
-            },
-            { enableHighAccuracy: true, timeout: 5000 }
+            (error) => reject(error),
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     });
 }

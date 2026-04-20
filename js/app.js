@@ -280,6 +280,61 @@ window.confirmAddDistributor = confirmAddDistributor;
 window.AppState = AppState;
 
 // ============================================
+// GEOLOCALISATION OVERLAY
+// ============================================
+
+function initGeolocationOverlay() {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('geoloc-overlay');
+        const btn = document.getElementById('geoloc-btn');
+        const errorEl = document.getElementById('geoloc-error');
+
+        if (!overlay || !btn) {
+            // Pas d'overlay dans le DOM, tenter la geoloc directement
+            getUserLocation().catch(() => {}).finally(resolve);
+            return;
+        }
+
+        btn.addEventListener('click', async () => {
+            // Etat loading
+            btn.disabled = true;
+            btn.innerHTML = '<span class="geoloc-spinner"></span> Localisation...';
+            errorEl.style.display = 'none';
+
+            try {
+                await getUserLocation();
+                // Succes : masquer l'overlay
+                overlay.classList.add('hidden');
+                overlay.addEventListener('transitionend', () => {
+                    overlay.remove();
+                }, { once: true });
+                resolve();
+            } catch (err) {
+                // Afficher l'erreur
+                let message = 'Impossible d\'obtenir ta position.';
+                if (err.code === 1) {
+                    message = 'Tu as refuse l\'acces a ta position. Autorise la localisation dans les reglages de ton navigateur puis reessaie.';
+                } else if (err.code === 2) {
+                    message = 'Position indisponible. Verifie que la localisation est activee sur ton appareil.';
+                } else if (err.code === 3) {
+                    message = 'Delai depasse. Verifie ta connexion et reessaie.';
+                }
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+
+                // Restaurer le bouton
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                    </svg>
+                    Reessayer`;
+            }
+        });
+    });
+}
+
+// ============================================
 // INITIALISATION
 // ============================================
 
@@ -298,8 +353,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadNotificationPrefs();
     loadNotificationQueue();
 
-    // Obtenir la geolocalisation
-    await getUserLocation();
+    // Attendre la geolocalisation via l'overlay
+    await initGeolocationOverlay();
 
     // Charger les distributeurs (Supabase > fetch JSON > embarque)
     await loadDistributors();

@@ -17,6 +17,28 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
+    <!-- Overlay geolocalisation obligatoire -->
+    <div id="geoloc-overlay" class="geoloc-overlay">
+        <div class="geoloc-content">
+            <div class="geoloc-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+            </div>
+            <h2>Ou es-tu ?</h2>
+            <p>DistriMatch a besoin de ta position pour trouver les distributeurs autour de toi.</p>
+            <button id="geoloc-btn" class="geoloc-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                </svg>
+                Activer la localisation
+            </button>
+            <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
+            <p class="geoloc-hint">Ta position reste privee et n'est jamais partagee.</p>
+        </div>
+    </div>
+
     <!-- Navigation Top -->
     <nav class="top-nav">
         <div class="nav-left">

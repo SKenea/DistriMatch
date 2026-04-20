@@ -2890,3 +2890,123 @@ body {
 .profile-actions .btn-primary-clean svg {
     flex-shrink: 0;
 }
+
+/* ==========================================
+   GEOLOCATION OVERLAY (pattern Tinder)
+   ========================================== */
+
+.geoloc-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.geoloc-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.geoloc-content {
+    text-align: center;
+    padding: 2rem;
+    max-width: 360px;
+    color: #fff;
+}
+
+.geoloc-icon {
+    margin-bottom: 1.5rem;
+    animation: geoloc-pulse 2s ease-in-out infinite;
+}
+
+.geoloc-icon svg {
+    width: 80px;
+    height: 80px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes geoloc-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.geoloc-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #fff;
+}
+
+.geoloc-content p {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1.5rem;
+}
+
+.geoloc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background: #fff;
+    color: var(--primary-dark);
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.geoloc-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.geoloc-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.geoloc-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.geoloc-error {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #fecaca;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.geoloc-hint {
+    font-size: 0.8rem !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    margin-bottom: 0 !important;
+}
+
+.geoloc-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--primary-dark);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: geoloc-spin 0.6s linear infinite;
+}
+
+@keyframes geoloc-spin {
+    to { transform: rotate(360deg); }
+}
