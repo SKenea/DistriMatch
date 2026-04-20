@@ -13,10 +13,32 @@
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="stylesheet" href="styles.css?v=16">
+    <link rel="stylesheet" href="styles.css?v=22">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
+    <!-- Overlay geolocalisation obligatoire -->
+    <div id="geoloc-overlay" class="geoloc-overlay">
+        <div class="geoloc-content">
+            <div class="geoloc-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+            </div>
+            <h2>Ou es-tu ?</h2>
+            <p>DistriMatch a besoin de ta position pour trouver les distributeurs autour de toi.</p>
+            <button id="geoloc-btn" class="geoloc-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                </svg>
+                Activer la localisation
+            </button>
+            <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
+            <p class="geoloc-hint">Ta position reste privee et n'est jamais partagee.</p>
+        </div>
+    </div>
+
     <!-- Navigation Top -->
     <nav class="top-nav">
         <div class="nav-left">
@@ -352,16 +374,20 @@
     </div>
 
     <!-- ============================================
-         MODAL DETAILS DISTRIBUTEUR
+         PAGE DISTRIBUTEUR (detail complet)
          ============================================ -->
-    <div id="detail-modal" class="modal-clean">
-        <div class="modal-content-clean">
-            <button class="close-modal" id="close-detail">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
+    <div id="distributor-view" class="view-page view-hidden">
+        <!-- Placeholder si aucun distributeur selectionne -->
+        <div id="distributor-empty" class="empty-state-page">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <polyline points="17 2 12 7 7 2"/>
+            </svg>
+            <p>Selectionne un distributeur sur la carte</p>
+        </div>
 
+        <!-- Contenu detail distributeur -->
+        <div class="distributor-page-content" id="distributor-page-content" style="display:none">
             <div class="detail-header-clean">
                 <div class="detail-type" id="detail-type"></div>
                 <h2 id="detail-name">Nom du distributeur</h2>
@@ -390,7 +416,7 @@
                 <div id="products-list"></div>
             </div>
 
-            <div class="modal-actions">
+            <div class="distributor-actions">
                 <button class="btn-secondary-clean btn-report-action" id="btn-report">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -505,6 +531,13 @@
             </svg>
             <span>Explorer</span>
         </button>
+        <button class="nav-tab nav-tab-disabled" data-tab="distributor" id="tab-distributor" aria-label="Distributeur">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <polyline points="17 2 12 7 7 2"/>
+            </svg>
+            <span>Distributeur</span>
+        </button>
         <button class="nav-tab" data-tab="activity" aria-label="Activite">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
@@ -521,6 +554,6 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="app.js?v=20"></script>
+    <script type="module" src="js/app.js?v=22"></script>
 </body>
 </html>
