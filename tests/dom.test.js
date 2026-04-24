@@ -15,45 +15,44 @@ import assert from 'node:assert/strict';
 const html = `<!DOCTYPE html>
 <html><body>
     <div id="toast-container"></div>
-    <div id="bottom-sheet" class="bottom-sheet">
-        <div id="bottom-sheet-drag"><div class="bottom-sheet-handle"></div></div>
-        <div id="bottom-sheet-peek" class="bottom-sheet-peek">
-            <div class="peek-left">
-                <span id="peek-emoji"></span>
-                <div class="peek-info">
-                    <span id="peek-name"></span>
-                    <span id="peek-meta"></span>
+
+    <!-- Modal distributeur Google Maps style -->
+    <div id="dist-modal-overlay" class="dist-modal-overlay">
+        <div id="dist-modal">
+            <button id="dist-modal-close"></button>
+            <div id="dist-modal-photo" style="display:none">
+                <div id="dist-modal-photos-gallery"></div>
+            </div>
+            <div class="dist-modal-header">
+                <h2 id="dist-modal-name"></h2>
+                <span id="dist-modal-rating"></span>
+                <span id="dist-modal-reviews"></span>
+                <span id="dist-modal-type"></span>
+            </div>
+            <div class="dist-modal-actions">
+                <button id="dist-action-directions"></button>
+                <button id="dist-action-favorite"><span id="dist-action-favorite-label">Favori</span></button>
+                <button id="dist-action-edit" style="display:none"></button>
+            </div>
+            <button class="dist-tab active" data-tab="produits"></button>
+            <button class="dist-tab" data-tab="avis"></button>
+            <button class="dist-tab" data-tab="apropos"></button>
+            <div class="dist-tab-pane active" data-tab-pane="produits">
+                <div id="dist-products-list"></div>
+                <div id="dist-products-add-section" style="display:none"></div>
+                <div id="dist-chat-section" style="display:none">
+                    <button id="dist-open-chat"></button>
                 </div>
             </div>
-            <button id="peek-favorite"></button>
-        </div>
-        <div id="bottom-sheet-full" class="bottom-sheet-full">
-            <div class="detail-header-clean">
-                <div id="bs-detail-type"></div>
-                <div class="detail-title-row">
-                    <h2 id="bs-detail-name"></h2>
-                    <button id="bs-favorite"></button>
-                </div>
-                <p id="bs-detail-address"></p>
-                <div class="detail-meta">
-                    <span id="bs-detail-rating"></span>
-                    <span id="bs-detail-reviews"></span>
-                    <span id="bs-detail-distance"></span>
-                </div>
-            </div>
-            <div id="bs-detail-photos" class="detail-photos-section" style="display:none">
-                <div id="bs-detail-photos-gallery"></div>
-            </div>
-            <div class="products-section-clean">
-                <div id="bs-products-list"></div>
-            </div>
-            <div class="distributor-actions">
-                <button id="bs-btn-report"></button>
-                <button id="bs-get-directions"></button>
-                <button id="bs-btn-chat"></button>
+            <div class="dist-tab-pane" data-tab-pane="avis"></div>
+            <div class="dist-tab-pane" data-tab-pane="apropos">
+                <span id="dist-apropos-address"></span>
+                <span id="dist-apropos-distance"></span>
+                <div id="dist-apropos-added-row" style="display:none"></div>
             </div>
         </div>
     </div>
+
     <div id="main-map"></div>
     <div id="products-list"></div>
     <div id="subscriptions-view" class="view-page view-hidden">
@@ -61,11 +60,9 @@ const html = `<!DOCTYPE html>
         <div id="subscriptions-empty" style="display:none"></div>
         <span id="subscriptions-count"></span>
     </div>
-    <div id="distributor-view" class="view-page view-hidden"></div>
     <div id="activity-view" class="view-page view-hidden"></div>
     <div id="profile-view" class="view-page view-hidden"></div>
     <div id="favorites-badge" style="display:none">0</div>
-    <div id="subscriptions-badge" style="display:none">0</div>
     <div id="conversations-count" style="display:none">0</div>
     <div id="chat-modal">
         <span id="chat-avatar"></span>
@@ -76,7 +73,11 @@ const html = `<!DOCTYPE html>
         <button id="chat-subscribe"></button>
     </div>
     <div id="conversations-list"></div>
-    <div id="sidebar" class="sidebar"></div>
+    <aside id="sidebar" class="sidebar side-panel">
+        <span id="side-panel-title"></span>
+        <button id="side-panel-close"></button>
+        <div id="side-panel-list"></div>
+    </aside>
     <div id="sidebar-overlay"></div>
     <span id="activity-badge" style="display:none">0</span>
     <span id="activity-count">0</span>
@@ -119,7 +120,7 @@ const {
     saveConversations, loadConversations
 } = await import('../js/utils.js');
 const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../js/distributor.js');
-const { initBottomSheet, showInBottomSheet, setBottomSheetState, closeBottomSheet, getBottomSheetState } = await import('../js/bottomsheet.js');
+const { openDistributorModal, closeDistModal } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
 
@@ -169,46 +170,10 @@ describe('showToast', () => {
 });
 
 // ============================================
-// BOTTOM SHEET
+// MODAL DISTRIBUTEUR (Google Maps style)
 // ============================================
 
-describe('setBottomSheetState', () => {
-    it('passe en peek', () => {
-        setBottomSheetState('peek');
-        const sheet = document.getElementById('bottom-sheet');
-        assert.ok(sheet.classList.contains('bs-peek'));
-        assert.ok(!sheet.classList.contains('bs-full'));
-        assert.equal(getBottomSheetState(), 'peek');
-    });
-
-    it('passe en full', () => {
-        setBottomSheetState('full');
-        const sheet = document.getElementById('bottom-sheet');
-        assert.ok(sheet.classList.contains('bs-full'));
-        assert.ok(!sheet.classList.contains('bs-peek'));
-        assert.equal(getBottomSheetState(), 'full');
-    });
-
-    it('passe en hidden', () => {
-        setBottomSheetState('hidden');
-        const sheet = document.getElementById('bottom-sheet');
-        assert.ok(!sheet.classList.contains('bs-peek'));
-        assert.ok(!sheet.classList.contains('bs-full'));
-        assert.equal(getBottomSheetState(), 'hidden');
-    });
-});
-
-describe('closeBottomSheet', () => {
-    it('ferme le sheet et reset currentDistributor', () => {
-        AppState.currentDistributor = { id: 'test' };
-        setBottomSheetState('peek');
-        closeBottomSheet();
-        assert.equal(getBottomSheetState(), 'hidden');
-        assert.equal(AppState.currentDistributor, null);
-    });
-});
-
-describe('showInBottomSheet', () => {
+describe('openDistributorModal', () => {
     beforeEach(() => {
         AppState.distributors = [
             {
@@ -230,29 +195,44 @@ describe('showInBottomSheet', () => {
         AppState.subscriptions = [];
     });
 
-    it('ouvre le peek avec les infos du distributeur', () => {
-        showInBottomSheet('dist-test');
-        assert.equal(getBottomSheetState(), 'peek');
-        assert.equal(document.getElementById('peek-name').textContent, 'Test Distrib');
-        assert.equal(document.getElementById('peek-emoji').textContent, '🍕');
+    it('ouvre la modal avec les infos du distributeur', () => {
+        openDistributorModal('dist-test');
+        const overlay = document.getElementById('dist-modal-overlay');
+        assert.ok(overlay.classList.contains('active'));
+        assert.equal(document.getElementById('dist-modal-name').textContent, 'Test Distrib');
     });
 
-    it('remplit le contenu full', () => {
-        showInBottomSheet('dist-test');
-        assert.equal(document.getElementById('bs-detail-name').textContent, 'Test Distrib');
-        assert.equal(document.getElementById('bs-detail-address').textContent, '1 Rue Test');
-        assert.ok(document.getElementById('bs-detail-rating').textContent.includes('★'));
-        assert.ok(document.getElementById('bs-detail-reviews').textContent.includes('42'));
+    it('remplit le rating et les reviews', () => {
+        openDistributorModal('dist-test');
+        assert.ok(document.getElementById('dist-modal-rating').textContent.includes('★'));
+        assert.ok(document.getElementById('dist-modal-reviews').textContent.includes('42'));
+    });
+
+    it('remplit l\'onglet "A propos"', () => {
+        openDistributorModal('dist-test');
+        assert.equal(document.getElementById('dist-apropos-address').textContent, '1 Rue Test');
     });
 
     it('set AppState.currentDistributor', () => {
-        showInBottomSheet('dist-test');
+        openDistributorModal('dist-test');
         assert.equal(AppState.currentDistributor.id, 'dist-test');
     });
 
     it('ne fait rien pour un id inexistant', () => {
-        showInBottomSheet('fake-id');
-        assert.equal(getBottomSheetState(), 'peek'); // reste au state precedent
+        const before = AppState.currentDistributor;
+        openDistributorModal('fake-id');
+        assert.equal(AppState.currentDistributor, before);
+    });
+});
+
+describe('closeDistModal', () => {
+    it('ferme la modal', () => {
+        AppState.distributors = [{ id: 'd1', name: 'X', type: 'pizza', emoji: '🍕', address: '', rating: 4, reviewCount: 0, products: [] }];
+        AppState.typeConfig = { pizza: { label: 'Pizza' } };
+        openDistributorModal('d1');
+        closeDistModal();
+        const overlay = document.getElementById('dist-modal-overlay');
+        assert.ok(!overlay.classList.contains('active'));
     });
 });
 
@@ -268,21 +248,21 @@ describe('renderProductsList', () => {
                 { name: 'Burger', price: 6.00, available: false }
             ]
         };
-        renderProductsList(dist, 'bs-products-list');
-        const list = document.getElementById('bs-products-list');
+        renderProductsList(dist, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
         const items = list.querySelectorAll('.product-item-clean');
         assert.equal(items.length, 2);
     });
 
     it('affiche l\'empty state si pas de produits', () => {
-        renderProductsList({ products: [] }, 'bs-products-list');
-        const list = document.getElementById('bs-products-list');
+        renderProductsList({ products: [] }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
         assert.ok(list.querySelector('.products-empty-state'));
     });
 
     it('affiche l\'empty state si products est null', () => {
-        renderProductsList({ products: null }, 'bs-products-list');
-        const list = document.getElementById('bs-products-list');
+        renderProductsList({ products: null }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
         assert.ok(list.querySelector('.products-empty-state'));
     });
 
@@ -293,15 +273,15 @@ describe('renderProductsList', () => {
                 { name: 'Pas dispo', price: 5, available: false }
             ]
         };
-        renderProductsList(dist, 'bs-products-list');
-        const items = document.getElementById('bs-products-list').querySelectorAll('.product-item-clean');
+        renderProductsList(dist, 'dist-products-list');
+        const items = document.getElementById('dist-products-list').querySelectorAll('.product-item-clean');
         assert.ok(items[0].classList.contains('available'));
         assert.ok(items[1].classList.contains('unavailable'));
     });
 
     it('affiche les prix', () => {
-        renderProductsList({ products: [{ name: 'Test', price: 12.50, available: true }] }, 'bs-products-list');
-        const price = document.getElementById('bs-products-list').querySelector('.product-price-clean');
+        renderProductsList({ products: [{ name: 'Test', price: 12.50, available: true }] }, 'dist-products-list');
+        const price = document.getElementById('dist-products-list').querySelector('.product-price-clean');
         assert.ok(price.textContent.includes('12.50'));
     });
 

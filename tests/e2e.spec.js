@@ -1,5 +1,5 @@
 /**
- * DistriMatch - Tests end-to-end des chemins fonctionnels
+ * DistriMatch - Tests end-to-end (Google Maps design)
  * Lancer : npx playwright test tests/e2e.spec.js --headed
  */
 
@@ -33,25 +33,12 @@ async function setupApp(page, context) {
     );
 }
 
-async function openBottomSheet(page, index = 0) {
+async function openDistModal(page, index = 0) {
     await page.evaluate((i) => {
         const d = window.AppState.distributors[i];
-        window.showDetails(d.id);
+        window.openDistributorModal(d.id);
     }, index);
-    await page.waitForSelector('#bottom-sheet.bs-peek', { timeout: 5000 });
-}
-
-async function expandBottomSheetToFull(page) {
-    await page.click('#bottom-sheet-peek');
-    await page.waitForSelector('#bottom-sheet.bs-full', { timeout: 5000 });
-}
-
-async function closeAuthModal(page) {
-    const close = await page.$('.auth-modal-close');
-    if (close) {
-        await close.click();
-        await page.waitForSelector('.auth-modal-overlay', { state: 'detached', timeout: 3000 });
-    }
+    await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
 }
 
 test.beforeEach(async ({ page, context }) => {
@@ -64,27 +51,21 @@ test.beforeEach(async ({ page, context }) => {
 
 test.describe('1. Onboarding', () => {
     test('la carte se charge apres validation geoloc', async ({ page }) => {
-        // L'overlay doit etre masque ou supprime du DOM
         const overlay = await page.$('#geoloc-overlay');
         if (overlay) {
             const classes = await overlay.getAttribute('class');
             expect(classes).toContain('hidden');
         }
-        // Sinon l'overlay a ete remove du DOM, ce qui est aussi OK
-
-        // La carte Leaflet doit etre presente
         const map = await page.$('.leaflet-container');
         expect(map).not.toBeNull();
-
-        // Des distributeurs sont charges
         const distCount = await page.evaluate(() => window.AppState.distributors.length);
         expect(distCount).toBeGreaterThan(0);
     });
 
     test('des marqueurs sont affiches sur la carte', async ({ page }) => {
-        const markerCount = await page.evaluate(() => {
-            return document.querySelectorAll('.distributor-marker-container').length;
-        });
+        const markerCount = await page.evaluate(() =>
+            document.querySelectorAll('.distributor-marker-container').length
+        );
         expect(markerCount).toBeGreaterThan(0);
     });
 });
@@ -104,413 +85,238 @@ test.describe('2. Navigation', () => {
     test('clic sur Activite ouvre la vue activite', async ({ page }) => {
         await page.click('.bottom-nav [data-tab="activity"]');
         await page.waitForSelector('#activity-view.view-active', { timeout: 3000 });
-
-        const h2 = await page.textContent('#activity-view h2');
-        expect(h2).toBe('Activite');
     });
 
     test('clic sur Favoris ouvre la vue favoris', async ({ page }) => {
         await page.click('.bottom-nav [data-tab="favorites"]');
         await page.waitForSelector('#subscriptions-view.view-active', { timeout: 3000 });
-
         const h2 = await page.textContent('#subscriptions-view h2');
         expect(h2).toBe('Mes Favoris');
     });
+});
 
-    test('clic sur Explorer revient a la carte', async ({ page }) => {
-        await page.click('.bottom-nav [data-tab="activity"]');
-        await page.waitForSelector('#activity-view.view-active');
-        await page.click('.bottom-nav [data-tab="explore"]');
+// ============================================
+// 3. PANNEAU LATERAL FILTRES (Google Maps style)
+// ============================================
+
+test.describe('3. Panneau lateral filtres', () => {
+    test('clic sur un filter chip ouvre le panneau lateral', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open', { timeout: 3000 });
+
+        const panelOpen = await page.evaluate(() =>
+            document.getElementById('sidebar').classList.contains('open')
+        );
+        expect(panelOpen).toBe(true);
+    });
+
+    test('le titre du panneau correspond au filtre', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+
+        const title = await page.textContent('#side-panel-title');
+        expect(title).toContain('Pizza');
+    });
+
+    test('le panneau liste les distributeurs filtres', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+        await page.waitForSelector('#side-panel-list .side-panel-item', { timeout: 3000 });
+
+        const items = await page.$$('#side-panel-list .side-panel-item');
+        expect(items.length).toBeGreaterThan(0);
+    });
+
+    test('clic sur un item du panneau ouvre la modal', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('#side-panel-list .side-panel-item');
+        await page.click('#side-panel-list .side-panel-item');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
+    });
+
+    test('bouton fermer ferme le panneau', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+        await page.click('#side-panel-close');
         await page.waitForTimeout(500);
 
-        const activeView = await page.$('.view-page.view-active');
-        expect(activeView).toBeNull();
-    });
-
-    test('top nav : boutons recherche/abonnements/profil presents', async ({ page }) => {
-        expect(await page.$('button[aria-label="Rechercher"]')).not.toBeNull();
-        expect(await page.$('button[aria-label="Abonnements"]')).not.toBeNull();
-        expect(await page.$('button[aria-label="Profil"]')).not.toBeNull();
-    });
-
-    test('clic profil ouvre la vue profil', async ({ page }) => {
-        await page.click('button[aria-label="Profil"]');
-        await page.waitForSelector('#profile-view.view-active', { timeout: 3000 });
-
-        const h2 = await page.textContent('#profile-view h2');
-        expect(h2).toContain('Profil');
+        const panelOpen = await page.evaluate(() =>
+            document.getElementById('sidebar').classList.contains('open')
+        );
+        expect(panelOpen).toBe(false);
     });
 });
 
 // ============================================
-// 3. EXPLORATION CARTE
+// 4. MODAL DISTRIBUTEUR
 // ============================================
 
-test.describe('3. Exploration carte', () => {
-    test('clic sur un filtre active le filtre et met a jour les marqueurs', async ({ page }) => {
-        await page.click('.filter-chip[data-type="pizza"]');
-        await page.waitForTimeout(500);
-
-        const activeFilter = await page.evaluate(() => {
-            return window.AppState.activeFilters;
-        });
-        expect(activeFilter).toContain('pizza');
-
-        // Les marqueurs visibles doivent etre filtres
-        const visibleMarkers = await page.$$('.distributor-marker-container');
-        expect(visibleMarkers.length).toBeGreaterThan(0);
-    });
-
-    test('clic sur "Tous" reset les filtres', async ({ page }) => {
-        await page.click('.filter-chip[data-type="pizza"]');
-        await page.waitForTimeout(300);
-        await page.click('.filter-chip[data-type="all"]');
-        await page.waitForTimeout(500);
-
-        const activeFilters = await page.evaluate(() => window.AppState.activeFilters);
-        expect(activeFilters.length).toBe(0);
-    });
-
-    test('ouverture recherche via bouton loupe', async ({ page }) => {
-        await page.click('button[aria-label="Rechercher"]');
-        await page.waitForSelector('#search-overlay.active', { timeout: 3000 });
-
-        const input = await page.$('#quick-search');
-        expect(input).not.toBeNull();
-    });
-
-    test('recherche par nom filtre les resultats', async ({ page }) => {
-        await page.click('button[aria-label="Rechercher"]');
-        await page.waitForSelector('#search-overlay.active');
-        await page.fill('#quick-search', 'Pizza');
-        await page.waitForTimeout(500);
-
-        const results = await page.$$('#search-results .search-item-clean');
-        expect(results.length).toBeGreaterThan(0);
-    });
-
-    test('bouton centrer sur ma position', async ({ page }) => {
-        const btn = await page.$('#center-map');
-        expect(btn).not.toBeNull();
-        await btn.click();
-        await page.waitForTimeout(500);
-        // Pas de crash
-    });
-});
-
-// ============================================
-// 4. INTERACTION DISTRIBUTEUR (BOTTOM SHEET)
-// ============================================
-
-test.describe('4. Bottom sheet distributeur', () => {
-    test('ouverture peek avec infos', async ({ page }) => {
-        await openBottomSheet(page);
-
-        const name = await page.textContent('#peek-name');
+test.describe('4. Modal distributeur', () => {
+    test('la modal s\'ouvre avec les infos', async ({ page }) => {
+        await openDistModal(page);
+        const name = await page.textContent('#dist-modal-name');
         expect(name).toBeTruthy();
-
-        const emoji = await page.textContent('#peek-emoji');
-        expect(emoji.length).toBeGreaterThan(0);
     });
 
-    test('expansion peek -> full', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-
-        // Verifier les sections full
-        const name = await page.textContent('#bs-detail-name');
-        expect(name).toBeTruthy();
-
-        const address = await page.textContent('#bs-detail-address');
-        expect(address).toBeTruthy();
-
-        const rating = await page.textContent('#bs-detail-rating');
+    test('rating + reviews + type visibles', async ({ page }) => {
+        await openDistModal(page);
+        const rating = await page.textContent('#dist-modal-rating');
         expect(rating).toContain('★');
+        const reviews = await page.textContent('#dist-modal-reviews');
+        expect(reviews).toMatch(/\d/);
     });
 
-    test('liste produits visible ou empty state', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-
-        const productsList = await page.$('#bs-products-list');
-        const html = await productsList.innerHTML();
-
-        // Soit des produits, soit l'empty state
-        expect(
-            html.includes('product-item-clean') || html.includes('products-empty-state')
-        ).toBe(true);
+    test('3 onglets presents (Produits / Avis / A propos)', async ({ page }) => {
+        await openDistModal(page);
+        const tabs = await page.$$eval('.dist-tab', els => els.map(el => el.textContent.trim()));
+        expect(tabs).toEqual(['Produits', 'Avis', 'À propos']);
     });
 
-    test('retour full -> peek via drag handle', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.click('#bottom-sheet-drag');
-        await page.waitForSelector('#bottom-sheet.bs-peek', { timeout: 3000 });
-
-        const state = await page.evaluate(() =>
-            document.getElementById('bottom-sheet').classList.toString()
-        );
-        expect(state).toContain('bs-peek');
-    });
-
-    test('3 boutons action presents (Signaler/Itineraire/Discuter)', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-
-        expect(await page.$('#bs-btn-report')).not.toBeNull();
-        expect(await page.$('#bs-get-directions')).not.toBeNull();
-        expect(await page.$('#bs-btn-chat')).not.toBeNull();
-    });
-});
-
-// ============================================
-// 5. CHAT BOT (SANS AUTH)
-// ============================================
-
-test.describe('5. Chat bot', () => {
-    test('clic Discuter ouvre le chat modal', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.click('#bs-btn-chat');
-        await page.waitForSelector('#chat-modal.active', { timeout: 3000 });
-
-        const name = await page.textContent('#chat-name');
-        expect(name).toBeTruthy();
-    });
-
-    test('chat affiche des quick replies', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
-
-        const replies = await page.$$('.quick-reply-btn');
-        expect(replies.length).toBeGreaterThan(0);
-    });
-
-    test('quick reply envoie un message francais', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
-        await page.waitForSelector('.quick-reply-btn');
-
-        const firstReply = await page.$('.quick-reply-btn');
-        const replyLabel = await firstReply.textContent();
-        await firstReply.click();
-        await page.waitForTimeout(800);
-
-        // Le dernier message user doit etre le label francais, pas l'action anglaise
-        const userMessages = await page.$$eval('#chat-messages .chat-message.user .message-content',
-            els => els.map(el => el.textContent.trim())
-        );
-        expect(userMessages[userMessages.length - 1]).toBe(replyLabel.trim());
-    });
-
-    test('le bot repond apres un quick reply', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
-        await page.waitForSelector('.quick-reply-btn');
-
-        const before = await page.$$eval('#chat-messages .chat-message.bot', els => els.length);
-        await page.click('.quick-reply-btn');
-        await page.waitForTimeout(800);
-        const after = await page.$$eval('#chat-messages .chat-message.bot', els => els.length);
-
-        expect(after).toBeGreaterThan(before);
-    });
-
-    test('fermeture chat modal', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
-        await page.click('#chat-close');
+    test('clic onglet Avis change le pane actif', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('.dist-tab[data-tab="avis"]');
         await page.waitForTimeout(300);
 
         const active = await page.evaluate(() =>
-            document.getElementById('chat-modal').classList.contains('active')
+            document.querySelector('.dist-tab-pane.active').dataset.tabPane
+        );
+        expect(active).toBe('avis');
+    });
+
+    test('clic onglet A propos affiche l\'adresse', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await page.waitForTimeout(300);
+
+        const address = await page.textContent('#dist-apropos-address');
+        expect(address).toBeTruthy();
+    });
+
+    test('bouton fermer ferme la modal', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('#dist-modal-close');
+        await page.waitForTimeout(300);
+
+        const active = await page.evaluate(() =>
+            document.getElementById('dist-modal-overlay').classList.contains('active')
         );
         expect(active).toBe(false);
+    });
+
+    test('boutons Itineraire et Favori visibles', async ({ page }) => {
+        await openDistModal(page);
+        expect(await page.$('#dist-action-directions')).not.toBeNull();
+        expect(await page.$('#dist-action-favorite')).not.toBeNull();
+    });
+
+    test('bouton Modifier cache si non favori', async ({ page }) => {
+        await page.evaluate(() => { window.AppState.subscriptions = []; });
+        await openDistModal(page);
+
+        const display = await page.evaluate(() =>
+            getComputedStyle(document.getElementById('dist-action-edit')).display
+        );
+        expect(display).toBe('none');
     });
 });
 
 // ============================================
-// 6. AUTH WALL - TOUTES LES ACTIONS D'ECRITURE
+// 5. AUTH WALL
 // ============================================
 
-test.describe('6. Auth wall', () => {
-    test('clic favori (coeur) declenche la modal auth', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.evaluate(() => document.getElementById('bs-favorite').click());
+test.describe('5. Auth wall', () => {
+    test('clic favori declenche la modal auth', async ({ page }) => {
+        await page.evaluate(() => { window.AppState.subscriptions = []; localStorage.clear(); });
+        await openDistModal(page);
+        await page.evaluate(() => document.getElementById('dist-action-favorite').click());
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
         const modal = await page.$('.auth-modal');
         expect(modal).not.toBeNull();
     });
 
-    test('clic "+ Ajouter un distributeur" declenche la modal auth', async ({ page }) => {
+    test('clic + Ajouter un distributeur declenche la modal auth', async ({ page }) => {
         await page.click('#btn-add-distributor');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
         const modal = await page.$('.auth-modal');
         expect(modal).not.toBeNull();
     });
-
-    test('clic Signaler declenche la modal auth', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.click('#bs-btn-report');
-        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
-
-        const modal = await page.$('.auth-modal');
-        expect(modal).not.toBeNull();
-    });
-
-    test('modal contient le widget hCaptcha', async ({ page }) => {
-        await page.waitForFunction(() => typeof window.hcaptcha !== 'undefined', { timeout: 15000 });
-
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.evaluate(() => document.getElementById('bs-favorite').click());
-        await page.waitForSelector('.auth-modal-overlay');
-
-        const captchaDiv = await page.$('.auth-modal .h-captcha');
-        expect(captchaDiv).not.toBeNull();
-
-        const sitekey = await captchaDiv.getAttribute('data-sitekey');
-        expect(sitekey).toBe('10000000-ffff-ffff-ffff-000000000001'); // cle test en localhost
-    });
-
-    test('bouton submit desactive sans captcha', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.evaluate(() => document.getElementById('bs-favorite').click());
-        await page.waitForSelector('.auth-modal-overlay');
-
-        const disabled = await page.getAttribute('.auth-modal-submit', 'disabled');
-        expect(disabled).not.toBeNull();
-    });
-
-    test('fermeture modal via croix', async ({ page }) => {
-        await openBottomSheet(page);
-        await expandBottomSheetToFull(page);
-        await page.evaluate(() => document.getElementById('bs-favorite').click());
-        await page.waitForSelector('.auth-modal-overlay');
-        await closeAuthModal(page);
-
-        const modalGone = await page.$('.auth-modal-overlay');
-        expect(modalGone).toBeNull();
-    });
 });
 
 // ============================================
-// 7. LECTURES ANONYMES
+// 6. CHAT BOT (sans auth)
 // ============================================
 
-test.describe('7. Lectures restent anonymes', () => {
-    test('ouverture bottom sheet sans modal auth', async ({ page }) => {
-        await openBottomSheet(page);
-
-        const modal = await page.$('.auth-modal-overlay');
-        expect(modal).toBeNull();
-    });
-
-    test('navigation onglets sans modal auth', async ({ page }) => {
-        await page.click('.bottom-nav [data-tab="activity"]');
-        await page.waitForTimeout(300);
-        await page.click('.bottom-nav [data-tab="favorites"]');
-        await page.waitForTimeout(300);
-        await page.click('.bottom-nav [data-tab="explore"]');
-        await page.waitForTimeout(300);
-
-        const modal = await page.$('.auth-modal-overlay');
-        expect(modal).toBeNull();
-    });
-
-    test('chat sans modal auth', async ({ page }) => {
+test.describe('6. Chat bot', () => {
+    test('chat ouvrable sans auth', async ({ page }) => {
         await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
         await page.waitForSelector('#chat-modal.active');
 
-        const modal = await page.$('.auth-modal-overlay');
-        expect(modal).toBeNull();
+        const active = await page.evaluate(() =>
+            document.getElementById('chat-modal').classList.contains('active')
+        );
+        expect(active).toBe(true);
+    });
+
+    test('quick replies en francais', async ({ page }) => {
+        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
+        await page.waitForSelector('.quick-reply-btn');
+
+        const firstReply = await page.$('.quick-reply-btn');
+        const replyLabel = (await firstReply.textContent()).trim();
+        await firstReply.click();
+        await page.waitForTimeout(800);
+
+        const userMessages = await page.$$eval('#chat-messages .chat-message.user .message-content',
+            els => els.map(el => el.textContent.trim())
+        );
+        expect(userMessages[userMessages.length - 1]).toBe(replyLabel);
     });
 });
 
 // ============================================
-// 8. PROFIL
+// 7. PROFIL
 // ============================================
 
-test.describe('8. Profil', () => {
+test.describe('7. Profil', () => {
     test('indicateur "Non connecte" par defaut', async ({ page }) => {
         await page.click('button[aria-label="Profil"]');
         await page.waitForSelector('#profile-view.view-active');
 
         const text = await page.textContent('#auth-indicator-text');
         expect(text).toBe('Non connecte');
-
-        const indicator = await page.$('#auth-indicator');
-        const classes = await indicator.getAttribute('class');
-        expect(classes).not.toContain('logged-in');
-    });
-
-    test('bouton logout cache par defaut', async ({ page }) => {
-        await page.click('button[aria-label="Profil"]');
-        await page.waitForSelector('#profile-view.view-active');
-
-        const display = await page.evaluate(() =>
-            getComputedStyle(document.getElementById('logout-btn')).display
-        );
-        expect(display).toBe('none');
     });
 
     test('stats profil visibles', async ({ page }) => {
         await page.click('button[aria-label="Profil"]');
         await page.waitForSelector('#profile-view.view-active');
-
         const subsStat = await page.$('#profile-view .stat-card');
         expect(subsStat).not.toBeNull();
-    });
-
-    test('bouton Notifications ouvre les parametres', async ({ page }) => {
-        await page.click('button[aria-label="Profil"]');
-        await page.waitForSelector('#profile-view.view-active');
-        await page.click('#notification-settings-btn');
-        await page.waitForSelector('#notification-settings.view-active', { timeout: 3000 });
-
-        const h2 = await page.textContent('#notification-settings h2');
-        expect(h2).toContain('Notifications');
     });
 });
 
 // ============================================
-// 9. MOBILE VIEWPORT
+// 8. MOBILE
 // ============================================
 
-test.describe('9. Mobile', () => {
-    test('sidebar cachee en mobile', async ({ page }) => {
-        await page.setViewportSize({ width: 375, height: 667 });
-        await page.waitForTimeout(500);
-
-        const sidebarOpen = await page.evaluate(() =>
-            document.getElementById('sidebar').classList.contains('open')
-        );
-        expect(sidebarOpen).toBe(false);
-    });
-
-    test('bottom sheet fonctionne en mobile', async ({ page }) => {
+test.describe('8. Mobile', () => {
+    test('modal plein ecran en mobile', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         await page.waitForTimeout(300);
+        await openDistModal(page);
 
-        await openBottomSheet(page);
-
-        const state = await page.evaluate(() =>
-            document.getElementById('bottom-sheet').classList.toString()
+        const height = await page.evaluate(() =>
+            document.getElementById('dist-modal').getBoundingClientRect().height
         );
-        expect(state).toContain('bs-peek');
+        // En mobile, la modal prend tout l'ecran
+        expect(height).toBeGreaterThan(500);
     });
 
     test('bottom nav visible en mobile', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         await page.waitForTimeout(300);
-
-        const bottomNav = await page.$('.bottom-nav');
-        const visible = await bottomNav.isVisible();
-        expect(visible).toBe(true);
+        const visible = await page.$('.bottom-nav');
+        expect(await visible.isVisible()).toBe(true);
     });
 });

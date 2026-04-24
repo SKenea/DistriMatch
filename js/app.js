@@ -67,7 +67,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initBottomSheet, showInBottomSheet } from './bottomsheet.js';
+import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 
@@ -237,7 +237,10 @@ registerViewCallback('activity', displayActivityFeed);
 // ============================================
 
 // Carte popups — showDetails redirige vers le bottom sheet
-window.showDetails = showInBottomSheet;
+window.showDetails = openDistributorModal;
+window.openDistributorModal = openDistributorModal;
+window.toggleDistAddProductForm = toggleDistAddProductForm;
+window.submitDistAddProduct = submitDistAddProduct;
 window.openConversation = openConversation;
 
 // Page distributeur
@@ -371,7 +374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMainMap();
 
     // Initialiser le bottom sheet
-    initBottomSheet();
+    initSidePanel();
+    initDistModal();
 
     // Initialiser les filtres
     initFilterChips();

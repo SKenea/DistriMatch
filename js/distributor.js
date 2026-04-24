@@ -56,8 +56,12 @@ export async function loadDistributorPhotos(distributorId) {
 // CRUD PRODUITS
 // ============================================
 
-export function renderProductsList(distributor, targetId = 'products-list') {
+export function renderProductsList(distributor, targetId = 'products-list', options = {}) {
     const productsList = document.getElementById(targetId);
+    // Lecture seule par defaut sur la modal Google Maps
+    const readonly = options.readonly !== undefined
+        ? options.readonly
+        : (targetId === 'dist-products-list');
     if (!distributor || !productsList) return;
 
     if (!distributor.products || distributor.products.length === 0) {
@@ -80,11 +84,13 @@ export function renderProductsList(distributor, targetId = 'products-list') {
             </div>
             <div class="product-actions-clean">
                 <div class="product-price-clean">${p.price.toFixed(2)}€</div>
-                <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
-                    ${p.available ? '✓' : '✗'}
-                </button>
-                <button class="product-btn-edit" onclick="editProduct(${index})" title="Modifier">✎</button>
-                <button class="product-btn-delete" onclick="deleteProduct(${index})" title="Supprimer">×</button>
+                ${readonly ? '' : `
+                    <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
+                        ${p.available ? '✓' : '✗'}
+                    </button>
+                    <button class="product-btn-edit" onclick="editProduct(${index})" title="Modifier">✎</button>
+                    <button class="product-btn-delete" onclick="deleteProduct(${index})" title="Supprimer">×</button>
+                `}
             </div>
         </div>
     `).join('');
@@ -333,7 +339,7 @@ export function displaySubscriptions() {
         const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="subscription-card" onclick="openConversation('${d.id}'); goBackToMap();">
+            <div class="subscription-card" onclick="openDistributorModal('${d.id}', true)">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
                 <div class="subscription-image" style="background: ${typeConfig.gradient || '#6366f1'}">
                     <span class="subscription-emoji">${d.emoji}</span>

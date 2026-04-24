@@ -27,7 +27,7 @@ import {
 
 import { isQuietHours, canNotify } from '../js/notifications.js';
 
-import { getBottomSheetState } from '../js/bottomsheet.js';
+// Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
 // ============================================
 // UTILS - FONCTIONS PURES
@@ -360,14 +360,8 @@ describe('canNotify', () => {
 });
 
 // ============================================
-// BOTTOMSHEET - ETAT
+// (Tests bottomsheet supprimes - module remplace par gmaps-ui)
 // ============================================
-
-describe('getBottomSheetState', () => {
-    it('retourne l\'etat initial hidden', () => {
-        assert.equal(getBottomSheetState(), 'hidden');
-    });
-});
 
 // ============================================
 // CONSTANTES - MESSAGES
