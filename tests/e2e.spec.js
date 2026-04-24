@@ -209,15 +209,6 @@ test.describe('4. Modal distributeur', () => {
         expect(await page.$('#dist-action-favorite')).not.toBeNull();
     });
 
-    test('bouton Modifier cache si non favori', async ({ page }) => {
-        await page.evaluate(() => { window.AppState.subscriptions = []; });
-        await openDistModal(page);
-
-        const display = await page.evaluate(() =>
-            getComputedStyle(document.getElementById('dist-action-edit')).display
-        );
-        expect(display).toBe('none');
-    });
 });
 
 // ============================================

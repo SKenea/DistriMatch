@@ -116,14 +116,7 @@ export function initDistModal() {
         if (AppState.currentDistributor) {
             await toggleSubscription(AppState.currentDistributor.id);
             updateFavoriteButton();
-            updateEditButton();
         }
-    });
-
-    document.getElementById('dist-action-edit')?.addEventListener('click', () => {
-        // Re-ouvrir la modal en mode edit
-        const distId = AppState.currentDistributor?.id;
-        if (distId) openDistributorModal(distId, true);
     });
 
     // Bouton Discuter avec le bot (mode edit)
@@ -183,7 +176,6 @@ export function openDistributorModal(id, editMode = false) {
 
     // Boutons
     updateFavoriteButton();
-    updateEditButton();
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');
@@ -216,15 +208,6 @@ function updateFavoriteButton() {
         btn.setAttribute('aria-label', isFav ? 'Retirer des favoris' : 'Ajouter aux favoris');
     }
     if (label) label.textContent = isFav ? 'Retirer' : 'Favori';
-}
-
-function updateEditButton() {
-    const dist = AppState.currentDistributor;
-    if (!dist) return;
-    const isFav = AppState.subscriptions.includes(dist.id);
-    const editBtn = document.getElementById('dist-action-edit');
-    // Pas besoin du bouton Modifier en mode edit deja
-    if (editBtn) editBtn.style.display = (isFav && !AppState.modalEditMode) ? 'flex' : 'none';
 }
 
 // ============================================
