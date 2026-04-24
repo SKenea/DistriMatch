@@ -497,70 +497,7 @@
         </div>
     </div>
 
-    <!-- ============================================
-         PAGE DISTRIBUTEUR (detail complet)
-         ============================================ -->
-    <div id="distributor-view" class="view-page view-hidden">
-        <!-- Placeholder si aucun distributeur selectionne -->
-        <div id="distributor-empty" class="empty-state-page">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                <polyline points="17 2 12 7 7 2"/>
-            </svg>
-            <p>Selectionne un distributeur sur la carte</p>
-        </div>
-
-        <!-- Contenu detail distributeur -->
-        <div class="distributor-page-content" id="distributor-page-content" style="display:none">
-            <div class="detail-header-clean">
-                <div class="detail-type" id="detail-type"></div>
-                <h2 id="detail-name">Nom du distributeur</h2>
-                <p id="detail-address">Adresse</p>
-                <div class="detail-meta">
-                    <span class="rating-clean" id="detail-rating"></span>
-                    <span class="reviews-clean" id="detail-reviews">(0 avis)</span>
-                    <span class="distance-clean" id="detail-distance">0 km</span>
-                </div>
-            </div>
-
-            <div id="detail-photos" class="detail-photos-section" style="display:none">
-                <div id="detail-photos-gallery" class="photos-gallery"></div>
-            </div>
-
-            <div class="products-section-clean">
-                <div class="products-header-clean">
-                    <h3>Produits disponibles</h3>
-                    <button class="btn-add-product" id="btn-add-product" onclick="toggleAddProductForm()">+ Ajouter</button>
-                </div>
-                <div id="add-product-form" class="add-product-form" style="display:none">
-                    <input type="text" id="detail-product-name" placeholder="Nom du produit">
-                    <input type="number" id="detail-product-price" placeholder="Prix" step="0.10" min="0">
-                    <button class="btn-confirm-small" onclick="submitDetailProduct()">OK</button>
-                </div>
-                <div id="products-list"></div>
-            </div>
-
-            <div class="distributor-actions">
-                <button class="btn-secondary-clean btn-report-action" id="btn-report">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    Signaler
-                </button>
-                <button class="btn-secondary-clean btn-directions-action" id="get-directions">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                    </svg>
-                    Itineraire
-                </button>
-                <button class="btn-primary-clean" id="btn-subscribe">
-                    S'abonner
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- L'ancienne page distributeur a ete remplacee par le bottom sheet (pattern Google Maps) -->
 
     <!-- ============================================
          MODAL SIGNALEMENT

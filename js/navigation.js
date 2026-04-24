@@ -18,8 +18,7 @@ const VIEW_CONFIG = {
     subscriptions:           { id: 'subscriptions-view',   onShow: null },
     profile:                 { id: 'profile-view',         onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
-    'notification-settings': { id: 'notification-settings' },
-    distributor:             { id: 'distributor-view',      onShow: null }
+    'notification-settings': { id: 'notification-settings' }
 };
 
 export function registerViewCallback(viewName, callback) {

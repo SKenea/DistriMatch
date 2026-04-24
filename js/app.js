@@ -34,11 +34,10 @@ import {
 } from './navigation.js';
 
 import {
-    showDetails, renderProductsList,
+    renderProductsList,
     toggleAddProductForm, submitDetailProduct,
     editProduct, saveProduct, toggleProductAvailability, deleteProduct,
-    getDirections, getDirectionsTo,
-    toggleSubscription, toggleSubscriptionFromModal, displaySubscriptions
+    toggleSubscription, displaySubscriptions
 } from './distributor.js';
 
 import {
@@ -232,12 +231,6 @@ registerViewCallback('subscriptions', displaySubscriptions);
 registerViewCallback('favorites', displaySubscriptions);
 registerViewCallback('profile', updateProfileStats);
 registerViewCallback('activity', displayActivityFeed);
-registerViewCallback('distributor', () => {
-    if (!AppState.currentDistributor) {
-        document.getElementById('distributor-page-content').style.display = 'none';
-        document.getElementById('distributor-empty').style.display = 'block';
-    }
-});
 
 // ============================================
 // WINDOW GLOBALS (pour onclick inline)
@@ -500,11 +493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Actions page distributeur
-    document.getElementById('get-directions').addEventListener('click', getDirections);
-    document.getElementById('btn-subscribe').addEventListener('click', toggleSubscriptionFromModal);
-    document.getElementById('btn-report').addEventListener('click', openReportModal);
-
+    // Modal signalement (close + submit)
     document.getElementById('close-report').addEventListener('click', () => {
         document.getElementById('report-modal').classList.remove('active');
     });
