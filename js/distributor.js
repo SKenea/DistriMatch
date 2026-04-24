@@ -7,81 +7,17 @@ import {
     escapeHTML, generateStars, formatDistance, showToast,
     updateImplicitProfile, saveToLocalStorage
 } from './utils.js';
-import {
-    switchTab, switchView, updateBadges, goBackToMap
-} from './navigation.js';
+import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
-import {
-    generateWelcomeMessage, updateConversationsList,
-    updateChatSubscribeButton
-} from './chat.js';
+import { generateWelcomeMessage } from './chat.js';
 import { requireAuth } from './auth.js';
 
 // ============================================
 // PAGE DISTRIBUTEUR
 // ============================================
 
-export function showDetails(id) {
-    const distributor = AppState.distributors.find(d => d.id === id);
-    if (!distributor) return;
-
-    AppState.currentDistributor = distributor;
-    updateImplicitProfile('view_details', { type: distributor.type, id: distributor.id });
-    updateImplicitProfile('time_activity', {});
-
-    const typeConfig = AppState.typeConfig[distributor.type] || {};
-    const distance = distributor.distance ? formatDistance(distributor.distance) : 'N/A';
-
-    document.getElementById('detail-type').innerHTML = `
-        <span style="font-size: 1.5rem">${distributor.emoji}</span>
-        <span>${escapeHTML(typeConfig.label || distributor.type)}</span>
-    `;
-    document.getElementById('detail-name').textContent = distributor.name;
-    document.getElementById('detail-address').textContent = distributor.address;
-    document.getElementById('detail-rating').textContent = generateStars(distributor.rating);
-    document.getElementById('detail-reviews').textContent = `(${distributor.reviewCount} avis)`;
-    document.getElementById('detail-distance').textContent = distance;
-
-    renderProductsList(distributor);
-
-    const subBtn = document.getElementById('btn-subscribe');
-    const isSubscribed = AppState.subscriptions.includes(distributor.id);
-    subBtn.textContent = isSubscribed ? 'Abonne' : "S'abonner";
-    subBtn.className = isSubscribed ? 'btn-primary-clean subscribed-active' : 'btn-primary-clean';
-
-    // Charger les photos
-    const photosSection = document.getElementById('detail-photos');
-    const photosGallery = document.getElementById('detail-photos-gallery');
-    photosSection.style.display = 'none';
-    photosGallery.innerHTML = '';
-
-    loadDistributorPhotos(distributor.id).then(photos => {
-        if (photos.length > 0) {
-            photosGallery.innerHTML = photos.map(p =>
-                `<div class="photo-gallery-item"><img src="${p.url}" alt="Photo distributeur" loading="lazy"></div>`
-            ).join('');
-            photosSection.style.display = 'block';
-        }
-    });
-
-    // Afficher le contenu, masquer le placeholder
-    const pageContent = document.getElementById('distributor-page-content');
-    const emptyState = document.getElementById('distributor-empty');
-    const addForm = document.getElementById('add-product-form');
-    if (pageContent) pageContent.style.display = 'block';
-    if (emptyState) emptyState.style.display = 'none';
-    if (addForm) addForm.style.display = 'none';
-
-    // Activer l'onglet et naviguer vers la page (legacy, si tab-distributor existe)
-    const tabDistributor = document.getElementById('tab-distributor');
-    if (tabDistributor) {
-        tabDistributor.classList.remove('nav-tab-disabled');
-        if (document.getElementById('distributor-view')?.classList.contains('view-hidden')) {
-            switchTab('distributor');
-        }
-    }
-}
+// La fonction showDetails legacy a ete supprimee. Utiliser showInBottomSheet (js/bottomsheet.js).
 
 // ============================================
 // PHOTOS
@@ -155,20 +91,21 @@ export function renderProductsList(distributor, targetId = 'products-list') {
 }
 
 export function toggleAddProductForm() {
-    const form = document.getElementById('add-product-form');
+    const form = document.getElementById('bs-add-product-form');
+    if (!form) return;
     form.style.display = form.style.display === 'none' ? 'flex' : 'none';
     if (form.style.display === 'flex') {
-        document.getElementById('detail-product-name').value = '';
-        document.getElementById('detail-product-price').value = '';
-        document.getElementById('detail-product-name').focus();
+        document.getElementById('bs-detail-product-name').value = '';
+        document.getElementById('bs-detail-product-price').value = '';
+        document.getElementById('bs-detail-product-name').focus();
     }
 }
 
 export async function submitDetailProduct() {
     if (!(await requireAuth())) return;
 
-    const name = document.getElementById('detail-product-name').value.trim();
-    const price = parseFloat(document.getElementById('detail-product-price').value) || 0;
+    const name = document.getElementById('bs-detail-product-name').value.trim();
+    const price = parseFloat(document.getElementById('bs-detail-product-price').value) || 0;
 
     if (!name || !AppState.currentDistributor) return;
 
@@ -191,11 +128,11 @@ export async function submitDetailProduct() {
     }
 
     AppState.currentDistributor.products.push(product);
-    renderProductsList(AppState.currentDistributor);
+    renderProductsList(AppState.currentDistributor, 'bs-products-list');
 
-    document.getElementById('detail-product-name').value = '';
-    document.getElementById('detail-product-price').value = '';
-    document.getElementById('add-product-form').style.display = 'none';
+    document.getElementById('bs-detail-product-name').value = '';
+    document.getElementById('bs-detail-product-price').value = '';
+    document.getElementById('bs-add-product-form').style.display = 'none';
 
     showToast(`${escapeHTML(name)} ajoute !`, 'success');
 }
@@ -338,11 +275,6 @@ export function getDirectionsTo(distributor) {
     window.open(url, '_blank');
 }
 
-export function getDirections() {
-    if (!AppState.currentDistributor) return;
-    getDirectionsTo(AppState.currentDistributor);
-}
-
 // ============================================
 // ABONNEMENTS
 // ============================================
@@ -373,22 +305,6 @@ export async function toggleSubscription(id, event) {
 
     if (document.getElementById('subscriptions-view').classList.contains('view-active')) {
         displaySubscriptions();
-    }
-
-    // Rafraichir le bouton subscribe (legacy detail page) si present
-    if (AppState.currentDistributor && AppState.currentDistributor.id === id) {
-        const subBtn = document.getElementById('btn-subscribe');
-        if (subBtn) {
-            const isNowSubscribed = AppState.subscriptions.includes(id);
-            subBtn.textContent = isNowSubscribed ? 'Abonne' : "S'abonner";
-            subBtn.className = isNowSubscribed ? 'btn-primary-clean subscribed-active' : 'btn-primary-clean';
-        }
-    }
-}
-
-export function toggleSubscriptionFromModal() {
-    if (AppState.currentDistributor) {
-        toggleSubscription(AppState.currentDistributor.id);
     }
 }
 

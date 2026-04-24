@@ -824,29 +824,6 @@ body {
     flex: 1;
 }
 
-.btn-favorite-heart {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: var(--gray-light);
-    transition: color 0.2s, transform 0.2s;
-    flex-shrink: 0;
-}
-
-.btn-favorite-heart:hover {
-    color: var(--danger);
-    transform: scale(1.15);
-}
-
-.btn-favorite-heart.favorited {
-    color: var(--danger);
-}
-
-.btn-favorite-heart.favorited svg {
-    fill: var(--danger);
-}
-
 .btn-center-map {
     position: absolute;
     bottom: 136px;
@@ -1977,12 +1954,6 @@ body {
     color: white;
 }
 
-/* Bouton abonne actif dans modal */
-.subscribed-active {
-    background: var(--primary) !important;
-    color: white !important;
-}
-
 /* Empty state */
 .empty-state {
     text-align: center;
@@ -2332,75 +2303,8 @@ body {
 }
 
 /* ==========================================
-   PAGE DISTRIBUTEUR (detail pleine page)
+   BOUTONS PRIMARY / SECONDARY (utilises dans profil, notifications, signalement)
    ========================================== */
-
-.distributor-page-content {
-    padding: 1.25rem 1rem 2rem;
-    background: var(--white);
-    min-height: 100%;
-}
-
-.distributor-page-content .detail-header-clean {
-    padding-right: 0;
-}
-
-.distributor-actions {
-    display: flex;
-    gap: 0.625rem;
-    align-items: center;
-    margin-top: 1.25rem;
-    padding-top: 1.25rem;
-}
-
-.empty-state-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 60vh;
-    color: var(--text-secondary);
-    gap: 1rem;
-    text-align: center;
-    padding: 2rem;
-}
-
-.empty-state-page p {
-    font-size: 0.95rem;
-}
-
-.btn-icon-action {
-    width: 44px;
-    height: 44px;
-    border: none;
-    background: var(--light);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--gray);
-    flex-shrink: 0;
-}
-
-.btn-icon-action:hover {
-    background: var(--warning);
-    color: white;
-}
-
-.btn-report-action,
-.btn-directions-action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-}
-
-.btn-report-action:hover {
-    background: var(--warning) !important;
-    color: white !important;
-}
 
 .btn-primary-clean,
 .btn-secondary-clean {
@@ -2421,10 +2325,6 @@ body {
 
 .btn-primary-clean:hover {
     background: var(--primary-dark);
-}
-
-.btn-primary-clean.favorite-active {
-    background: var(--danger);
 }
 
 .btn-secondary-clean {
