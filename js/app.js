@@ -22,7 +22,7 @@ import {
     loadUserDistributors, saveUserDistributor
 } from './utils.js';
 
-import { initMainMap, updateMapMarkers, centerMapOnUser } from './map.js';
+import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
 
 import {
     switchView, switchTab, goBackToMap,
@@ -465,6 +465,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Centrer la carte
     document.getElementById('center-map').addEventListener('click', centerMapOnUser);
+
+    // Boutons zoom +/-
+    document.getElementById('btn-zoom-in')?.addEventListener('click', zoomIn);
+    document.getElementById('btn-zoom-out')?.addEventListener('click', zoomOut);
 
     // Ajout distributeur
     document.getElementById('btn-add-distributor')?.addEventListener('click', toggleAddMode);
