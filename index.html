@@ -170,6 +170,90 @@
                 <span>Cliquez sur la carte pour placer le distributeur</span>
                 <button class="placement-cancel" id="placement-cancel">Annuler</button>
             </div>
+
+            <!-- Bottom Sheet distributeur (Google Maps style) -->
+            <div class="bottom-sheet" id="bottom-sheet">
+                <div class="bottom-sheet-drag" id="bottom-sheet-drag">
+                    <div class="bottom-sheet-handle"></div>
+                </div>
+
+                <!-- Etat PEEK : resume compact -->
+                <div class="bottom-sheet-peek" id="bottom-sheet-peek">
+                    <div class="peek-left">
+                        <span class="peek-emoji" id="peek-emoji"></span>
+                        <div class="peek-info">
+                            <span class="peek-name" id="peek-name"></span>
+                            <span class="peek-meta" id="peek-meta"></span>
+                        </div>
+                    </div>
+                    <button class="peek-favorite" id="peek-favorite" aria-label="Ajouter aux favoris">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Etat FULL : detail complet -->
+                <div class="bottom-sheet-full" id="bottom-sheet-full">
+                    <div class="detail-header-clean">
+                        <div class="detail-type" id="bs-detail-type"></div>
+                        <div class="detail-title-row">
+                            <h2 id="bs-detail-name">Nom du distributeur</h2>
+                            <button class="btn-favorite-heart" id="bs-favorite" aria-label="Ajouter aux favoris">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p id="bs-detail-address">Adresse</p>
+                        <div class="detail-meta">
+                            <span class="rating-clean" id="bs-detail-rating"></span>
+                            <span class="reviews-clean" id="bs-detail-reviews">(0 avis)</span>
+                            <span class="distance-clean" id="bs-detail-distance">0 km</span>
+                        </div>
+                    </div>
+
+                    <div id="bs-detail-photos" class="detail-photos-section" style="display:none">
+                        <div id="bs-detail-photos-gallery" class="photos-gallery"></div>
+                    </div>
+
+                    <div class="products-section-clean">
+                        <div class="products-header-clean">
+                            <h3>Produits disponibles</h3>
+                            <button class="btn-add-product" id="bs-btn-add-product" onclick="toggleAddProductForm()">+ Ajouter</button>
+                        </div>
+                        <div id="bs-add-product-form" class="add-product-form" style="display:none">
+                            <input type="text" id="bs-detail-product-name" placeholder="Nom du produit">
+                            <input type="number" id="bs-detail-product-price" placeholder="Prix" step="0.10" min="0">
+                            <button class="btn-confirm-small" onclick="submitDetailProduct()">OK</button>
+                        </div>
+                        <div id="bs-products-list"></div>
+                    </div>
+
+                    <div class="distributor-actions">
+                        <button class="btn-secondary-clean btn-report-action" id="bs-btn-report">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            Signaler
+                        </button>
+                        <button class="btn-secondary-clean btn-directions-action" id="bs-get-directions">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                            </svg>
+                            Itineraire
+                        </button>
+                        <button class="btn-secondary-clean btn-directions-action" id="bs-btn-chat">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            Discuter
+                        </button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -231,8 +315,8 @@
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
             </button>
-            <h2>Mes Abonnements</h2>
-            <span class="header-count" id="subscriptions-count">0 abonnement(s)</span>
+            <h2>Mes Favoris</h2>
+            <span class="header-count" id="subscriptions-count">0 favori(s)</span>
         </div>
         <div id="subscriptions-list" class="items-list">
             <!-- Abonnements injectes ici -->
@@ -244,8 +328,8 @@
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
             </div>
-            <h3>Aucun abonnement</h3>
-            <p>Abonne-toi a un distributeur pour recevoir ses alertes !</p>
+            <h3>Aucun favori</h3>
+            <p>Ajoute un distributeur a tes favoris pour le retrouver facilement !</p>
         </div>
     </div>
 
@@ -297,6 +381,12 @@
                 <!-- Preferences implicites affichees ici -->
             </div>
         </div>
+        <div class="profile-auth-status" id="profile-auth-status">
+            <span class="auth-indicator" id="auth-indicator">
+                <span class="dot"></span>
+                <span id="auth-indicator-text">Non connecte</span>
+            </span>
+        </div>
         <div class="profile-actions">
             <button class="btn-primary-clean" id="notification-settings-btn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
@@ -305,6 +395,7 @@
                 </svg>
                 Notifications
             </button>
+            <button class="btn-secondary-clean" id="logout-btn" style="display:none">Se deconnecter</button>
             <button class="btn-secondary-clean" id="clear-data-btn">Effacer mes donnees</button>
         </div>
     </div>
@@ -425,7 +516,10 @@
                     </svg>
                     Signaler
                 </button>
-                <button class="btn-secondary-clean" id="get-directions">
+                <button class="btn-secondary-clean btn-directions-action" id="get-directions">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                    </svg>
                     Itineraire
                 </button>
                 <button class="btn-primary-clean" id="btn-subscribe">
@@ -531,12 +625,12 @@
             </svg>
             <span>Explorer</span>
         </button>
-        <button class="nav-tab nav-tab-disabled" data-tab="distributor" id="tab-distributor" aria-label="Distributeur">
+        <button class="nav-tab" data-tab="favorites" id="tab-favorites" aria-label="Favoris">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                <polyline points="17 2 12 7 7 2"/>
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <span>Distributeur</span>
+            <span>Favoris</span>
+            <span class="nav-tab-badge" id="favorites-badge" style="display: none;">0</span>
         </button>
         <button class="nav-tab" data-tab="activity" aria-label="Activite">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -554,6 +648,7 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
     <script type="module" src="js/app.js?v=22"></script>
 </body>
 </html>

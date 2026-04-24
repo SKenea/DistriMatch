@@ -22,5 +22,9 @@ screenshot-*.png
 # Artefacts Windows
 nul
 
-# Node (si utilisé plus tard)
+# Node
 node_modules/
+
+# Playwright
+test-results/
+playwright-report/

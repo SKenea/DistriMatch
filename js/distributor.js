@@ -16,6 +16,7 @@ import {
     generateWelcomeMessage, updateConversationsList,
     updateChatSubscribeButton
 } from './chat.js';
+import { requireAuth } from './auth.js';
 
 // ============================================
 // PAGE DISTRIBUTEUR
@@ -65,14 +66,20 @@ export function showDetails(id) {
     });
 
     // Afficher le contenu, masquer le placeholder
-    document.getElementById('distributor-page-content').style.display = 'block';
-    document.getElementById('distributor-empty').style.display = 'none';
-    document.getElementById('add-product-form').style.display = 'none';
+    const pageContent = document.getElementById('distributor-page-content');
+    const emptyState = document.getElementById('distributor-empty');
+    const addForm = document.getElementById('add-product-form');
+    if (pageContent) pageContent.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+    if (addForm) addForm.style.display = 'none';
 
-    // Activer l'onglet et naviguer vers la page
-    document.getElementById('tab-distributor').classList.remove('nav-tab-disabled');
-    if (document.getElementById('distributor-view').classList.contains('view-hidden')) {
-        switchTab('distributor');
+    // Activer l'onglet et naviguer vers la page (legacy, si tab-distributor existe)
+    const tabDistributor = document.getElementById('tab-distributor');
+    if (tabDistributor) {
+        tabDistributor.classList.remove('nav-tab-disabled');
+        if (document.getElementById('distributor-view')?.classList.contains('view-hidden')) {
+            switchTab('distributor');
+        }
     }
 }
 
@@ -88,7 +95,7 @@ function getPhotoUrl(storagePath) {
     return data?.publicUrl || '';
 }
 
-async function loadDistributorPhotos(distributorId) {
+export async function loadDistributorPhotos(distributorId) {
     if (!supabaseClient) return [];
     try {
         const { data, error } = await supabaseClient
@@ -113,9 +120,22 @@ async function loadDistributorPhotos(distributorId) {
 // CRUD PRODUITS
 // ============================================
 
-export function renderProductsList(distributor) {
-    const productsList = document.getElementById('products-list');
+export function renderProductsList(distributor, targetId = 'products-list') {
+    const productsList = document.getElementById(targetId);
     if (!distributor || !productsList) return;
+
+    if (!distributor.products || distributor.products.length === 0) {
+        productsList.innerHTML = `
+            <div class="products-empty-state">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 01-8 0"/>
+                </svg>
+                <p>Aucun produit reference pour le moment</p>
+            </div>`;
+        return;
+    }
 
     productsList.innerHTML = distributor.products.map((p, index) => `
         <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
@@ -145,6 +165,8 @@ export function toggleAddProductForm() {
 }
 
 export async function submitDetailProduct() {
+    if (!(await requireAuth())) return;
+
     const name = document.getElementById('detail-product-name').value.trim();
     const price = parseFloat(document.getElementById('detail-product-price').value) || 0;
 
@@ -200,6 +222,8 @@ export function editProduct(index) {
 }
 
 export async function saveProduct(index) {
+    if (!(await requireAuth())) return;
+
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const product = distributor.products[index];
@@ -242,6 +266,8 @@ export async function saveProduct(index) {
 }
 
 export async function toggleProductAvailability(index) {
+    if (!(await requireAuth())) return;
+
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const product = distributor.products[index];
@@ -273,6 +299,8 @@ export async function toggleProductAvailability(index) {
 }
 
 export async function deleteProduct(index) {
+    if (!(await requireAuth())) return;
+
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const product = distributor.products[index];
@@ -319,8 +347,9 @@ export function getDirections() {
 // ABONNEMENTS
 // ============================================
 
-export function toggleSubscription(id, event) {
+export async function toggleSubscription(id, event) {
     if (event) event.stopPropagation();
+    if (!(await requireAuth())) return;
 
     const index = AppState.subscriptions.indexOf(id);
     const distributor = AppState.distributors.find(d => d.id === id);
@@ -346,8 +375,14 @@ export function toggleSubscription(id, event) {
         displaySubscriptions();
     }
 
+    // Rafraichir le bouton subscribe (legacy detail page) si present
     if (AppState.currentDistributor && AppState.currentDistributor.id === id) {
-        showDetails(id);
+        const subBtn = document.getElementById('btn-subscribe');
+        if (subBtn) {
+            const isNowSubscribed = AppState.subscriptions.includes(id);
+            subBtn.textContent = isNowSubscribed ? 'Abonne' : "S'abonner";
+            subBtn.className = isNowSubscribed ? 'btn-primary-clean subscribed-active' : 'btn-primary-clean';
+        }
     }
 }
 
@@ -371,7 +406,7 @@ export function displaySubscriptions() {
 
     list.style.display = 'block';
     empty.style.display = 'none';
-    count.textContent = `${AppState.subscriptions.length} abonnement(s)`;
+    count.textContent = `${AppState.subscriptions.length} favori(s)`;
 
     list.innerHTML = AppState.subscriptions.map(id => {
         const d = AppState.distributors.find(dist => dist.id === id);

@@ -93,7 +93,7 @@ function displayChatModal(bot) {
         const btn = document.createElement('button');
         btn.className = 'quick-reply-btn';
         btn.textContent = reply.text;
-        btn.onclick = () => handleQuickReply(reply.action, bot);
+        btn.onclick = () => handleQuickReply(reply.action, bot, reply.text);
         quickReplies.appendChild(btn);
     });
 
@@ -147,18 +147,19 @@ function addUserMessageToConversation(distributorId, text) {
 // ACTIONS CHAT
 // ============================================
 
-function handleQuickReply(action, bot) {
+function handleQuickReply(action, bot, displayText) {
     const quickReplies = document.getElementById('chat-quick-replies');
     quickReplies.innerHTML = '';
-    handleDistributorAction(action, bot);
+    handleDistributorAction(action, bot, displayText);
 }
 
-function handleDistributorAction(action, bot) {
+function handleDistributorAction(action, bot, displayText) {
     const d = bot.distributor;
     const distributorId = bot.id;
 
-    addUserMessageToConversation(distributorId, action);
-    addChatMessageToDOM('user', '👤', action);
+    const userText = displayText || action;
+    addUserMessageToConversation(distributorId, userText);
+    addChatMessageToDOM('user', '👤', userText);
 
     setTimeout(() => {
         let response = '';
@@ -237,7 +238,7 @@ function handleDistributorAction(action, bot) {
             const btn = document.createElement('button');
             btn.className = 'quick-reply-btn';
             btn.textContent = reply.text;
-            btn.onclick = () => handleQuickReply(reply.action, bot);
+            btn.onclick = () => handleQuickReply(reply.action, bot, reply.text);
             quickReplies.appendChild(btn);
         });
 
