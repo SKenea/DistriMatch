@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="#E63946">
     <meta name="description" content="DistriMatch - Trouvez les distributeurs alimentaires pres de chez vous">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -20,30 +20,6 @@
     <!-- Overlay geolocalisation (pre-permission prompt) -->
     <div id="geoloc-overlay" class="geoloc-overlay">
         <div class="geoloc-content">
-            <!-- Illustration : carte stylee avec pins autour d'une position user -->
-            <div class="geoloc-illustration">
-                <svg viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Fond carte stylise -->
-                    <rect x="10" y="10" width="180" height="120" rx="12" fill="rgba(255,255,255,0.12)" />
-                    <path d="M20 50 Q60 30 100 50 T180 60" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" fill="none"/>
-                    <path d="M20 80 Q70 95 130 75 T180 90" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none"/>
-                    <!-- Pins distributeurs autour -->
-                    <circle cx="50" cy="45" r="5" fill="#fff" opacity="0.7"/>
-                    <circle cx="155" cy="35" r="5" fill="#fff" opacity="0.8"/>
-                    <circle cx="60" cy="105" r="5" fill="#fff" opacity="0.7"/>
-                    <circle cx="145" cy="100" r="5" fill="#fff" opacity="0.75"/>
-                    <circle cx="35" cy="75" r="4" fill="#fff" opacity="0.6"/>
-                    <circle cx="170" cy="70" r="4" fill="#fff" opacity="0.6"/>
-                    <!-- Pin user au centre avec pulse -->
-                    <circle cx="100" cy="70" r="14" fill="rgba(255,255,255,0.25)">
-                        <animate attributeName="r" values="14;20;14" dur="2s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" values="0.25;0;0.25" dur="2s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="100" cy="70" r="10" fill="#fff"/>
-                    <circle cx="100" cy="70" r="5" fill="#6366f1"/>
-                </svg>
-            </div>
-
             <h2 id="geoloc-title">Trouve ta street food</h2>
             <p class="geoloc-subtitle">Les distributeurs et producteurs locaux de la Cote Basque, classes par distance.</p>
 

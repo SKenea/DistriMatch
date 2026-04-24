@@ -24,22 +24,22 @@
    ========================================== */
 
 :root {
-    /* Couleurs */
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --success: #10b981;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --dark: #1f2937;
-    --gray: #6b7280;
-    --gray-light: #9ca3af;
-    --light: #f3f4f6;
-    --lighter: #f9fafb;
+    /* Couleurs - Palette Basque Street Food (piment d'Espelette) */
+    --primary: #E63946;        /* Rouge piment d'Espelette */
+    --primary-dark: #C1272D;   /* Hover / actif */
+    --primary-light: #F17B82;  /* Versions claires */
+    --success: #6A994E;        /* Vert olive - local / frais */
+    --danger: #D62828;         /* Rouge intense - alertes */
+    --warning: #F4A261;        /* Orange terracota - artisanal */
+    --dark: #2B2B2B;           /* Noir chaleureux (sans teinte bleue) */
+    --gray: #6B5E54;           /* Gris brun chaud */
+    --gray-light: #A89B8C;     /* Gris creme */
+    --light: #FDF8F3;          /* Creme tres claire */
+    --lighter: #FEFCF9;        /* Creme pale (fond) */
     --white: #ffffff;
-    --gray-dark: #374151;
-    --light-gray: #e5e7eb;
-    --text-secondary: #6b7280;
+    --gray-dark: #3D3D3D;
+    --light-gray: #E8DFD4;     /* Beige tres pale pour bordures */
+    --text-secondary: #6B5E54;
     --radius-md: 12px;
 
     /* Layout */
@@ -3217,7 +3217,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, #E63946 0%, #F4A261 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3314,20 +3314,6 @@ body {
     color: rgba(255, 255, 255, 0.55) !important;
     margin-bottom: 0 !important;
     margin-top: 0.75rem !important;
-}
-
-/* Nouvelle illustration */
-.geoloc-illustration {
-    margin-bottom: 1.25rem;
-    max-width: 240px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.geoloc-illustration svg {
-    width: 100%;
-    height: auto;
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.2));
 }
 
 .geoloc-subtitle {

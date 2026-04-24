@@ -341,7 +341,7 @@ export function displaySubscriptions() {
         return `
             <div class="subscription-card" onclick="openDistributorModal('${d.id}', true)">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
-                <div class="subscription-image" style="background: ${typeConfig.gradient || '#6366f1'}">
+                <div class="subscription-image" style="background: ${typeConfig.gradient || '#E63946'}">
                     <span class="subscription-emoji">${d.emoji}</span>
                 </div>
                 <div class="subscription-content">

@@ -89,7 +89,7 @@ export function updateMapMarkers(fitBounds = true) {
 }
 
 function createDistributorIcon(d, isSubscribed) {
-    const color = isSubscribed ? '#ef4444' : '#6366f1';
+    const color = isSubscribed ? '#F4A261' : '#E63946';
 
     return L.divIcon({
         className: 'distributor-marker-container',
