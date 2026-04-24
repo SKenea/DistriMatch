@@ -93,7 +93,7 @@ function getAddPopupContent() {
                     </svg>
                     Photos (max 3)
                 </label>
-                <input type="file" id="new-dist-photos" accept="image/*" multiple style="display:none" onchange="previewAddPhotos(this)">
+                <input type="file" id="new-dist-photos" accept="image/*" capture="environment" multiple style="display:none" onchange="previewAddPhotos(this)">
                 <div id="photo-preview-container" class="photo-preview-container"></div>
             </div>
             <div class="popup-actions">
@@ -232,6 +232,40 @@ export function cancelAddDistributor() {
     mainMap.off('click', onMapClickForPlacement);
 }
 
+/**
+ * Verifie que l'utilisateur est physiquement proche du point de placement.
+ * Retourne true si OK, false si trop loin.
+ */
+async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            showToast('Geolocalisation indispensable pour ajouter une photo', 'error');
+            resolve(false);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const distanceKm = calculateDistance(
+                    position.coords.latitude, position.coords.longitude,
+                    targetLat, targetLng
+                );
+                const distanceM = Math.round(distanceKm * 1000);
+                if (distanceM > maxDistanceMeters) {
+                    showToast(`Tu dois etre a moins de ${maxDistanceMeters}m du distributeur (tu es a ${distanceM}m)`, 'error');
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            },
+            () => {
+                showToast('Impossible de verifier ta position. Autorise la geolocalisation.', 'error');
+                resolve(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+}
+
 export async function confirmAddDistributor() {
     const typeSelect = document.getElementById('new-dist-type');
     const nameInput = document.getElementById('new-dist-name');
@@ -246,6 +280,12 @@ export async function confirmAddDistributor() {
     if (!name) {
         showToast('Nom requis', 'error');
         return;
+    }
+
+    // Si des photos sont attachees, verifier que l'user est a < 30m du point de placement
+    if (AddMode.photos && AddMode.photos.length > 0) {
+        const onSite = await verifyUserOnSite(AddMode.lat, AddMode.lng, 30);
+        if (!onSite) return;
     }
 
     const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
