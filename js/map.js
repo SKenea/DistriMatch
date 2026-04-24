@@ -101,12 +101,55 @@ function createDistributorIcon(d, isSubscribed) {
 }
 
 export function centerMapOnUser() {
-    if (mainMap && AppState.userLocation) {
-        mainMap.setView([AppState.userLocation.lat, AppState.userLocation.lng], 14);
-        showToast('Centre sur ta position', 'success');
-    } else {
-        showToast('Position non disponible', 'warning');
+    if (!mainMap) {
+        showToast('Carte non initialisee', 'warning');
+        return;
     }
+    if (!navigator.geolocation) {
+        showToast('Geolocalisation non supportee par ton navigateur', 'warning');
+        return;
+    }
+
+    showToast('Localisation en cours...', 'default');
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // Mettre a jour la position dans l'etat
+            AppState.userLocation = { lat, lng };
+
+            // Mettre a jour le marker existant ou en creer un (ne PAS en creer un 2eme)
+            if (userMarker) {
+                userMarker.setLatLng([lat, lng]);
+            } else {
+                const userIcon = L.divIcon({
+                    className: 'user-marker-container',
+                    html: '<div class="user-marker"></div>',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+                const newMarker = L.marker([lat, lng], {
+                    icon: userIcon,
+                    zIndexOffset: 1000
+                }).addTo(mainMap);
+                newMarker.bindPopup('<strong>Vous etes ici</strong>');
+                setUserMarker(newMarker);
+            }
+
+            // Centrer la carte
+            mainMap.setView([lat, lng], 15);
+            showToast('Centre sur ta position', 'success');
+        },
+        (err) => {
+            let msg = 'Position indisponible';
+            if (err.code === 1) msg = 'Autorisation geoloc refusee';
+            else if (err.code === 3) msg = 'Geoloc trop lente, reessaie';
+            showToast(msg, 'warning');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 }
 
 export function highlightOnMap(id) {
