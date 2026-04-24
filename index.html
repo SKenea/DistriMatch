@@ -44,8 +44,47 @@
                 </svg>
             </div>
 
-            <h2 id="geoloc-title">Distributeurs autour de toi</h2>
-            <p class="geoloc-subtitle" id="geoloc-subtitle">Plus de 30 points de street food a decouvrir sur la Cote Basque, classes par distance.</p>
+            <h2 id="geoloc-title">Trouve ta street food</h2>
+            <p class="geoloc-subtitle">Les distributeurs et producteurs locaux de la Cote Basque, classes par distance.</p>
+
+            <!-- 3 benefices avec icones -->
+            <div class="geoloc-benefits">
+                <div class="geoloc-benefit">
+                    <div class="geoloc-benefit-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </div>
+                    <div class="geoloc-benefit-text">
+                        <strong>Autour de toi</strong>
+                        <span>Distributeurs classes par distance</span>
+                    </div>
+                </div>
+                <div class="geoloc-benefit">
+                    <div class="geoloc-benefit-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                    </div>
+                    <div class="geoloc-benefit-text">
+                        <strong>Alertes stock</strong>
+                        <span>Sois prevenu quand tes produits reviennent</span>
+                    </div>
+                </div>
+                <div class="geoloc-benefit">
+                    <div class="geoloc-benefit-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="geoloc-benefit-text">
+                        <strong>Infos en direct</strong>
+                        <span>Avis et disponibilites par la communaute</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- Action primaire -->
             <button id="geoloc-btn" class="geoloc-btn">
@@ -55,21 +94,8 @@
                 Activer la localisation
             </button>
 
-            <!-- Action secondaire (fallback) -->
-            <button id="geoloc-manual-btn" class="geoloc-btn-secondary" type="button">
-                Saisir ma ville a la place
-            </button>
-
-            <!-- Formulaire de saisie manuelle (cache par defaut) -->
-            <div id="geoloc-manual-form" style="display:none">
-                <select id="geoloc-city-select" class="geoloc-city-select">
-                    <option value="">Choisis une ville de la Cote Basque...</option>
-                </select>
-                <button id="geoloc-confirm-city" class="geoloc-btn">Valider</button>
-            </div>
-
             <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
-            <p class="geoloc-hint">Ta position reste privee. Jamais partagee, jamais stockee sur un serveur.</p>
+            <p class="geoloc-hint">Ta position reste privee. Jamais partagee, jamais stockee.</p>
         </div>
     </div>
 
