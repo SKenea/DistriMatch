@@ -706,6 +706,46 @@ body {
     transform: scale(1.05);
 }
 
+/* Boutons zoom +/- */
+.zoom-controls {
+    position: absolute;
+    bottom: 184px;
+    right: 18px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.btn-zoom {
+    width: 40px;
+    height: 40px;
+    background: white;
+    color: var(--dark);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-zoom:hover {
+    background: var(--light);
+    transform: scale(1.05);
+}
+
+.btn-zoom:active {
+    transform: scale(0.95);
+}
+
+/* Masquer le control zoom Leaflet par defaut (on a nos boutons custom) */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
 /* Bouton ajout distributeur */
 .btn-add-distributor {
     position: absolute;

@@ -152,6 +152,14 @@ export function centerMapOnUser() {
     );
 }
 
+export function zoomIn() {
+    if (mainMap) mainMap.zoomIn();
+}
+
+export function zoomOut() {
+    if (mainMap) mainMap.zoomOut();
+}
+
 export function highlightOnMap(id) {
     const d = AppState.distributors.find(d => d.id === id);
     if (d && mainMap) {
