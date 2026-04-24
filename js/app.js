@@ -68,6 +68,10 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
+import { initBottomSheet, showInBottomSheet } from './bottomsheet.js';
+
+import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
+
 // ============================================
 // SUPABASE
 // ============================================
@@ -225,6 +229,7 @@ function clearUserData() {
 // ============================================
 
 registerViewCallback('subscriptions', displaySubscriptions);
+registerViewCallback('favorites', displaySubscriptions);
 registerViewCallback('profile', updateProfileStats);
 registerViewCallback('activity', displayActivityFeed);
 registerViewCallback('distributor', () => {
@@ -238,8 +243,8 @@ registerViewCallback('distributor', () => {
 // WINDOW GLOBALS (pour onclick inline)
 // ============================================
 
-// Carte popups
-window.showDetails = showDetails;
+// Carte popups — showDetails redirige vers le bottom sheet
+window.showDetails = showInBottomSheet;
 window.openConversation = openConversation;
 
 // Page distributeur
@@ -278,6 +283,12 @@ window.confirmAddDistributor = confirmAddDistributor;
 
 // Etat global (pour onclick inline dans editProduct)
 window.AppState = AppState;
+
+// Auth (pour debug)
+window.requireAuth = requireAuth;
+window.getCurrentUser = getCurrentUser;
+window.isAuthenticated = isAuthenticated;
+window.signOut = signOut;
 
 // ============================================
 // GEOLOCALISATION OVERLAY
@@ -344,6 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialiser Supabase
     initSupabase();
     await signInAnonymously();
+    await initAuth();
 
     // Charger les donnees locales
     loadFromLocalStorage(updateBadges);
@@ -364,6 +376,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser la carte
     initMainMap();
+
+    // Initialiser le bottom sheet
+    initBottomSheet();
 
     // Initialiser les filtres
     initFilterChips();
@@ -409,6 +424,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('profile'));
+
+    // Indicateur auth + bouton logout
+    const updateAuthUI = (user) => {
+        const indicator = document.getElementById('auth-indicator');
+        const text = document.getElementById('auth-indicator-text');
+        const logoutBtn = document.getElementById('logout-btn');
+        if (!indicator || !text) return;
+        if (user && !user.is_anonymous) {
+            indicator.classList.add('logged-in');
+            text.textContent = user.email;
+            logoutBtn.style.display = 'inline-flex';
+        } else {
+            indicator.classList.remove('logged-in');
+            text.textContent = 'Non connecte';
+            logoutBtn.style.display = 'none';
+        }
+    };
+    updateAuthUI(getCurrentUser());
+    onAuthChange(updateAuthUI);
+    document.getElementById('logout-btn')?.addEventListener('click', async () => {
+        await signOut();
+    });
 
     // Bouton parametres notifications depuis profil
     document.getElementById('notification-settings-btn')?.addEventListener('click', openNotificationSettings);

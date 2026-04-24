@@ -8,6 +8,7 @@ import {
 } from './state.js';
 import { escapeHTML, formatTime, showToast, saveToLocalStorage } from './utils.js';
 import { updateProfileStats } from './navigation.js';
+import { requireAuth } from './auth.js';
 
 // ============================================
 // PERSISTANCE ACTIVITE
@@ -194,6 +195,8 @@ export function setActivityFilter(filter) {
 // ============================================
 
 export async function voteOnReport(activityId, voteType) {
+    if (!(await requireAuth())) return;
+
     const item = ActivityFeed.items.find(i => i.id === activityId);
     if (!item || item.userVote || item.resolved) return;
 
@@ -251,7 +254,8 @@ export function getUnverifiedReportsForDistributor(distributorId) {
 // SIGNALEMENTS
 // ============================================
 
-export function openReportModal() {
+export async function openReportModal() {
+    if (!(await requireAuth())) return;
     if (!AppState.currentDistributor) return;
 
     const distributor = AppState.currentDistributor;

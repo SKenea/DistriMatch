@@ -13,16 +13,18 @@ import {
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
+import { requireAuth } from './auth.js';
 
 // ============================================
 // MODE AJOUT
 // ============================================
 
-export function toggleAddMode() {
+export async function toggleAddMode() {
     if (AddMode.active) {
         cancelAddDistributor();
         return;
     }
+    if (!(await requireAuth())) return;
 
     AddMode.active = true;
     document.getElementById('btn-add-distributor').classList.add('active');
