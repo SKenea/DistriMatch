@@ -134,16 +134,13 @@ export function showInBottomSheet(id) {
     document.getElementById('peek-meta').textContent =
         `${typeConfig.label || distributor.type}${distance ? ' — ' + distance : ''} — ★ ${distributor.rating}`;
 
-    // Full content
-    document.getElementById('bs-detail-type').innerHTML = `
-        <span style="font-size: 1.5rem">${distributor.emoji}</span>
-        <span>${escapeHTML(typeConfig.label || distributor.type)}</span>
-    `;
+    // Full content (style Google Maps)
+    document.getElementById('bs-detail-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
     document.getElementById('bs-detail-name').textContent = distributor.name;
     document.getElementById('bs-detail-address').textContent = distributor.address;
-    document.getElementById('bs-detail-rating').textContent = generateStars(distributor.rating);
-    document.getElementById('bs-detail-reviews').textContent = `(${distributor.reviewCount} avis)`;
-    document.getElementById('bs-detail-distance').textContent = distance || 'N/A';
+    document.getElementById('bs-detail-rating').textContent = `${distributor.rating.toFixed(1)} ${generateStars(distributor.rating)}`;
+    document.getElementById('bs-detail-reviews').textContent = `(${distributor.reviewCount})`;
+    document.getElementById('bs-detail-distance').textContent = distance || '';
 
     // Produits
     renderProductsList(distributor, 'bs-products-list');
@@ -180,6 +177,7 @@ function updateFavoriteButtons() {
 
     const peekBtn = document.getElementById('peek-favorite');
     const fullBtn = document.getElementById('bs-favorite');
+    const fullLabel = document.getElementById('bs-favorite-label');
 
     [peekBtn, fullBtn].forEach(btn => {
         if (btn) {
@@ -187,6 +185,10 @@ function updateFavoriteButtons() {
             btn.setAttribute('aria-label', isFav ? 'Retirer des favoris' : 'Ajouter aux favoris');
         }
     });
+
+    if (fullLabel) {
+        fullLabel.textContent = isFav ? 'Retirer' : 'Favori';
+    }
 }
 
 // ============================================
