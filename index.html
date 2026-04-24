@@ -17,25 +17,59 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <!-- Overlay geolocalisation obligatoire -->
+    <!-- Overlay geolocalisation (pre-permission prompt) -->
     <div id="geoloc-overlay" class="geoloc-overlay">
         <div class="geoloc-content">
-            <div class="geoloc-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
+            <!-- Illustration : carte stylee avec pins autour d'une position user -->
+            <div class="geoloc-illustration">
+                <svg viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Fond carte stylise -->
+                    <rect x="10" y="10" width="180" height="120" rx="12" fill="rgba(255,255,255,0.12)" />
+                    <path d="M20 50 Q60 30 100 50 T180 60" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" fill="none"/>
+                    <path d="M20 80 Q70 95 130 75 T180 90" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none"/>
+                    <!-- Pins distributeurs autour -->
+                    <circle cx="50" cy="45" r="5" fill="#fff" opacity="0.7"/>
+                    <circle cx="155" cy="35" r="5" fill="#fff" opacity="0.8"/>
+                    <circle cx="60" cy="105" r="5" fill="#fff" opacity="0.7"/>
+                    <circle cx="145" cy="100" r="5" fill="#fff" opacity="0.75"/>
+                    <circle cx="35" cy="75" r="4" fill="#fff" opacity="0.6"/>
+                    <circle cx="170" cy="70" r="4" fill="#fff" opacity="0.6"/>
+                    <!-- Pin user au centre avec pulse -->
+                    <circle cx="100" cy="70" r="14" fill="rgba(255,255,255,0.25)">
+                        <animate attributeName="r" values="14;20;14" dur="2s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" values="0.25;0;0.25" dur="2s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="100" cy="70" r="10" fill="#fff"/>
+                    <circle cx="100" cy="70" r="5" fill="#6366f1"/>
                 </svg>
             </div>
-            <h2>Ou es-tu ?</h2>
-            <p>DistriMatch a besoin de ta position pour trouver les distributeurs autour de toi.</p>
+
+            <h2 id="geoloc-title">Distributeurs autour de toi</h2>
+            <p class="geoloc-subtitle" id="geoloc-subtitle">Plus de 30 points de street food a decouvrir sur la Cote Basque, classes par distance.</p>
+
+            <!-- Action primaire -->
             <button id="geoloc-btn" class="geoloc-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                 </svg>
                 Activer la localisation
             </button>
+
+            <!-- Action secondaire (fallback) -->
+            <button id="geoloc-manual-btn" class="geoloc-btn-secondary" type="button">
+                Saisir ma ville a la place
+            </button>
+
+            <!-- Formulaire de saisie manuelle (cache par defaut) -->
+            <div id="geoloc-manual-form" style="display:none">
+                <select id="geoloc-city-select" class="geoloc-city-select">
+                    <option value="">Choisis une ville de la Cote Basque...</option>
+                </select>
+                <button id="geoloc-confirm-city" class="geoloc-btn">Valider</button>
+            </div>
+
             <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
-            <p class="geoloc-hint">Ta position reste privee et n'est jamais partagee.</p>
+            <p class="geoloc-hint">Ta position reste privee. Jamais partagee, jamais stockee sur un serveur.</p>
         </div>
     </div>
 

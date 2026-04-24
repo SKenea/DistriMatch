@@ -290,52 +290,108 @@ window.signOut = signOut;
 // GEOLOCALISATION OVERLAY
 // ============================================
 
+// Villes de la Cote Basque pour le fallback manuel
+const BASQUE_CITIES = [
+    { name: 'Biarritz', lat: 43.4832, lng: -1.5586 },
+    { name: 'Bayonne', lat: 43.4929, lng: -1.4748 },
+    { name: 'Anglet', lat: 43.4784, lng: -1.5147 },
+    { name: 'Saint-Jean-de-Luz', lat: 43.3883, lng: -1.6603 },
+    { name: 'Hendaye', lat: 43.3590, lng: -1.7734 },
+    { name: 'Ciboure', lat: 43.3897, lng: -1.6803 },
+    { name: 'Bidart', lat: 43.4375, lng: -1.5917 },
+    { name: 'Guethary', lat: 43.4242, lng: -1.6097 },
+    { name: 'Urrugne', lat: 43.3628, lng: -1.6997 },
+    { name: 'Espelette', lat: 43.3411, lng: -1.4486 },
+    { name: 'Cambo-les-Bains', lat: 43.3592, lng: -1.4003 },
+    { name: 'Hasparren', lat: 43.3842, lng: -1.3056 },
+    { name: 'Ainhoa', lat: 43.3047, lng: -1.4722 },
+    { name: 'Saint-Pee-sur-Nivelle', lat: 43.3475, lng: -1.5447 },
+    { name: 'Ustaritz', lat: 43.4097, lng: -1.4650 }
+];
+
 function initGeolocationOverlay() {
     return new Promise((resolve) => {
         const overlay = document.getElementById('geoloc-overlay');
         const btn = document.getElementById('geoloc-btn');
+        const manualBtn = document.getElementById('geoloc-manual-btn');
+        const manualForm = document.getElementById('geoloc-manual-form');
+        const citySelect = document.getElementById('geoloc-city-select');
+        const confirmCityBtn = document.getElementById('geoloc-confirm-city');
         const errorEl = document.getElementById('geoloc-error');
 
         if (!overlay || !btn) {
-            // Pas d'overlay dans le DOM, tenter la geoloc directement
             getUserLocation().catch(() => {}).finally(resolve);
             return;
         }
 
+        // Remplir le dropdown avec les villes
+        if (citySelect) {
+            BASQUE_CITIES.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ lat: c.lat, lng: c.lng });
+                opt.textContent = c.name;
+                citySelect.appendChild(opt);
+            });
+        }
+
+        const closeOverlay = () => {
+            overlay.classList.add('hidden');
+            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+            resolve();
+        };
+
+        // Action : activer la geoloc
         btn.addEventListener('click', async () => {
-            // Etat loading
             btn.disabled = true;
             btn.innerHTML = '<span class="geoloc-spinner"></span> Localisation...';
             errorEl.style.display = 'none';
 
             try {
                 await getUserLocation();
-                // Succes : masquer l'overlay
-                overlay.classList.add('hidden');
-                overlay.addEventListener('transitionend', () => {
-                    overlay.remove();
-                }, { once: true });
-                resolve();
+                closeOverlay();
             } catch (err) {
-                // Afficher l'erreur
                 let message = 'Impossible d\'obtenir ta position.';
                 if (err.code === 1) {
-                    message = 'Tu as refuse l\'acces a ta position. Autorise la localisation dans les reglages de ton navigateur puis reessaie.';
+                    message = 'Tu as refuse la geoloc. Utilise plutot "Saisir ma ville" ci-dessous.';
                 } else if (err.code === 2) {
-                    message = 'Position indisponible. Verifie que la localisation est activee sur ton appareil.';
+                    message = 'Position indisponible. Essaie "Saisir ma ville".';
                 } else if (err.code === 3) {
-                    message = 'Delai depasse. Verifie ta connexion et reessaie.';
+                    message = 'Delai depasse. Essaie "Saisir ma ville" ou reessaie.';
                 }
                 errorEl.textContent = message;
                 errorEl.style.display = 'block';
-
-                // Restaurer le bouton
                 btn.disabled = false;
                 btn.innerHTML = `
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                     </svg>
                     Reessayer`;
+            }
+        });
+
+        // Action : ouvrir le formulaire manuel
+        manualBtn?.addEventListener('click', () => {
+            manualForm.style.display = 'flex';
+            manualBtn.style.display = 'none';
+            btn.style.display = 'none';
+            errorEl.style.display = 'none';
+        });
+
+        // Action : valider la ville saisie
+        confirmCityBtn?.addEventListener('click', () => {
+            const value = citySelect.value;
+            if (!value) {
+                errorEl.textContent = 'Choisis une ville dans la liste.';
+                errorEl.style.display = 'block';
+                return;
+            }
+            try {
+                const coords = JSON.parse(value);
+                AppState.userLocation = { lat: coords.lat, lng: coords.lng };
+                closeOverlay();
+            } catch (e) {
+                errorEl.textContent = 'Erreur de selection.';
+                errorEl.style.display = 'block';
             }
         });
     });
