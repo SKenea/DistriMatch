@@ -282,11 +282,26 @@ export async function confirmAddDistributor() {
         return;
     }
 
-    // Si des photos sont attachees, verifier que l'user est a < 30m du point de placement
-    if (AddMode.photos && AddMode.photos.length > 0) {
-        const onSite = await verifyUserOnSite(AddMode.lat, AddMode.lng, 30);
-        if (!onSite) return;
+    // Photo obligatoire pour ajouter un distributeur
+    if (!AddMode.photos || AddMode.photos.length === 0) {
+        showToast('Au moins une photo est obligatoire pour ajouter un distributeur', 'error');
+        return;
     }
+
+    // Verifier qu'aucun autre distributeur existe a < 50m du point de placement
+    const DUPLICATE_RADIUS_M = 50;
+    const nearbyExisting = AppState.distributors.find(d => {
+        const distKm = calculateDistance(AddMode.lat, AddMode.lng, d.lat, d.lng);
+        return distKm * 1000 < DUPLICATE_RADIUS_M;
+    });
+    if (nearbyExisting) {
+        showToast(`Un distributeur existe deja ici : "${nearbyExisting.name}". Tu ne peux pas en ajouter un nouveau a moins de ${DUPLICATE_RADIUS_M}m.`, 'error');
+        return;
+    }
+
+    // Verifier que l'user est physiquement a < 30m du point de placement
+    const onSite = await verifyUserOnSite(AddMode.lat, AddMode.lng, 30);
+    if (!onSite) return;
 
     const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
     const products = getProductsFromForm();
