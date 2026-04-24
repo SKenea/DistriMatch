@@ -230,15 +230,14 @@ export function setFilter(type) {
         showToast(`${AppState.activeFilters.length} filtres : ${count} distributeur(s)`, 'default');
     }
 
-    // Ouvrir le panneau lateral avec la liste filtree (Google Maps style)
+    // Panneau lateral : visible uniquement si au moins un filtre actif
     import('./gmaps-ui.js').then(m => {
         if (AppState.activeFilters.length === 0) {
-            m.openSidePanelForType('all');
-        } else if (AppState.activeFilters.length === 1) {
-            m.openSidePanelForType(AppState.activeFilters[0]);
+            // Aucun filtre actif (= "Tous") : fermer le panneau
+            m.closeSidePanel();
         } else {
-            // Plusieurs filtres : on affiche tous les distributeurs filtres
-            m.openSidePanelForType('all');
+            // 1 ou plusieurs filtres : afficher la liste filtree
+            m.openSidePanelForFilters(AppState.activeFilters);
         }
     });
 }
