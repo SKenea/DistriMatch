@@ -21,21 +21,31 @@ export function initSidePanel() {
 }
 
 export function openSidePanelForType(type) {
-    currentFilter = type;
+    openSidePanelForFilters(type === 'all' ? [] : [type]);
+}
+
+export function openSidePanelForFilters(types = []) {
+    currentFilter = types;
     const sidebar = document.getElementById('sidebar');
     const title = document.getElementById('side-panel-title');
     const list = document.getElementById('side-panel-list');
 
     if (!sidebar || !list) return;
 
-    const typeConfig = AppState.typeConfig[type] || {};
-    title.textContent = type === 'all'
-        ? 'Tous les distributeurs'
-        : `${typeConfig.emoji || '📍'} ${typeConfig.label || type}`;
+    // Construction du titre
+    if (types.length === 0) {
+        title.textContent = 'Tous les distributeurs';
+    } else if (types.length === 1) {
+        const tc = AppState.typeConfig[types[0]] || {};
+        title.textContent = `${tc.emoji || '📍'} ${tc.label || types[0]}`;
+    } else {
+        const labels = types.map(t => AppState.typeConfig[t]?.label || t);
+        title.textContent = `${labels.length} categories : ${labels.join(', ')}`;
+    }
 
-    const matches = type === 'all'
+    const matches = types.length === 0
         ? AppState.distributors
-        : AppState.distributors.filter(d => d.type === type);
+        : AppState.distributors.filter(d => types.includes(d.type));
 
     if (matches.length === 0) {
         list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;

@@ -3498,6 +3498,11 @@ body {
    ========================================== */
 
 .side-panel {
+    position: fixed;
+    top: var(--nav-height);
+    left: 0;
+    bottom: 60px; /* au-dessus de la bottom-nav */
+    width: var(--sidebar-width);
     background: var(--white);
     border-right: 1px solid var(--light-gray);
     display: flex;
@@ -3506,6 +3511,7 @@ body {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     z-index: var(--z-sidebar);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
 }
 
 .side-panel.open {
