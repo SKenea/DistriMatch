@@ -1342,7 +1342,7 @@ body {
     top: 12px;
     left: 12px;
     right: 12px;
-    z-index: 60; /* au-dessus du panneau lateral (z-sidebar = 50) */
+    z-index: 1100; /* au-dessus de TOUS les elements Leaflet (max 800) et du panneau (50) */
     display: flex;
     gap: 8px;
     overflow-x: auto;
@@ -1350,12 +1350,14 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     transition: left 0.3s ease;
+    pointer-events: auto;
 }
 
-/* Quand le panneau lateral est ouvert, decaler les filtres a droite */
-.side-panel.open ~ * .filter-bar,
-.app-container:has(.side-panel.open) .filter-bar {
-    left: calc(var(--sidebar-width) + 12px);
+/* Quand le panneau lateral est ouvert (desktop), decaler les filtres a droite */
+@media (min-width: 769px) {
+    .app-container:has(.side-panel.open) .filter-bar {
+        left: calc(var(--sidebar-width) + 12px);
+    }
 }
 
 .filter-bar::-webkit-scrollbar {
