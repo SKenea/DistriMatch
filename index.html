@@ -87,20 +87,22 @@
          CONTAINER PRINCIPAL (Sidebar + Carte)
          ============================================ -->
     <div class="app-container">
-        <!-- Sidebar gauche - Mes conversations -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <span class="sidebar-title">Mes conversations</span>
+        <!-- Panneau lateral gauche - Liste filtree (Google Maps style) -->
+        <aside class="sidebar side-panel" id="sidebar">
+            <div class="side-panel-header">
+                <span class="side-panel-title" id="side-panel-title">Tous les distributeurs</span>
+                <button class="side-panel-close" id="side-panel-close" aria-label="Fermer">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="side-panel-list" id="side-panel-list">
+                <!-- Liste injectee en JS -->
             </div>
 
-            <!-- Liste des conversations -->
-            <div class="conversations-list" id="conversations-list">
-                <div class="empty-conversations">
-                    <div class="empty-icon">💬</div>
-                    <p>Aucune conversation</p>
-                    <small>Clique sur un distributeur sur la carte pour lui parler</small>
-                </div>
-            </div>
+            <!-- Liste des conversations (compatibilite, cachee par defaut) -->
+            <div class="conversations-list" id="conversations-list" style="display:none"></div>
         </aside>
 
         <!-- Overlay sombre pour mobile -->
@@ -185,109 +187,117 @@
                 <button class="placement-cancel" id="placement-cancel">Annuler</button>
             </div>
 
-            <!-- Bottom Sheet distributeur (Google Maps style) -->
-            <div class="bottom-sheet" id="bottom-sheet">
-                <div class="bottom-sheet-drag" id="bottom-sheet-drag">
-                    <div class="bottom-sheet-handle"></div>
+        </main>
+    </div>
+
+    <!-- ============================================
+         MODAL DISTRIBUTEUR (Google Maps style, centree, onglets)
+         ============================================ -->
+    <div class="dist-modal-overlay" id="dist-modal-overlay">
+        <div class="dist-modal" id="dist-modal">
+            <button class="dist-modal-close" id="dist-modal-close" aria-label="Fermer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <!-- Photo header -->
+            <div class="dist-modal-photo" id="dist-modal-photo" style="display:none">
+                <div id="dist-modal-photos-gallery" class="photos-gallery"></div>
+            </div>
+
+            <!-- Header titre + meta -->
+            <div class="dist-modal-header">
+                <h2 id="dist-modal-name">Nom du distributeur</h2>
+                <div class="dist-modal-meta">
+                    <span class="dist-modal-rating" id="dist-modal-rating"></span>
+                    <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
+                    <span class="meta-separator">·</span>
+                    <span class="dist-modal-type" id="dist-modal-type"></span>
                 </div>
-                <button class="bs-close" id="bs-close" aria-label="Fermer">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                        <path d="M18 6L6 18M6 6l12 12"/>
+            </div>
+
+            <!-- Boutons d'action en haut -->
+            <div class="dist-modal-actions">
+                <button class="dist-action-btn primary" id="dist-action-directions" aria-label="Itineraire">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
                     </svg>
+                    <span>Itineraire</span>
                 </button>
+                <button class="dist-action-btn" id="dist-action-favorite" aria-label="Ajouter aux favoris">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span id="dist-action-favorite-label">Favori</span>
+                </button>
+                <button class="dist-action-btn" id="dist-action-edit" aria-label="Modifier" style="display:none">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span>Modifier</span>
+                </button>
+            </div>
 
-                <!-- Etat PEEK : resume compact -->
-                <div class="bottom-sheet-peek" id="bottom-sheet-peek">
-                    <div class="peek-left">
-                        <span class="peek-emoji" id="peek-emoji"></span>
-                        <div class="peek-info">
-                            <span class="peek-name" id="peek-name"></span>
-                            <span class="peek-meta" id="peek-meta"></span>
+            <!-- Onglets -->
+            <div class="dist-modal-tabs">
+                <button class="dist-tab active" data-tab="produits">Produits</button>
+                <button class="dist-tab" data-tab="avis">Avis</button>
+                <button class="dist-tab" data-tab="apropos">À propos</button>
+            </div>
+
+            <!-- Contenu onglet -->
+            <div class="dist-modal-content">
+                <!-- Onglet Produits -->
+                <div class="dist-tab-pane active" data-tab-pane="produits">
+                    <div id="dist-products-list"></div>
+                    <!-- Section ajout produit (seulement en mode edit favoris) -->
+                    <div id="dist-products-add-section" style="display:none; margin-top: 1rem;">
+                        <button class="btn-add-product" onclick="toggleDistAddProductForm()">+ Ajouter un produit</button>
+                        <div id="dist-add-product-form" class="add-product-form" style="display:none; margin-top: 0.5rem;">
+                            <input type="text" id="dist-add-product-name" placeholder="Nom du produit">
+                            <input type="number" id="dist-add-product-price" placeholder="Prix" step="0.10" min="0">
+                            <button class="btn-confirm-small" onclick="submitDistAddProduct()">OK</button>
                         </div>
                     </div>
-                    <button class="peek-favorite" id="peek-favorite" aria-label="Ajouter aux favoris">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                        </svg>
-                    </button>
+                    <!-- Section chat avec le bot (seulement en mode edit favoris) -->
+                    <div id="dist-chat-section" style="display:none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light);">
+                        <button class="btn-primary-clean" id="dist-open-chat" style="width: 100%;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            Discuter avec le bot
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Etat FULL : detail complet (style Google Maps) -->
-                <div class="bottom-sheet-full" id="bottom-sheet-full">
-                    <!-- Header photo (cache si pas de photos) -->
-                    <div id="bs-detail-photos" class="bs-photo-header" style="display:none">
-                        <div id="bs-detail-photos-gallery" class="photos-gallery"></div>
+                <!-- Onglet Avis -->
+                <div class="dist-tab-pane" data-tab-pane="avis">
+                    <div class="dist-avis-empty">
+                        <p>Aucun avis pour le moment</p>
+                        <small>Sois le premier a partager ton experience.</small>
                     </div>
+                </div>
 
-                    <!-- Header titre + meta -->
-                    <div class="bs-detail-header">
-                        <h2 id="bs-detail-name">Nom du distributeur</h2>
-                        <div class="bs-meta-row">
-                            <span class="rating-clean" id="bs-detail-rating"></span>
-                            <span class="reviews-clean" id="bs-detail-reviews">(0 avis)</span>
-                            <span class="meta-separator">·</span>
-                            <span class="bs-type-text" id="bs-detail-type"></span>
-                        </div>
-                        <div class="bs-meta-row bs-meta-secondary">
-                            <span class="distance-clean" id="bs-detail-distance">0 km</span>
-                            <span id="bs-detail-address" class="bs-address"></span>
-                        </div>
+                <!-- Onglet À propos -->
+                <div class="dist-tab-pane" data-tab-pane="apropos">
+                    <div class="dist-apropos-row">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span id="dist-apropos-address"></span>
                     </div>
-
-                    <!-- Boutons d'action style Google Maps : ronds + label en dessous -->
-                    <div class="bs-actions-row">
-                        <button class="bs-action-btn primary" id="bs-get-directions" aria-label="Itineraire">
-                            <span class="bs-action-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                                </svg>
-                            </span>
-                            <span class="bs-action-label">Itineraire</span>
-                        </button>
-                        <button class="bs-action-btn" id="bs-favorite" aria-label="Ajouter aux favoris">
-                            <span class="bs-action-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                </svg>
-                            </span>
-                            <span class="bs-action-label" id="bs-favorite-label">Favori</span>
-                        </button>
-                        <button class="bs-action-btn" id="bs-btn-chat" aria-label="Discuter">
-                            <span class="bs-action-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                </svg>
-                            </span>
-                            <span class="bs-action-label">Discuter</span>
-                        </button>
-                        <button class="bs-action-btn" id="bs-btn-report" aria-label="Signaler">
-                            <span class="bs-action-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                                    <line x1="12" y1="9" x2="12" y2="13"/>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                                </svg>
-                            </span>
-                            <span class="bs-action-label">Signaler</span>
-                        </button>
+                    <div class="dist-apropos-row">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+                        <span id="dist-apropos-distance"></span>
                     </div>
-
-                    <!-- Section produits -->
-                    <div class="products-section-clean">
-                        <div class="products-header-clean">
-                            <h3>Produits disponibles</h3>
-                            <button class="btn-add-product" id="bs-btn-add-product" onclick="toggleAddProductForm()">+ Ajouter</button>
-                        </div>
-                        <div id="bs-add-product-form" class="add-product-form" style="display:none">
-                            <input type="text" id="bs-detail-product-name" placeholder="Nom du produit">
-                            <input type="number" id="bs-detail-product-price" placeholder="Prix" step="0.10" min="0">
-                            <button class="btn-confirm-small" onclick="submitDetailProduct()">OK</button>
-                        </div>
-                        <div id="bs-products-list"></div>
+                    <div class="dist-apropos-row" id="dist-apropos-added-row" style="display:none">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span>Ajoute par la communaute</span>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
+    </div>
     </div>
 
     <!-- ============================================

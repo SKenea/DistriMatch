@@ -229,6 +229,18 @@ export function setFilter(type) {
     } else {
         showToast(`${AppState.activeFilters.length} filtres : ${count} distributeur(s)`, 'default');
     }
+
+    // Ouvrir le panneau lateral avec la liste filtree (Google Maps style)
+    import('./gmaps-ui.js').then(m => {
+        if (AppState.activeFilters.length === 0) {
+            m.openSidePanelForType('all');
+        } else if (AppState.activeFilters.length === 1) {
+            m.openSidePanelForType(AppState.activeFilters[0]);
+        } else {
+            // Plusieurs filtres : on affiche tous les distributeurs filtres
+            m.openSidePanelForType('all');
+        }
+    });
 }
 
 export function initFilterChips() {
