@@ -14,6 +14,7 @@ import { updateMapMarkers } from './map.js';
 // ============================================
 
 const VIEW_CONFIG = {
+    favorites:               { id: 'subscriptions-view',   onShow: null },
     subscriptions:           { id: 'subscriptions-view',   onShow: null },
     profile:                 { id: 'profile-view',         onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
@@ -64,8 +65,19 @@ export function goBackToMap() {
 // ============================================
 
 export function updateBadges() {
-    const subscriptionsBadge = document.getElementById('subscriptions-badge');
+    // Badge favoris dans la bottom nav
+    const favoritesBadge = document.getElementById('favorites-badge');
+    if (favoritesBadge) {
+        if (AppState.subscriptions.length > 0) {
+            favoritesBadge.textContent = AppState.subscriptions.length;
+            favoritesBadge.style.display = 'flex';
+        } else {
+            favoritesBadge.style.display = 'none';
+        }
+    }
 
+    // Legacy : badge abonnements dans la top nav (si present)
+    const subscriptionsBadge = document.getElementById('subscriptions-badge');
     if (subscriptionsBadge) {
         if (AppState.subscriptions.length > 0) {
             subscriptionsBadge.textContent = AppState.subscriptions.length;

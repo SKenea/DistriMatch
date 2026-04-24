@@ -3,11 +3,11 @@
  */
 
 import {
-    AppState, Conversations,
+    AppState,
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { escapeHTML, formatDistance, showToast, getFilteredDistributors } from './utils.js';
+import { showToast, getFilteredDistributors } from './utils.js';
 
 // ============================================
 // CARTE LEAFLET
@@ -62,17 +62,19 @@ export function updateMapMarkers(fitBounds = true) {
 
     filteredDistributors.forEach(d => {
         const isSubscribed = AppState.subscriptions.includes(d.id);
-        const hasConversation = Conversations.list.includes(d.id);
 
         const marker = L.marker([d.lat, d.lng], {
             icon: createDistributorIcon(d, isSubscribed)
         }).addTo(mainMap);
 
         marker.distributorId = d.id;
-        marker.bindPopup(createPopupContent(d, hasConversation));
 
         marker.on('click', () => {
             mainMap.setView([d.lat, d.lng], 15);
+            // Ouvrir le bottom sheet directement (pattern Google Maps)
+            if (window.showDetails) {
+                window.showDetails(d.id);
+            }
         });
 
         newMarkers.push(marker);
@@ -96,26 +98,6 @@ function createDistributorIcon(d, isSubscribed) {
         iconAnchor: [18, 18],
         popupAnchor: [0, -20]
     });
-}
-
-function createPopupContent(d, hasConversation) {
-    const distance = d.distance ? formatDistance(d.distance) : '';
-    const isSubscribed = AppState.subscriptions.includes(d.id);
-
-    return `
-        <div class="map-popup">
-            <strong>${d.emoji} ${escapeHTML(d.name)}</strong>
-            <p>${escapeHTML(d.address)}</p>
-            <p>★ ${d.rating} ${distance ? '- ' + distance : ''}</p>
-            ${isSubscribed ? '<p style="color:#6366f1;font-weight:600;">🔔 Abonne</p>' : ''}
-            <button onclick="showDetails('${d.id}')" class="btn-popup-details" aria-label="Voir la fiche de ${escapeHTML(d.name)}">
-                Voir la fiche
-            </button>
-            <button onclick="openConversation('${d.id}')" class="btn-popup-chat" aria-label="${hasConversation ? 'Reprendre la conversation avec' : 'Discuter avec'} ${escapeHTML(d.name)}">
-                ${hasConversation ? 'Reprendre' : 'Discuter'}
-            </button>
-        </div>
-    `;
 }
 
 export function centerMapOnUser() {

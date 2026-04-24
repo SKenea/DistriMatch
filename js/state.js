@@ -106,8 +106,8 @@ export const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
 export const NOTIFICATION_PREFS_KEY = 'snackmatch_notification_prefs';
 export const NOTIFICATION_QUEUE_KEY = 'snackmatch_notification_queue';
 
-export const SUPABASE_URL = 'https://qtpgdkipweivjxcremsk.supabase.co';
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0cGdka2lwd2Vpdmp4Y3JlbXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwOTYwMjUsImV4cCI6MjA5MTY3MjAyNX0.Uz5GhGwJ5CIgoy3n6t6_2g1kE8N35msmeHfpMSFeEuc';
+// Cles deplacees dans js/config.js — re-exportees pour retrocompatibilite
+export { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 export let supabaseClient = null;
 export function setSupabaseClient(client) { supabaseClient = client; }
