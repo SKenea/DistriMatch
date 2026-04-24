@@ -80,11 +80,10 @@ export function initBottomSheet() {
         }
     });
 
-    // Clic en dehors du bottom sheet -> fermer
-    document.getElementById('main-map').addEventListener('click', (e) => {
-        if (currentState !== 'hidden' && !e.target.closest('.leaflet-popup')) {
-            closeBottomSheet();
-        }
+    // Bouton fermer (X)
+    document.getElementById('bs-close')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeBottomSheet();
     });
 }
 
