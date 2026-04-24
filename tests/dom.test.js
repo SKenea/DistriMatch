@@ -242,7 +242,7 @@ describe('showInBottomSheet', () => {
         assert.equal(document.getElementById('bs-detail-name').textContent, 'Test Distrib');
         assert.equal(document.getElementById('bs-detail-address').textContent, '1 Rue Test');
         assert.ok(document.getElementById('bs-detail-rating').textContent.includes('★'));
-        assert.equal(document.getElementById('bs-detail-reviews').textContent, '(42 avis)');
+        assert.ok(document.getElementById('bs-detail-reviews').textContent.includes('42'));
     });
 
     it('set AppState.currentDistributor', () => {

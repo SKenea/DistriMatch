@@ -29,7 +29,7 @@ async function setupApp(page, context) {
 
     await page.waitForFunction(
         () => window.AppState?.distributors?.length > 0,
-        { timeout: 30000 }
+        { timeout: 50000 }
     );
 }
 

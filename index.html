@@ -212,30 +212,67 @@
                     </button>
                 </div>
 
-                <!-- Etat FULL : detail complet -->
+                <!-- Etat FULL : detail complet (style Google Maps) -->
                 <div class="bottom-sheet-full" id="bottom-sheet-full">
-                    <div class="detail-header-clean">
-                        <div class="detail-type" id="bs-detail-type"></div>
-                        <div class="detail-title-row">
-                            <h2 id="bs-detail-name">Nom du distributeur</h2>
-                            <button class="btn-favorite-heart" id="bs-favorite" aria-label="Ajouter aux favoris">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <p id="bs-detail-address">Adresse</p>
-                        <div class="detail-meta">
-                            <span class="rating-clean" id="bs-detail-rating"></span>
-                            <span class="reviews-clean" id="bs-detail-reviews">(0 avis)</span>
-                            <span class="distance-clean" id="bs-detail-distance">0 km</span>
-                        </div>
-                    </div>
-
-                    <div id="bs-detail-photos" class="detail-photos-section" style="display:none">
+                    <!-- Header photo (cache si pas de photos) -->
+                    <div id="bs-detail-photos" class="bs-photo-header" style="display:none">
                         <div id="bs-detail-photos-gallery" class="photos-gallery"></div>
                     </div>
 
+                    <!-- Header titre + meta -->
+                    <div class="bs-detail-header">
+                        <h2 id="bs-detail-name">Nom du distributeur</h2>
+                        <div class="bs-meta-row">
+                            <span class="rating-clean" id="bs-detail-rating"></span>
+                            <span class="reviews-clean" id="bs-detail-reviews">(0 avis)</span>
+                            <span class="meta-separator">·</span>
+                            <span class="bs-type-text" id="bs-detail-type"></span>
+                        </div>
+                        <div class="bs-meta-row bs-meta-secondary">
+                            <span class="distance-clean" id="bs-detail-distance">0 km</span>
+                            <span id="bs-detail-address" class="bs-address"></span>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'action style Google Maps : ronds + label en dessous -->
+                    <div class="bs-actions-row">
+                        <button class="bs-action-btn primary" id="bs-get-directions" aria-label="Itineraire">
+                            <span class="bs-action-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                                </svg>
+                            </span>
+                            <span class="bs-action-label">Itineraire</span>
+                        </button>
+                        <button class="bs-action-btn" id="bs-favorite" aria-label="Ajouter aux favoris">
+                            <span class="bs-action-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                            </span>
+                            <span class="bs-action-label" id="bs-favorite-label">Favori</span>
+                        </button>
+                        <button class="bs-action-btn" id="bs-btn-chat" aria-label="Discuter">
+                            <span class="bs-action-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </span>
+                            <span class="bs-action-label">Discuter</span>
+                        </button>
+                        <button class="bs-action-btn" id="bs-btn-report" aria-label="Signaler">
+                            <span class="bs-action-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </span>
+                            <span class="bs-action-label">Signaler</span>
+                        </button>
+                    </div>
+
+                    <!-- Section produits -->
                     <div class="products-section-clean">
                         <div class="products-header-clean">
                             <h3>Produits disponibles</h3>
@@ -247,29 +284,6 @@
                             <button class="btn-confirm-small" onclick="submitDetailProduct()">OK</button>
                         </div>
                         <div id="bs-products-list"></div>
-                    </div>
-
-                    <div class="distributor-actions">
-                        <button class="btn-secondary-clean btn-report-action" id="bs-btn-report">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                                <line x1="12" y1="9" x2="12" y2="13"/>
-                                <line x1="12" y1="17" x2="12.01" y2="17"/>
-                            </svg>
-                            Signaler
-                        </button>
-                        <button class="btn-secondary-clean btn-directions-action" id="bs-get-directions">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                            </svg>
-                            Itineraire
-                        </button>
-                        <button class="btn-secondary-clean btn-directions-action" id="bs-btn-chat">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                            Discuter
-                        </button>
                     </div>
                 </div>
             </div>

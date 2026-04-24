@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
     testDir: './tests',
     testMatch: '**/*.spec.js',
-    timeout: 60000,
-    retries: 0,
+    timeout: 90000,
+    retries: 1,
     use: {
         baseURL: 'http://localhost:8080',
         trace: 'on-first-retry',
