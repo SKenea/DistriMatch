@@ -18,9 +18,11 @@ export function initMainMap() {
 
     const defaultCenter = AppState.userLocation || { lat: 43.4929, lng: -1.4748 };
 
+    // Zoom 15 par defaut (echelle quartier ~2km, standard Google Maps)
+    // La geoloc etant obligatoire au boot, AppState.userLocation est toujours defini ici
     const map = L.map('main-map', {
         zoomControl: false
-    }).setView([defaultCenter.lat, defaultCenter.lng], 13);
+    }).setView([defaultCenter.lat, defaultCenter.lng], 15);
 
     setMainMap(map);
     AppState.mapInitialized = true;
@@ -48,7 +50,9 @@ export function initMainMap() {
         userMarker.bindPopup('<strong>Vous etes ici</strong>');
     }
 
-    updateMapMarkers();
+    // fitBounds=false : on garde le zoom 15 sur la position user
+    // (sinon Leaflet re-zoom pour englober tous les markers)
+    updateMapMarkers(false);
     console.log('[DistriMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
 }
 
