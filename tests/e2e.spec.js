@@ -153,10 +153,45 @@ test.describe('3. Panneau lateral filtres', () => {
         const title = await page.textContent('#side-panel-title');
         expect(title).toContain('Tous');
 
-        // Le panneau doit contenir tous les distributeurs charges
         const totalDist = await page.evaluate(() => window.AppState.distributors.length);
         const items = await page.$$('#side-panel-list .side-panel-item');
         expect(items.length).toBe(totalDist);
+    });
+
+    test('re-clic sur Tous ferme le panneau et deselectionne le chip', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open');
+
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForTimeout(500);
+
+        const panelOpen = await page.evaluate(() =>
+            document.getElementById('sidebar').classList.contains('open')
+        );
+        expect(panelOpen).toBe(false);
+
+        const tousActive = await page.evaluate(() =>
+            document.querySelector('.filter-chip[data-type="all"]').classList.contains('active')
+        );
+        expect(tousActive).toBe(false);
+    });
+
+    test('re-clic sur un type ferme le panneau (Tous reste inactif)', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForTimeout(500);
+
+        const panelOpen = await page.evaluate(() =>
+            document.getElementById('sidebar').classList.contains('open')
+        );
+        expect(panelOpen).toBe(false);
+
+        const tousActive = await page.evaluate(() =>
+            document.querySelector('.filter-chip[data-type="all"]').classList.contains('active')
+        );
+        expect(tousActive).toBe(false);
     });
 
 });
