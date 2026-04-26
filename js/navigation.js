@@ -198,6 +198,14 @@ export function performSearch(query) {
 // ============================================
 
 export function setFilter(type) {
+    // Etat du panneau et du chip "Tous" AVANT la mise a jour
+    const sidebar = document.getElementById('sidebar');
+    const tousChip = document.querySelector('.filter-chip[data-type="all"]');
+    const wasPanelOpen = sidebar?.classList.contains('open') || false;
+    const wasInTousMode = wasPanelOpen && AppState.activeFilters.length === 0;
+    const tousWasActive = tousChip?.classList.contains('active') || false;
+
+    // Mise a jour du state des filtres
     if (type === 'all') {
         AppState.activeFilters = [];
     } else {
@@ -209,10 +217,19 @@ export function setFilter(type) {
         }
     }
 
+    // Mise a jour visuelle des chips
+    // - "Tous" : toggle uniquement si on clique dessus (jamais auto-active)
+    // - Types : actif si dans activeFilters
     document.querySelectorAll('.filter-chip').forEach(chip => {
         const chipType = chip.dataset.type;
         if (chipType === 'all') {
-            chip.classList.toggle('active', AppState.activeFilters.length === 0);
+            if (type === 'all') {
+                // Clic explicite sur Tous : toggle
+                chip.classList.toggle('active', !tousWasActive);
+            } else {
+                // Clic sur un autre chip : Tous redevient inactif
+                chip.classList.remove('active');
+            }
         } else {
             chip.classList.toggle('active', AppState.activeFilters.includes(chipType));
         }
@@ -230,14 +247,20 @@ export function setFilter(type) {
         showToast(`${AppState.activeFilters.length} filtres : ${count} distributeur(s)`, 'default');
     }
 
-    // Panneau lateral : ouvert si clic explicite "Tous" OU au moins un filtre actif
+    // Panneau lateral : toggle propre
     import('./gmaps-ui.js').then(m => {
-        if (type === 'all' || AppState.activeFilters.length > 0) {
-            // Clic "Tous" : panneau avec liste complete
-            // Sinon (>= 1 filtre actif) : liste filtree
+        if (type === 'all') {
+            // Clic Tous : ouvre si etait ferme (ou pas en mode Tous), ferme si etait deja en mode Tous
+            if (wasInTousMode) {
+                m.closeSidePanel();
+            } else {
+                m.openSidePanelForFilters([]);
+            }
+        } else if (AppState.activeFilters.length > 0) {
+            // Au moins un filtre actif : ouvrir/maj la liste filtree
             m.openSidePanelForFilters(AppState.activeFilters);
         } else {
-            // Deselection du dernier filtre actif : fermer
+            // Deselection du dernier filtre : fermer (Tous reste inactif aussi)
             m.closeSidePanel();
         }
     });
