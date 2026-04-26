@@ -145,6 +145,20 @@ test.describe('3. Panneau lateral filtres', () => {
         );
         expect(panelOpen).toBe(false);
     });
+
+    test('clic sur Tous ouvre le panneau avec liste complete', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open', { timeout: 3000 });
+
+        const title = await page.textContent('#side-panel-title');
+        expect(title).toContain('Tous');
+
+        // Le panneau doit contenir tous les distributeurs charges
+        const totalDist = await page.evaluate(() => window.AppState.distributors.length);
+        const items = await page.$$('#side-panel-list .side-panel-item');
+        expect(items.length).toBe(totalDist);
+    });
+
 });
 
 // ============================================
