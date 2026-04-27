@@ -385,7 +385,11 @@ export async function confirmAddDistributor() {
         );
     }
 
-    mainMap.removeLayer(AddMode.marker);
+    // Fermer explicitement tous les popups Leaflet (formulaire d'ajout)
+    mainMap.closePopup();
+    if (AddMode.marker) {
+        mainMap.removeLayer(AddMode.marker);
+    }
     updateMapMarkers(false);
 
     AddMode.active = false;
@@ -393,7 +397,11 @@ export async function confirmAddDistributor() {
     AddMode.lat = null;
     AddMode.lng = null;
 
+    // Fermer le mode ajout proprement (curseur, hint, listener)
     document.getElementById('btn-add-distributor').classList.remove('active');
+    document.getElementById('placement-hint')?.classList.remove('visible');
+    document.getElementById('main-map').style.cursor = '';
+    mainMap.off('click', onMapClickForPlacement);
 
     showToast(`${escapeHTML(newDistributor.name)} ajoute !`, 'success');
 
