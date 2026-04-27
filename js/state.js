@@ -94,7 +94,9 @@ export const DISTRIBUTOR_TYPES = [
     { id: 'dairy', emoji: '🥛', name: 'Produits laitiers' },
     { id: 'meat', emoji: '🥩', name: 'Viande' },
     { id: 'terroir', emoji: '🍯', name: 'Terroir' },
-    { id: 'general', emoji: '🏪', name: 'Mixte' }
+    { id: 'ice', emoji: '🧊', name: 'Glacons' },
+    { id: 'general', emoji: '🏪', name: 'Mixte' },
+    { id: 'other', emoji: '📦', name: 'Autre' }
 ];
 
 export const STORAGE_KEY = 'snackmatch_user';
@@ -161,6 +163,8 @@ export const EMBEDDED_DATA = {
         agricultural: { label: "Produits agricoles", gradient: "linear-gradient(135deg, #00b894 0%, #55efc4 100%)" },
         meat: { label: "Viande & Charcuterie", gradient: "linear-gradient(135deg, #d63031 0%, #e17055 100%)" },
         terroir: { label: "Terroir local", gradient: "linear-gradient(135deg, #e17055 0%, #fdcb6e 100%)" },
-        general: { label: "Distributeur mixte", gradient: "linear-gradient(135deg, #636e72 0%, #b2bec3 100%)" }
+        ice: { label: "Glacons", emoji: "🧊", gradient: "linear-gradient(135deg, #74b9ff 0%, #a8d8ea 100%)" },
+        general: { label: "Distributeur mixte", gradient: "linear-gradient(135deg, #636e72 0%, #b2bec3 100%)" },
+        other: { label: "Autre", emoji: "📦", gradient: "linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)" }
     }
 };
