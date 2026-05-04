@@ -9,11 +9,6 @@
 
 ## Priorite haute
 
-- [ ] UX : feedback visuel quand on s'abonne (heart se remplit avec animation pulse)
-  - Reproduire : ouvrir une modal distributeur, cliquer le coeur
-  - Attendu : animation 200ms du coeur (scale 1 -> 1.3 -> 1) + couleur passe au rouge
-  - Acceptance : animation smooth + le toast existant reste
-
 ## Priorite normale
 
 - [ ] Feature : bouton "Partager" sur la modal distributeur (copie un lien vers le distributeur dans le presse-papier)
@@ -60,4 +55,5 @@
 
 - [x] 2026-04-27 Empty state Activite centre verticalement (PR #27, commit 3657115)
 - [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR #28, commit 736cb9d)
-- [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR a venir)
+- [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR #29, commit 1e9fc15)
+- [x] 2026-05-04 Animation pulse coeur favori (PR a venir)

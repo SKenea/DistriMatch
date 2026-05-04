@@ -116,6 +116,13 @@ export function initDistModal() {
         if (AppState.currentDistributor) {
             await toggleSubscription(AppState.currentDistributor.id);
             updateFavoriteButton();
+            // Animation pulse 200ms apres toggle
+            const btn = document.getElementById('dist-action-favorite');
+            btn?.classList.remove('pulsing');
+            // reflow pour relancer l'animation si on clique a nouveau
+            void btn?.offsetWidth;
+            btn?.classList.add('pulsing');
+            btn?.addEventListener('animationend', () => btn.classList.remove('pulsing'), { once: true });
         }
     });
 
