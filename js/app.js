@@ -397,6 +397,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialiser la carte
     initMainMap();
 
+    // Masquer le loader des que la carte est prete
+    const mapLoader = document.getElementById('map-loader');
+    if (mapLoader) {
+        mapLoader.classList.add('hidden');
+        mapLoader.addEventListener('transitionend', () => mapLoader.remove(), { once: true });
+    }
+
     // Initialiser le bottom sheet
     initSidePanel();
     initDistModal();
