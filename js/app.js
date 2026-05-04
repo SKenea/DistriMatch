@@ -385,11 +385,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadNotificationPrefs();
     loadNotificationQueue();
 
+    // Charger les distributeurs en parallele de l'overlay geoloc :
+    // ca permet a un deep link (?id=<distId>) d'ouvrir la modal AVANT
+    // que l'utilisateur ait consenti a la geolocalisation.
+    const distributorsPromise = loadDistributors();
+
+    // Initialiser la modal des maintenant pour le deep link
+    initDistModal();
+
+    // Si l'URL contient ?id=<distId>, ouvrir la modal des que les distributeurs
+    // sont prets, sans attendre le consentement geoloc.
+    const deepLinkId = new URLSearchParams(window.location.search).get('id');
+    if (deepLinkId) {
+        distributorsPromise.then(() => openModalFromUrlParam()).catch(() => {});
+    }
+
     // Attendre la geolocalisation via l'overlay
     await initGeolocationOverlay();
 
-    // Charger les distributeurs (Supabase > fetch JSON > embarque)
-    await loadDistributors();
+    // S'assurer que les distributeurs sont charges avant de continuer
+    await distributorsPromise;
 
     // Charger les signalements communautaires depuis Supabase
     await loadReportsFromSupabase();
@@ -406,10 +421,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser le bottom sheet
     initSidePanel();
-    initDistModal();
-
-    // Si l'URL contient ?id=<distId>, ouvrir la modal directement
-    openModalFromUrlParam();
 
     // Initialiser les filtres
     initFilterChips();

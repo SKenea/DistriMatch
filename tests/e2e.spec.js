@@ -71,6 +71,48 @@ test.describe('1. Onboarding', () => {
 });
 
 // ============================================
+// 1bis. DEEP LINK (?id=<distId>) sans consentement geoloc
+// ============================================
+
+test.describe('1bis. Deep link sans consentement geoloc', () => {
+    test.beforeEach(async () => { /* override : pas de setupApp */ });
+
+    test('lien partage ouvre la modal meme avant clic geoloc', async ({ browser }) => {
+        // Nouveau context vierge : pas de permission geoloc accordee
+        const context = await browser.newContext();
+        const page = await context.newPage();
+
+        // Recuperer un id de distributeur reel via une 1ere visite normale
+        const tempPage = await context.newPage();
+        await tempPage.goto(BASE_URL);
+        await tempPage.waitForFunction(
+            () => window.AppState?.distributors?.length > 0,
+            { timeout: 50000 }
+        );
+        const firstId = await tempPage.evaluate(() => window.AppState.distributors[0].id);
+        await tempPage.close();
+
+        // Visiter le deep link sans cliquer sur "Activer la localisation"
+        await page.goto(`${BASE_URL}/?id=${firstId}`);
+
+        // La modal doit apparaitre (au-dessus de l'onboarding)
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+
+        // L'onboarding geoloc reste affiche en arriere-plan (pas hidden)
+        const overlayHidden = await page.evaluate(() =>
+            document.getElementById('geoloc-overlay')?.classList.contains('hidden')
+        );
+        expect(overlayHidden).toBe(false);
+
+        // L'URL doit etre nettoyee apres ouverture
+        const url = await page.url();
+        expect(url).not.toContain('?id=');
+
+        await context.close();
+    });
+});
+
+// ============================================
 // 2. NAVIGATION
 // ============================================
 
