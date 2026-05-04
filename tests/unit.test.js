@@ -25,7 +25,7 @@ import {
     incrementAddProductCounter
 } from '../js/state.js';
 
-import { isQuietHours, canNotify } from '../js/notifications.js';
+import { isQuietHours, canNotify, markNotified } from '../js/notifications.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
@@ -356,6 +356,55 @@ describe('canNotify', () => {
     it('retourne true si notifie il y a plus d\'1h', () => {
         NotificationPrefs.lastNotifications = { 'dist-001': Date.now() - 2 * 3600000 };
         assert.equal(canNotify('dist-001'), true);
+    });
+});
+
+describe('markNotified', () => {
+    it('enregistre le timestamp de notification', () => {
+        NotificationPrefs.lastNotifications = {};
+        const before = Date.now();
+        markNotified('dist-test');
+        const after = Date.now();
+        assert.ok(NotificationPrefs.lastNotifications['dist-test'] >= before);
+        assert.ok(NotificationPrefs.lastNotifications['dist-test'] <= after);
+    });
+
+    it('canNotify devient false apres markNotified', () => {
+        NotificationPrefs.lastNotifications = {};
+        assert.equal(canNotify('dist-x'), true);
+        markNotified('dist-x');
+        assert.equal(canNotify('dist-x'), false);
+    });
+
+    it('plusieurs distributeurs trackes independamment', () => {
+        NotificationPrefs.lastNotifications = {};
+        markNotified('dist-a');
+        markNotified('dist-b');
+        assert.ok(NotificationPrefs.lastNotifications['dist-a']);
+        assert.ok(NotificationPrefs.lastNotifications['dist-b']);
+        assert.notEqual(NotificationPrefs.lastNotifications['dist-a'], undefined);
+    });
+});
+
+describe('isQuietHours - cas additionnels', () => {
+    it('retourne false si on est apres end (plage normale meme jour)', () => {
+        NotificationPrefs.quietHours.enabled = true;
+        const hour = new Date().getHours();
+        // Plage 0h-1h, on est forcement apres 1h sauf entre 0 et 1
+        NotificationPrefs.quietHours.start = 0;
+        NotificationPrefs.quietHours.end = 1;
+        const expected = hour >= 0 && hour < 1;
+        assert.equal(isQuietHours(), expected);
+    });
+
+    it('retourne false si on est avant start (plage normale meme jour)', () => {
+        NotificationPrefs.quietHours.enabled = true;
+        // Plage 23h-23h59, on est forcement avant 23h sauf entre 23 et minuit
+        NotificationPrefs.quietHours.start = 23;
+        NotificationPrefs.quietHours.end = 23.99;
+        const hour = new Date().getHours();
+        const expected = hour >= 23;
+        assert.equal(isQuietHours(), expected);
     });
 });
 
