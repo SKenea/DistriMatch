@@ -159,16 +159,21 @@ export function buildShareUrl(distId) {
     return `${base}?id=${encodeURIComponent(distId)}`;
 }
 
-/**
- * Si l'URL contient ?id=<distId>, ouvre la modal du distributeur a l'init.
- * A appeler apres loadDistributors.
- */
 export function openModalFromUrlParam() {
     if (typeof window === 'undefined' || !window.location) return;
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
-    if (id && AppState.distributors.find(d => d.id === id)) {
+    if (!id) return;
+
+    if (AppState.distributors.find(d => d.id === id)) {
         openDistributorModal(id);
+    } else {
+        showToast('Distributeur introuvable', 'error');
+    }
+
+    // Nettoyer l'URL pour eviter une re-ouverture au rafraichissement
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
     }
 }
 

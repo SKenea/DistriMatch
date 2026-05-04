@@ -126,18 +126,27 @@ describe('getTimeSlot', () => {
     const ORIGINAL_DATE = global.Date;
 
     function mockHour(hour) {
-        const fixed = new ORIGINAL_DATE(2026, 0, 1, hour, 0, 0);
         global.Date = class extends ORIGINAL_DATE {
             constructor(...args) {
-                if (args.length === 0) return fixed;
-                return new ORIGINAL_DATE(...args);
+                if (args.length === 0) {
+                    super(2026, 0, 1, hour, 0, 0);
+                } else {
+                    super(...args);
+                }
             }
-            static now() { return fixed.getTime(); }
+            static now() {
+                return new ORIGINAL_DATE(2026, 0, 1, hour, 0, 0).getTime();
+            }
         };
     }
 
-    function restore() {
-        global.Date = ORIGINAL_DATE;
+    function withMockedHour(hour, fn) {
+        mockHour(hour);
+        try {
+            fn();
+        } finally {
+            global.Date = ORIGINAL_DATE;
+        }
     }
 
     it('retourne un slot valide', () => {
@@ -146,34 +155,29 @@ describe('getTimeSlot', () => {
     });
 
     it('6h-10h59 = morning', () => {
-        mockHour(6); assert.equal(getTimeSlot(), 'morning');
-        mockHour(10); assert.equal(getTimeSlot(), 'morning');
-        restore();
+        withMockedHour(6, () => assert.equal(getTimeSlot(), 'morning'));
+        withMockedHour(10, () => assert.equal(getTimeSlot(), 'morning'));
     });
 
     it('11h-13h59 = lunch', () => {
-        mockHour(11); assert.equal(getTimeSlot(), 'lunch');
-        mockHour(13); assert.equal(getTimeSlot(), 'lunch');
-        restore();
+        withMockedHour(11, () => assert.equal(getTimeSlot(), 'lunch'));
+        withMockedHour(13, () => assert.equal(getTimeSlot(), 'lunch'));
     });
 
     it('14h-17h59 = afternoon', () => {
-        mockHour(14); assert.equal(getTimeSlot(), 'afternoon');
-        mockHour(17); assert.equal(getTimeSlot(), 'afternoon');
-        restore();
+        withMockedHour(14, () => assert.equal(getTimeSlot(), 'afternoon'));
+        withMockedHour(17, () => assert.equal(getTimeSlot(), 'afternoon'));
     });
 
     it('18h-21h59 = evening', () => {
-        mockHour(18); assert.equal(getTimeSlot(), 'evening');
-        mockHour(21); assert.equal(getTimeSlot(), 'evening');
-        restore();
+        withMockedHour(18, () => assert.equal(getTimeSlot(), 'evening'));
+        withMockedHour(21, () => assert.equal(getTimeSlot(), 'evening'));
     });
 
     it('22h-5h59 = night', () => {
-        mockHour(22); assert.equal(getTimeSlot(), 'night');
-        mockHour(3); assert.equal(getTimeSlot(), 'night');
-        mockHour(5); assert.equal(getTimeSlot(), 'night');
-        restore();
+        withMockedHour(22, () => assert.equal(getTimeSlot(), 'night'));
+        withMockedHour(3, () => assert.equal(getTimeSlot(), 'night'));
+        withMockedHour(5, () => assert.equal(getTimeSlot(), 'night'));
     });
 });
 

@@ -16,7 +16,9 @@ export function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
-    return div.innerHTML;
+    return div.innerHTML
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 export function calculateDistance(lat1, lng1, lat2, lng2) {

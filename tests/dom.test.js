@@ -152,6 +152,18 @@ describe('escapeHTML (DOM)', () => {
     it('garde le texte normal intact', () => {
         assert.equal(escapeHTML('Bonjour monde'), 'Bonjour monde');
     });
+
+    it('echappe les guillemets pour usage en attribut HTML (XSS attr)', () => {
+        const result = escapeHTML('foo" onclick="alert(1)');
+        assert.ok(!result.includes('"'), `Guillemets non echappes (XSS): ${result}`);
+        assert.ok(result.includes('&quot;'), `Devrait contenir &quot;: ${result}`);
+    });
+
+    it('echappe les apostrophes', () => {
+        const result = escapeHTML("foo' onclick='alert(1)");
+        assert.ok(!result.includes("'"), `Apostrophes non echappees: ${result}`);
+        assert.ok(result.includes('&#39;'), `Devrait contenir &#39;: ${result}`);
+    });
 });
 
 // ============================================
@@ -503,8 +515,7 @@ describe('updateProfileStats - contributions', () => {
     beforeEach(() => {
         AppState.distributors = [
             { id: 'd1', name: 'Officiel', type: 'pizza' },
-            { id: 'user-1', name: 'Mon distrib', type: 'ice', isUserAdded: true, addedBy: 'user' },
-            { id: 'user-2', name: 'Autre distrib', type: 'other', isUserAdded: true, addedBy: 'user' }
+            { id: 'other-user-1', name: 'Distrib autre user', type: 'pizza', isUserAdded: true, addedBy: 'someone-else' }
         ];
         AppState.subscriptions = [];
         AppState.reports = 3;
@@ -512,11 +523,23 @@ describe('updateProfileStats - contributions', () => {
         Conversations.list = [];
         UserProfile.stats.photosUploaded = 5;
         UserProfile.preferences.types = {};
+        // Distributeurs ajoutes localement (this device only)
+        localStorage.setItem('snackmatch_user_distributors', JSON.stringify([
+            { id: 'user-1', name: 'Mon distrib', type: 'ice' },
+            { id: 'user-2', name: 'Autre distrib', type: 'other' }
+        ]));
     });
 
-    it('compte les distributeurs ajoutes par l\'user', () => {
+    it('compte uniquement les distributeurs ajoutes sur cet appareil', () => {
         updateProfileStats();
+        // 2 dans localStorage, ignore le distributeur Supabase d'un autre user
         assert.equal(document.getElementById('stat-contrib-distributors').textContent, '2');
+    });
+
+    it('retourne 0 si aucun distributeur ajoute', () => {
+        localStorage.setItem('snackmatch_user_distributors', JSON.stringify([]));
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-contrib-distributors').textContent, '0');
     });
 
     it('affiche le nombre de photos uploadees', () => {
