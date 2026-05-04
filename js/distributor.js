@@ -85,11 +85,11 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
             <div class="product-actions-clean">
                 <div class="product-price-clean">${p.price.toFixed(2)}€</div>
                 ${readonly ? '' : `
-                    <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
+                    <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
                         ${p.available ? '✓' : '✗'}
                     </button>
-                    <button class="product-btn-edit" onclick="editProduct(${index})" title="Modifier">✎</button>
-                    <button class="product-btn-delete" onclick="deleteProduct(${index})" title="Supprimer">×</button>
+                    <button class="product-btn-edit" onclick="editProduct(${index})" aria-label="Modifier le produit" title="Modifier">✎</button>
+                    <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer">×</button>
                 `}
             </div>
         </div>
@@ -157,8 +157,8 @@ export function editProduct(index) {
         <div class="product-edit-row">
             <input type="text" class="product-edit-name" value="${escapeHTML(product.name)}">
             <input type="number" class="product-edit-price" value="${product.price}" step="0.10" min="0">
-            <button class="product-btn-save" onclick="saveProduct(${index})">✓</button>
-            <button class="product-btn-cancel-edit" onclick="renderProductsList(AppState.currentDistributor)">✗</button>
+            <button class="product-btn-save" aria-label="Enregistrer" onclick="saveProduct(${index})">✓</button>
+            <button class="product-btn-cancel-edit" aria-label="Annuler" onclick="renderProductsList(AppState.currentDistributor)">✗</button>
         </div>
     `;
     item.querySelector('.product-edit-name').focus();
@@ -352,7 +352,7 @@ export function displaySubscriptions() {
                         <span class="subscription-rating">${generateStars(d.rating)} ${d.rating}</span>
                     </div>
                 </div>
-                <button class="btn-unsubscribe" onclick="toggleSubscription('${d.id}', event)" title="Se desabonner">
+                <button class="btn-unsubscribe" aria-label="Se desabonner" onclick="toggleSubscription('${d.id}', event)" title="Se desabonner">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>

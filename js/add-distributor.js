@@ -123,7 +123,7 @@ export function addProductRow() {
     row.innerHTML = `
         <input type="text" class="product-name-input" placeholder="Nom du produit" required>
         <input type="number" class="product-price-input" placeholder="Prix" step="0.10" min="0">
-        <button type="button" class="product-remove-row" onclick="removeProductRow(${id})">&times;</button>
+        <button type="button" class="product-remove-row" aria-label="Retirer ce produit" onclick="removeProductRow(${id})">&times;</button>
     `;
     list.appendChild(row);
 }
@@ -159,7 +159,7 @@ export function renderPhotoPreview() {
         return `
             <div class="photo-preview-item">
                 <img src="${url}" alt="Photo ${i + 1}">
-                <button class="photo-remove-btn" onclick="removeAddPhoto(${i})" type="button">&times;</button>
+                <button class="photo-remove-btn" aria-label="Supprimer cette photo" onclick="removeAddPhoto(${i})" type="button">&times;</button>
             </div>
         `;
     }).join('');
