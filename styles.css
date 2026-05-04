@@ -1963,15 +1963,22 @@ body {
     color: white;
 }
 
-/* Empty state */
+/* Empty state - centre verticalement et horizontalement */
 .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 3rem 1.5rem;
+    padding: 2rem 1.5rem;
+    min-height: 50vh;
+    gap: 0.5rem;
 }
 
 .empty-icon {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     color: var(--gray-light);
+    font-size: 3rem;
 }
 
 .empty-state h3 {
