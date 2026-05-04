@@ -9,11 +9,6 @@
 
 ## Priorite haute
 
-- [ ] Bug : `openModalFromUrlParam` ne s'execute pas pour les nouveaux visiteurs (lien partage casse tant que la geoloc n'a pas ete acceptee)
-  - Repro : ouvrir https://skenea.github.io/DistriMatch/?id=dist-005 en navigation privee → onboarding s'affiche, modal jamais ouverte
-  - Cause : `openModalFromUrlParam()` est appele dans `app.js` apres l'init carte, qui attend le consentement geoloc
-  - Acceptance : visiter `?id=<distId>` ouvre la modal dans 100% des cas, meme si l'utilisateur n'a pas consenti a la geoloc (la modal apparait au-dessus de l'onboarding ou apres dismiss). Test e2e qui couvre ce flow nouveau visiteur.
-
 ## Priorite normale
 
 
@@ -54,3 +49,5 @@
 - [x] 2026-05-04 Compteur "Mes contributions" dans le profil (PR #33, commit 2c95ff2)
 - [x] 2026-05-04 Tests unit chat.js (getTimeSlot edges + generateGreetingMessage) (PR #34, commit dac64e6)
 - [x] 2026-05-04 Aria-labels sur tous les boutons icon-only (PR #35, commit 1f899d1)
+- [x] 2026-05-04 5 fix post-review /auto 5 (XSS aria-label, saveProfile, multi-user counter, URL cleanup, mock Date) (PR #36, commit cefb38b)
+- [x] 2026-05-04 Deep link ?id= ouvre la modal avant consentement geoloc (PR #37, commit c6d0a1b)
