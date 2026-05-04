@@ -67,7 +67,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, openModalFromUrlParam } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 
@@ -407,6 +407,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialiser le bottom sheet
     initSidePanel();
     initDistModal();
+
+    // Si l'URL contient ?id=<distId>, ouvrir la modal directement
+    setTimeout(() => openModalFromUrlParam(), 100);
 
     // Initialiser les filtres
     initFilterChips();
