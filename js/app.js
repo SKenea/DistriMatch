@@ -313,14 +313,46 @@ function initGeolocationOverlay() {
                 resolve();
             } catch (err) {
                 let message = 'Impossible d\'obtenir ta position.';
+                let helpHtml = '';
                 if (err.code === 1) {
-                    message = 'Tu as refuse l\'acces a ta position. Autorise la geolocalisation dans les reglages de ton navigateur, puis reessaie.';
+                    // PERMISSION_DENIED : instructions adaptees mobile/desktop
+                    const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    message = 'Geolocalisation refusee';
+                    if (isIOS) {
+                        helpHtml = `
+                            <strong>Comment reactiver sur iPhone :</strong>
+                            <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
+                                <li>Ouvre <em>Reglages</em> > <em>Safari</em> > <em>Localisation</em></li>
+                                <li>Choisis <em>Demander</em> ou <em>Autoriser</em></li>
+                                <li>Reviens sur cette page et reessaie</li>
+                            </ol>
+                        `;
+                    } else if (isMobile) {
+                        helpHtml = `
+                            <strong>Comment reactiver sur Android :</strong>
+                            <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
+                                <li>Touche l'icone cadenas a gauche de l'URL</li>
+                                <li>Permissions > Localisation > Autoriser</li>
+                                <li>Recharge la page</li>
+                            </ol>
+                        `;
+                    } else {
+                        helpHtml = `
+                            <strong>Comment reactiver :</strong>
+                            <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
+                                <li>Clique sur l'icone cadenas a gauche de l'URL</li>
+                                <li>Reglages du site > Localisation > Autoriser</li>
+                                <li>Recharge la page</li>
+                            </ol>
+                        `;
+                    }
                 } else if (err.code === 2) {
-                    message = 'Position indisponible. Verifie que le GPS est active.';
+                    message = 'Position indisponible. Verifie que le GPS de ton appareil est active.';
                 } else if (err.code === 3) {
                     message = 'Delai depasse. Verifie ta connexion et reessaie.';
                 }
-                errorEl.textContent = message;
+                errorEl.innerHTML = `<strong>${message}</strong>${helpHtml ? '<br>' + helpHtml : ''}`;
                 errorEl.style.display = 'block';
                 btn.disabled = false;
                 btn.innerHTML = `
