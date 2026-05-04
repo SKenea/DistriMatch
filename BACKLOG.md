@@ -11,11 +11,6 @@
 
 ## Priorite normale
 
-- [ ] Feature : compteur "Mes contributions" dans le profil (distributeurs ajoutes, photos, signalements)
-  - Acceptance : 3 stats visibles, mis a jour au fil des actions
-
-- [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
-  - Acceptance : 5 skeleton items visibles le temps du tri
 
 - [ ] Qualite : ajouter des tests unit pour `js/chat.js` fonctions pures (getTimeSlot helpers, generateGreetingMessage)
   - Acceptance : 4+ tests
@@ -41,6 +36,13 @@
 ## A clarifier (auto-ajoutes par /auto)
 <!-- Le skill /auto place ici les items ambigus qu'il n'a pas pu traiter -->
 
+- [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
+  - Note /auto 2026-05-04 : le tri actuel est synchrone (<1ms) car les distances
+    sont pre-calculees au chargement. Pas de latence reelle a masquer.
+    Reformuler : skeleton uniquement si distributors pas encore charges (Supabase
+    en cours), ou si le calcul de distance prend du temps lors d'un mouvement
+    significatif de l'user ?
+
 ## Done
 <!-- Items completes au format : [x] YYYY-MM-DD - Description (PR #N, commit abc1234) -->
 
@@ -49,4 +51,5 @@
 - [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR #29, commit 1e9fc15)
 - [x] 2026-05-04 Animation pulse coeur favori (PR #30, commit 03e9847)
 - [x] 2026-05-04 Tests unit notifications.js (PR #31, commit 8d0a8a8)
-- [x] 2026-05-04 Bouton Partager sur la modal + auto-open via ?id= (PR a venir)
+- [x] 2026-05-04 Bouton Partager sur la modal + auto-open via ?id= (PR #32, commit 12c750d)
+- [x] 2026-05-04 Compteur "Mes contributions" dans le profil (PR #33, commit 2c95ff2)

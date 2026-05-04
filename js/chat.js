@@ -464,7 +464,7 @@ export function generateProactiveMessages() {
     });
 }
 
-function generateGreetingMessage(distributor, timeSlot) {
+export function generateGreetingMessage(distributor, timeSlot) {
     const messages = GREETING_MESSAGES[timeSlot] || GREETING_MESSAGES.morning;
     const text = messages[Math.floor(Math.random() * messages.length)];
     return { text, category: `greeting_${timeSlot}` };

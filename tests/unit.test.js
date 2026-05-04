@@ -26,6 +26,7 @@ import {
 } from '../js/state.js';
 
 import { isQuietHours, canNotify, markNotified } from '../js/notifications.js';
+import { generateGreetingMessage } from '../js/chat.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
@@ -122,9 +123,88 @@ describe('formatTime', () => {
 });
 
 describe('getTimeSlot', () => {
+    const ORIGINAL_DATE = global.Date;
+
+    function mockHour(hour) {
+        const fixed = new ORIGINAL_DATE(2026, 0, 1, hour, 0, 0);
+        global.Date = class extends ORIGINAL_DATE {
+            constructor(...args) {
+                if (args.length === 0) return fixed;
+                return new ORIGINAL_DATE(...args);
+            }
+            static now() { return fixed.getTime(); }
+        };
+    }
+
+    function restore() {
+        global.Date = ORIGINAL_DATE;
+    }
+
     it('retourne un slot valide', () => {
         const slot = getTimeSlot();
         assert.ok(['morning', 'lunch', 'afternoon', 'evening', 'night'].includes(slot), `Slot: ${slot}`);
+    });
+
+    it('6h-10h59 = morning', () => {
+        mockHour(6); assert.equal(getTimeSlot(), 'morning');
+        mockHour(10); assert.equal(getTimeSlot(), 'morning');
+        restore();
+    });
+
+    it('11h-13h59 = lunch', () => {
+        mockHour(11); assert.equal(getTimeSlot(), 'lunch');
+        mockHour(13); assert.equal(getTimeSlot(), 'lunch');
+        restore();
+    });
+
+    it('14h-17h59 = afternoon', () => {
+        mockHour(14); assert.equal(getTimeSlot(), 'afternoon');
+        mockHour(17); assert.equal(getTimeSlot(), 'afternoon');
+        restore();
+    });
+
+    it('18h-21h59 = evening', () => {
+        mockHour(18); assert.equal(getTimeSlot(), 'evening');
+        mockHour(21); assert.equal(getTimeSlot(), 'evening');
+        restore();
+    });
+
+    it('22h-5h59 = night', () => {
+        mockHour(22); assert.equal(getTimeSlot(), 'night');
+        mockHour(3); assert.equal(getTimeSlot(), 'night');
+        mockHour(5); assert.equal(getTimeSlot(), 'night');
+        restore();
+    });
+});
+
+// ============================================
+// CHAT - generateGreetingMessage
+// ============================================
+
+describe('generateGreetingMessage', () => {
+    it('retourne un objet avec text et category', () => {
+        const result = generateGreetingMessage({ id: 'd1', name: 'Test' }, 'morning');
+        assert.ok(typeof result.text === 'string');
+        assert.equal(result.category, 'greeting_morning');
+    });
+
+    it('utilise les messages du timeSlot demande', () => {
+        const result = generateGreetingMessage({ id: 'd1' }, 'lunch');
+        assert.ok(GREETING_MESSAGES.lunch.includes(result.text));
+        assert.equal(result.category, 'greeting_lunch');
+    });
+
+    it('fallback sur morning si timeSlot inconnu', () => {
+        const result = generateGreetingMessage({ id: 'd1' }, 'invalid');
+        assert.ok(GREETING_MESSAGES.morning.includes(result.text));
+        assert.equal(result.category, 'greeting_invalid');
+    });
+
+    it('fonctionne pour chaque timeSlot valide', () => {
+        ['morning', 'lunch', 'afternoon', 'evening', 'night'].forEach(slot => {
+            const result = generateGreetingMessage({ id: 'd1' }, slot);
+            assert.ok(GREETING_MESSAGES[slot].includes(result.text), `Slot ${slot} non couvert`);
+        });
     });
 });
 
