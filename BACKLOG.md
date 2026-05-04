@@ -9,11 +9,6 @@
 
 ## Priorite haute
 
-- [ ] UX : ajouter un loader visible pendant le chargement initial des distributeurs (Supabase peut prendre 5-10s)
-  - Reproduire : reseau lent, ouvrir l'app
-  - Attendu : spinner + texte "Chargement des distributeurs..." sur la carte
-  - Acceptance : loader visible si fetch > 1s, disparait au chargement complete
-
 - [ ] UX : feedback visuel quand on s'abonne (heart se remplit avec animation pulse)
   - Reproduire : ouvrir une modal distributeur, cliquer le coeur
   - Attendu : animation 200ms du coeur (scale 1 -> 1.3 -> 1) + couleur passe au rouge
@@ -64,4 +59,5 @@
 <!-- Items completes au format : [x] YYYY-MM-DD - Description (PR #N, commit abc1234) -->
 
 - [x] 2026-04-27 Empty state Activite centre verticalement (PR #27, commit 3657115)
-- [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR a venir)
+- [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR #28, commit 736cb9d)
+- [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR a venir)
