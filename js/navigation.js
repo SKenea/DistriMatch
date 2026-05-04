@@ -5,7 +5,7 @@
 import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
     escapeHTML, formatDistance, showToast, getFilteredDistributors,
-    updateImplicitProfile, getTopPreferredTypes
+    updateImplicitProfile, getTopPreferredTypes, loadUserDistributors
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 
@@ -299,8 +299,7 @@ function updateContributionStats() {
     const statContribReports = document.getElementById('stat-contrib-reports');
 
     if (statContribDistributors) {
-        const count = AppState.distributors.filter(d => d.isUserAdded || d.addedBy === 'user').length;
-        statContribDistributors.textContent = count;
+        statContribDistributors.textContent = loadUserDistributors().length;
     }
     if (statContribPhotos) {
         statContribPhotos.textContent = UserProfile.stats.photosUploaded || 0;

@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDistModal();
 
     // Si l'URL contient ?id=<distId>, ouvrir la modal directement
-    setTimeout(() => openModalFromUrlParam(), 100);
+    openModalFromUrlParam();
 
     // Initialiser les filtres
     initFilterChips();

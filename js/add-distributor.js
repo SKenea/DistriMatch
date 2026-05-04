@@ -9,7 +9,7 @@ import {
 } from './state.js';
 import {
     escapeHTML, showToast, calculateDistance,
-    saveToLocalStorage, saveUserDistributor
+    saveToLocalStorage, saveUserDistributor, saveProfile
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
@@ -212,6 +212,7 @@ async function uploadDistributorPhotos(distributorId, files) {
 
     if (uploadedPaths.length > 0) {
         UserProfile.stats.photosUploaded = (UserProfile.stats.photosUploaded || 0) + uploadedPaths.length;
+        saveProfile();
     }
 
     return uploadedPaths;
