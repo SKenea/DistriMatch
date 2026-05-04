@@ -6,7 +6,7 @@
 
 import { supabaseClient } from './state.js';
 import { showToast, escapeHTML } from './utils.js';
-import { getHcaptchaSitekey } from './config.js';
+import { getHcaptchaSitekey, isLocalhost } from './config.js';
 
 // ============================================
 // ETAT AUTH
@@ -71,15 +71,18 @@ export async function initAuth() {
 
 export async function sendMagicLink(email, captchaToken) {
     if (!supabaseClient) throw new Error('Supabase indisponible');
-    if (!captchaToken) throw new Error('Captcha requis');
+    if (!isLocalhost() && !captchaToken) throw new Error('Captcha requis');
 
-    const { error } = await supabaseClient.auth.signInWithOtp({
-        email,
-        options: {
-            emailRedirectTo: window.location.origin + window.location.pathname,
-            captchaToken
-        }
-    });
+    const options = {
+        emailRedirectTo: window.location.origin + window.location.pathname
+    };
+    // Sur localhost, on n'envoie pas de captchaToken (Supabase peut etre
+    // configure pour ne pas exiger captcha en dev). En prod, le token est requis.
+    if (captchaToken) {
+        options.captchaToken = captchaToken;
+    }
+
+    const { error } = await supabaseClient.auth.signInWithOtp({ email, options });
 
     if (error) throw error;
     return true;
@@ -138,8 +141,11 @@ function openEmailModal(onClose) {
             <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe, juste un lien a cliquer.</p>
             <form class="auth-modal-form">
                 <input type="email" placeholder="ton@email.com" required autofocus>
-                <div class="h-captcha" data-sitekey="${getHcaptchaSitekey()}" data-callback="onHcaptchaSuccess" data-expired-callback="onHcaptchaExpired"></div>
-                <button type="submit" class="auth-modal-submit" disabled>Recevoir le lien</button>
+                ${isLocalhost()
+                    ? '<div class="auth-modal-dev-banner">Mode developpement — captcha desactive sur localhost</div>'
+                    : `<div class="h-captcha" data-sitekey="${getHcaptchaSitekey()}" data-callback="onHcaptchaSuccess" data-expired-callback="onHcaptchaExpired"></div>`
+                }
+                <button type="submit" class="auth-modal-submit"${isLocalhost() ? '' : ' disabled'}>Recevoir le lien</button>
             </form>
             <p class="auth-modal-status" style="display:none"></p>
         </div>
@@ -151,7 +157,14 @@ function openEmailModal(onClose) {
     let captchaWidgetId = null;
     let captchaToken = null;
 
+    // Sur localhost : pas de captcha rendu, on saute directement
+    if (isLocalhost()) {
+        // Le bouton submit est deja active dans le HTML, captchaToken reste null
+        // et sendMagicLink n'enverra pas de captchaToken a Supabase.
+    }
+
     const tryRenderHcaptcha = () => {
+        if (isLocalhost()) return; // pas de captcha en dev
         const captchaEl = overlay.querySelector('.h-captcha');
         if (window.hcaptcha && captchaEl && !captchaEl.dataset.rendered) {
             try {
@@ -215,7 +228,7 @@ function openEmailModal(onClose) {
         e.preventDefault();
         const email = input.value.trim();
         if (!email) return;
-        if (!captchaToken) {
+        if (!isLocalhost() && !captchaToken) {
             status.style.display = 'block';
             status.className = 'auth-modal-status error';
             status.textContent = 'Merci de valider le captcha avant de continuer.';
