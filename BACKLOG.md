@@ -11,12 +11,6 @@
 
 ## Priorite normale
 
-- [ ] Feature : bouton "Partager" sur la modal distributeur (copie un lien vers le distributeur dans le presse-papier)
-  - Reproduire : ouvrir une modal, scroll, cliquer Partager
-  - Attendu : copie URL `https://skenea.github.io/DistriMatch/?id=<distId>` + toast "Lien copie"
-  - Acceptance : test unitaire de la generation d'URL + integration clipboard
-  - Bonus : a l'ouverture de l'app avec ce param, ouvrir directement la modal
-
 - [ ] Feature : compteur "Mes contributions" dans le profil (distributeurs ajoutes, photos, signalements)
   - Acceptance : 3 stats visibles, mis a jour au fil des actions
 
@@ -54,4 +48,5 @@
 - [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR #28, commit 736cb9d)
 - [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR #29, commit 1e9fc15)
 - [x] 2026-05-04 Animation pulse coeur favori (PR #30, commit 03e9847)
-- [x] 2026-05-04 Tests unit notifications.js : markNotified + edge cases isQuietHours (PR a venir)
+- [x] 2026-05-04 Tests unit notifications.js (PR #31, commit 8d0a8a8)
+- [x] 2026-05-04 Bouton Partager sur la modal + auto-open via ?id= (PR a venir)

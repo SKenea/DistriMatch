@@ -120,7 +120,7 @@ const {
     saveConversations, loadConversations
 } = await import('../js/utils.js');
 const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../js/distributor.js');
-const { openDistributorModal, closeDistModal } = await import('../js/gmaps-ui.js');
+const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
 
@@ -233,6 +233,19 @@ describe('closeDistModal', () => {
         closeDistModal();
         const overlay = document.getElementById('dist-modal-overlay');
         assert.ok(!overlay.classList.contains('active'));
+    });
+});
+
+describe('buildShareUrl', () => {
+    it('construit une URL valide avec le param id', () => {
+        const url = buildShareUrl('dist-005');
+        assert.ok(url.includes('?id=dist-005'));
+        assert.ok(url.startsWith('http'));
+    });
+
+    it('encode les caracteres speciaux dans l\'id', () => {
+        const url = buildShareUrl('user/abc 123');
+        assert.ok(url.includes('id=user%2Fabc%20123'));
     });
 });
 

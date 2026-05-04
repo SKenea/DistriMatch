@@ -132,6 +132,44 @@ export function initDistModal() {
             openConversation(AppState.currentDistributor.id);
         }
     });
+
+    // Bouton Partager : copie URL avec ?id=<distId>
+    document.getElementById('dist-action-share')?.addEventListener('click', async () => {
+        const dist = AppState.currentDistributor;
+        if (!dist) return;
+        const url = buildShareUrl(dist.id);
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Lien copie dans le presse-papier', 'success');
+        } catch (e) {
+            // Fallback : prompt
+            window.prompt('Copie ce lien :', url);
+        }
+    });
+}
+
+/**
+ * Construit l'URL partageable d'un distributeur.
+ * Exporte pour test unitaire.
+ */
+export function buildShareUrl(distId) {
+    const base = (typeof window !== 'undefined' && window.location)
+        ? `${window.location.origin}${window.location.pathname}`
+        : 'https://skenea.github.io/DistriMatch/';
+    return `${base}?id=${encodeURIComponent(distId)}`;
+}
+
+/**
+ * Si l'URL contient ?id=<distId>, ouvre la modal du distributeur a l'init.
+ * A appeler apres loadDistributors.
+ */
+export function openModalFromUrlParam() {
+    if (typeof window === 'undefined' || !window.location) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id && AppState.distributors.find(d => d.id === id)) {
+        openDistributorModal(id);
+    }
 }
 
 export function openDistributorModal(id, editMode = false) {
