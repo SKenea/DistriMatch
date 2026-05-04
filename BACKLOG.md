@@ -12,12 +12,6 @@
 ## Priorite normale
 
 
-- [ ] Qualite : ajouter des tests unit pour `js/chat.js` fonctions pures (getTimeSlot helpers, generateGreetingMessage)
-  - Acceptance : 4+ tests
-
-- [ ] Qualite : ajouter des aria-labels aux boutons sans label visible (close, drag handle, navigation)
-  - Acceptance : 100% des boutons ont un label ARIA, audit Lighthouse Accessibility >= 95
-
 - [ ] Code : decouper styles.css (3500+ lignes) en 4-5 fichiers concatenes a la build (filter-bar.css, modal.css, etc.)
   - Acceptance : meme rendu, structure plus maintenable, doc dans CLAUDE.md
 
@@ -53,3 +47,5 @@
 - [x] 2026-05-04 Tests unit notifications.js (PR #31, commit 8d0a8a8)
 - [x] 2026-05-04 Bouton Partager sur la modal + auto-open via ?id= (PR #32, commit 12c750d)
 - [x] 2026-05-04 Compteur "Mes contributions" dans le profil (PR #33, commit 2c95ff2)
+- [x] 2026-05-04 Tests unit chat.js (getTimeSlot edges + generateGreetingMessage) (PR #34, commit dac64e6)
+- [x] 2026-05-04 Aria-labels sur tous les boutons icon-only (PR #35, commit 1f899d1)
