@@ -23,9 +23,6 @@
 - [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
   - Acceptance : 5 skeleton items visibles le temps du tri
 
-- [ ] Qualite : ajouter des tests unit pour `js/notifications.js` (isQuietHours, canNotify, processQueuedNotifications)
-  - Acceptance : 5+ tests, couverture > 80% du module
-
 - [ ] Qualite : ajouter des tests unit pour `js/chat.js` fonctions pures (getTimeSlot helpers, generateGreetingMessage)
   - Acceptance : 4+ tests
 
@@ -56,4 +53,5 @@
 - [x] 2026-04-27 Empty state Activite centre verticalement (PR #27, commit 3657115)
 - [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR #28, commit 736cb9d)
 - [x] 2026-05-04 Loader pendant chargement initial des distributeurs (PR #29, commit 1e9fc15)
-- [x] 2026-05-04 Animation pulse coeur favori (PR a venir)
+- [x] 2026-05-04 Animation pulse coeur favori (PR #30, commit 03e9847)
+- [x] 2026-05-04 Tests unit notifications.js : markNotified + edge cases isQuietHours (PR a venir)
