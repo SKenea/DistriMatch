@@ -198,7 +198,7 @@ function showNotificationBanner(notif) {
         <button class="notif-action" onclick="openConversation('${notif.distributorId}'); this.closest('.notification-banner').remove();">
             Voir
         </button>
-        <button class="notif-close" onclick="this.closest('.notification-banner').remove();">&times;</button>
+        <button class="notif-close" aria-label="Fermer la notification" onclick="this.closest('.notification-banner').remove();">&times;</button>
     `;
 
     document.body.appendChild(banner);
@@ -252,7 +252,7 @@ function updateFollowedProductsList() {
         return `
         <span class="followed-product-chip">
             ${escapeHTML(product)}
-            <button class="remove-btn" onclick="unfollowProduct('${safeAttr}')">&times;</button>
+            <button class="remove-btn" aria-label="Retirer ${escapeHTML(product)} des produits suivis" onclick="unfollowProduct('${safeAttr}')">&times;</button>
         </span>
     `;
     }).join('');
