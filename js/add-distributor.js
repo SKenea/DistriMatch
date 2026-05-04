@@ -4,7 +4,7 @@
 
 import {
     AppState, AddMode, DISTRIBUTOR_TYPES,
-    mainMap, supabaseClient,
+    UserProfile, mainMap, supabaseClient,
     incrementAddProductCounter
 } from './state.js';
 import {
@@ -208,6 +208,10 @@ async function uploadDistributorPhotos(distributorId, files) {
         } catch (e) {
             console.warn('[DistriMatch] Erreur upload photo:', e.message);
         }
+    }
+
+    if (uploadedPaths.length > 0) {
+        UserProfile.stats.photosUploaded = (UserProfile.stats.photosUploaded || 0) + uploadedPaths.length;
     }
 
     return uploadedPaths;

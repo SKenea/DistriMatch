@@ -39,7 +39,8 @@ export const UserProfile = {
         totalSubscriptions: 0,
         detailsViewed: 0,
         searchQueries: [],
-        conversationsStarted: 0
+        conversationsStarted: 0,
+        photosUploaded: 0
     },
     history: {
         lastTypes: [],

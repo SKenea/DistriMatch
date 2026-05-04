@@ -61,7 +61,16 @@ const html = `<!DOCTYPE html>
         <span id="subscriptions-count"></span>
     </div>
     <div id="activity-view" class="view-page view-hidden"></div>
-    <div id="profile-view" class="view-page view-hidden"></div>
+    <div id="profile-view" class="view-page view-hidden">
+        <span id="stat-subscriptions"></span>
+        <span id="stat-reports"></span>
+        <span id="stat-conversations"></span>
+        <span id="profile-points"></span>
+        <span id="stat-contrib-distributors"></span>
+        <span id="stat-contrib-photos"></span>
+        <span id="stat-contrib-reports"></span>
+        <div id="profile-preferences-list"></div>
+    </div>
     <div id="favorites-badge" style="display:none">0</div>
     <div id="conversations-count" style="display:none">0</div>
     <div id="chat-modal">
@@ -121,7 +130,7 @@ const {
 } = await import('../js/utils.js');
 const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../js/distributor.js');
 const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
-const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount } = await import('../js/navigation.js');
+const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
 
 // ============================================
@@ -483,5 +492,46 @@ describe('displaySubscriptions', () => {
         displaySubscriptions();
         const count = document.getElementById('subscriptions-count');
         assert.ok(count.textContent.includes('1'));
+    });
+});
+
+// ============================================
+// PROFIL : COMPTEUR CONTRIBUTIONS
+// ============================================
+
+describe('updateProfileStats - contributions', () => {
+    beforeEach(() => {
+        AppState.distributors = [
+            { id: 'd1', name: 'Officiel', type: 'pizza' },
+            { id: 'user-1', name: 'Mon distrib', type: 'ice', isUserAdded: true, addedBy: 'user' },
+            { id: 'user-2', name: 'Autre distrib', type: 'other', isUserAdded: true, addedBy: 'user' }
+        ];
+        AppState.subscriptions = [];
+        AppState.reports = 3;
+        AppState.points = 0;
+        Conversations.list = [];
+        UserProfile.stats.photosUploaded = 5;
+        UserProfile.preferences.types = {};
+    });
+
+    it('compte les distributeurs ajoutes par l\'user', () => {
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-contrib-distributors').textContent, '2');
+    });
+
+    it('affiche le nombre de photos uploadees', () => {
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-contrib-photos').textContent, '5');
+    });
+
+    it('affiche le nombre de signalements', () => {
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-contrib-reports').textContent, '3');
+    });
+
+    it('gere photosUploaded undefined (defaut 0)', () => {
+        UserProfile.stats.photosUploaded = undefined;
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-contrib-photos').textContent, '0');
     });
 });
