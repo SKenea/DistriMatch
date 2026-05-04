@@ -2,7 +2,7 @@
  * DistriMatch - Navigation, sidebar, recherche, filtres, profil
  */
 
-import { AppState, Conversations, mainMap } from './state.js';
+import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
     escapeHTML, formatDistance, showToast, getFilteredDistributors,
     updateImplicitProfile, getTopPreferredTypes
@@ -289,7 +289,25 @@ export function updateProfileStats() {
     if (statConversations) statConversations.textContent = Conversations.list.length;
     if (pointsValue) pointsValue.textContent = AppState.points;
 
+    updateContributionStats();
     displayDetectedPreferences();
+}
+
+function updateContributionStats() {
+    const statContribDistributors = document.getElementById('stat-contrib-distributors');
+    const statContribPhotos = document.getElementById('stat-contrib-photos');
+    const statContribReports = document.getElementById('stat-contrib-reports');
+
+    if (statContribDistributors) {
+        const count = AppState.distributors.filter(d => d.isUserAdded || d.addedBy === 'user').length;
+        statContribDistributors.textContent = count;
+    }
+    if (statContribPhotos) {
+        statContribPhotos.textContent = UserProfile.stats.photosUploaded || 0;
+    }
+    if (statContribReports) {
+        statContribReports.textContent = AppState.reports;
+    }
 }
 
 function displayDetectedPreferences() {

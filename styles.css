@@ -2078,6 +2078,15 @@ body {
     margin-bottom: 1rem;
 }
 
+.profile-section-title {
+    margin: 0.5rem 1rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 .stat-card {
     background: var(--white);
     padding: 1rem;
