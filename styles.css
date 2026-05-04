@@ -3768,7 +3768,7 @@ body {
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.5);
-    z-index: 9000;
+    z-index: 10500; /* au-dessus de l'onboarding geoloc (10000) pour les deep links */
     display: none;
     align-items: center;
     justify-content: center;
