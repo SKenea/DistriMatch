@@ -9,11 +9,6 @@
 
 ## Priorite haute
 
-- [ ] Bug : si l'user refuse la geoloc, il reste bloque sur l'overlay sans message clair
-  - Reproduire : refuser permission geoloc dans le navigateur
-  - Attendu : message explicite avec lien vers reglages navigateur
-  - Acceptance : message explicite affiche + test e2e du refus
-
 - [ ] UX : ajouter un loader visible pendant le chargement initial des distributeurs (Supabase peut prendre 5-10s)
   - Reproduire : reseau lent, ouvrir l'app
   - Attendu : spinner + texte "Chargement des distributeurs..." sur la carte
@@ -68,4 +63,5 @@
 ## Done
 <!-- Items completes au format : [x] YYYY-MM-DD - Description (PR #N, commit abc1234) -->
 
-- [x] 2026-04-27 Empty state Activite centre verticalement (PR a venir)
+- [x] 2026-04-27 Empty state Activite centre verticalement (PR #27, commit 3657115)
+- [x] 2026-04-27 Geoloc refusee : message explicite + instructions OS-specifiques (PR a venir)
