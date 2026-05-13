@@ -1,0 +1,1001 @@
+.bottom-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--white);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+}
+
+.bottom-sheet.bs-peek {
+    transform: translateY(calc(100% - 80px));
+}
+
+.bottom-sheet.bs-full {
+    transform: translateY(0);
+    overflow-y: auto;
+}
+
+.bottom-sheet-drag {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+.bottom-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--gray-light);
+    border-radius: 2px;
+}
+
+.bs-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    z-index: 1;
+}
+
+.bs-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--dark);
+}
+
+/* Peek state */
+.bottom-sheet-peek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem 0.75rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.peek-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.peek-emoji {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.peek-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.peek-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.peek-meta {
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.peek-favorite {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    color: var(--gray-light);
+    transition: color 0.2s, transform 0.2s;
+    flex-shrink: 0;
+}
+
+.peek-favorite:hover {
+    color: var(--danger);
+    transform: scale(1.15);
+}
+
+.peek-favorite.favorited {
+    color: var(--danger);
+    fill: var(--danger);
+}
+
+.peek-favorite.favorited svg {
+    fill: var(--danger);
+}
+
+/* Full state content */
+.bottom-sheet-full {
+    padding: 0 0 1.5rem;
+    display: none;
+}
+
+.bottom-sheet.bs-full .bottom-sheet-full {
+    display: block;
+}
+
+.bottom-sheet.bs-full .bottom-sheet-peek {
+    display: none;
+}
+
+/* === Google Maps style header === */
+
+.bs-photo-header {
+    width: 100%;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.bs-photo-header .photos-gallery {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0 4px;
+}
+
+.bs-photo-header .photo-gallery-item {
+    flex: 0 0 100%;
+    height: 200px;
+    scroll-snap-align: start;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.bs-photo-header .photo-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bs-detail-header {
+    padding: 0 1rem 0.75rem;
+}
+
+.bs-detail-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--dark);
+    line-height: 1.2;
+}
+
+.bs-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    color: var(--gray);
+    margin-bottom: 0.375rem;
+}
+
+.bs-meta-row.bs-meta-secondary {
+    margin-bottom: 0;
+}
+
+.bs-meta-row .rating-clean {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.bs-meta-row .reviews-clean {
+    font-size: 0.875rem;
+}
+
+.meta-separator {
+    color: var(--gray-light);
+}
+
+.bs-type-text {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.bs-address {
+    color: var(--gray);
+    font-size: 0.875rem;
+}
+
+/* === Boutons d'action style Google Maps === */
+
+.bs-actions-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 0.5rem;
+    padding: 1rem 1rem 1.25rem;
+    border-bottom: 8px solid var(--light);
+}
+
+.bs-action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem 0.25rem;
+    border-radius: 8px;
+    transition: background 0.15s;
+    color: var(--primary);
+}
+
+.bs-action-btn:hover {
+    background: var(--light);
+}
+
+.bs-action-btn:active {
+    background: var(--light-gray);
+}
+
+.bs-action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.bs-action-btn:not(.primary) .bs-action-icon {
+    background: var(--light);
+    color: var(--primary);
+    border: 1px solid var(--light-gray);
+}
+
+.bs-action-btn.primary .bs-action-icon {
+    background: var(--primary);
+    color: white;
+}
+
+.bs-action-btn:hover .bs-action-icon {
+    background: var(--primary-dark);
+    color: white;
+}
+
+.bs-action-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--dark);
+    text-align: center;
+}
+
+/* Etat favori actif (coeur rouge) */
+.bs-action-btn.favorited .bs-action-icon {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+.bs-action-btn.favorited .bs-action-icon svg {
+    fill: white;
+}
+
+/* Padding sections suivantes */
+.bottom-sheet-full .products-section-clean {
+    padding: 1rem;
+    margin-bottom: 0;
+}
+
+.detail-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.detail-title-row h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    flex: 1;
+}
+
+.btn-center-map {
+    position: absolute;
+    bottom: 136px;
+    right: 18px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    background: white;
+    color: #4285f4;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-center-map:hover {
+    background: #f0f4ff;
+    transform: scale(1.05);
+}
+
+/* Boutons zoom +/- */
+.zoom-controls {
+    position: absolute;
+    bottom: 184px;
+    right: 18px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.btn-zoom {
+    width: 40px;
+    height: 40px;
+    background: white;
+    color: var(--dark);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-zoom:hover {
+    background: var(--light);
+    transform: scale(1.05);
+}
+
+.btn-zoom:active {
+    transform: scale(0.95);
+}
+
+/* Masquer le control zoom Leaflet par defaut (on a nos boutons custom) */
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* Bouton ajout distributeur */
+.btn-add-distributor {
+    position: absolute;
+    bottom: 80px;
+    right: 16px;
+    z-index: 1000;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-add-distributor:hover {
+    transform: scale(1.1);
+    background: var(--primary-dark);
+}
+
+.btn-add-distributor.active {
+    background: var(--warning);
+}
+
+/* Message mode placement */
+.placement-hint {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--dark);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.placement-hint.visible {
+    display: flex;
+}
+
+.placement-cancel {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.placement-cancel:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Popup ajout distributeur */
+.add-distributor-popup h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+}
+
+.add-distributor-popup select,
+.add-distributor-popup input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.popup-actions button {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.btn-cancel {
+    background: var(--light);
+    color: var(--dark);
+}
+
+.btn-cancel:hover {
+    background: var(--gray-light);
+}
+
+.btn-confirm {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: var(--primary-dark);
+}
+
+/* Produits dans popup ajout */
+.add-products-section {
+    margin-bottom: 0.5rem;
+}
+
+.add-products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.375rem;
+}
+
+.add-products-header span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-dark);
+}
+
+.btn-add-product-row {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.product-row {
+    display: flex;
+    gap: 0.375rem;
+    margin-bottom: 0.375rem;
+    align-items: center;
+}
+
+.product-name-input {
+    flex: 2;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.product-price-input {
+    flex: 1;
+    max-width: 70px;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.product-remove-row {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--light);
+    border: none;
+    color: var(--gray);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Actions produits dans fiche details */
+.product-actions-clean {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.product-btn-toggle,
+.product-btn-edit,
+.product-btn-delete {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: var(--light);
+    color: var(--gray-dark);
+}
+
+.product-btn-toggle:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.product-btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.product-btn-delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Edition inline produit */
+.product-edit-row {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    width: 100%;
+}
+
+.product-edit-name {
+    flex: 2;
+    padding: 0.375rem 0.5rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.product-edit-price {
+    flex: 1;
+    max-width: 70px;
+    padding: 0.375rem 0.5rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.product-btn-save {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.product-btn-cancel-edit {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--light);
+    color: var(--gray-dark);
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.products-header-clean {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-add-product {
+    background: none;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-product:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.add-product-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.add-product-form input {
+    padding: 0.5rem;
+    border: 1px solid var(--light);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.add-product-form input[type="text"] {
+    flex: 2;
+}
+
+.add-product-form input[type="number"] {
+    flex: 1;
+    max-width: 80px;
+}
+
+.btn-confirm-small {
+    padding: 0.5rem 0.75rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Upload photo dans popup ajout */
+.photo-upload-section {
+    margin-bottom: 0.5rem;
+}
+
+.photo-upload-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--light);
+    border: 1.5px dashed var(--gray);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--gray-dark);
+    transition: all 0.2s;
+}
+
+.photo-upload-label:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.photo-preview-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.photo-preview-item {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.photo-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-remove-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Photos dans fiche details */
+.detail-photos-section {
+    padding: 0 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.photos-gallery {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.photo-gallery-item {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 280px;
+    height: 180px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    scroll-snap-align: start;
+}
+
+.photo-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Marker pour nouveau distributeur */
+.new-distributor-marker {
+    font-size: 1.5rem;
+    text-align: center;
+    line-height: 40px;
+}
+
+/* Badge user-added sur les markers */
+.user-added-icon {
+    position: relative;
+}
+
+.user-added-icon::after {
+    content: 'U';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--success);
+    color: white;
+    font-size: 0.6rem;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+/* Filter Bar */
+.filter-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 1100; /* au-dessus de TOUS les elements Leaflet (max 800) et du panneau (50) */
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: left 0.3s ease;
+    pointer-events: auto;
+}
+
+/* Quand le panneau lateral est ouvert (desktop), decaler les filtres a droite */
+@media (min-width: 769px) {
+    .app-container:has(.side-panel.open) .filter-bar {
+        left: calc(var(--sidebar-width) + 12px);
+    }
+}
+
+.filter-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--white);
+    border: 1.5px solid var(--light);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--dark);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.filter-chip:hover {
+    border-color: var(--primary);
+    background: var(--lighter);
+}
+
+.filter-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 2px 12px rgba(230, 57, 70, 0.3);
+}
+
+.chip-emoji {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.chip-label {
+    font-size: 0.8rem;
+}
+
+/* Map Markers */
+/* Marqueur "vous etes ici" : bleu Google (#1A73E8), convention universelle pour
+   distinguer la position de l'user des marqueurs de distributeurs (rouges). */
+.user-marker {
+    background: #1A73E8;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.5);
+    animation: user-pulse 2s ease-in-out infinite;
+}
+
+@keyframes user-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(26, 115, 232, 0.45);
+    }
+    50% {
+        box-shadow: 0 0 0 14px rgba(26, 115, 232, 0);
+    }
+}
+
+.distributor-marker-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+}
+
+.distributor-marker-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Map Popup */
+.map-popup {
+    min-width: 180px;
+    padding: 0.25rem;
+}
+
+.map-popup strong {
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 0.375rem;
+}
+
+.map-popup p {
+    margin: 0.25rem 0;
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.btn-popup-details {
+    margin-top: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background: var(--white);
+    color: var(--dark);
+    border: 1.5px solid var(--primary);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-popup-details:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-popup-chat {
+    margin-top: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-popup-chat:hover {
+    background: var(--primary-dark);
+}
+

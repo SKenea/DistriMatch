@@ -18,8 +18,13 @@ Interface carte Leaflet + chatbot par distributeur avec robots proactifs et noti
 
 Application single-page modulaire en ES modules (`<script type="module">`) :
 
-- `index.html` - Structure HTML, charge Leaflet/Supabase CDN + `styles.css` + `js/app.js`
-- `styles.css` - CSS variables, mobile-first, ~2500 lignes
+- `index.html` - Structure HTML, charge Leaflet/Supabase CDN + 5 fichiers CSS + `js/app.js`
+- `css/` - CSS decoupe en 5 modules (l'ordre des `<link>` dans `index.html` est strict, le cascade en depend) :
+  - `css/base.css` — variables, reset, layout fondamental, top nav, recherche, app container, sidebar
+  - `css/map.css` — bottom sheet, zone carte, filter bar, markers, popups, mode ajout distributeur
+  - `css/panels.css` — chat modal, pages overlay (favoris/profil), modals, boutons primary/secondary, modal signalement
+  - `css/feed-and-nav.css` — toast, responsive mobile, bottom nav, activity, notifications
+  - `css/overlays.css` — geoloc overlay, loader, auth modal magic link, side panel filtres + dist modal (Google Maps style)
 - `data/distributors.json` - Donnees des distributeurs (source de verite)
 - `sw.js` - Service Worker (desactive, se desinstalle automatiquement)
 - `supabase/` - Schemas SQL (001_schema, 002_seed, 003_photos)

@@ -1,0 +1,503 @@
+/* ==========================================
+   SNACKMATCH V4.5 - CODE REVIEW FIXES
+   Sidebar + Carte + Modal Chat + Filter Chips
+   ========================================== */
+
+/* ==========================================
+   LAYOUT STRUCTURE
+   ==========================================
+
+   +-----------------------------------------+
+   | TOP-NAV (56px)                          |
+   | [=] Logo        [Search] [Fav] [Profile]|
+   +---------+-------------------------------+
+   | SIDEBAR |                               |
+   | (280px) |     CARTE LEAFLET             |
+   |         |                               |
+   | Mes     |     [Marqueurs]               |
+   | convos  |                               |
+   |         |     +------------------+      |
+   |         |     | CHAT MODAL       |      |
+   |         |     | (slide from right)|     |
+   +---------+-----+------------------+------+
+
+   ========================================== */
+
+:root {
+    /* Couleurs - Palette Basque Street Food (piment d'Espelette) */
+    --primary: #E63946;        /* Rouge piment d'Espelette */
+    --primary-dark: #C1272D;   /* Hover / actif */
+    --primary-light: #F17B82;  /* Versions claires */
+    --success: #6A994E;        /* Vert olive - local / frais */
+    --danger: #D62828;         /* Rouge intense - alertes */
+    --warning: #F4A261;        /* Orange terracota - artisanal */
+    --dark: #2B2B2B;           /* Noir chaleureux (sans teinte bleue) */
+    --gray: #6B5E54;           /* Gris brun chaud */
+    --gray-light: #A89B8C;     /* Gris creme */
+    --light: #FDF8F3;          /* Creme tres claire */
+    --lighter: #FEFCF9;        /* Creme pale (fond) */
+    --white: #ffffff;
+    --gray-dark: #3D3D3D;
+    --light-gray: #E8DFD4;     /* Beige tres pale pour bordures */
+    --text-secondary: #6B5E54;
+    --radius-md: 12px;
+
+    /* Layout */
+    --nav-height: 56px;
+    --sidebar-width: 280px;
+    --chat-width: 400px;
+
+    /* Spacing */
+    --radius: 16px;
+    --radius-sm: 8px;
+    --radius-xs: 4px;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+    /* Z-index */
+    --z-sidebar: 50;
+    --z-map: 1;
+    --z-chat: 100;
+    --z-nav: 110;
+    --z-overlay: 150;
+    --z-modal: 200;
+    --z-toast: 300;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--light);
+    color: var(--dark);
+    line-height: 1.5;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ==========================================
+   TOP NAVIGATION
+   ========================================== */
+
+.top-nav {
+    background: var(--white);
+    padding: 0 1rem;
+    height: var(--nav-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-nav);
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sidebar-toggle {
+    display: none;
+}
+
+.hamburger-icon {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--dark);
+    position: relative;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 2px;
+    background: var(--dark);
+    left: 0;
+}
+
+.hamburger-icon::before {
+    top: -6px;
+}
+
+.hamburger-icon::after {
+    top: 6px;
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary);
+    cursor: pointer;
+    letter-spacing: -0.5px;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: var(--gray);
+}
+
+.icon-btn:hover {
+    background: var(--light);
+    color: var(--primary);
+}
+
+.icon-btn svg {
+    flex-shrink: 0;
+}
+
+.nav-icon-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+.nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================
+   RECHERCHE OVERLAY
+   ========================================== */
+
+.search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--white);
+    z-index: var(--z-overlay);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.search-overlay.active {
+    transform: translateY(0);
+}
+
+.search-container-clean {
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    border-bottom: 1px solid var(--light);
+}
+
+.search-container-clean input {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--light);
+    border-radius: var(--radius);
+    background: var(--lighter);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-container-clean input:focus {
+    border-color: var(--primary);
+    background: var(--white);
+}
+
+.close-search {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--light);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-search:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.search-results-clean {
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 70px);
+}
+
+.search-item-clean {
+    background: var(--white);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--light);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-item-clean:hover {
+    border-color: var(--primary);
+    background: var(--lighter);
+}
+
+.search-item-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-item-location {
+    color: var(--gray);
+    font-size: 0.85rem;
+}
+
+/* ==========================================
+   APP CONTAINER (Sidebar + Carte)
+   ========================================== */
+
+.app-container {
+    display: flex;
+    height: calc(100vh - var(--nav-height));
+    margin-top: var(--nav-height);
+}
+
+/* ==========================================
+   SIDEBAR
+   ========================================== */
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--white);
+    border-right: 1px solid var(--light-gray);
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-sidebar);
+    flex-shrink: 0;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+/* Sidebar header */
+.sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--light);
+    background: var(--white);
+}
+
+.sidebar-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+/* Liste des conversations */
+.conversations-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.empty-conversations {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--gray);
+}
+
+.empty-conversations .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-conversations p {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+.empty-conversations small {
+    font-size: 0.85rem;
+    color: var(--gray-light);
+    line-height: 1.4;
+}
+
+.conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 0.25rem;
+}
+
+.conversation-item:hover {
+    background: var(--light);
+}
+
+.conversation-item.active {
+    background: rgba(230, 57, 70, 0.1);
+}
+
+.conversation-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: var(--light);
+    flex-shrink: 0;
+}
+
+.conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.125rem;
+}
+
+.conversation-preview {
+    font-size: 0.8rem;
+    color: var(--gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.conversation-time {
+    font-size: 0.7rem;
+    color: var(--gray-light);
+}
+
+.conversation-badge {
+    background: var(--danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: notification-pulse 2s ease-in-out infinite;
+}
+
+@keyframes notification-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Conversation abonnee */
+.conversation-item.subscribed {
+    border-left: 3px solid var(--primary);
+    background: rgba(230, 57, 70, 0.03);
+}
+
+.conversation-item.subscribed .conversation-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Preview message non lu */
+.conversation-preview.unread {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+/* Badge sur sidebar title */
+.sidebar-badge {
+    background: var(--danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    animation: notification-pulse 2s ease-in-out infinite;
+}
+
+/* ==========================================
+   ZONE CARTE PRINCIPALE
+   ========================================== */
+
+.map-zone {
+    flex: 1;
+    position: relative;
+    z-index: var(--z-map);
+    min-width: 0;
+}
+
+#main-map {
+    width: 100%;
+    height: 100%;
+}
+
+/* ==========================================
+   BOTTOM SHEET (Google Maps style)
+   ========================================== */
+
