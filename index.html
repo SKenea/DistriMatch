@@ -13,7 +13,12 @@
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-    <link rel="stylesheet" href="styles.css?v=22">
+    <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
+    <link rel="stylesheet" href="css/base.css?v=23">
+    <link rel="stylesheet" href="css/map.css?v=23">
+    <link rel="stylesheet" href="css/panels.css?v=23">
+    <link rel="stylesheet" href="css/feed-and-nav.css?v=23">
+    <link rel="stylesheet" href="css/overlays.css?v=23">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
