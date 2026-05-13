@@ -11,10 +11,6 @@
 
 ## Priorite normale
 
-
-- [ ] Code : decouper styles.css (3500+ lignes) en 4-5 fichiers concatenes a la build (filter-bar.css, modal.css, etc.)
-  - Acceptance : meme rendu, structure plus maintenable, doc dans CLAUDE.md
-
 ## Idees / a explorer
 
 - [ ] Mode sombre auto (prefers-color-scheme) avec palette adapter
@@ -53,3 +49,4 @@
 - [x] 2026-05-04 Deep link ?id= ouvre la modal avant consentement geoloc (PR #37, commit c6d0a1b)
 - [x] 2026-05-04 Bypass hCaptcha sur localhost + banner dev (PR #38, commit 8426f40)
 - [x] 2026-05-06 Marqueur user en bleu Google au lieu de rouge (PR #39, commit 65e9d37)
+- [x] 2026-05-13 Decoupage styles.css 4038 lignes en 5 modules thematiques (PR #40, commit 2ffd56d)
