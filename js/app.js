@@ -90,23 +90,10 @@ function initSupabase() {
     return false;
 }
 
-async function signInAnonymously() {
-    if (!supabaseClient) return null;
-    try {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            console.log('[DistriMatch] Session existante');
-            return session.user;
-        }
-        const { data, error } = await supabaseClient.auth.signInAnonymously();
-        if (error) throw error;
-        console.log('[DistriMatch] Connexion anonyme OK');
-        return data.user;
-    } catch (e) {
-        console.warn('[DistriMatch] Auth anonyme echouee:', e.message);
-        return null;
-    }
-}
+// signInAnonymously() retire 2026-05-14 : le projet Supabase a hCaptcha
+// active sur le signup, donc l'appel automatique echouait toujours (HTTP 400).
+// Modele actuel : lecture = anonyme (pas de session), ecriture = magic link
+// via openEmailModal() qui passe par hCaptcha. Voir auth.js.
 
 // ============================================
 // CHARGEMENT DONNEES
@@ -374,7 +361,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser Supabase
     initSupabase();
-    await signInAnonymously();
     await initAuth();
 
     // Charger les donnees locales
