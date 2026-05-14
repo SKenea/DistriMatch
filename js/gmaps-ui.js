@@ -64,7 +64,7 @@ export function openSidePanelForFilters(types = []) {
                         <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
                         <div class="side-panel-item-meta">
                             <span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>
-                            ${distance ? ' · ' + distance : ''}
+                            ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
                         </div>
                     </div>
                 </div>
