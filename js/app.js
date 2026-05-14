@@ -392,6 +392,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // S'assurer que les distributeurs sont charges avant de continuer
     await distributorsPromise;
 
+    // Re-calculer les distances maintenant que userLocation EST set.
+    // Necessaire car loadDistributors() tourne en parallele de l'overlay
+    // geoloc (pour permettre les deep links), donc le premier sortByDistance()
+    // a l'interieur de loadDistributors voit souvent userLocation=null.
+    if (AppState.userLocation) {
+        sortByDistance();
+    }
+
     // Charger les signalements communautaires depuis Supabase
     await loadReportsFromSupabase();
 

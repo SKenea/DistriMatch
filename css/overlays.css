@@ -466,11 +466,14 @@
 .side-panel-item {
     display: flex;
     gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 8px;
+    padding: 0.875rem 0.75rem;
     cursor: pointer;
     transition: background 0.15s;
-    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--light);
+}
+
+.side-panel-item:last-child {
+    border-bottom: none;
 }
 
 .side-panel-item:hover {
@@ -512,13 +515,31 @@
 }
 
 .side-panel-item-meta {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--gray);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .side-panel-item-rating {
     color: var(--warning);
     font-weight: 600;
+}
+
+.side-panel-item-distance {
+    color: var(--dark);
+    font-weight: 600;
+    position: relative;
+    padding-left: 0.5rem;
+}
+
+.side-panel-item-distance::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--gray);
+    font-weight: 400;
 }
 
 .side-panel-empty {
