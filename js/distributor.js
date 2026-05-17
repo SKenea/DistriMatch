@@ -339,7 +339,7 @@ export function displaySubscriptions() {
         const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="subscription-card" onclick="openDistributorModal('${d.id}', true)">
+            <div class="subscription-card" onclick="openDistributorModal('${d.id}', false, true)">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
                 <div class="subscription-image" style="background: ${typeConfig.gradient || '#E63946'}">
                     <span class="subscription-emoji">${d.emoji}</span>
