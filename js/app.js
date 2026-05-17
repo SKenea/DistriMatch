@@ -159,8 +159,13 @@ async function loadDistributors() {
 
     const userDistributors = loadUserDistributors();
     if (userDistributors.length > 0) {
-        AppState.distributors = [...AppState.distributors, ...userDistributors];
-        console.log('[DistriMatch] Distributeurs utilisateur:', userDistributors.length);
+        // Dedup par id : si un distributeur local a deja ete sync sur Supabase,
+        // il revient via le fetch remote. On garde la version remote (plus a jour)
+        // et on n'ajoute que les distributeurs locaux pas encore connus.
+        const existingIds = new Set(AppState.distributors.map((d) => d.id));
+        const newUserDistributors = userDistributors.filter((d) => !existingIds.has(d.id));
+        AppState.distributors = [...AppState.distributors, ...newUserDistributors];
+        console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote ignores)');
     }
 
     if (AppState.userLocation) {
