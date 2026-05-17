@@ -17,6 +17,7 @@
 - [ ] Service Worker reactive (cache offline des distributeurs deja vus)
 - [ ] Notifications push reelles via Supabase Realtime + Web Push API
 - [ ] Filtres avances : "ouverts maintenant", "photo verifiee", "ajoute < 7 jours"
+- [ ] Side panel : groupes par distance avec en-tetes ("A proximite" / "Moins de 5 km" / "Plus loin") - meilleur UX de scan (benchmark Google Maps/Uber Eats). Hors scope PR #47 (option A non retenue pour le separateur simple).
 - [ ] Heatmap des distributeurs les plus consultes (analytics)
 - [ ] Tutorial premiere visite (3 slides : decouvrir / s'abonner / contribuer)
 - [ ] Open Graph meta tags pour partage social (1 image + description)
@@ -56,3 +57,4 @@
 - [x] 2026-05-17 Bug : dedup distributeurs par id (local + remote Supabase) (PR #44, commit ca4f4fa)
 - [x] 2026-05-17 Bug : dedup doublons internes localStorage - upsert saveUserDistributor + merge robuste (PR #45, commit d477978)
 - [x] 2026-05-17 Bug : CAUSE RACINE doublons - garde anti double-submit confirmAddDistributor + filet dedup par contenu (PR #46, commit 72da3ac)
+- [x] 2026-05-17 UX : separateur visuel net entre distributeurs (side panel) - option C inset iOS/Material (PR #47, commit 3e383ee)
