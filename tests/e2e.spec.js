@@ -402,3 +402,44 @@ test.describe('8. Mobile', () => {
         expect(await visible.isVisible()).toBe(true);
     });
 });
+
+// ============================================
+// 9. DEDUP DISTRIBUTEURS (local + remote)
+// ============================================
+
+test.describe('9. Dedup distributeurs', () => {
+    test('un distributeur deja remote n\'apparait pas en double via le local', async ({ page }) => {
+        // Prend un distributeur deja charge (simule la version "remote" / source de verite)
+        const remote = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            return { id: d.id, name: d.name };
+        });
+
+        // Injecte une copie locale avec le MEME id (simule un distrib ajoute en
+        // local puis sync sur Supabase : il revient via le fetch + le local)
+        await page.evaluate((r) => {
+            const localCopy = { ...window.AppState.distributors[0], name: r.name + ' (copie locale)' };
+            localStorage.setItem('snackmatch_user_distributors', JSON.stringify([localCopy]));
+        }, remote);
+
+        // Recharge : loadDistributors() doit dedupliquer par id
+        await page.reload();
+        await page.waitForFunction(
+            () => window.AppState?.distributors?.length > 0,
+            { timeout: 50000 }
+        );
+
+        const occurrences = await page.evaluate(
+            (id) => window.AppState.distributors.filter((d) => d.id === id).length,
+            remote.id
+        );
+        expect(occurrences).toBe(1);
+
+        // La version conservee doit etre la remote (pas la copie locale renommee)
+        const keptName = await page.evaluate(
+            (id) => window.AppState.distributors.find((d) => d.id === id)?.name,
+            remote.id
+        );
+        expect(keptName).toBe(remote.name);
+    });
+});
