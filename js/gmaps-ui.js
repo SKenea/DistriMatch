@@ -18,9 +18,9 @@ let currentFilter = null;
 // Tranches de distance pour le regroupement du panneau lateral.
 // La liste est deja triee par distance croissante (sortByDistance, PR #43).
 const DISTANCE_GROUPS = [
-    { label: 'À proximité', range: "moins d'1 km", transport: '🚶 à pied',            max: 1 },        // < 1 km
-    { label: 'À côté',      range: '1 à 5 km',     transport: '🚴 en vélo',           max: 5 },        // 1–5 km
-    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 en voiture ou 🚌 bus', max: Infinity }, // ≥ 5 km
+    { label: 'À proximité', range: "moins d'1 km", transport: '🚶',    transportLabel: 'à pied',            max: 1 },        // < 1 km
+    { label: 'À côté',      range: '1 à 5 km',     transport: '🚴',    transportLabel: 'en vélo',           max: 5 },        // 1–5 km
+    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 🚌', transportLabel: 'en voiture ou bus', max: Infinity }, // ≥ 5 km
 ];
 
 // Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
@@ -124,7 +124,7 @@ export function openSidePanelForFilters(types = []) {
                     <span class="spg-chevron" aria-hidden="true">▸</span>
                     <span class="spg-main">
                         <span class="spg-label">${escapeHTML(group.label)}</span>
-                        <span class="spg-sub">${escapeHTML(group.range)} · ${escapeHTML(group.transport)}</span>
+                        <span class="spg-sub">${escapeHTML(group.range)} · <span class="spg-transport" title="${escapeHTML(group.transportLabel)}" aria-label="${escapeHTML(group.transportLabel)}">${escapeHTML(group.transport)}</span></span>
                     </span>
                     <span class="spg-count">${items.length}</span>
                 </button>`;

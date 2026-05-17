@@ -302,10 +302,14 @@ test.describe('3ter. Groupes par distance (accordeon)', () => {
         const first = await page.$eval('#side-panel-list .side-panel-group-header', el => ({
             label: el.querySelector('.spg-label')?.textContent,
             sub: el.querySelector('.spg-sub')?.textContent,
+            transportTitle: el.querySelector('.spg-transport')?.getAttribute('title'),
+            transportText: el.querySelector('.spg-transport')?.textContent,
         }));
         expect(first.label).toBe('À proximité');
         expect(first.sub).toContain("moins d'1 km");
-        expect(first.sub).toContain('à pied');
+        // Icone seule visible, libelle accessible via title/aria-label
+        expect(first.transportText).toBe('🚶');
+        expect(first.transportTitle).toBe('à pied');
     });
 
     test('en-tetes collants (sticky)', async ({ page }) => {
