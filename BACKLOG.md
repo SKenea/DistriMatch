@@ -17,8 +17,8 @@
 - [ ] Service Worker reactive (cache offline des distributeurs deja vus)
 - [ ] Notifications push reelles via Supabase Realtime + Web Push API
 - [ ] Filtres avances : "ouverts maintenant", "photo verifiee", "ajoute < 7 jours"
-- [ ] Side panel : groupes par distance avec en-tetes ("A proximite" / "Moins de 5 km" / "Plus loin") - meilleur UX de scan (benchmark Google Maps/Uber Eats). Hors scope PR #47 (option A non retenue pour le separateur simple).
 - [ ] Heatmap des distributeurs les plus consultes (analytics)
+- [ ] Side panel : mode de transport comme discriminant de filtre ("a pied / velo / voiture-bus") - reutiliser DISTANCE_GROUPS de gmaps-ui.js (idee notee lors de PR #48)
 - [ ] Tutorial premiere visite (3 slides : decouvrir / s'abonner / contribuer)
 - [ ] Open Graph meta tags pour partage social (1 image + description)
 - [ ] Mode "Itineraire multiple" : selectionner 3 distributeurs et generer un parcours optimal
@@ -58,3 +58,4 @@
 - [x] 2026-05-17 Bug : dedup doublons internes localStorage - upsert saveUserDistributor + merge robuste (PR #45, commit d477978)
 - [x] 2026-05-17 Bug : CAUSE RACINE doublons - garde anti double-submit confirmAddDistributor + filet dedup par contenu (PR #46, commit 72da3ac)
 - [x] 2026-05-17 UX : separateur visuel net entre distributeurs (side panel) - option C inset iOS/Material (PR #47, commit 3e383ee)
+- [x] 2026-05-17 UX : side panel accordeon par distance (3 tranches fermees, sticky, plage + mode de transport en icones) (PR #48, commit 30b1017)
