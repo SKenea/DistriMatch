@@ -8,7 +8,7 @@ import {
     EMBEDDED_DATA, SUPABASE_URL, SUPABASE_ANON_KEY,
     STORAGE_KEY, PROFILE_KEY, CONVERSATIONS_KEY,
     NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY,
-    supabaseClient, setSupabaseClient
+    supabaseClient, setSupabaseClient, AddMode
 } from './state.js';
 
 import {
@@ -175,6 +175,24 @@ async function loadDistributors() {
         console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote + internes ignores)');
     }
 
+    // Filet anti-doublon par CONTENU : les doublons crees avant le garde
+    // anti-double-submit ont des ids differents (user-<timestamp> distinct a
+    // chaque clic) donc la dedup par id ne les voit pas. On collapse les
+    // entrees de meme signature (nom + coords arrondies ~1m). La regle des 50m
+    // garantit que 2 distributeurs legitimes ne partagent jamais cette
+    // signature. Premiere occurrence conservee (remote en tete = prefere).
+    const beforeContentDedup = AppState.distributors.length;
+    const seenSignatures = new Set();
+    AppState.distributors = AppState.distributors.filter((d) => {
+        const sig = `${(d.name || '').trim().toLowerCase()}|${Number(d.lat).toFixed(5)}|${Number(d.lng).toFixed(5)}`;
+        if (seenSignatures.has(sig)) return false;
+        seenSignatures.add(sig);
+        return true;
+    });
+    if (beforeContentDedup !== AppState.distributors.length) {
+        console.log('[DistriMatch] Doublons par contenu collapses:', beforeContentDedup - AppState.distributors.length);
+    }
+
     if (AppState.userLocation) {
         sortByDistance();
     }
@@ -278,6 +296,7 @@ window.confirmAddDistributor = confirmAddDistributor;
 
 // Etat global (pour onclick inline dans editProduct)
 window.AppState = AppState;
+window.AddMode = AddMode;
 
 // Auth (pour debug)
 window.requireAuth = requireAuth;

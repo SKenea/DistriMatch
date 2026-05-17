@@ -98,7 +98,7 @@ function getAddPopupContent() {
             </div>
             <div class="popup-actions">
                 <button class="btn-cancel" onclick="cancelAddDistributor()">Annuler</button>
-                <button class="btn-confirm" onclick="confirmAddDistributor()">Ajouter</button>
+                <button id="btn-confirm-add" class="btn-confirm" onclick="confirmAddDistributor()">Ajouter</button>
             </div>
         </div>
     `;
@@ -271,7 +271,31 @@ async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
     });
 }
 
+// Garde anti double-soumission : le bouton "Ajouter" est async et reste
+// cliquable pendant les awaits (verifyUserOnSite, insert Supabase). Sans ce
+// verrou, 2 clics rapides lancent 2 confirmAddDistributorImpl() en parallele,
+// le check anti-doublon des 50m lisant AppState.distributors AVANT le 1er push
+// (race condition) -> N lignes contenu identique, ids differents.
 export async function confirmAddDistributor() {
+    if (AddMode.submitting) return;
+    AddMode.submitting = true;
+    const btn = document.getElementById('btn-confirm-add');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Ajout...';
+    }
+    try {
+        await confirmAddDistributorImpl();
+    } finally {
+        AddMode.submitting = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Ajouter';
+        }
+    }
+}
+
+async function confirmAddDistributorImpl() {
     const typeSelect = document.getElementById('new-dist-type');
     const nameInput = document.getElementById('new-dist-name');
     const addressInput = document.getElementById('new-dist-address');
