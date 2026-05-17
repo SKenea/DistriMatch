@@ -9,11 +9,6 @@
 
 ## Priorite haute
 
-- [ ] Bug : distributeurs en doublon dans la liste (local + remote Supabase)
-  - Repro : ajouter un distributeur, recharger -> il apparait 2 fois dans le side panel
-  - Cause : dans `js/app.js` `loadDistributors()`, `AppState.distributors = [...AppState.distributors, ...userDistributors]` ne deduplique pas par id. Si un distributeur a ete sync sur Supabase, il revient via le fetch, puis le local le rajoute.
-  - Acceptance : un distributeur n'apparait qu'une seule fois meme s'il est dans les 2 sources. Strategie : dedupliquer par `id` apres le merge, en preferant la version remote (plus a jour). Test e2e qui ajoute un distrib, recharge, compte 1 seule occurrence.
-
 ## Priorite normale
 
 ## Idees / a explorer
@@ -58,3 +53,4 @@
 - [x] 2026-05-14 Head polish : OG meta tags + favicon + PWA icons + manifest fix (PR #41, commit a84eac8)
 - [x] 2026-05-14 Retrait signInAnonymously() automatique (dead code depuis activation hCaptcha) (PR #42, commit ae7f1f8)
 - [x] 2026-05-14 Side panel : distance affichee + tri par distance + separateurs visuels (PR #43, commit d0bd63a)
+- [x] 2026-05-17 Bug : dedup distributeurs par id (local + remote Supabase) (PR #44, commit ca4f4fa)
