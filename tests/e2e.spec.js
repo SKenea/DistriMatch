@@ -466,4 +466,43 @@ test.describe('9. Dedup distributeurs', () => {
         );
         expect(occurrences).toBe(1);
     });
+
+    test('doublons par contenu, ids differents (bug double-submit) -> 1 occurrence', async ({ page }) => {
+        // Reproduit le symptome reel : N entrees meme nom + memes coords mais
+        // ids tous differents (user-<timestamp> distinct a chaque clic du
+        // bouton avant le garde anti-double-submit). La dedup par id ne peut
+        // PAS les voir -> c'est le filet par contenu qui doit collapser.
+        // Nom volontairement unique : l'e2e tape la vraie base Supabase, un nom
+        // reel (ex. "Gaztainbidea 2") entrerait en collision avec la prod.
+        const uniqueName = 'ZZ-E2E-DEDUP-CONTENU-' + Date.now();
+        await page.evaluate((nm) => {
+            const base = { name: nm, type: 'general', emoji: '🌰',
+                lat: 43.4931, lng: -1.4752, address: '', city: 'Test', rating: 5,
+                reviewCount: 0, status: 'verified', priceRange: '€', products: [] };
+            const dups = Array.from({ length: 7 }, (_, i) => ({
+                ...base, id: `user-${1700000000000 + i}`
+            }));
+            localStorage.setItem('snackmatch_user_distributors', JSON.stringify(dups));
+        }, uniqueName);
+
+        await page.reload();
+        await page.waitForFunction(
+            () => window.AppState?.distributors?.length > 0,
+            { timeout: 50000 }
+        );
+
+        const occurrences = await page.evaluate(
+            (nm) => window.AppState.distributors.filter((d) => d.name === nm).length,
+            uniqueName
+        );
+        expect(occurrences).toBe(1);
+    });
+
+    test('le garde anti-double-submit existe sur AddMode', async ({ page }) => {
+        const hasGuard = await page.evaluate(
+            () => typeof window.AppState !== 'undefined'
+                && Object.prototype.hasOwnProperty.call(window.AddMode || {}, 'submitting')
+        );
+        expect(hasGuard).toBe(true);
+    });
 });

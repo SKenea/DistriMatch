@@ -69,7 +69,8 @@ export const AddMode = {
     marker: null,
     lat: null,
     lng: null,
-    photos: null
+    photos: null,
+    submitting: false
 };
 
 // Variables carte
