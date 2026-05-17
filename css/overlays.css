@@ -466,14 +466,26 @@
 .side-panel-item {
     display: flex;
     gap: 0.75rem;
-    padding: 0.875rem 0.75rem;
+    padding: 1rem 0.75rem;          /* +air vertical (etait 0.875rem) */
     cursor: pointer;
     transition: background 0.15s;
-    border-bottom: 1px solid var(--light);
+    position: relative;             /* ancre le ::after */
 }
 
-.side-panel-item:last-child {
-    border-bottom: none;
+/* Separateur net, en retrait : commence apres la vignette + le gap,
+   aligne sous le texte (facon iOS Settings / Material 3 list). */
+.side-panel-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: calc(0.75rem + 64px + 0.75rem); /* padding-left + photo 64px + flex gap */
+    right: 0.75rem;                        /* = padding-right */
+    height: 1px;
+    background: var(--light-gray);         /* contraste lisible vs var(--light) */
+}
+
+.side-panel-item:last-child::after {
+    display: none;                  /* pas de trait apres le dernier */
 }
 
 .side-panel-item:hover {
