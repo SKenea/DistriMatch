@@ -18,9 +18,9 @@ let currentFilter = null;
 // Tranches de distance pour le regroupement du panneau lateral.
 // La liste est deja triee par distance croissante (sortByDistance, PR #43).
 const DISTANCE_GROUPS = [
-    { label: 'À proximité',   max: 1 },        // < 1 km
-    { label: 'Moins de 5 km', max: 5 },        // 1–5 km
-    { label: 'Plus loin',     max: Infinity }, // ≥ 5 km
+    { label: 'À proximité', range: "moins d'1 km", max: 1 },        // < 1 km
+    { label: 'À côté',      range: '1 à 5 km',     max: 5 },        // 1–5 km
+    { label: 'Plus loin',   range: 'plus de 5 km', max: Infinity }, // ≥ 5 km
 ];
 
 // Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
@@ -44,6 +44,21 @@ function bindSidePanelItemClicks(list) {
     list.querySelectorAll('.side-panel-item').forEach(item => {
         item.addEventListener('click', () => {
             openDistributorModal(item.dataset.id);
+        });
+    });
+}
+
+// Accordeon : chaque en-tete de groupe ouvre/ferme sa liste d'items.
+// Les 3 groupes sont fermes par defaut (aria-expanded=false, items [hidden]).
+function bindGroupAccordion(list) {
+    list.querySelectorAll('.side-panel-group-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const open = header.getAttribute('aria-expanded') === 'true';
+            header.setAttribute('aria-expanded', String(!open));
+            const items = header.nextElementSibling;
+            if (items && items.classList.contains('side-panel-group-items')) {
+                items.hidden = open;
+            }
         });
     });
 }
@@ -100,15 +115,26 @@ export function openSidePanelForFilters(types = []) {
             buckets[idx === -1 ? DISTANCE_GROUPS.length - 1 : idx].push(d);
         });
 
+        // Accordeon : les 3 groupes sont toujours affiches, fermes par defaut.
+        // L'utilisateur clique une en-tete pour deplier sa tranche.
         list.innerHTML = DISTANCE_GROUPS.map((group, gi) => {
             const items = buckets[gi];
-            if (items.length === 0) return '';
-            const header = `<div class="side-panel-group-header">${escapeHTML(group.label)} · ${items.length}</div>`;
-            const rows = items.map((d, i) =>
-                renderSidePanelItem(d, i === items.length - 1 ? 'side-panel-item--group-end' : '')
-            ).join('');
-            return header + rows;
+            const header = `
+                <button type="button" class="side-panel-group-header" aria-expanded="false">
+                    <span class="spg-chevron" aria-hidden="true">▸</span>
+                    <span class="spg-label">${escapeHTML(group.label)}</span>
+                    <span class="spg-range">${escapeHTML(group.range)}</span>
+                    <span class="spg-count">${items.length}</span>
+                </button>`;
+            const rows = items.length === 0
+                ? `<div class="side-panel-empty">Aucun distributeur dans cette tranche</div>`
+                : items.map((d, i) =>
+                    renderSidePanelItem(d, i === items.length - 1 ? 'side-panel-item--group-end' : '')
+                  ).join('');
+            return `<div class="side-panel-group">${header}<div class="side-panel-group-items" hidden>${rows}</div></div>`;
         }).join('');
+
+        bindGroupAccordion(list);
 
         bindSidePanelItemClicks(list);
     }

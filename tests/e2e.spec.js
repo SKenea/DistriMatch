@@ -163,7 +163,8 @@ test.describe('3. Panneau lateral filtres', () => {
     test('le panneau liste les distributeurs filtres', async ({ page }) => {
         await page.click('.filter-chip[data-type="pizza"]');
         await page.waitForSelector('.side-panel.open');
-        await page.waitForSelector('#side-panel-list .side-panel-item', { timeout: 3000 });
+        // Accordeon : les items sont dans le DOM mais caches (groupes fermes).
+        await page.waitForSelector('#side-panel-list .side-panel-item', { state: 'attached', timeout: 3000 });
 
         const items = await page.$$('#side-panel-list .side-panel-item');
         expect(items.length).toBeGreaterThan(0);
@@ -171,8 +172,16 @@ test.describe('3. Panneau lateral filtres', () => {
 
     test('clic sur un item du panneau ouvre la modal', async ({ page }) => {
         await page.click('.filter-chip[data-type="pizza"]');
-        await page.waitForSelector('#side-panel-list .side-panel-item');
-        await page.click('#side-panel-list .side-panel-item');
+        await page.waitForSelector('.side-panel.open');
+        // Accordeon : les groupes sont fermes par defaut, deplier le premier
+        // groupe non vide avant de pouvoir cliquer un item.
+        const headers = await page.$$('#side-panel-list .side-panel-group-header');
+        for (const h of headers) {
+            await h.click();
+            const visible = await page.$('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item');
+            if (visible) break;
+        }
+        await page.click('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item');
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
     });
 
@@ -242,30 +251,63 @@ test.describe('3. Panneau lateral filtres', () => {
 // 3ter. GROUPES PAR DISTANCE (side panel)
 // ============================================
 
-test.describe('3ter. Groupes par distance', () => {
-    test('des en-tetes de groupe apparaissent et la somme des compteurs == nb items', async ({ page }) => {
+test.describe('3ter. Groupes par distance (accordeon)', () => {
+    test('3 en-tetes, somme des compteurs == nb items', async ({ page }) => {
         await page.click('.filter-chip[data-type="all"]');
         await page.waitForSelector('.side-panel.open');
-        await page.waitForSelector('#side-panel-list .side-panel-item');
+        await page.waitForSelector('#side-panel-list .side-panel-group-header');
 
-        const headers = await page.$$eval(
-            '#side-panel-list .side-panel-group-header',
-            els => els.map(e => e.textContent)
+        const headers = await page.$$('#side-panel-list .side-panel-group-header');
+        expect(headers.length).toBe(3);
+
+        const counts = await page.$$eval(
+            '#side-panel-list .spg-count',
+            els => els.map(e => parseInt(e.textContent, 10))
         );
-        expect(headers.length).toBeGreaterThan(0);
-
-        // Chaque en-tete a le format "Label · N"
-        const sumCounts = headers.reduce((s, txt) => {
-            const m = txt.match(/·\s*(\d+)\s*$/);
-            return s + (m ? parseInt(m[1], 10) : 0);
-        }, 0);
+        const sumCounts = counts.reduce((s, n) => s + n, 0);
         const itemCount = await page.$$eval(
             '#side-panel-list .side-panel-item', els => els.length
         );
         expect(sumCounts).toBe(itemCount);
     });
 
-    test('les en-tetes de groupe sont collants (sticky)', async ({ page }) => {
+    test('groupes fermes par defaut, clic en-tete deplie', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('#side-panel-list .side-panel-group-header');
+
+        // Tous fermes : aria-expanded=false, items caches
+        const allClosed = await page.$$eval(
+            '#side-panel-list .side-panel-group-header',
+            els => els.every(e => e.getAttribute('aria-expanded') === 'false')
+        );
+        expect(allClosed).toBe(true);
+        const visibleBefore = await page.$('#side-panel-list .side-panel-group-items:not([hidden])');
+        expect(visibleBefore).toBeNull();
+
+        // Clic sur la 1ere en-tete -> sa tranche se deplie
+        await page.click('#side-panel-list .side-panel-group-header');
+        const expanded = await page.$eval(
+            '#side-panel-list .side-panel-group-header',
+            el => el.getAttribute('aria-expanded')
+        );
+        expect(expanded).toBe('true');
+        const visibleAfter = await page.$('#side-panel-list .side-panel-group-items:not([hidden])');
+        expect(visibleAfter).not.toBeNull();
+    });
+
+    test('en-tete affiche le libelle + la plage de distance', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('#side-panel-list .side-panel-group-header');
+
+        const first = await page.$eval('#side-panel-list .side-panel-group-header', el => ({
+            label: el.querySelector('.spg-label')?.textContent,
+            range: el.querySelector('.spg-range')?.textContent,
+        }));
+        expect(first.label).toBe('À proximité');
+        expect(first.range).toBe("moins d'1 km");
+    });
+
+    test('en-tetes collants (sticky)', async ({ page }) => {
         await page.click('.filter-chip[data-type="all"]');
         await page.waitForSelector('#side-panel-list .side-panel-group-header');
 

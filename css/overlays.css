@@ -492,27 +492,73 @@
     background: var(--light);
 }
 
-/* En-tete de groupe par distance (sticky au scroll du panneau) */
+/* Accordeon : groupe par distance (en-tete cliquable, sticky au scroll) */
+.side-panel-group {
+    border-bottom: 1px solid var(--light-gray);
+}
+
 .side-panel-group-header {
     position: sticky;
     top: 0;
     z-index: 1;
-    background: var(--white);            /* opaque : les items passent dessous */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
     margin: 0 -0.5rem;                   /* bleed sur le padding 0.5rem de .side-panel-list */
-    padding: 0.5rem 1.25rem 0.375rem;    /* aligne le texte au contenu */
+    padding: 0.625rem 1.25rem;
+    background: var(--white);            /* opaque : les items passent dessous */
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--gray);
+    font-family: inherit;
+}
+
+.side-panel-group-header:hover {
+    background: var(--light);
+}
+
+.spg-chevron {
     font-size: 0.7rem;
+    color: var(--gray-light);
+    transition: transform 0.15s ease;
+}
+
+.side-panel-group-header[aria-expanded="true"] .spg-chevron {
+    transform: rotate(90deg);
+}
+
+.spg-label {
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    color: var(--dark);
+}
+
+.spg-range {
+    font-size: 0.72rem;
+    color: var(--gray-light);
+}
+
+.spg-count {
+    margin-left: auto;
+    min-width: 1.25rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--light);
     color: var(--gray);
-    border-bottom: 1px solid var(--light-gray);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
 }
 
-.side-panel-group-header:first-child {
-    padding-top: 0.25rem;
+.side-panel-group-items[hidden] {
+    display: none;
 }
 
-/* Pas de separateur inset juste avant un en-tete (evite le double trait) */
+/* Pas de separateur inset sur le dernier item d'un groupe ouvert */
 .side-panel-item--group-end::after {
     display: none;
 }
