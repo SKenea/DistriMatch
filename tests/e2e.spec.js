@@ -422,6 +422,86 @@ test.describe('5. Auth wall', () => {
 });
 
 // ============================================
+// 5bis. MODIFICATION DEPUIS FAVORIS (stylo)
+// ============================================
+
+test.describe('5bis. Modification via stylo (Favoris)', () => {
+    async function openFirstFavoriteCard(page) {
+        await page.evaluate(() => {
+            const id = window.AppState.distributors[0].id;
+            window.AppState.subscriptions = [id];
+        });
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active');
+        await page.waitForSelector('#subscriptions-list .subscription-card');
+        await page.click('#subscriptions-list .subscription-card');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
+    }
+
+    test('carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
+        await openFirstFavoriteCard(page);
+
+        const state = await page.evaluate(() => ({
+            edit: window.AppState.modalEditMode,
+            canEdit: window.AppState.modalCanEdit,
+            addHidden: getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none',
+        }));
+        expect(state.edit).toBe(false);
+        expect(state.canEdit).toBe(true);
+        expect(state.addHidden).toBe(true);
+
+        const editBtn = page.locator('#dist-action-edit');
+        await expect(editBtn).toBeVisible();
+    });
+
+    test('clic stylo non identifie -> mur d\'auth, pas d\'edition', async ({ page }) => {
+        await page.evaluate(() => localStorage.clear());
+        await openFirstFavoriteCard(page);
+        await page.click('#dist-action-edit');
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+
+        const stillReadonly = await page.evaluate(() =>
+            window.AppState.modalEditMode === false
+            && getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none'
+        );
+        expect(stillReadonly).toBe(true);
+    });
+
+    test('mode edition affiche produits CRUD + ajout + chat, stylo masque', async ({ page }) => {
+        await openFirstFavoriteCard(page);
+        // Auth contournee pour isoler le rendu edition
+        await page.evaluate(() => {
+            const id = window.AppState.currentDistributor.id;
+            window.openDistributorModal(id, true, true);
+        });
+        const r = await page.evaluate(() => ({
+            edit: window.AppState.modalEditMode,
+            addVisible: getComputedStyle(document.getElementById('dist-products-add-section')).display !== 'none',
+            chatVisible: getComputedStyle(document.getElementById('dist-chat-section')).display !== 'none',
+            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
+        }));
+        expect(r.edit).toBe(true);
+        expect(r.addVisible).toBe(true);
+        expect(r.chatVisible).toBe(true);
+        expect(r.styloHidden).toBe(true);
+    });
+
+    test('hors Favoris (canEdit absent) -> pas de stylo, lecture seule', async ({ page }) => {
+        await page.evaluate(() => {
+            const id = window.AppState.distributors[0].id;
+            window.openDistributorModal(id); // comme side panel / carte / deep link
+        });
+        await page.waitForSelector('#dist-modal-overlay.active');
+        const r = await page.evaluate(() => ({
+            edit: window.AppState.modalEditMode,
+            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
+        }));
+        expect(r.edit).toBe(false);
+        expect(r.styloHidden).toBe(true);
+    });
+});
+
+// ============================================
 // 6. CHAT BOT (sans auth)
 // ============================================
 
