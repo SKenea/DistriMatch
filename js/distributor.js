@@ -287,7 +287,8 @@ export function getDirectionsTo(distributor) {
 
 export async function toggleSubscription(id, event) {
     if (event) event.stopPropagation();
-    if (!(await requireAuth())) return;
+    // Favori = etat purement local (localStorage), pas d'email requis.
+    // L'edition d'un distributeur (produits) garde requireAuth, elle.
 
     const index = AppState.subscriptions.indexOf(id);
     const distributor = AppState.distributors.find(d => d.id === id);

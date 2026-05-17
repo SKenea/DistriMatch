@@ -402,14 +402,19 @@ test.describe('4. Modal distributeur', () => {
 // ============================================
 
 test.describe('5. Auth wall', () => {
-    test('clic favori declenche la modal auth', async ({ page }) => {
+    test('clic favori : ajout local SANS mur d\'auth', async ({ page }) => {
         await page.evaluate(() => { window.AppState.subscriptions = []; localStorage.clear(); });
         await openDistModal(page);
+        const id = await page.evaluate(() => window.AppState.currentDistributor.id);
         await page.evaluate(() => document.getElementById('dist-action-favorite').click());
-        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
-
-        const modal = await page.$('.auth-modal');
-        expect(modal).not.toBeNull();
+        // Favori = purement local : pas de modale d'auth, ajout immediat
+        await page.waitForTimeout(400);
+        const r = await page.evaluate((did) => ({
+            authShown: !!document.querySelector('.auth-modal-overlay'),
+            subscribed: window.AppState.subscriptions.includes(did),
+        }), id);
+        expect(r.authShown).toBe(false);
+        expect(r.subscribed).toBe(true);
     });
 
     test('clic + Ajouter un distributeur declenche la modal auth', async ({ page }) => {

@@ -330,7 +330,7 @@ describe('renderProductsList', () => {
 // TOGGLE SUBSCRIPTION
 // ============================================
 
-describe('toggleSubscription (mock auth)', () => {
+describe('toggleSubscription (favori local, sans auth)', () => {
     beforeEach(() => {
         AppState.subscriptions = [];
         AppState.distributors = [
@@ -338,22 +338,17 @@ describe('toggleSubscription (mock auth)', () => {
         ];
         AppState.currentDistributor = null;
         localStorage.clear();
-        // Mock auth : override requireAuth to always return true
-        globalThis.__mockAuthAllowed = true;
     });
 
-    it('ajoute un abonnement', async () => {
-        // Injecter un faux user authentifie dans la session Supabase interne
-        // Plus simple : tester la logique metier sans l'auth guard en appelant directement l'ajout
-        AppState.subscriptions.push('dist-sub');
+    it('ajoute un abonnement sans demander d\'auth', async () => {
+        await toggleSubscription('dist-sub');
         assert.ok(AppState.subscriptions.includes('dist-sub'));
     });
 
-    it('toggleSubscription retourne sans erreur si non-authentifie', async () => {
-        // Sans auth, requireAuth ouvre la modal et retourne pending
-        // La fonction doit retourner sans crasher
-        const result = toggleSubscription('dist-sub');
-        assert.ok(result !== undefined);
+    it('un 2e appel retire l\'abonnement (toggle)', async () => {
+        await toggleSubscription('dist-sub');
+        await toggleSubscription('dist-sub');
+        assert.ok(!AppState.subscriptions.includes('dist-sub'));
     });
 });
 
