@@ -239,6 +239,54 @@ test.describe('3. Panneau lateral filtres', () => {
 });
 
 // ============================================
+// 3ter. GROUPES PAR DISTANCE (side panel)
+// ============================================
+
+test.describe('3ter. Groupes par distance', () => {
+    test('des en-tetes de groupe apparaissent et la somme des compteurs == nb items', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open');
+        await page.waitForSelector('#side-panel-list .side-panel-item');
+
+        const headers = await page.$$eval(
+            '#side-panel-list .side-panel-group-header',
+            els => els.map(e => e.textContent)
+        );
+        expect(headers.length).toBeGreaterThan(0);
+
+        // Chaque en-tete a le format "Label · N"
+        const sumCounts = headers.reduce((s, txt) => {
+            const m = txt.match(/·\s*(\d+)\s*$/);
+            return s + (m ? parseInt(m[1], 10) : 0);
+        }, 0);
+        const itemCount = await page.$$eval(
+            '#side-panel-list .side-panel-item', els => els.length
+        );
+        expect(sumCounts).toBe(itemCount);
+    });
+
+    test('les en-tetes de groupe sont collants (sticky)', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('#side-panel-list .side-panel-group-header');
+
+        const pos = await page.$eval(
+            '#side-panel-list .side-panel-group-header',
+            el => getComputedStyle(el).position
+        );
+        expect(pos).toBe('sticky');
+    });
+
+    test('sans geoloc : liste plate, aucun en-tete de groupe', async ({ page }) => {
+        await page.evaluate(() => { window.AppState.userLocation = null; });
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('#side-panel-list .side-panel-item');
+
+        const headers = await page.$$('#side-panel-list .side-panel-group-header');
+        expect(headers.length).toBe(0);
+    });
+});
+
+// ============================================
 // 4. MODAL DISTRIBUTEUR
 // ============================================
 

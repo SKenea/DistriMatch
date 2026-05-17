@@ -492,6 +492,31 @@
     background: var(--light);
 }
 
+/* En-tete de groupe par distance (sticky au scroll du panneau) */
+.side-panel-group-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--white);            /* opaque : les items passent dessous */
+    margin: 0 -0.5rem;                   /* bleed sur le padding 0.5rem de .side-panel-list */
+    padding: 0.5rem 1.25rem 0.375rem;    /* aligne le texte au contenu */
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gray);
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.side-panel-group-header:first-child {
+    padding-top: 0.25rem;
+}
+
+/* Pas de separateur inset juste avant un en-tete (evite le double trait) */
+.side-panel-item--group-end::after {
+    display: none;
+}
+
 .side-panel-item-photo {
     width: 64px;
     height: 64px;
