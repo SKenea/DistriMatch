@@ -20,7 +20,7 @@ let currentFilter = null;
 const DISTANCE_GROUPS = [
     { label: 'À proximité', range: "moins d'1 km", transport: '🚶 à pied',            max: 1 },        // < 1 km
     { label: 'À côté',      range: '1 à 5 km',     transport: '🚴 en vélo',           max: 5 },        // 1–5 km
-    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 en voiture ou bus', max: Infinity }, // ≥ 5 km
+    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 en voiture ou 🚌 bus', max: Infinity }, // ≥ 5 km
 ];
 
 // Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
