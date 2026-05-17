@@ -442,4 +442,28 @@ test.describe('9. Dedup distributeurs', () => {
         );
         expect(keptName).toBe(remote.name);
     });
+
+    test('localStorage legacy avec doublon interne (meme id, pas en remote) -> 1 occurrence', async ({ page }) => {
+        // Simule un etat localStorage corrompu d'avant le fix : 2 entrees avec
+        // le MEME id, et cet id n'existe PAS dans la source remote.
+        const localId = 'user-legacy-dup-test';
+        await page.evaluate((id) => {
+            const a = { id, name: 'Distrib legacy', type: 'general', emoji: '🍫',
+                lat: 43.49, lng: -1.47, address: '', city: 'Test', rating: 4,
+                reviewCount: 0, status: 'verified', priceRange: '€', products: [] };
+            localStorage.setItem('snackmatch_user_distributors', JSON.stringify([a, { ...a }]));
+        }, localId);
+
+        await page.reload();
+        await page.waitForFunction(
+            () => window.AppState?.distributors?.length > 0,
+            { timeout: 50000 }
+        );
+
+        const occurrences = await page.evaluate(
+            (id) => window.AppState.distributors.filter((d) => d.id === id).length,
+            localId
+        );
+        expect(occurrences).toBe(1);
+    });
 });

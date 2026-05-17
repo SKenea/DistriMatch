@@ -159,13 +159,20 @@ async function loadDistributors() {
 
     const userDistributors = loadUserDistributors();
     if (userDistributors.length > 0) {
-        // Dedup par id : si un distributeur local a deja ete sync sur Supabase,
-        // il revient via le fetch remote. On garde la version remote (plus a jour)
-        // et on n'ajoute que les distributeurs locaux pas encore connus.
-        const existingIds = new Set(AppState.distributors.map((d) => d.id));
-        const newUserDistributors = userDistributors.filter((d) => !existingIds.has(d.id));
+        // Dedup par id sur 2 fronts :
+        //  1. un distributeur local deja sync sur Supabase revient via le fetch
+        //     remote -> on garde la version remote (plus a jour).
+        //  2. le localStorage peut deja contenir des doublons internes
+        //     (etat legacy d'avant le fix de saveUserDistributor).
+        // Le Set grandit au fil du filtre : chaque id n'est conserve qu'une fois.
+        const seenIds = new Set(AppState.distributors.map((d) => d.id));
+        const newUserDistributors = userDistributors.filter((d) => {
+            if (seenIds.has(d.id)) return false;
+            seenIds.add(d.id);
+            return true;
+        });
         AppState.distributors = [...AppState.distributors, ...newUserDistributors];
-        console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote ignores)');
+        console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote + internes ignores)');
     }
 
     if (AppState.userLocation) {

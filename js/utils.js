@@ -186,7 +186,10 @@ export function loadUserDistributors() {
 }
 
 export function saveUserDistributor(distributor) {
-    const existing = loadUserDistributors();
+    // Upsert par id : evite les doublons en localStorage si la fonction est
+    // appelee 2 fois pour le meme distributeur (double soumission, retry,
+    // re-ajout). On remplace l'entree existante plutot que d'empiler.
+    const existing = loadUserDistributors().filter((d) => d.id !== distributor.id);
     existing.push(distributor);
     try {
         localStorage.setItem(USER_DISTRIBUTORS_KEY, JSON.stringify(existing));

@@ -15,7 +15,8 @@ import {
     calculateDistance, formatDistance, generateStars,
     getTimeSlot, formatTime, getFilteredDistributors,
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
-    escapeHTML, saveStore, loadStore
+    escapeHTML, saveStore, loadStore,
+    saveUserDistributor, loadUserDistributors
 } from '../js/utils.js';
 
 import {
@@ -357,6 +358,39 @@ describe('saveStore / loadStore', () => {
         saveStore('test_array', [1, 2, 3]);
         const result = loadStore('test_array');
         assert.deepEqual(result, [1, 2, 3]);
+    });
+});
+
+describe('saveUserDistributor (upsert par id)', () => {
+    it('sauvegarde un nouveau distributeur', () => {
+        localStorage.clear();
+        saveUserDistributor({ id: 'user-1', name: 'A' });
+        assert.deepEqual(loadUserDistributors(), [{ id: 'user-1', name: 'A' }]);
+    });
+
+    it('ne cree pas de doublon si appele 2 fois avec le meme id', () => {
+        localStorage.clear();
+        saveUserDistributor({ id: 'user-1', name: 'A' });
+        saveUserDistributor({ id: 'user-1', name: 'A' });
+        const all = loadUserDistributors();
+        assert.equal(all.length, 1);
+        assert.equal(all.filter((d) => d.id === 'user-1').length, 1);
+    });
+
+    it('remplace l\'entree existante (version la plus recente conservee)', () => {
+        localStorage.clear();
+        saveUserDistributor({ id: 'user-1', name: 'Ancien' });
+        saveUserDistributor({ id: 'user-1', name: 'Nouveau' });
+        const all = loadUserDistributors();
+        assert.equal(all.length, 1);
+        assert.equal(all[0].name, 'Nouveau');
+    });
+
+    it('conserve les distributeurs d\'ids differents', () => {
+        localStorage.clear();
+        saveUserDistributor({ id: 'user-1', name: 'A' });
+        saveUserDistributor({ id: 'user-2', name: 'B' });
+        assert.equal(loadUserDistributors().length, 2);
     });
 });
 
