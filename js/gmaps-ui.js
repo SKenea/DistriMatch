@@ -18,9 +18,9 @@ let currentFilter = null;
 // Tranches de distance pour le regroupement du panneau lateral.
 // La liste est deja triee par distance croissante (sortByDistance, PR #43).
 const DISTANCE_GROUPS = [
-    { label: 'À proximité', range: "moins d'1 km", max: 1 },        // < 1 km
-    { label: 'À côté',      range: '1 à 5 km',     max: 5 },        // 1–5 km
-    { label: 'Plus loin',   range: 'plus de 5 km', max: Infinity }, // ≥ 5 km
+    { label: 'À proximité', range: "moins d'1 km", transport: '🚶 à pied',            max: 1 },        // < 1 km
+    { label: 'À côté',      range: '1 à 5 km',     transport: '🚴 en vélo',           max: 5 },        // 1–5 km
+    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 en voiture ou bus', max: Infinity }, // ≥ 5 km
 ];
 
 // Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
@@ -122,8 +122,10 @@ export function openSidePanelForFilters(types = []) {
             const header = `
                 <button type="button" class="side-panel-group-header" aria-expanded="false">
                     <span class="spg-chevron" aria-hidden="true">▸</span>
-                    <span class="spg-label">${escapeHTML(group.label)}</span>
-                    <span class="spg-range">${escapeHTML(group.range)}</span>
+                    <span class="spg-main">
+                        <span class="spg-label">${escapeHTML(group.label)}</span>
+                        <span class="spg-sub">${escapeHTML(group.range)} · ${escapeHTML(group.transport)}</span>
+                    </span>
                     <span class="spg-count">${items.length}</span>
                 </button>`;
             const rows = items.length === 0

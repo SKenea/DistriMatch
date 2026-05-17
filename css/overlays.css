@@ -529,6 +529,13 @@
     transform: rotate(90deg);
 }
 
+.spg-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;            /* permet l'ellipsis si besoin */
+}
+
 .spg-label {
     font-size: 0.72rem;
     font-weight: 700;
@@ -537,8 +544,8 @@
     color: var(--dark);
 }
 
-.spg-range {
-    font-size: 0.72rem;
+.spg-sub {
+    font-size: 0.68rem;
     color: var(--gray-light);
 }
 

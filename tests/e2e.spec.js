@@ -295,16 +295,17 @@ test.describe('3ter. Groupes par distance (accordeon)', () => {
         expect(visibleAfter).not.toBeNull();
     });
 
-    test('en-tete affiche le libelle + la plage de distance', async ({ page }) => {
+    test('en-tete affiche le libelle + la plage + le mode de transport', async ({ page }) => {
         await page.click('.filter-chip[data-type="all"]');
         await page.waitForSelector('#side-panel-list .side-panel-group-header');
 
         const first = await page.$eval('#side-panel-list .side-panel-group-header', el => ({
             label: el.querySelector('.spg-label')?.textContent,
-            range: el.querySelector('.spg-range')?.textContent,
+            sub: el.querySelector('.spg-sub')?.textContent,
         }));
         expect(first.label).toBe('À proximité');
-        expect(first.range).toBe("moins d'1 km");
+        expect(first.sub).toContain("moins d'1 km");
+        expect(first.sub).toContain('à pied');
     });
 
     test('en-tetes collants (sticky)', async ({ page }) => {
