@@ -15,6 +15,54 @@ import { requireAuth } from './auth.js';
 
 let currentFilter = null;
 
+// Tranches de distance pour le regroupement du panneau lateral.
+// La liste est deja triee par distance croissante (sortByDistance, PR #43).
+const DISTANCE_GROUPS = [
+    { label: 'À proximité', range: "moins d'1 km", transport: '🚶',    transportLabel: 'à pied',            max: 1 },        // < 1 km
+    { label: 'À côté',      range: '1 à 5 km',     transport: '🚴',    transportLabel: 'en vélo',           max: 5 },        // 1–5 km
+    { label: 'Plus loin',   range: 'plus de 5 km', transport: '🚗 🚌', transportLabel: 'en voiture ou bus', max: Infinity }, // ≥ 5 km
+];
+
+// Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
+// et le rendu groupe pour ne pas casser le binding .side-panel-item / le CSS.
+function renderSidePanelItem(d, extraClass = '') {
+    const distance = d.distance ? formatDistance(d.distance) : '';
+    return `
+        <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
+            <div class="side-panel-item-photo">${d.emoji}</div>
+            <div class="side-panel-item-info">
+                <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
+                <div class="side-panel-item-meta">
+                    <span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>
+                    ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
+                </div>
+            </div>
+        </div>`;
+}
+
+function bindSidePanelItemClicks(list) {
+    list.querySelectorAll('.side-panel-item').forEach(item => {
+        item.addEventListener('click', () => {
+            openDistributorModal(item.dataset.id);
+        });
+    });
+}
+
+// Accordeon : chaque en-tete de groupe ouvre/ferme sa liste d'items.
+// Les 3 groupes sont fermes par defaut (aria-expanded=false, items [hidden]).
+function bindGroupAccordion(list) {
+    list.querySelectorAll('.side-panel-group-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const open = header.getAttribute('aria-expanded') === 'true';
+            header.setAttribute('aria-expanded', String(!open));
+            const items = header.nextElementSibling;
+            if (items && items.classList.contains('side-panel-group-items')) {
+                items.hidden = open;
+            }
+        });
+    });
+}
+
 export function initSidePanel() {
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
@@ -49,34 +97,48 @@ export function openSidePanelForFilters(types = []) {
 
     if (matches.length === 0) {
         list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;
+    } else if (!AppState.userLocation) {
+        // Sans geoloc : pas de distance -> liste plate, comportement inchange.
+        list.innerHTML = matches.map(d => renderSidePanelItem(d)).join('');
+        bindSidePanelItemClicks(list);
     } else {
-        // Trier par distance si position connue
-        const sorted = AppState.userLocation
-            ? [...matches].sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
-            : matches;
+        // Avec geoloc : la liste est deja triee par distance croissante.
+        // On la decoupe en tranches via DISTANCE_GROUPS.
+        const sorted = [...matches].sort(
+            (a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity)
+        );
 
-        list.innerHTML = sorted.map(d => {
-            const distance = d.distance ? formatDistance(d.distance) : '';
-            return `
-                <div class="side-panel-item" data-id="${escapeHTML(d.id)}">
-                    <div class="side-panel-item-photo">${d.emoji}</div>
-                    <div class="side-panel-item-info">
-                        <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
-                        <div class="side-panel-item-meta">
-                            <span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>
-                            ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
+        const buckets = DISTANCE_GROUPS.map(() => []);
+        sorted.forEach(d => {
+            const dist = d.distance ?? Infinity;
+            const idx = DISTANCE_GROUPS.findIndex(g => dist < g.max);
+            buckets[idx === -1 ? DISTANCE_GROUPS.length - 1 : idx].push(d);
+        });
+
+        // Accordeon : les 3 groupes sont toujours affiches, fermes par defaut.
+        // L'utilisateur clique une en-tete pour deplier sa tranche.
+        list.innerHTML = DISTANCE_GROUPS.map((group, gi) => {
+            const items = buckets[gi];
+            const header = `
+                <button type="button" class="side-panel-group-header" aria-expanded="false">
+                    <span class="spg-chevron" aria-hidden="true">▸</span>
+                    <span class="spg-main">
+                        <span class="spg-label">${escapeHTML(group.label)}</span>
+                        <span class="spg-sub">${escapeHTML(group.range)} · <span class="spg-transport" title="${escapeHTML(group.transportLabel)}" aria-label="${escapeHTML(group.transportLabel)}">${escapeHTML(group.transport)}</span></span>
+                    </span>
+                    <span class="spg-count">${items.length}</span>
+                </button>`;
+            const rows = items.length === 0
+                ? `<div class="side-panel-empty">Aucun distributeur dans cette tranche</div>`
+                : items.map((d, i) =>
+                    renderSidePanelItem(d, i === items.length - 1 ? 'side-panel-item--group-end' : '')
+                  ).join('');
+            return `<div class="side-panel-group">${header}<div class="side-panel-group-items" hidden>${rows}</div></div>`;
         }).join('');
 
-        // Bind clicks sur les items
-        list.querySelectorAll('.side-panel-item').forEach(item => {
-            item.addEventListener('click', () => {
-                openDistributorModal(item.dataset.id);
-            });
-        });
+        bindGroupAccordion(list);
+
+        bindSidePanelItemClicks(list);
     }
 
     sidebar.classList.add('open');

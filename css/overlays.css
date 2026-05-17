@@ -492,6 +492,84 @@
     background: var(--light);
 }
 
+/* Accordeon : groupe par distance (en-tete cliquable, sticky au scroll) */
+.side-panel-group {
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.side-panel-group-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin: 0 -0.5rem;                   /* bleed sur le padding 0.5rem de .side-panel-list */
+    padding: 0.625rem 1.25rem;
+    background: var(--white);            /* opaque : les items passent dessous */
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--gray);
+    font-family: inherit;
+}
+
+.side-panel-group-header:hover {
+    background: var(--light);
+}
+
+.spg-chevron {
+    font-size: 0.7rem;
+    color: var(--gray-light);
+    transition: transform 0.15s ease;
+}
+
+.side-panel-group-header[aria-expanded="true"] .spg-chevron {
+    transform: rotate(90deg);
+}
+
+.spg-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;            /* permet l'ellipsis si besoin */
+}
+
+.spg-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dark);
+}
+
+.spg-sub {
+    font-size: 0.68rem;
+    color: var(--gray-light);
+}
+
+.spg-count {
+    margin-left: auto;
+    min-width: 1.25rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--light);
+    color: var(--gray);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.side-panel-group-items[hidden] {
+    display: none;
+}
+
+/* Pas de separateur inset sur le dernier item d'un groupe ouvert */
+.side-panel-item--group-end::after {
+    display: none;
+}
+
 .side-panel-item-photo {
     width: 64px;
     height: 64px;
