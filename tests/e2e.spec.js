@@ -418,6 +418,8 @@ test.describe('5. Auth wall', () => {
     });
 
     test('clic + Ajouter un distributeur declenche la modal auth', async ({ page }) => {
+        // Localhost saute le mur d'auth par defaut : on le reactive pour ce test
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await page.click('#btn-add-distributor');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
@@ -462,6 +464,8 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
     test('clic stylo non identifie -> mur d\'auth, pas d\'edition', async ({ page }) => {
         await page.evaluate(() => localStorage.clear());
         await openFirstFavoriteCard(page);
+        // Localhost saute le mur par defaut : on le reactive pour ce test
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await page.click('#dist-action-edit');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 

@@ -109,16 +109,19 @@ export async function signOut() {
  * @returns {Promise<boolean>} true si authentifie, false sinon
  */
 export async function requireAuth() {
-    // Dev only : sur localhost le magic link Supabase ne peut pas aboutir
-    // (pas de redirection vers localhost). Bypass OPT-IN via le flag
-    // localStorage 'distrimatch_dev_auth' = '1' pour tester les ecritures
-    // en local. Par defaut le mur d'auth reste actif sur localhost (les
-    // tests e2e en dependent). Aucun effet en prod.
+    // Dev : sur localhost le magic link Supabase ne peut pas aboutir
+    // (pas de redirection vers localhost). On saute donc le mur d'auth
+    // PAR DEFAUT en local pour pouvoir tester les ecritures sans friction.
+    // Les tests e2e qui verifient le mur posent le flag
+    // 'distrimatch_force_auth' = '1' pour le reactiver. Aucun effet en prod
+    // (isLocalhost gate : l'email reste obligatoire sur le site deploye).
     try {
-        if (isLocalhost() && localStorage.getItem('distrimatch_dev_auth') === '1') {
+        if (isLocalhost() && localStorage.getItem('distrimatch_force_auth') !== '1') {
             return true;
         }
-    } catch (e) { /* localStorage indispo : on ignore */ }
+    } catch (e) {
+        if (isLocalhost()) return true; // localStorage indispo : on autorise en dev
+    }
 
     if (isAuthenticated()) return true;
 
