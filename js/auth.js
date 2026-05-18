@@ -109,6 +109,17 @@ export async function signOut() {
  * @returns {Promise<boolean>} true si authentifie, false sinon
  */
 export async function requireAuth() {
+    // Dev only : sur localhost le magic link Supabase ne peut pas aboutir
+    // (pas de redirection vers localhost). Bypass OPT-IN via le flag
+    // localStorage 'distrimatch_dev_auth' = '1' pour tester les ecritures
+    // en local. Par defaut le mur d'auth reste actif sur localhost (les
+    // tests e2e en dependent). Aucun effet en prod.
+    try {
+        if (isLocalhost() && localStorage.getItem('distrimatch_dev_auth') === '1') {
+            return true;
+        }
+    } catch (e) { /* localStorage indispo : on ignore */ }
+
     if (isAuthenticated()) return true;
 
     return new Promise((resolve) => {
