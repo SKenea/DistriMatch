@@ -132,8 +132,8 @@ export const GREETING_MESSAGES = {
 
 export const ALERT_MESSAGES = {
     stock_back: ["Bonne nouvelle ! {product} est de retour en stock !", "Tu attendais {product} ? C'est dispo maintenant !", "Alerte restock : {product} est la !"],
-    price_drop: ["Promo flash ! {product} a {newPrice} EUR au lieu de {oldPrice} EUR", "Prix reduit sur {product} ! Profites-en vite.", "Offre speciale : {product} en promo !"],
-    new_product: ["Nouveau ! Decouvre {product} a {price} EUR", "J'ai une nouveaute pour toi : {product}", "Exclusivite : {product} vient d'arriver !"]
+    price_drop: ["Offre speciale sur {product} ! Profites-en vite.", "Bon plan : {product} a decouvrir.", "{product} : c'est le moment !"],
+    new_product: ["Nouveau ! Decouvre {product}", "J'ai une nouveaute pour toi : {product}", "Exclusivite : {product} vient d'arriver !"]
 };
 
 export const EMBEDDED_DATA = {

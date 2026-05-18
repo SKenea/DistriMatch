@@ -418,6 +418,8 @@ test.describe('5. Auth wall', () => {
     });
 
     test('clic + Ajouter un distributeur declenche la modal auth', async ({ page }) => {
+        // Localhost saute le mur d'auth par defaut : on le reactive pour ce test
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await page.click('#btn-add-distributor');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
@@ -462,6 +464,8 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
     test('clic stylo non identifie -> mur d\'auth, pas d\'edition', async ({ page }) => {
         await page.evaluate(() => localStorage.clear());
         await openFirstFavoriteCard(page);
+        // Localhost saute le mur par defaut : on le reactive pour ce test
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await page.click('#dist-action-edit');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
@@ -489,6 +493,26 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.addVisible).toBe(true);
         expect(r.chatVisible).toBe(true);
         expect(r.styloHidden).toBe(true);
+    });
+
+    test('niveau de prix affiche + select edition, aucun prix produit', async ({ page }) => {
+        await openFirstFavoriteCard(page);
+        await page.evaluate(() => {
+            const id = window.AppState.currentDistributor.id;
+            window.openDistributorModal(id, true, true);
+        });
+        const r = await page.evaluate(() => ({
+            headerPrice: document.getElementById('dist-modal-pricerange').textContent,
+            selectVal: document.getElementById('dist-edit-pricerange').value,
+            priceCleanCount: document.querySelectorAll('#dist-products-list .product-price-clean').length,
+            priceInputCount: document.querySelectorAll('#dist-products-list .product-edit-price').length,
+            addPriceInput: document.getElementById('dist-add-product-price'),
+        }));
+        expect(['€', '€€', '€€€']).toContain(r.headerPrice);
+        expect(r.selectVal).toBe(r.headerPrice);
+        expect(r.priceCleanCount).toBe(0);
+        expect(r.priceInputCount).toBe(0);
+        expect(r.addPriceInput).toBeNull();
     });
 
     test('hors Favoris (canEdit absent) -> pas de stylo, lecture seule', async ({ page }) => {

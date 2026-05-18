@@ -64,6 +64,10 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
         : (targetId === 'dist-products-list');
     if (!distributor || !productsList) return;
 
+    // Memorise le conteneur courant pour que les CRUD (toggle/delete/edit)
+    // re-render dans la bonne liste (sinon fige sur 'products-list').
+    AppState.productsListTarget = targetId;
+
     if (!distributor.products || distributor.products.length === 0) {
         productsList.innerHTML = `
             <div class="products-empty-state">
@@ -77,23 +81,37 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
         return;
     }
 
-    productsList.innerHTML = distributor.products.map((p, index) => `
+    productsList.innerHTML = distributor.products.map((p, index) => {
+        if (readonly) {
+            return `
         <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
             <div class="product-info-clean">
                 <div class="product-name-clean">${escapeHTML(p.name)}</div>
             </div>
             <div class="product-actions-clean">
-                <div class="product-price-clean">${p.price.toFixed(2)}€</div>
-                ${readonly ? '' : `
-                    <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
-                        ${p.available ? '✓' : '✗'}
-                    </button>
-                    <button class="product-btn-edit" onclick="editProduct(${index})" aria-label="Modifier le produit" title="Modifier">✎</button>
-                    <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer">×</button>
-                `}
+                <span class="product-availability-clean">${p.available ? 'Disponible' : 'Indisponible'}</span>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+        }
+        // Mode edition : nom editable + dispo + supprimer (pas de prix).
+        return `
+        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
+            <div class="product-info-clean">
+                <input class="product-edit-name" type="text" value="${escapeHTML(p.name)}"
+                    onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">
+            </div>
+            <div class="product-actions-clean">
+                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Disponible — cliquer pour marquer indisponible' : 'Indisponible — cliquer pour marquer disponible'}" title="${p.available ? 'Cliquer pour marquer indisponible' : 'Cliquer pour marquer disponible'}">
+                    ${p.available ? 'Disponible' : 'Indisponible'}
+                </button>
+                <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer ce produit">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 export function toggleAddProductForm() {
@@ -102,7 +120,6 @@ export function toggleAddProductForm() {
     form.style.display = form.style.display === 'none' ? 'flex' : 'none';
     if (form.style.display === 'flex') {
         document.getElementById('bs-detail-product-name').value = '';
-        document.getElementById('bs-detail-product-price').value = '';
         document.getElementById('bs-detail-product-name').focus();
     }
 }
@@ -111,18 +128,16 @@ export async function submitDetailProduct() {
     if (!(await requireAuth())) return;
 
     const name = document.getElementById('bs-detail-product-name').value.trim();
-    const price = parseFloat(document.getElementById('bs-detail-product-price').value) || 0;
 
     if (!name || !AppState.currentDistributor) return;
 
-    const product = { name, price, available: true };
+    const product = { name, available: true };
 
     if (supabaseClient) {
         try {
             const { data, error } = await supabaseClient.from('products').insert({
                 distributor_id: AppState.currentDistributor.id,
                 name: name,
-                price: price,
                 available: true
             }).select('id').single();
             if (error) throw error;
@@ -137,34 +152,14 @@ export async function submitDetailProduct() {
     renderProductsList(AppState.currentDistributor, 'bs-products-list');
 
     document.getElementById('bs-detail-product-name').value = '';
-    document.getElementById('bs-detail-product-price').value = '';
     document.getElementById('bs-add-product-form').style.display = 'none';
 
     showToast(`${escapeHTML(name)} ajoute !`, 'success');
 }
 
-export function editProduct(index) {
-    const distributor = AppState.currentDistributor;
-    if (!distributor) return;
-    const product = distributor.products[index];
-    if (!product) return;
-
-    const productsList = document.getElementById('products-list');
-    const item = productsList.querySelectorAll('.product-item-clean')[index];
-    if (!item) return;
-
-    item.innerHTML = `
-        <div class="product-edit-row">
-            <input type="text" class="product-edit-name" value="${escapeHTML(product.name)}">
-            <input type="number" class="product-edit-price" value="${product.price}" step="0.10" min="0">
-            <button class="product-btn-save" aria-label="Enregistrer" onclick="saveProduct(${index})">✓</button>
-            <button class="product-btn-cancel-edit" aria-label="Annuler" onclick="renderProductsList(AppState.currentDistributor)">✗</button>
-        </div>
-    `;
-    item.querySelector('.product-edit-name').focus();
-}
-
-export async function saveProduct(index) {
+// Edition directe du nom d'un produit (au change/blur). Plus de prix.
+export async function updateProductField(index, field, rawValue) {
+    if (field !== 'name') return;
     if (!(await requireAuth())) return;
 
     const distributor = AppState.currentDistributor;
@@ -172,30 +167,23 @@ export async function saveProduct(index) {
     const product = distributor.products[index];
     if (!product) return;
 
-    const productsList = document.getElementById('products-list');
-    const item = productsList.querySelectorAll('.product-item-clean')[index];
-    const newName = item.querySelector('.product-edit-name').value.trim();
-    const newPrice = parseFloat(item.querySelector('.product-edit-price').value) || 0;
+    const oldName = product.name;
+    const newName = String(rawValue).trim();
+    if (!newName || newName === product.name) {
+        renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
+        return;
+    }
 
-    if (!newName) return;
-
-    if (supabaseClient && product.dbId) {
+    if (supabaseClient) {
         try {
-            const { error } = await supabaseClient.from('products')
-                .update({ name: newName, price: newPrice })
-                .eq('id', product.dbId);
-            if (error) throw error;
-            console.log('[DistriMatch] Produit modifie sur Supabase:', newName);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur modification produit:', e.message);
-        }
-    } else if (supabaseClient) {
-        try {
-            const { error } = await supabaseClient.from('products')
-                .update({ name: newName, price: newPrice })
-                .eq('distributor_id', distributor.id)
-                .eq('name', product.name);
-            if (error) throw error;
+            if (product.dbId) {
+                await supabaseClient.from('products')
+                    .update({ name: newName }).eq('id', product.dbId);
+            } else {
+                await supabaseClient.from('products')
+                    .update({ name: newName })
+                    .eq('distributor_id', distributor.id).eq('name', oldName);
+            }
             console.log('[DistriMatch] Produit modifie sur Supabase:', newName);
         } catch (e) {
             console.warn('[DistriMatch] Erreur modification produit:', e.message);
@@ -203,8 +191,6 @@ export async function saveProduct(index) {
     }
 
     product.name = newName;
-    product.price = newPrice;
-    renderProductsList(distributor);
     showToast('Produit modifie', 'success');
 }
 
@@ -237,17 +223,20 @@ export async function toggleProductAvailability(index) {
     }
 
     product.available = newAvailable;
-    renderProductsList(distributor);
+    renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
     showToast(newAvailable ? 'Produit disponible' : 'Produit indisponible', 'default');
 }
 
 export async function deleteProduct(index) {
-    if (!(await requireAuth())) return;
-
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const product = distributor.products[index];
     if (!product) return;
+
+    if (typeof confirm === 'function'
+        && !confirm(`Supprimer "${product.name}" ?`)) return;
+
+    if (!(await requireAuth())) return;
 
     if (supabaseClient) {
         try {
@@ -266,7 +255,7 @@ export async function deleteProduct(index) {
     }
 
     distributor.products.splice(index, 1);
-    renderProductsList(distributor);
+    renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
     showToast('Produit supprime', 'default');
 }
 

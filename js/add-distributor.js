@@ -77,6 +77,13 @@ function getAddPopupContent() {
             <select id="new-dist-type">${options}</select>
             <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required>
             <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)">
+            <label class="add-dist-pricerange">Niveau de prix
+                <select id="new-dist-price" aria-label="Niveau de prix">
+                    <option value="€">€</option>
+                    <option value="€€" selected>€€</option>
+                    <option value="€€€">€€€</option>
+                </select>
+            </label>
             <div class="add-products-section">
                 <div class="add-products-header">
                     <span>Produits</span>
@@ -122,7 +129,6 @@ export function addProductRow() {
     row.dataset.rowId = id;
     row.innerHTML = `
         <input type="text" class="product-name-input" placeholder="Nom du produit" required>
-        <input type="number" class="product-price-input" placeholder="Prix" step="0.10" min="0">
         <button type="button" class="product-remove-row" aria-label="Retirer ce produit" onclick="removeProductRow(${id})">&times;</button>
     `;
     list.appendChild(row);
@@ -138,9 +144,8 @@ function getProductsFromForm() {
     const products = [];
     rows.forEach(row => {
         const name = row.querySelector('.product-name-input')?.value.trim();
-        const price = parseFloat(row.querySelector('.product-price-input')?.value) || 0;
         if (name) {
-            products.push({ name, price, available: true });
+            products.push({ name, available: true });
         }
     });
     return products;
@@ -305,6 +310,8 @@ async function confirmAddDistributorImpl() {
     const type = typeSelect.value;
     const name = nameInput.value.trim();
     const address = addressInput ? addressInput.value.trim() : '';
+    const priceSelect = document.getElementById('new-dist-price');
+    const priceRange = ['€', '€€', '€€€'].includes(priceSelect?.value) ? priceSelect.value : '€€';
 
     if (!name) {
         showToast('Nom requis', 'error');
@@ -347,6 +354,7 @@ async function confirmAddDistributorImpl() {
         city: 'A verifier',
         rating: 5.0,
         reviewCount: 0,
+        priceRange: priceRange,
         products: products,
         isUserAdded: true,
         addedAt: Date.now(),
@@ -369,7 +377,7 @@ async function confirmAddDistributorImpl() {
                 rating: 5.0,
                 review_count: 0,
                 status: 'verified',
-                price_range: '€',
+                price_range: priceRange,
                 is_user_added: true,
                 added_by: userId
             });
@@ -380,7 +388,6 @@ async function confirmAddDistributorImpl() {
                 const productRows = products.map(p => ({
                     distributor_id: distId,
                     name: p.name,
-                    price: p.price,
                     available: true
                 }));
                 const { error: prodError } = await supabaseClient.from('products').insert(productRows);
