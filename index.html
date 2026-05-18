@@ -288,6 +288,8 @@
                     <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-type" id="dist-modal-type"></span>
+                    <span class="meta-separator">·</span>
+                    <span class="dist-modal-pricerange" id="dist-modal-pricerange"></span>
                 </div>
             </div>
 
@@ -338,10 +340,17 @@
                     <div id="dist-products-list"></div>
                     <!-- Section ajout produit (seulement en mode edit favoris) -->
                     <div id="dist-products-add-section" style="display:none; margin-top: 1rem;">
+                        <label class="dist-pricerange-edit">
+                            Niveau de prix
+                            <select id="dist-edit-pricerange" onchange="updateDistributorPriceRange(this.value)" aria-label="Niveau de prix du distributeur">
+                                <option value="€">€</option>
+                                <option value="€€">€€</option>
+                                <option value="€€€">€€€</option>
+                            </select>
+                        </label>
                         <button class="btn-add-product" onclick="toggleDistAddProductForm()">+ Ajouter un produit</button>
                         <div id="dist-add-product-form" class="add-product-form" style="display:none; margin-top: 0.5rem;">
                             <input type="text" id="dist-add-product-name" placeholder="Nom du produit">
-                            <input type="number" id="dist-add-product-price" placeholder="Prix" step="0.10" min="0">
                             <button class="btn-confirm-small" onclick="submitDistAddProduct()">OK</button>
                         </div>
                     </div>

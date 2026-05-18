@@ -313,10 +313,21 @@ describe('renderProductsList', () => {
         assert.ok(items[1].classList.contains('unavailable'));
     });
 
-    it('affiche les prix', () => {
-        renderProductsList({ products: [{ name: 'Test', price: 12.50, available: true }] }, 'dist-products-list');
-        const price = document.getElementById('dist-products-list').querySelector('.product-price-clean');
-        assert.ok(price.textContent.includes('12.50'));
+    it('lecture : affiche la dispo, AUCUN prix', () => {
+        renderProductsList({ products: [{ name: 'Test', available: true }] }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
+        assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
+        assert.ok(list.querySelector('.product-availability-clean'), 'dispo affichee');
+        assert.ok(list.querySelector('.product-name-clean').textContent.includes('Test'));
+    });
+
+    it('edition : nom editable, pas de champ prix, pas de crayon', () => {
+        renderProductsList({ products: [{ name: 'Pizza', available: true }] }, 'dist-products-list', { readonly: false });
+        const list = document.getElementById('dist-products-list');
+        assert.ok(list.querySelector('.product-edit-name'), 'input nom present');
+        assert.equal(list.querySelector('.product-edit-price'), null, 'pas d\'input prix');
+        assert.equal(list.querySelector('.product-btn-edit'), null, 'pas de crayon');
+        assert.ok(list.querySelector('.product-btn-delete'), 'bouton supprimer');
     });
 
     it('utilise le target par defaut (products-list)', () => {

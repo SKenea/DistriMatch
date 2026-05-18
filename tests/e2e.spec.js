@@ -491,6 +491,26 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.styloHidden).toBe(true);
     });
 
+    test('niveau de prix affiche + select edition, aucun prix produit', async ({ page }) => {
+        await openFirstFavoriteCard(page);
+        await page.evaluate(() => {
+            const id = window.AppState.currentDistributor.id;
+            window.openDistributorModal(id, true, true);
+        });
+        const r = await page.evaluate(() => ({
+            headerPrice: document.getElementById('dist-modal-pricerange').textContent,
+            selectVal: document.getElementById('dist-edit-pricerange').value,
+            priceCleanCount: document.querySelectorAll('#dist-products-list .product-price-clean').length,
+            priceInputCount: document.querySelectorAll('#dist-products-list .product-edit-price').length,
+            addPriceInput: document.getElementById('dist-add-product-price'),
+        }));
+        expect(['€', '€€', '€€€']).toContain(r.headerPrice);
+        expect(r.selectVal).toBe(r.headerPrice);
+        expect(r.priceCleanCount).toBe(0);
+        expect(r.priceInputCount).toBe(0);
+        expect(r.addPriceInput).toBeNull();
+    });
+
     test('hors Favoris (canEdit absent) -> pas de stylo, lecture seule', async ({ page }) => {
         await page.evaluate(() => {
             const id = window.AppState.distributors[0].id;

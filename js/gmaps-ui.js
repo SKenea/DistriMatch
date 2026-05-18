@@ -266,6 +266,13 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
         `${(distributor.rating || 0).toFixed(1)} ${generateStars(distributor.rating || 0)}`;
     document.getElementById('dist-modal-reviews').textContent = `(${distributor.reviewCount || 0})`;
     document.getElementById('dist-modal-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
+    // Niveau de prix : valeur bornee a € / €€ / €€€ (defaut €€)
+    const PRICE_LEVELS = ['€', '€€', '€€€'];
+    const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : '€€';
+    const prEl = document.getElementById('dist-modal-pricerange');
+    if (prEl) prEl.textContent = priceRange;
+    const prSelect = document.getElementById('dist-edit-pricerange');
+    if (prSelect) prSelect.value = priceRange;
 
     // A propos
     document.getElementById('dist-apropos-address').textContent = distributor.address || 'Adresse inconnue';
@@ -349,7 +356,6 @@ export function toggleDistAddProductForm() {
     form.style.display = showing ? 'none' : 'flex';
     if (!showing) {
         document.getElementById('dist-add-product-name').value = '';
-        document.getElementById('dist-add-product-price').value = '';
         document.getElementById('dist-add-product-name').focus();
     }
 }
@@ -358,18 +364,16 @@ export async function submitDistAddProduct() {
     if (!(await requireAuth())) return;
 
     const name = document.getElementById('dist-add-product-name').value.trim();
-    const price = parseFloat(document.getElementById('dist-add-product-price').value) || 0;
 
     if (!name || !AppState.currentDistributor) return;
 
-    const product = { name, price, available: true };
+    const product = { name, available: true };
 
     if (supabaseClient) {
         try {
             const { data, error } = await supabaseClient.from('products').insert({
                 distributor_id: AppState.currentDistributor.id,
                 name: name,
-                price: price,
                 available: true
             }).select('id').single();
             if (error) throw error;
@@ -383,8 +387,32 @@ export async function submitDistAddProduct() {
     renderProductsList(AppState.currentDistributor, 'dist-products-list', { readonly: false });
 
     document.getElementById('dist-add-product-name').value = '';
-    document.getElementById('dist-add-product-price').value = '';
     document.getElementById('dist-add-product-form').style.display = 'none';
 
     showToast(`${escapeHTML(name)} ajoute !`, 'success');
+}
+
+// Maj du niveau de prix du distributeur (select en mode edition).
+export async function updateDistributorPriceRange(value) {
+    const PRICE_LEVELS = ['€', '€€', '€€€'];
+    if (!PRICE_LEVELS.includes(value)) return;
+    if (!(await requireAuth())) return;
+
+    const d = AppState.currentDistributor;
+    if (!d) return;
+    d.priceRange = value;
+
+    if (supabaseClient) {
+        try {
+            await supabaseClient.from('distributors')
+                .update({ price_range: value }).eq('id', d.id);
+            console.log('[DistriMatch] Niveau de prix modifie:', value);
+        } catch (e) {
+            console.warn('[DistriMatch] Erreur maj niveau de prix:', e.message);
+        }
+    }
+
+    const prEl = document.getElementById('dist-modal-pricerange');
+    if (prEl) prEl.textContent = value;
+    showToast('Niveau de prix mis a jour', 'success');
 }

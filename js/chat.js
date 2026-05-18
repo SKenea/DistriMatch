@@ -180,10 +180,7 @@ function handleDistributorAction(action, bot, displayText) {
 
             case 'prices':
             case 'Prix':
-                const pricesList = d.products.map(p =>
-                    `${p.name} : ${p.price.toFixed(2)}€`
-                ).join('\n');
-                response = `Mes tarifs :\n${pricesList}`;
+                response = `Fourchette de prix : ${d.priceRange || '€€'}`;
                 newReplies = [
                     { text: 'Produits', action: 'products' },
                     { text: 'Itineraire', action: 'directions' }
@@ -253,8 +250,7 @@ function processNaturalMessage(text, distributor) {
     }
 
     if (lower.includes('prix') || lower.includes('combien') || lower.includes('cher')) {
-        const cheapest = distributor.products.reduce((min, p) => p.price < min.price ? p : min);
-        return `Le moins cher : ${cheapest.name} a ${cheapest.price.toFixed(2)}€`;
+        return `Ma fourchette de prix : ${distributor.priceRange || '€€'}`;
     }
 
     if (lower.includes('ou') || lower.includes('adresse') || lower.includes('trouv')) {
@@ -483,7 +479,6 @@ function generateStockAlert(distributor) {
 
     let text = templates[Math.floor(Math.random() * templates.length)];
     text = text.replace('{product}', product.name);
-    text = text.replace('{price}', product.price || '?');
 
     return { text, category: alertType };
 }
