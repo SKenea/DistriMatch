@@ -2,12 +2,12 @@
   "name": "DistriMatch - Distributeurs Alimentaires",
   "short_name": "DistriMatch",
   "description": "Le Waze des distributeurs automatiques de la Cote Basque",
-  "start_url": "/index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#E63946",
   "theme_color": "#E63946",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "lang": "fr-FR",
   "icons": [
     {
