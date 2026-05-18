@@ -188,6 +188,16 @@ export function initDistModal() {
         }
     });
 
+    // Bouton stylo "Modifier" : exige d'etre identifie (requireAuth).
+    // Non identifie -> modale email, on reste en lecture. Identifie ->
+    // re-render de la fiche en mode edition (conserve canEdit).
+    document.getElementById('dist-action-edit')?.addEventListener('click', async () => {
+        const d = AppState.currentDistributor;
+        if (!d) return;
+        if (!(await requireAuth())) return;
+        openDistributorModal(d.id, true, true);
+    });
+
     // Bouton Discuter avec le bot (mode edit)
     document.getElementById('dist-open-chat')?.addEventListener('click', () => {
         if (AppState.currentDistributor) {
@@ -239,12 +249,13 @@ export function openModalFromUrlParam() {
     }
 }
 
-export function openDistributorModal(id, editMode = false) {
+export function openDistributorModal(id, editMode = false, canEdit = false) {
     const distributor = AppState.distributors.find(d => d.id === id);
     if (!distributor) return;
 
     AppState.currentDistributor = distributor;
     AppState.modalEditMode = editMode;
+    AppState.modalCanEdit = canEdit;
 
     const typeConfig = AppState.typeConfig[distributor.type] || {};
     const distance = distributor.distance ? formatDistance(distributor.distance) : '';
@@ -288,6 +299,11 @@ export function openDistributorModal(id, editMode = false) {
 
     // Boutons
     updateFavoriteButton();
+
+    // Stylo "Modifier" : visible uniquement si ouvert depuis Favoris (canEdit)
+    // ET en lecture (on le cache une fois en edition).
+    const editBtn = document.getElementById('dist-action-edit');
+    if (editBtn) editBtn.style.display = (canEdit && !editMode) ? '' : 'none';
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');

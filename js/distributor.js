@@ -287,7 +287,8 @@ export function getDirectionsTo(distributor) {
 
 export async function toggleSubscription(id, event) {
     if (event) event.stopPropagation();
-    if (!(await requireAuth())) return;
+    // Favori = etat purement local (localStorage), pas d'email requis.
+    // L'edition d'un distributeur (produits) garde requireAuth, elle.
 
     const index = AppState.subscriptions.indexOf(id);
     const distributor = AppState.distributors.find(d => d.id === id);
@@ -339,7 +340,7 @@ export function displaySubscriptions() {
         const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="subscription-card" onclick="openDistributorModal('${d.id}', true)">
+            <div class="subscription-card" onclick="openDistributorModal('${d.id}', false, true)">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
                 <div class="subscription-image" style="background: ${typeConfig.gradient || '#E63946'}">
                     <span class="subscription-emoji">${d.emoji}</span>
