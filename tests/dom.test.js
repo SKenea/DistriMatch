@@ -92,6 +92,7 @@ const html = `<!DOCTYPE html>
     <span id="activity-count">0</span>
     <span id="notifications-badge" style="display:none">0</span>
     <div id="notifications-view" class="view-page view-hidden">
+        <button id="clear-notifications" style="display:none">Tout effacer</button>
         <div id="notifications-list"></div>
         <div id="notifications-empty" style="display:none"></div>
     </div>
@@ -137,7 +138,7 @@ const { renderProductsList, toggleSubscription, displaySubscriptions } = await i
 const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
-const { getUnreadCount, updateNotificationsBadge, openNotificationsView } = await import('../js/notifications.js');
+const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications } = await import('../js/notifications.js');
 const { NotificationQueue } = await import('../js/state.js');
 
 // ============================================
@@ -618,5 +619,56 @@ describe('Centre de notifications', () => {
         openNotificationsView();
         assert.equal(document.getElementById('notifications-list').innerHTML, '');
         assert.notEqual(document.getElementById('notifications-empty').style.display, 'none');
+    });
+
+    it('deleteNotification retire un item et recalcule le badge', () => {
+        NotificationQueue.history = [
+            { type: 'proximity', message: 'A', read: false, timestamp: Date.now() },
+            { type: 'stock', message: 'B', read: false, timestamp: Date.now() }
+        ];
+        openNotificationsView();           // rend + marque lu
+        NotificationQueue.history[0].read = false; // simuler 1 non-lue
+        deleteNotification(0);
+        assert.equal(NotificationQueue.history.length, 1);
+        assert.equal(NotificationQueue.history[0].message, 'B');
+        assert.equal(document.querySelectorAll('#notifications-list .notif-item').length, 1);
+        assert.equal(getUnreadCount(), 0);
+    });
+
+    it('deleteNotification ignore un index hors borne', () => {
+        NotificationQueue.history = [{ type: 'proximity', message: 'X', read: true }];
+        deleteNotification(5);
+        deleteNotification(-1);
+        assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    it('clearAllNotifications vide tout (confirm ok) + empty state + bouton cache', () => {
+        const prev = globalThis.confirm;
+        globalThis.confirm = () => true;
+        NotificationQueue.history = [
+            { type: 'proximity', message: 'A', read: false },
+            { type: 'stock', message: 'B', read: false }
+        ];
+        clearAllNotifications();
+        globalThis.confirm = prev;
+        assert.equal(NotificationQueue.history.length, 0);
+        assert.notEqual(document.getElementById('notifications-empty').style.display, 'none');
+        assert.equal(document.getElementById('clear-notifications').style.display, 'none');
+        assert.equal(document.getElementById('notifications-badge').style.display, 'none');
+    });
+
+    it('clearAllNotifications annule si confirm refuse', () => {
+        const prev = globalThis.confirm;
+        globalThis.confirm = () => false;
+        NotificationQueue.history = [{ type: 'proximity', message: 'A', read: false }];
+        clearAllNotifications();
+        globalThis.confirm = prev;
+        assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    it('bouton Tout effacer visible si liste non vide', () => {
+        NotificationQueue.history = [{ type: 'proximity', message: 'A', read: true, timestamp: Date.now() }];
+        openNotificationsView();
+        assert.notEqual(document.getElementById('clear-notifications').style.display, 'none');
     });
 });

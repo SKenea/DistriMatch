@@ -514,10 +514,12 @@ test.describe('5ter. Centre de notifications', () => {
     test('la cloche ouvre la vue notifications (empty state)', async ({ page }) => {
         await page.click('.nav-icon-btn[data-view="notifications"]');
         await page.waitForSelector('#notifications-view.view-active', { timeout: 3000 });
-        const emptyVisible = await page.evaluate(() =>
-            getComputedStyle(document.getElementById('notifications-empty')).display !== 'none'
-        );
-        expect(emptyVisible).toBe(true);
+        const r = await page.evaluate(() => ({
+            emptyVisible: getComputedStyle(document.getElementById('notifications-empty')).display !== 'none',
+            clearHidden: getComputedStyle(document.getElementById('clear-notifications')).display === 'none',
+        }));
+        expect(r.emptyVisible).toBe(true);
+        expect(r.clearHidden).toBe(true); // pas de "Tout effacer" si vide
     });
 
     test('la cloche n\'affiche plus le compteur favoris', async ({ page }) => {

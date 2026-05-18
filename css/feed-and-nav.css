@@ -596,6 +596,35 @@
     color: var(--gray-light);
 }
 
+.notif-item-delete {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: var(--gray-light);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    align-self: center;
+}
+
+.notif-item-delete:hover {
+    background: #fdecec;
+    color: #ef4444;
+}
+
+#clear-notifications {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+
 /* Parametres Notifications */
 .settings-content {
     padding: 1rem;

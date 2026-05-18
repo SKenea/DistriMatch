@@ -59,7 +59,8 @@ import {
     openNotificationSettings, saveNotificationSettingsFromUI,
     updateRadiusDisplay, promptAddProductFollow,
     unfollowProduct,
-    openNotificationsView, updateNotificationsBadge, askNotifPermissionFromUI
+    openNotificationsView, updateNotificationsBadge, askNotifPermissionFromUI,
+    deleteNotification, clearAllNotifications
 } from './notifications.js';
 
 import {
@@ -288,6 +289,8 @@ window.promptAddProductFollow = promptAddProductFollow;
 window.saveNotificationSettingsFromUI = saveNotificationSettingsFromUI;
 window.unfollowProduct = unfollowProduct;
 window.askNotifPermissionFromUI = askNotifPermissionFromUI;
+window.deleteNotification = deleteNotification;
+window.clearAllNotifications = clearAllNotifications;
 
 // Ajout distributeur
 window.addProductRow = addProductRow;

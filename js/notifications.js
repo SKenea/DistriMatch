@@ -254,18 +254,22 @@ function timeAgo(ts) {
     return `il y a ${d} j`;
 }
 
+const TRASH_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+
 function renderNotificationsList() {
     const list = document.getElementById('notifications-list');
     const empty = document.getElementById('notifications-empty');
+    const clearBtn = document.getElementById('clear-notifications');
     if (!list) return;
     const items = NotificationQueue.history;
+    if (clearBtn) clearBtn.style.display = items.length ? 'inline-flex' : 'none';
     if (!items.length) {
         list.innerHTML = '';
         if (empty) empty.style.display = 'flex';
         return;
     }
     if (empty) empty.style.display = 'none';
-    list.innerHTML = items.map(n => {
+    list.innerHTML = items.map((n, index) => {
         const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
         return `
             <div class="notif-item ${n.read ? '' : 'unread'}">
@@ -275,8 +279,26 @@ function renderNotificationsList() {
                     <p>${escapeHTML(n.message || '')}</p>
                     <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
                 </div>
+                <button class="notif-item-delete" aria-label="Supprimer cette notification" title="Supprimer" onclick="deleteNotification(${index})">${TRASH_SVG}</button>
             </div>`;
     }).join('');
+}
+
+export function deleteNotification(index) {
+    if (index < 0 || index >= NotificationQueue.history.length) return;
+    NotificationQueue.history.splice(index, 1);
+    saveNotificationQueue();
+    renderNotificationsList();
+    updateNotificationsBadge();
+}
+
+export function clearAllNotifications() {
+    if (typeof confirm === 'function'
+        && !confirm('Effacer toutes les notifications ?')) return;
+    NotificationQueue.history = [];
+    saveNotificationQueue();
+    renderNotificationsList();
+    updateNotificationsBadge();
 }
 
 export function openNotificationsView() {
