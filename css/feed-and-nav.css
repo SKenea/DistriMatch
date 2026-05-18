@@ -546,6 +546,56 @@
     color: var(--dark);
 }
 
+/* Centre de notifications (vue cloche) */
+.notifications-list {
+    padding: 0.5rem 1rem 1rem;
+}
+
+.notif-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.875rem 0.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item.unread {
+    background: var(--light);
+    border-radius: 8px;
+}
+
+.notif-item-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.notif-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-body strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--dark);
+}
+
+.notif-item-body p {
+    margin: 0.15rem 0;
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.notif-item-time {
+    font-size: 0.72rem;
+    color: var(--gray-light);
+}
+
 /* Parametres Notifications */
 .settings-content {
     padding: 1rem;

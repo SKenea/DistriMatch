@@ -90,6 +90,11 @@ const html = `<!DOCTYPE html>
     <div id="sidebar-overlay"></div>
     <span id="activity-badge" style="display:none">0</span>
     <span id="activity-count">0</span>
+    <span id="notifications-badge" style="display:none">0</span>
+    <div id="notifications-view" class="view-page view-hidden">
+        <div id="notifications-list"></div>
+        <div id="notifications-empty" style="display:none"></div>
+    </div>
     <nav class="bottom-nav">
         <button class="nav-tab active" data-tab="explore"></button>
         <button class="nav-tab" data-tab="favorites"></button>
@@ -132,6 +137,8 @@ const { renderProductsList, toggleSubscription, displaySubscriptions } = await i
 const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
+const { getUnreadCount, updateNotificationsBadge, openNotificationsView } = await import('../js/notifications.js');
+const { NotificationQueue } = await import('../js/state.js');
 
 // ============================================
 // ESCAPEHTML (DOM)
@@ -551,5 +558,65 @@ describe('updateProfileStats - contributions', () => {
         UserProfile.stats.photosUploaded = undefined;
         updateProfileStats();
         assert.equal(document.getElementById('stat-contrib-photos').textContent, '0');
+    });
+});
+
+// ============================================
+// CENTRE DE NOTIFICATIONS
+// ============================================
+
+describe('Centre de notifications', () => {
+    beforeEach(() => {
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+        document.getElementById('notifications-list').innerHTML = '';
+        const badge = document.getElementById('notifications-badge');
+        badge.style.display = 'none';
+        badge.textContent = '0';
+    });
+
+    it('getUnreadCount compte les items read===false', () => {
+        NotificationQueue.history = [
+            { type: 'proximity', message: 'a', read: false },
+            { type: 'proximity', message: 'b', read: true },
+            { type: 'stock', message: 'c', read: false }
+        ];
+        assert.equal(getUnreadCount(), 2);
+    });
+
+    it('updateNotificationsBadge affiche le compteur non-lus, cache si 0', () => {
+        const badge = document.getElementById('notifications-badge');
+        NotificationQueue.history = [{ type: 'proximity', message: 'x', read: false }];
+        updateNotificationsBadge();
+        assert.equal(badge.textContent, '1');
+        assert.notEqual(badge.style.display, 'none');
+
+        NotificationQueue.history = [];
+        updateNotificationsBadge();
+        assert.equal(badge.style.display, 'none');
+    });
+
+    it('updateNotificationsBadge plafonne a 9+', () => {
+        NotificationQueue.history = Array.from({ length: 12 }, () => ({ type: 'proximity', message: 'm', read: false }));
+        updateNotificationsBadge();
+        assert.equal(document.getElementById('notifications-badge').textContent, '9+');
+    });
+
+    it('openNotificationsView rend la liste puis marque tout lu (badge 0)', () => {
+        NotificationQueue.history = [
+            { type: 'proximity', message: 'Proche !', read: false, timestamp: Date.now() },
+            { type: 'stock', message: 'Dispo', read: false, timestamp: Date.now() }
+        ];
+        openNotificationsView();
+        const list = document.getElementById('notifications-list');
+        assert.equal(list.querySelectorAll('.notif-item').length, 2);
+        assert.equal(getUnreadCount(), 0, 'tout marque lu');
+        assert.equal(document.getElementById('notifications-badge').style.display, 'none');
+    });
+
+    it('openNotificationsView : empty state si aucun', () => {
+        openNotificationsView();
+        assert.equal(document.getElementById('notifications-list').innerHTML, '');
+        assert.notEqual(document.getElementById('notifications-empty').style.display, 'none');
     });
 });

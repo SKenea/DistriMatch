@@ -58,7 +58,8 @@ import {
     startGeofenceMonitoring, processQueuedNotifications,
     openNotificationSettings, saveNotificationSettingsFromUI,
     updateRadiusDisplay, promptAddProductFollow,
-    unfollowProduct
+    unfollowProduct,
+    openNotificationsView, updateNotificationsBadge, askNotifPermissionFromUI
 } from './notifications.js';
 
 import {
@@ -248,6 +249,7 @@ registerViewCallback('subscriptions', displaySubscriptions);
 registerViewCallback('favorites', displaySubscriptions);
 registerViewCallback('profile', updateProfileStats);
 registerViewCallback('activity', displayActivityFeed);
+registerViewCallback('notifications', openNotificationsView);
 
 // ============================================
 // WINDOW GLOBALS (pour onclick inline)
@@ -285,6 +287,7 @@ window.updateRadiusDisplay = updateRadiusDisplay;
 window.promptAddProductFollow = promptAddProductFollow;
 window.saveNotificationSettingsFromUI = saveNotificationSettingsFromUI;
 window.unfollowProduct = unfollowProduct;
+window.askNotifPermissionFromUI = askNotifPermissionFromUI;
 
 // Ajout distributeur
 window.addProductRow = addProductRow;
@@ -469,6 +472,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Traiter les notifications en attente
     processQueuedNotifications();
 
+    // Badge du centre de notifications (cloche top nav)
+    updateNotificationsBadge();
+
     // Mettre a jour le badge des conversations
     updateConversationsBadge();
 
@@ -490,6 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-subscriptions')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('profile'));
 
     // Indicateur auth + bouton logout

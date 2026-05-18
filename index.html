@@ -115,12 +115,12 @@
                     <path d="m21 21-4.35-4.35"/>
                 </svg>
             </button>
-            <button class="icon-btn nav-icon-btn" data-view="subscriptions" aria-label="Abonnements">
+            <button class="icon-btn nav-icon-btn" data-view="notifications" aria-label="Notifications">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
-                <span class="nav-badge" id="subscriptions-badge" style="display: none;">0</span>
+                <span class="nav-badge" id="notifications-badge" style="display: none;">0</span>
             </button>
             <button class="icon-btn nav-icon-btn" data-view="profile" aria-label="Profil">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -562,6 +562,10 @@
                     <span>Notifications activees</span>
                     <input type="checkbox" id="notif-enabled" checked>
                 </label>
+                <p class="setting-hint" id="notif-permission-state">Notifications navigateur : non autorisees</p>
+                <button class="btn-secondary-clean" id="notif-permission-btn" onclick="askNotifPermissionFromUI()" style="display:none">
+                    Autoriser les notifications du navigateur
+                </button>
             </div>
 
             <div class="settings-section">
@@ -690,6 +694,25 @@
             <div class="empty-icon">📋</div>
             <h3>Aucune activite</h3>
             <p>Tes signalements et abonnements apparaitront ici</p>
+        </div>
+    </div>
+
+    <div id="notifications-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <button class="back-btn" id="back-from-notifications" aria-label="Retour">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Notifications</h2>
+        </div>
+        <div id="notifications-list" class="notifications-list">
+            <!-- Notifications injectees ici -->
+        </div>
+        <div id="notifications-empty" class="empty-state">
+            <div class="empty-icon">🔔</div>
+            <h3>Aucune notification</h3>
+            <p>Tes alertes de proximite apparaitront ici</p>
         </div>
     </div>
 

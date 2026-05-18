@@ -164,24 +164,130 @@ export function triggerProductNotification(distributor, product) {
 function sendNotification(notif) {
     if (!NotificationPrefs.enabled) return;
 
+    notif.read = false;
+    notif.timestamp = notif.timestamp || Date.now();
     NotificationQueue.history.unshift(notif);
     if (NotificationQueue.history.length > 50) {
         NotificationQueue.history.pop();
     }
     saveNotificationQueue();
 
-    showNotificationBanner(notif);
+    // Vraie notification navigateur si permission accordee, sinon bandeau
+    // in-app (fallback : zero regression si refus / non supporte).
+    const supported = typeof window !== 'undefined' && 'Notification' in window;
+    if (supported && Notification.permission === 'default'
+        && NotificationPrefs.enabled) {
+        // Demande paresseuse au 1er envoi
+        requestNotificationPermission();
+    }
+    if (supported && Notification.permission === 'granted') {
+        try {
+            const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
+            const n = new Notification(typeInfo.title, {
+                body: notif.message,
+                icon: 'images/icon-192.png',
+                tag: notif.distributorId
+            });
+            n.onclick = () => {
+                window.focus();
+                if (typeof window.openConversation === 'function') {
+                    window.openConversation(notif.distributorId);
+                }
+                n.close();
+            };
+        } catch (e) {
+            showNotificationBanner(notif);
+        }
+    } else {
+        showNotificationBanner(notif);
+    }
 
     if (navigator.vibrate) {
         navigator.vibrate(200);
     }
 
     markNotified(notif.distributorId);
+    updateNotificationsBadge();
 
     addActivityItem('notification', notif.distributorId, {
         subtype: notif.type,
         message: notif.message
     });
+}
+
+// ============================================
+// CENTRE DE NOTIFICATIONS (cloche)
+// ============================================
+
+export function requestNotificationPermission() {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    try {
+        Notification.requestPermission();
+    } catch (e) { /* Safari ancien : API callback only, ignore */ }
+}
+
+export function getUnreadCount() {
+    return NotificationQueue.history.filter(n => n.read === false).length;
+}
+
+export function updateNotificationsBadge() {
+    const badge = document.getElementById('notifications-badge');
+    if (!badge) return;
+    const count = getUnreadCount();
+    if (count > 0) {
+        badge.textContent = count > 9 ? '9+' : String(count);
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function timeAgo(ts) {
+    const diff = Date.now() - (ts || 0);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "a l'instant";
+    if (m < 60) return `il y a ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `il y a ${h} h`;
+    const d = Math.floor(h / 24);
+    return `il y a ${d} j`;
+}
+
+function renderNotificationsList() {
+    const list = document.getElementById('notifications-list');
+    const empty = document.getElementById('notifications-empty');
+    if (!list) return;
+    const items = NotificationQueue.history;
+    if (!items.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'flex';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    list.innerHTML = items.map(n => {
+        const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
+        return `
+            <div class="notif-item ${n.read ? '' : 'unread'}">
+                <span class="notif-item-icon">${typeInfo.icon}</span>
+                <div class="notif-item-body">
+                    <strong>${escapeHTML(typeInfo.title)}</strong>
+                    <p>${escapeHTML(n.message || '')}</p>
+                    <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+export function openNotificationsView() {
+    renderNotificationsList();
+    // Marquer tout lu apres affichage
+    let changed = false;
+    NotificationQueue.history.forEach(n => {
+        if (n.read === false) { n.read = true; changed = true; }
+    });
+    if (changed) saveNotificationQueue();
+    updateNotificationsBadge();
 }
 
 function showNotificationBanner(notif) {
@@ -275,8 +381,32 @@ export function openNotificationSettings() {
     document.getElementById('radius-value').textContent = `${NotificationPrefs.geofence.radius / 1000} km`;
 
     updateFollowedProductsList();
+    refreshNotifPermissionLabel();
 
     switchView('notification-settings');
+}
+
+export function refreshNotifPermissionLabel() {
+    const label = document.getElementById('notif-permission-state');
+    const btn = document.getElementById('notif-permission-btn');
+    if (!label) return;
+    const supported = typeof window !== 'undefined' && 'Notification' in window;
+    const perm = supported ? Notification.permission : 'unsupported';
+    const map = {
+        granted: 'Notifications navigateur : activees',
+        denied: 'Notifications navigateur : bloquees (a reactiver dans le navigateur). Repli sur le bandeau in-app.',
+        default: 'Notifications navigateur : non autorisees',
+        unsupported: 'Notifications navigateur non supportees ici. Repli sur le bandeau in-app.'
+    };
+    label.textContent = map[perm] || map.default;
+    if (btn) btn.style.display = (perm === 'default') ? 'inline-flex' : 'none';
+}
+
+export function askNotifPermissionFromUI() {
+    requestNotificationPermission();
+    // requestPermission peut etre async (promesse) ou callback ; on
+    // rafraichit apres un court delai pour refleter le choix.
+    setTimeout(refreshNotifPermissionLabel, 300);
 }
 
 export function saveNotificationSettingsFromUI() {

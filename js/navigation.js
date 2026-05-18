@@ -18,6 +18,7 @@ const VIEW_CONFIG = {
     subscriptions:           { id: 'subscriptions-view',   onShow: null },
     profile:                 { id: 'profile-view',         onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
+    notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }
 };
 
@@ -75,16 +76,9 @@ export function updateBadges() {
         }
     }
 
-    // Legacy : badge abonnements dans la top nav (si present)
-    const subscriptionsBadge = document.getElementById('subscriptions-badge');
-    if (subscriptionsBadge) {
-        if (AppState.subscriptions.length > 0) {
-            subscriptionsBadge.textContent = AppState.subscriptions.length;
-            subscriptionsBadge.style.display = 'flex';
-        } else {
-            subscriptionsBadge.style.display = 'none';
-        }
-    }
+    // (La cloche top nav n'affiche plus les favoris : c'est le centre de
+    // notifications, badge gere par updateNotificationsBadge dans
+    // notifications.js. Le compteur favoris reste sur la bottom nav.)
 
     updateConversationsBadge();
 }
