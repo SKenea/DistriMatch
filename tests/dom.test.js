@@ -327,7 +327,18 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.product-edit-name'), 'input nom present');
         assert.equal(list.querySelector('.product-edit-price'), null, 'pas d\'input prix');
         assert.equal(list.querySelector('.product-btn-edit'), null, 'pas de crayon');
-        assert.ok(list.querySelector('.product-btn-delete'), 'bouton supprimer');
+        assert.ok(list.querySelector('.product-btn-delete svg'), 'corbeille (svg) supprimer');
+        const chip = list.querySelector('.product-availability-chip');
+        assert.ok(chip, 'pastille etat presente');
+        assert.ok(chip.classList.contains('is-available'), 'etat disponible');
+        assert.ok(chip.textContent.includes('Disponible'), 'libelle Disponible');
+    });
+
+    it('edition : pastille indisponible si available=false', () => {
+        renderProductsList({ products: [{ name: 'X', available: false }] }, 'dist-products-list', { readonly: false });
+        const chip = document.getElementById('dist-products-list').querySelector('.product-availability-chip');
+        assert.ok(chip.classList.contains('is-unavailable'));
+        assert.ok(chip.textContent.includes('Indisponible'));
     });
 
     it('utilise le target par defaut (products-list)', () => {

@@ -606,6 +606,44 @@
     color: white;
 }
 
+/* Pastille etat dispo/indispo (cliquable, code couleur + texte) */
+.product-availability-chip {
+    border: none;
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem 0.2rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: filter 0.15s;
+}
+
+.product-availability-chip::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+.product-availability-chip.is-available {
+    background: #e7f5ec;
+    color: #1e7a44;
+}
+
+.product-availability-chip.is-unavailable {
+    background: var(--light);
+    color: var(--gray);
+}
+
+.product-availability-chip:hover {
+    filter: brightness(0.95);
+}
+
 /* Edition inline produit */
 .product-edit-row {
     display: flex;

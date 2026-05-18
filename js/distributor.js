@@ -101,10 +101,14 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">
             </div>
             <div class="product-actions-clean">
-                <button class="product-btn-toggle" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}" title="${p.available ? 'Marquer indisponible' : 'Marquer disponible'}">
-                    ${p.available ? '✓' : '✗'}
+                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Disponible — cliquer pour marquer indisponible' : 'Indisponible — cliquer pour marquer disponible'}" title="${p.available ? 'Cliquer pour marquer indisponible' : 'Cliquer pour marquer disponible'}">
+                    ${p.available ? 'Disponible' : 'Indisponible'}
                 </button>
-                <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer">×</button>
+                <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer ce produit">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
             </div>
         </div>`;
     }).join('');
@@ -224,12 +228,15 @@ export async function toggleProductAvailability(index) {
 }
 
 export async function deleteProduct(index) {
-    if (!(await requireAuth())) return;
-
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const product = distributor.products[index];
     if (!product) return;
+
+    if (typeof confirm === 'function'
+        && !confirm(`Supprimer "${product.name}" ?`)) return;
+
+    if (!(await requireAuth())) return;
 
     if (supabaseClient) {
         try {
