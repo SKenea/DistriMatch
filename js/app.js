@@ -36,7 +36,7 @@ import {
 import {
     renderProductsList,
     toggleAddProductForm, submitDetailProduct,
-    editProduct, saveProduct, toggleProductAvailability, deleteProduct,
+    updateProductField, toggleProductAvailability, deleteProduct,
     toggleSubscription, displaySubscriptions
 } from './distributor.js';
 
@@ -69,7 +69,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, openModalFromUrlParam } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 
@@ -261,12 +261,12 @@ window.showDetails = openDistributorModal;
 window.openDistributorModal = openDistributorModal;
 window.toggleDistAddProductForm = toggleDistAddProductForm;
 window.submitDistAddProduct = submitDistAddProduct;
+window.updateDistributorPriceRange = updateDistributorPriceRange;
 window.openConversation = openConversation;
 
 // Page distributeur
 window.toggleProductAvailability = toggleProductAvailability;
-window.editProduct = editProduct;
-window.saveProduct = saveProduct;
+window.updateProductField = updateProductField;
 window.deleteProduct = deleteProduct;
 window.renderProductsList = renderProductsList;
 window.toggleAddProductForm = toggleAddProductForm;
