@@ -474,33 +474,52 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
     }
 
-    test('carte favori non identifie : fiche en LECTURE, bouton "Se connecter" (pas le stylo)', async ({ page }) => {
+    test('carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
         await openFirstFavoriteCard(page);
 
         const state = await page.evaluate(() => ({
             edit: window.AppState.modalEditMode,
             canEdit: window.AppState.modalCanEdit,
             addHidden: getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none',
-            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
         }));
         expect(state.edit).toBe(false);
         expect(state.canEdit).toBe(true);
         expect(state.addHidden).toBe(true);
-        // Non identifie (pas de session en e2e) -> stylo masque, "Se connecter" visible
-        expect(state.styloHidden).toBe(true);
-        await expect(page.locator('#dist-action-login')).toBeVisible();
+        await expect(page.locator('#dist-action-edit')).toBeVisible();
     });
 
-    test('clic "Se connecter" -> ferme la fiche + ouvre la page Compte', async ({ page }) => {
+    test('clic stylo non identifie -> modale "Connexion requise", pas d\'edition', async ({ page }) => {
         await openFirstFavoriteCard(page);
-        await page.click('#dist-action-login');
+        await page.click('#dist-action-edit');
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+
+        const r = await page.evaluate(() => {
+            const gate = document.getElementById('edit-auth-gate');
+            return {
+                gateText: gate.querySelector('h2')?.textContent,
+                hasCta: !!gate.querySelector('#edit-auth-gate-go'),
+                stillReadonly: window.AppState.modalEditMode === false,
+            };
+        });
+        expect(r.gateText).toBe('Connexion requise');
+        expect(r.hasCta).toBe(true);
+        expect(r.stillReadonly).toBe(true);
+    });
+
+    test('modale gate : clic "Se connecter" -> ferme tout + page Compte', async ({ page }) => {
+        await openFirstFavoriteCard(page);
+        await page.click('#dist-action-edit');
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+        await page.click('#edit-auth-gate-go');
         await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
 
         const r = await page.evaluate(() => ({
+            gateGone: !document.getElementById('edit-auth-gate'),
             modalClosed: !document.getElementById('dist-modal-overlay').classList.contains('active'),
             stillReadonly: window.AppState.modalEditMode === false,
             authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
         }));
+        expect(r.gateGone).toBe(true);
         expect(r.modalClosed).toBe(true);
         expect(r.stillReadonly).toBe(true);
         expect(r.authBtn).toBe('Se connecter');
@@ -554,11 +573,9 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         const r = await page.evaluate(() => ({
             edit: window.AppState.modalEditMode,
             styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
-            loginHidden: getComputedStyle(document.getElementById('dist-action-login')).display === 'none',
         }));
         expect(r.edit).toBe(false);
         expect(r.styloHidden).toBe(true);
-        expect(r.loginHidden).toBe(true);
     });
 });
 

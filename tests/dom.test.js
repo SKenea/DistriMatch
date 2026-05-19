@@ -33,7 +33,6 @@ const html = `<!DOCTYPE html>
                 <button id="dist-action-directions"></button>
                 <button id="dist-action-favorite"><span id="dist-action-favorite-label">Favori</span></button>
                 <button id="dist-action-edit" style="display:none"></button>
-                <button id="dist-action-login" style="display:none"></button>
             </div>
             <button class="dist-tab active" data-tab="produits"></button>
             <button class="dist-tab" data-tab="avis"></button>
@@ -266,19 +265,14 @@ describe('openDistributorModal', () => {
         assert.equal(AppState.currentDistributor, before);
     });
 
-    it('canEdit + non identifie : affiche "Se connecter", masque le stylo', () => {
-        // En env de test, aucun utilisateur connecte -> isAuthenticated() false
+    it('canEdit + lecture : stylo "Modifier" visible (gate au clic)', () => {
         openDistributorModal('dist-test', false, true);
-        const editBtn = document.getElementById('dist-action-edit');
-        const loginBtn = document.getElementById('dist-action-login');
-        assert.equal(editBtn.style.display, 'none');
-        assert.notEqual(loginBtn.style.display, 'none');
+        assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
     });
 
-    it('sans canEdit : ni stylo ni "Se connecter"', () => {
+    it('sans canEdit : stylo masque', () => {
         openDistributorModal('dist-test', false, false);
         assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
-        assert.equal(document.getElementById('dist-action-login').style.display, 'none');
     });
 });
 
