@@ -29,11 +29,13 @@ const DISTANCE_GROUPS = [
 function renderSidePanelItem(d, extraClass = '') {
     const distance = d.distance ? formatDistance(d.distance) : '';
     // Vignette : 1ere photo reelle si dispo (cache prefetch), sinon emoji.
-    // onerror : si l'image casse, on retombe sur l'emoji (pas de tuile vide).
+    // L'emoji de categorie reste TOUJOURS visible : seul (pas de photo) ou
+    // en pastille superposee a la photo (repere visuel du type conserve).
+    // onerror : si l'image casse, on retombe sur l'emoji seul.
     const emoji = escapeHTML(d.emoji || '📍');
     const thumb = AppState.photoThumbs && AppState.photoThumbs[d.id];
     const photoCell = thumb
-        ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${emoji}'">`
+        ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${emoji}'"><span class="side-panel-item-cat" aria-hidden="true">${emoji}</span>`
         : emoji;
     return `
         <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
