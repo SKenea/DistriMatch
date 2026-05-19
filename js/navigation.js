@@ -5,7 +5,8 @@
 import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
     escapeHTML, formatDistance, showToast, getFilteredDistributors,
-    updateImplicitProfile, getTopPreferredTypes, loadUserDistributors
+    updateImplicitProfile, getTopPreferredTypes, loadUserDistributors,
+    getLevelInfo
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 
@@ -17,6 +18,7 @@ const VIEW_CONFIG = {
     favorites:               { id: 'subscriptions-view',   onShow: null },
     subscriptions:           { id: 'subscriptions-view',   onShow: null },
     profile:                 { id: 'profile-view',         onShow: null },
+    account:                  { id: 'account-view',         onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
     notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }
@@ -273,15 +275,25 @@ export function initFilterChips() {
 // ============================================
 
 export function updateProfileStats() {
-    const statSubscriptions = document.getElementById('stat-subscriptions');
-    const statReports = document.getElementById('stat-reports');
-    const statConversations = document.getElementById('stat-conversations');
+    // Niveau "Local Guides" derive des points cumules
+    const info = getLevelInfo(AppState.points);
     const pointsValue = document.getElementById('profile-points');
+    const badge = document.getElementById('profile-badge');
+    const bar = document.getElementById('profile-level-bar');
+    const label = document.getElementById('profile-level-label');
 
+    if (pointsValue) pointsValue.textContent = info.points;
+    if (badge) badge.textContent = info.name;
+    if (bar) bar.style.width = info.progress + '%';
+    if (label) {
+        label.textContent = info.isMax
+            ? 'Niveau max atteint 🎉'
+            : `Plus que ${info.toNext} pt(s) pour « ${info.next.name} »`;
+    }
+
+    // Favoris (= abonnements) dans le breakdown contribution
+    const statSubscriptions = document.getElementById('stat-subscriptions');
     if (statSubscriptions) statSubscriptions.textContent = AppState.subscriptions.length;
-    if (statReports) statReports.textContent = AppState.reports;
-    if (statConversations) statConversations.textContent = Conversations.list.length;
-    if (pointsValue) pointsValue.textContent = AppState.points;
 
     updateContributionStats();
     displayDetectedPreferences();
@@ -310,7 +322,7 @@ function displayDetectedPreferences() {
     const topTypes = getTopPreferredTypes(5);
 
     if (topTypes.length === 0) {
-        container.innerHTML = '<span class="preference-tag">Explore pour que je te connaisse mieux !</span>';
+        container.innerHTML = '<span class="preference-tag">Tes types préférés apparaîtront ici en explorant.</span>';
         return;
     }
 

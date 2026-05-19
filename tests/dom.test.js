@@ -62,14 +62,20 @@ const html = `<!DOCTYPE html>
     </div>
     <div id="activity-view" class="view-page view-hidden"></div>
     <div id="profile-view" class="view-page view-hidden">
-        <span id="stat-subscriptions"></span>
-        <span id="stat-reports"></span>
-        <span id="stat-conversations"></span>
+        <span id="profile-name"></span>
+        <span id="profile-badge"></span>
         <span id="profile-points"></span>
+        <div id="profile-level-bar"></div>
+        <span id="profile-level-label"></span>
+        <span id="stat-subscriptions"></span>
         <span id="stat-contrib-distributors"></span>
         <span id="stat-contrib-photos"></span>
         <span id="stat-contrib-reports"></span>
         <div id="profile-preferences-list"></div>
+    </div>
+    <div id="account-view" class="view-page view-hidden">
+        <span class="auth-indicator" id="auth-indicator"><span id="account-auth-text"></span></span>
+        <button id="clear-data-btn"></button>
     </div>
     <div id="favorites-badge" style="display:none">0</div>
     <div id="conversations-count" style="display:none">0</div>
@@ -581,6 +587,49 @@ describe('updateProfileStats - contributions', () => {
         UserProfile.stats.photosUploaded = undefined;
         updateProfileStats();
         assert.equal(document.getElementById('stat-contrib-photos').textContent, '0');
+    });
+});
+
+describe('Profil Local Guides (niveau + favoris)', () => {
+    beforeEach(() => {
+        AppState.distributors = [];
+        AppState.subscriptions = ['a', 'b'];
+        AppState.reports = 0;
+        UserProfile.stats.photosUploaded = 0;
+        UserProfile.preferences.types = {};
+        localStorage.setItem('snackmatch_user_distributors', JSON.stringify([]));
+    });
+
+    it('points=0 -> Explorateur, barre 0%, label vers Eclaireur', () => {
+        AppState.points = 0;
+        updateProfileStats();
+        assert.equal(document.getElementById('profile-badge').textContent, 'Explorateur');
+        assert.equal(document.getElementById('profile-points').textContent, '0');
+        assert.equal(document.getElementById('profile-level-bar').style.width, '0%');
+        assert.match(document.getElementById('profile-level-label').textContent, /Éclaireur/);
+    });
+
+    it('points=100 -> Habitué, progression intermediaire', () => {
+        AppState.points = 100;
+        updateProfileStats();
+        assert.equal(document.getElementById('profile-badge').textContent, 'Habitué');
+        // (100-60)/(150-60) = 44%
+        assert.equal(document.getElementById('profile-level-bar').style.width, '44%');
+        assert.match(document.getElementById('profile-level-label').textContent, /Ambassadeur/);
+    });
+
+    it('points tres eleves -> niveau max', () => {
+        AppState.points = 9999;
+        updateProfileStats();
+        assert.equal(document.getElementById('profile-badge').textContent, 'Légende du coin');
+        assert.equal(document.getElementById('profile-level-bar').style.width, '100%');
+        assert.match(document.getElementById('profile-level-label').textContent, /max/i);
+    });
+
+    it('favoris affiches dans le breakdown contribution', () => {
+        AppState.points = 0;
+        updateProfileStats();
+        assert.equal(document.getElementById('stat-subscriptions').textContent, '2');
     });
 });
 

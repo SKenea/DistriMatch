@@ -246,9 +246,23 @@ function clearUserData() {
 // ENREGISTREMENT CALLBACKS NAVIGATION
 // ============================================
 
+// Etat auth partage : indicateur Compte, libelle menu, nom du hero profil.
+function refreshAuthUI(user = getCurrentUser()) {
+    const authed = !!(user && !user.is_anonymous);
+    const indicator = document.getElementById('auth-indicator');
+    const accountText = document.getElementById('account-auth-text');
+    const menuAuth = document.getElementById('menu-auth-action');
+    const profileName = document.getElementById('profile-name');
+    if (indicator) indicator.classList.toggle('logged-in', authed);
+    if (accountText) accountText.textContent = authed ? user.email : 'Non connecté';
+    if (menuAuth) menuAuth.textContent = authed ? 'Déconnexion' : 'Connexion';
+    if (profileName) profileName.textContent = authed ? user.email : 'Invité';
+}
+
 registerViewCallback('subscriptions', displaySubscriptions);
 registerViewCallback('favorites', displaySubscriptions);
-registerViewCallback('profile', updateProfileStats);
+registerViewCallback('profile', () => { updateProfileStats(); refreshAuthUI(); });
+registerViewCallback('account', () => refreshAuthUI());
 registerViewCallback('activity', displayActivityFeed);
 registerViewCallback('notifications', openNotificationsView);
 
@@ -498,34 +512,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Boutons retour
     document.getElementById('back-from-subscriptions')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-account')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);
-    document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('profile'));
+    document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('account'));
 
-    // Indicateur auth + bouton logout
-    const updateAuthUI = (user) => {
-        const indicator = document.getElementById('auth-indicator');
-        const text = document.getElementById('auth-indicator-text');
-        const logoutBtn = document.getElementById('logout-btn');
-        if (!indicator || !text) return;
-        if (user && !user.is_anonymous) {
-            indicator.classList.add('logged-in');
-            text.textContent = user.email;
-            logoutBtn.style.display = 'inline-flex';
-        } else {
-            indicator.classList.remove('logged-in');
-            text.textContent = 'Non connecte';
-            logoutBtn.style.display = 'none';
-        }
+    // Etat auth : indicateur Compte + libelle Connexion/Deconnexion du menu
+    // + nom du hero profil. refreshAuthUI() est aussi le callback des vues
+    // profil/compte (defini au niveau module plus bas).
+    refreshAuthUI(getCurrentUser());
+    onAuthChange(refreshAuthUI);
+
+    // Menu deroulant avatar
+    const avatarBtn = document.getElementById('profile-avatar-btn');
+    const profileMenu = document.getElementById('profile-menu');
+    const closeProfileMenu = () => {
+        if (!profileMenu) return;
+        profileMenu.hidden = true;
+        avatarBtn?.setAttribute('aria-expanded', 'false');
     };
-    updateAuthUI(getCurrentUser());
-    onAuthChange(updateAuthUI);
-    document.getElementById('logout-btn')?.addEventListener('click', async () => {
-        await signOut();
+    avatarBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = profileMenu.hidden;
+        profileMenu.hidden = !open;
+        avatarBtn.setAttribute('aria-expanded', String(open));
+    });
+    profileMenu?.querySelectorAll('[data-action]').forEach(item => {
+        item.addEventListener('click', () => {
+            switchView(item.dataset.action); // 'profile' | 'account'
+            closeProfileMenu();
+        });
+    });
+    document.getElementById('menu-auth-action')?.addEventListener('click', async () => {
+        closeProfileMenu();
+        if (isAuthenticated()) {
+            await signOut();
+        } else {
+            await requireAuth();
+        }
+        refreshAuthUI(getCurrentUser());
+    });
+    document.addEventListener('click', (e) => {
+        if (profileMenu && !profileMenu.hidden
+            && !profileMenu.contains(e.target) && e.target !== avatarBtn
+            && !avatarBtn?.contains(e.target)) {
+            closeProfileMenu();
+        }
     });
 
-    // Bouton parametres notifications depuis profil
-    document.getElementById('notification-settings-btn')?.addEventListener('click', openNotificationSettings);
+    // Compte : acces aux reglages de notifications
+    document.getElementById('account-notif-settings')?.addEventListener('click', openNotificationSettings);
 
     // Bottom navigation
     document.querySelectorAll('.nav-tab').forEach(tab => {

@@ -638,6 +638,176 @@
     color: white;
 }
 
+/* ===== Menu deroulant avatar ===== */
+.profile-menu-wrap { position: relative; }
+
+.profile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 190px;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--light-gray);
+    padding: 0.375rem;
+    z-index: var(--z-overlay);
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-menu[hidden] { display: none; }
+
+.profile-menu-item {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--dark);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.profile-menu-item:hover { background: var(--light); }
+
+.profile-menu-sep {
+    height: 1px;
+    background: var(--light-gray);
+    margin: 0.375rem 0.25rem;
+}
+
+.profile-menu-auth {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* ===== Barre de progression niveau (Local Guides) ===== */
+.level-progress {
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.level-progress-track {
+    height: 8px;
+    background: var(--light);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.level-progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.level-progress-label {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--gray);
+}
+
+/* ===== Panneau "Ta contribution" (compact) ===== */
+.contrib-list {
+    background: var(--white);
+    margin: 0 1rem 1rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.contrib-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--light);
+}
+
+.contrib-row:last-child { border-bottom: none; }
+
+.contrib-label {
+    font-size: 0.9rem;
+    color: var(--dark);
+}
+
+.contrib-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* ===== Vue Compte ===== */
+.account-section {
+    background: var(--white);
+    margin: 1rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.account-status {
+    padding: 1rem;
+    border-bottom: 1px solid var(--light);
+}
+
+.account-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    color: var(--dark);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.account-item:hover { background: var(--light); }
+.account-item svg { color: var(--gray-light); }
+
+.account-danger {
+    margin: 1.5rem 1rem;
+    padding: 1rem;
+    border: 1px solid #f3c2c2;
+    border-radius: var(--radius);
+    background: #fdf3f3;
+}
+
+.account-danger-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #b42318;
+}
+
+.btn-danger {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-danger:hover { background: #dc2626; }
+
+.account-danger-hint {
+    margin: 0.625rem 0 0;
+    font-size: 0.78rem;
+    color: var(--gray);
+}
+
 .profile-actions {
     padding: 1rem;
     text-align: center;
