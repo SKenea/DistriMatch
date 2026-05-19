@@ -146,6 +146,11 @@ export function openSidePanelForFilters(types = []) {
 
 export function closeSidePanel() {
     document.getElementById('sidebar')?.classList.remove('open');
+    // Le chip "Tous" (= aucun filtre) ne doit pas rester selectionne quand
+    // le panneau est ferme : evite la desync (le clic "Tous" suivant ouvrait
+    // le panneau en deselectionnant le chip). Sans effet sur la carte.
+    document.querySelector('.filter-chip[data-type="all"]')
+        ?.classList.remove('active');
 }
 
 // ============================================
