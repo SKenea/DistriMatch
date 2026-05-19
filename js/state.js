@@ -8,6 +8,7 @@ export const AppState = {
     userLocation: null,
     currentDistributor: null,
     typeConfig: {},
+    photoThumbs: {},
     reports: 0,
     points: 0,
     mapInitialized: false,

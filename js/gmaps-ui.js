@@ -28,9 +28,16 @@ const DISTANCE_GROUPS = [
 // et le rendu groupe pour ne pas casser le binding .side-panel-item / le CSS.
 function renderSidePanelItem(d, extraClass = '') {
     const distance = d.distance ? formatDistance(d.distance) : '';
+    // Vignette : 1ere photo reelle si dispo (cache prefetch), sinon emoji.
+    // onerror : si l'image casse, on retombe sur l'emoji (pas de tuile vide).
+    const emoji = escapeHTML(d.emoji || '📍');
+    const thumb = AppState.photoThumbs && AppState.photoThumbs[d.id];
+    const photoCell = thumb
+        ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${emoji}'">`
+        : emoji;
     return `
         <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
-            <div class="side-panel-item-photo">${d.emoji}</div>
+            <div class="side-panel-item-photo">${photoCell}</div>
             <div class="side-panel-item-info">
                 <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
                 <div class="side-panel-item-meta">
@@ -298,18 +305,23 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const chatSection = document.getElementById('dist-chat-section');
     if (chatSection) chatSection.style.display = editMode ? 'block' : 'none';
 
-    // Photos
+    // Photos : bandeau toujours visible. Par defaut un fallback degrade +
+    // emoji + label type (la fiche n'est jamais "vide" en haut), remplace
+    // par les vraies photos si Supabase en renvoie.
     const photoSection = document.getElementById('dist-modal-photo');
     const photoGallery = document.getElementById('dist-modal-photos-gallery');
-    photoSection.style.display = 'none';
-    photoGallery.innerHTML = '';
+    photoGallery.innerHTML = `
+        <div class="dist-photo-fallback" style="background:${escapeHTML(typeConfig.gradient || '#E63946')}">
+            <span class="dist-photo-fallback-emoji">${escapeHTML(distributor.emoji || '📍')}</span>
+            <span class="dist-photo-fallback-label">${escapeHTML(typeConfig.label || distributor.type || '')}</span>
+        </div>`;
+    photoSection.style.display = 'block';
 
     loadDistributorPhotos(distributor.id).then(photos => {
         if (photos.length > 0) {
             photoGallery.innerHTML = photos.map(p =>
-                `<div class="photo-gallery-item"><img src="${p.url}" alt="Photo distributeur" loading="lazy"></div>`
+                `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
             ).join('');
-            photoSection.style.display = 'block';
         }
     });
 
