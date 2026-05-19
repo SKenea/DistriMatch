@@ -752,6 +752,15 @@
 .account-status {
     padding: 1rem;
     border-bottom: 1px solid var(--light);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.account-auth-btn {
+    width: 100%;
+    flex: 0 0 auto;
 }
 
 .account-item {
@@ -771,38 +780,40 @@
 .account-item:hover { background: var(--light); }
 .account-item svg { color: var(--gray-light); }
 
-.account-danger {
+.account-reset {
     margin: 1.5rem 1rem;
     padding: 1rem;
-    border: 1px solid #f3c2c2;
     border-radius: var(--radius);
-    background: #fdf3f3;
+    background: var(--white);
+    box-shadow: var(--shadow);
 }
 
-.account-danger-title {
+.account-reset-title {
     margin: 0 0 0.75rem;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #b42318;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray);
 }
 
-.btn-danger {
+.btn-reset {
     width: 100%;
     padding: 0.75rem;
-    border: none;
+    border: 1px solid var(--danger);
     border-radius: 8px;
-    background: #ef4444;
-    color: white;
+    background: transparent;
+    color: var(--danger);
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, color 0.2s;
 }
 
-.btn-danger:hover { background: #dc2626; }
+.btn-reset:hover {
+    background: var(--danger);
+    color: var(--white);
+}
 
-.account-danger-hint {
+.account-reset-hint {
     margin: 0.625rem 0 0;
     font-size: 0.78rem;
     color: var(--gray);

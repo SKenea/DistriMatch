@@ -74,8 +74,14 @@ const html = `<!DOCTYPE html>
         <div id="profile-preferences-list"></div>
     </div>
     <div id="account-view" class="view-page view-hidden">
-        <span class="auth-indicator" id="auth-indicator"><span id="account-auth-text"></span></span>
-        <button id="clear-data-btn"></button>
+        <div class="account-status">
+            <span class="auth-indicator" id="auth-indicator"><span id="account-auth-text"></span></span>
+            <button id="account-auth-action">Se connecter</button>
+        </div>
+        <div class="account-reset">
+            <h4 class="account-reset-title">Réinitialisation</h4>
+            <button id="clear-data-btn">Effacer mes données</button>
+        </div>
     </div>
     <div id="favorites-badge" style="display:none">0</div>
     <div id="conversations-count" style="display:none">0</div>
@@ -258,6 +264,16 @@ describe('openDistributorModal', () => {
         openDistributorModal('fake-id');
         assert.equal(AppState.currentDistributor, before);
     });
+
+    it('canEdit + lecture : stylo "Modifier" visible (gate au clic)', () => {
+        openDistributorModal('dist-test', false, true);
+        assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
+    });
+
+    it('sans canEdit : stylo masque', () => {
+        openDistributorModal('dist-test', false, false);
+        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
+    });
 });
 
 describe('closeDistModal', () => {
@@ -268,6 +284,25 @@ describe('closeDistModal', () => {
         closeDistModal();
         const overlay = document.getElementById('dist-modal-overlay');
         assert.ok(!overlay.classList.contains('active'));
+    });
+});
+
+describe('Vue Compte (connexion + reinitialisation)', () => {
+    it('a un bouton "Se connecter" dans le bloc statut', () => {
+        const btn = document.getElementById('account-auth-action');
+        assert.ok(btn, 'bouton #account-auth-action present');
+        assert.equal(btn.textContent.trim(), 'Se connecter');
+    });
+
+    it('aucun mot "danger" dans la vue Compte', () => {
+        const view = document.getElementById('account-view');
+        assert.ok(!/danger/i.test(view.innerHTML), 'le terme "danger" est proscrit');
+    });
+
+    it('le bouton d\'effacement existe toujours (id conserve)', () => {
+        const btn = document.getElementById('clear-data-btn');
+        assert.ok(btn);
+        assert.equal(btn.textContent.trim(), 'Effacer mes données');
     });
 });
 

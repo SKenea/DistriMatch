@@ -7,7 +7,8 @@ import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { openConversation } from './chat.js';
-import { requireAuth } from './auth.js';
+import { requireAuth, isAuthenticated } from './auth.js';
+import { switchView } from './navigation.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -193,14 +194,17 @@ export function initDistModal() {
         }
     });
 
-    // Bouton stylo "Modifier" : exige d'etre identifie (requireAuth).
-    // Non identifie -> modale email, on reste en lecture. Identifie ->
-    // re-render de la fiche en mode edition (conserve canEdit).
-    document.getElementById('dist-action-edit')?.addEventListener('click', async () => {
+    // Bouton stylo "Modifier" : toujours visible (canEdit). Identifie ->
+    // mode edition. Non identifie -> modale d'explication invitant a se
+    // connecter via la page Compte (point d'entree unique de la connexion).
+    document.getElementById('dist-action-edit')?.addEventListener('click', () => {
         const d = AppState.currentDistributor;
         if (!d) return;
-        if (!(await requireAuth())) return;
-        openDistributorModal(d.id, true, true);
+        if (isAuthenticated()) {
+            openDistributorModal(d.id, true, true);
+        } else {
+            showEditAuthGate();
+        }
     });
 
     // Bouton Discuter avec le bot (mode edit)
@@ -312,8 +316,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Boutons
     updateFavoriteButton();
 
-    // Stylo "Modifier" : visible uniquement si ouvert depuis Favoris (canEdit)
-    // ET en lecture (on le cache une fois en edition).
+    // Stylo "Modifier" : visible si ouvert depuis Favoris (canEdit) ET en
+    // lecture. La verification d'identite se fait au clic (modale gate).
     const editBtn = document.getElementById('dist-action-edit');
     if (editBtn) editBtn.style.display = (canEdit && !editMode) ? '' : 'none';
 
@@ -326,6 +330,41 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
 export function closeDistModal() {
     document.getElementById('dist-modal-overlay')?.classList.remove('active');
+}
+
+// Modale d'explication affichee quand on clique "Modifier" sans etre
+// identifie. Invite a se connecter via la page Compte (point d'entree
+// unique de la connexion : email + hCaptcha), puis a revenir.
+function showEditAuthGate() {
+    if (document.getElementById('edit-auth-gate')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'edit-auth-gate';
+    overlay.className = 'auth-modal-overlay';
+    overlay.innerHTML = `
+        <div class="auth-modal">
+            <button class="auth-modal-close" aria-label="Fermer">&times;</button>
+            <div class="auth-modal-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <h2>Connexion requise</h2>
+            <p class="auth-modal-subtitle">Pour faire une modification ou une mise &agrave; jour, il faut que tu sois connect&eacute;. Clique sur le bouton ci-dessous pour te connecter, puis reviens sur ce distributeur.</p>
+            <button class="auth-modal-submit" id="edit-auth-gate-go" type="button">Se connecter</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const remove = () => overlay.remove();
+    overlay.querySelector('.auth-modal-close').addEventListener('click', remove);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) remove(); });
+    overlay.querySelector('#edit-auth-gate-go').addEventListener('click', () => {
+        remove();
+        closeDistModal();
+        switchView('account');
+    });
 }
 
 function switchDistTab(tabName) {
