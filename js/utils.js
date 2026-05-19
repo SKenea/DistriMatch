@@ -5,7 +5,8 @@
 import {
     AppState, Conversations, UserProfile, NotificationPrefs, NotificationQueue,
     STORAGE_KEY, PROFILE_KEY, CONVERSATIONS_KEY,
-    USER_DISTRIBUTORS_KEY, NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY
+    USER_DISTRIBUTORS_KEY, NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY,
+    LEVELS
 } from './state.js';
 
 // ============================================
@@ -276,6 +277,27 @@ export function getTopPreferredTypes(limit = 3) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit)
         .map(([type]) => type);
+}
+
+// Niveau "Local Guides" derive des points cumules (fonction pure).
+export function getLevelInfo(points) {
+    const p = Math.max(0, Number(points) || 0);
+    let cur = LEVELS[0];
+    for (const L of LEVELS) {
+        if (p >= L.min) cur = L;
+    }
+    const next = LEVELS.find(L => L.min > cur.min) || null;
+    return {
+        level: cur.lvl,
+        name: cur.name,
+        points: p,
+        next,
+        isMax: !next,
+        toNext: next ? next.min - p : 0,
+        progress: next
+            ? Math.min(100, Math.round((p - cur.min) / (next.min - cur.min) * 100))
+            : 100
+    };
 }
 
 // ============================================

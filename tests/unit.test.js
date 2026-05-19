@@ -16,7 +16,7 @@ import {
     getTimeSlot, formatTime, getFilteredDistributors,
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
-    saveUserDistributor, loadUserDistributors
+    saveUserDistributor, loadUserDistributors, getLevelInfo
 } from '../js/utils.js';
 
 import {
@@ -335,6 +335,48 @@ describe('getTopPreferredTypes', () => {
     it('respecte la limite', () => {
         UserProfile.preferences.types = { a: 1, b: 2, c: 3, d: 4 };
         assert.equal(getTopPreferredTypes(2).length, 2);
+    });
+});
+
+describe('getLevelInfo (niveau Local Guides)', () => {
+    it('0 point -> Explorateur niveau 1, 0%', () => {
+        const i = getLevelInfo(0);
+        assert.equal(i.level, 1);
+        assert.equal(i.name, 'Explorateur');
+        assert.equal(i.progress, 0);
+        assert.equal(i.isMax, false);
+        assert.equal(i.next.name, 'Éclaireur');
+        assert.equal(i.toNext, 20);
+    });
+
+    it('pile sur un palier -> niveau de ce palier', () => {
+        const i = getLevelInfo(60);
+        assert.equal(i.name, 'Habitué');
+        assert.equal(i.progress, 0); // (60-60)/(150-60)
+        assert.equal(i.toNext, 90);
+    });
+
+    it('entre 2 paliers -> progression correcte', () => {
+        const i = getLevelInfo(100); // Habitué[60] -> Ambassadeur[150]
+        assert.equal(i.name, 'Habitué');
+        assert.equal(i.progress, 44); // round(40/90*100)
+        assert.equal(i.next.name, 'Ambassadeur');
+        assert.equal(i.toNext, 50);
+    });
+
+    it('au-dela du dernier palier -> niveau max', () => {
+        const i = getLevelInfo(99999);
+        assert.equal(i.name, 'Légende du coin');
+        assert.equal(i.isMax, true);
+        assert.equal(i.next, null);
+        assert.equal(i.progress, 100);
+        assert.equal(i.toNext, 0);
+    });
+
+    it('points invalides/negatifs -> niveau 1', () => {
+        assert.equal(getLevelInfo(undefined).level, 1);
+        assert.equal(getLevelInfo(-50).level, 1);
+        assert.equal(getLevelInfo(NaN).name, 'Explorateur');
     });
 });
 

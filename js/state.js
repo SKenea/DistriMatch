@@ -110,6 +110,16 @@ export const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
 export const NOTIFICATION_PREFS_KEY = 'snackmatch_notification_prefs';
 export const NOTIFICATION_QUEUE_KEY = 'snackmatch_notification_queue';
 
+// Echelle de niveaux "Local Guides" (derivee des points cumules)
+export const LEVELS = [
+    { lvl: 1, name: 'Explorateur',     min: 0 },
+    { lvl: 2, name: 'Éclaireur',       min: 20 },
+    { lvl: 3, name: 'Habitué',         min: 60 },
+    { lvl: 4, name: 'Ambassadeur',     min: 150 },
+    { lvl: 5, name: 'Référent',        min: 300 },
+    { lvl: 6, name: 'Légende du coin', min: 600 }
+];
+
 // Cles deplacees dans js/config.js — re-exportees pour retrocompatibilite
 export { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 

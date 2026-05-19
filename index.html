@@ -122,12 +122,20 @@
                 </svg>
                 <span class="nav-badge" id="notifications-badge" style="display: none;">0</span>
             </button>
-            <button class="icon-btn nav-icon-btn" data-view="profile" aria-label="Profil">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
-            </button>
+            <div class="profile-menu-wrap">
+                <button class="icon-btn" id="profile-avatar-btn" aria-label="Profil" aria-haspopup="true" aria-expanded="false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </button>
+                <div class="profile-menu" id="profile-menu" role="menu" hidden>
+                    <button class="profile-menu-item" role="menuitem" data-action="profile">Mon profil</button>
+                    <button class="profile-menu-item" role="menuitem" data-action="account">Compte</button>
+                    <div class="profile-menu-sep"></div>
+                    <button class="profile-menu-item profile-menu-auth" role="menuitem" id="menu-auth-action">Connexion</button>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -488,7 +496,7 @@
                     <circle cx="12" cy="7" r="4"/>
                 </svg>
             </div>
-            <h3 id="profile-name">Utilisateur</h3>
+            <h3 id="profile-name">Invité</h3>
             <div class="profile-badge">
                 <span class="badge bronze" id="profile-badge">Explorateur</span>
             </div>
@@ -496,58 +504,65 @@
                 <span class="points-value" id="profile-points">0</span>
                 <span class="points-label">points</span>
             </div>
-        </div>
-        <div class="profile-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="stat-subscriptions">0</div>
-                <div class="stat-label">Abonnements</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-reports">0</div>
-                <div class="stat-label">Signalements</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-conversations">0</div>
-                <div class="stat-label">Discussions</div>
+            <div class="level-progress">
+                <div class="level-progress-track">
+                    <div class="level-progress-bar" id="profile-level-bar" style="width:0%"></div>
+                </div>
+                <span class="level-progress-label" id="profile-level-label"></span>
             </div>
         </div>
-        <h4 class="profile-section-title">Mes contributions</h4>
-        <div class="profile-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="stat-contrib-distributors">0</div>
-                <div class="stat-label">Distributeurs</div>
+        <h4 class="profile-section-title">Ta contribution</h4>
+        <div class="contrib-list">
+            <div class="contrib-row">
+                <span class="contrib-label">🏪 Distributeurs ajoutés</span>
+                <span class="contrib-value" id="stat-contrib-distributors">0</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-contrib-photos">0</div>
-                <div class="stat-label">Photos</div>
+            <div class="contrib-row">
+                <span class="contrib-label">📷 Photos</span>
+                <span class="contrib-value" id="stat-contrib-photos">0</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="stat-contrib-reports">0</div>
-                <div class="stat-label">Signalements</div>
+            <div class="contrib-row">
+                <span class="contrib-label">⚠️ Signalements</span>
+                <span class="contrib-value" id="stat-contrib-reports">0</span>
+            </div>
+            <div class="contrib-row">
+                <span class="contrib-label">❤️ Favoris</span>
+                <span class="contrib-value" id="stat-subscriptions">0</span>
             </div>
         </div>
         <div class="profile-preferences">
-            <h4>Tes preferences detectees</h4>
+            <h4>Tes types préférés</h4>
             <div id="profile-preferences-list" class="preferences-list">
                 <!-- Preferences implicites affichees ici -->
             </div>
         </div>
-        <div class="profile-auth-status" id="profile-auth-status">
-            <span class="auth-indicator" id="auth-indicator">
-                <span class="dot"></span>
-                <span id="auth-indicator-text">Non connecte</span>
-            </span>
-        </div>
-        <div class="profile-actions">
-            <button class="btn-primary-clean" id="notification-settings-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </div>
+
+    <div id="account-view" class="view-page view-hidden">
+        <div class="page-header-inner">
+            <button class="back-btn" id="back-from-account" aria-label="Retour">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
-                Notifications
             </button>
-            <button class="btn-secondary-clean" id="logout-btn" style="display:none">Se deconnecter</button>
-            <button class="btn-secondary-clean" id="clear-data-btn">Effacer mes donnees</button>
+            <h2>Compte</h2>
+        </div>
+        <div class="account-section">
+            <div class="account-status">
+                <span class="auth-indicator" id="auth-indicator">
+                    <span class="dot"></span>
+                    <span id="account-auth-text">Non connecté</span>
+                </span>
+            </div>
+            <button class="account-item" id="account-notif-settings">
+                <span>Réglages des notifications</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+        <div class="account-danger">
+            <h4 class="account-danger-title">Zone de danger</h4>
+            <button class="btn-danger" id="clear-data-btn">Effacer mes données</button>
+            <p class="account-danger-hint">Supprime définitivement tes favoris, contributions, conversations et réglages sur cet appareil.</p>
         </div>
     </div>
 

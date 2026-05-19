@@ -634,20 +634,48 @@ test.describe('6. Chat bot', () => {
 // 7. PROFIL
 // ============================================
 
-test.describe('7. Profil', () => {
-    test('indicateur "Non connecte" par defaut', async ({ page }) => {
-        await page.click('button[aria-label="Profil"]');
-        await page.waitForSelector('#profile-view.view-active');
-
-        const text = await page.textContent('#auth-indicator-text');
-        expect(text).toBe('Non connecte');
+test.describe('7. Profil (Local Guides + menu avatar)', () => {
+    test('avatar ouvre le menu deroulant (Connexion si deconnecte)', async ({ page }) => {
+        await page.click('#profile-avatar-btn');
+        await page.waitForSelector('#profile-menu:not([hidden])', { timeout: 3000 });
+        const authLabel = await page.textContent('#menu-auth-action');
+        expect(authLabel).toBe('Connexion');
     });
 
-    test('stats profil visibles', async ({ page }) => {
-        await page.click('button[aria-label="Profil"]');
-        await page.waitForSelector('#profile-view.view-active');
-        const subsStat = await page.$('#profile-view .stat-card');
-        expect(subsStat).not.toBeNull();
+    test('menu -> Mon profil : dashboard avec niveau + barre', async ({ page }) => {
+        await page.click('#profile-avatar-btn');
+        await page.click('#profile-menu [data-action="profile"]');
+        await page.waitForSelector('#profile-view.view-active', { timeout: 3000 });
+        const r = await page.evaluate(() => ({
+            badge: document.getElementById('profile-badge').textContent,
+            hasBar: !!document.getElementById('profile-level-bar'),
+            contrib: document.querySelectorAll('#profile-view .contrib-row').length,
+            noStatCard: document.querySelectorAll('#profile-view .stat-card').length,
+        }));
+        expect(r.badge.length).toBeGreaterThan(0); // niveau dynamique
+        expect(r.hasBar).toBe(true);
+        expect(r.contrib).toBe(4);                 // breakdown compact
+        expect(r.noStatCard).toBe(0);              // plus de mur de cartes
+    });
+
+    test('menu -> Compte : etat + zone danger', async ({ page }) => {
+        await page.click('#profile-avatar-btn');
+        await page.click('#profile-menu [data-action="account"]');
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        const r = await page.evaluate(() => ({
+            authText: document.getElementById('account-auth-text').textContent,
+            danger: !!document.getElementById('clear-data-btn'),
+        }));
+        expect(r.authText).toBe('Non connecté');
+        expect(r.danger).toBe(true);
+    });
+
+    test('menu Connexion -> mur d\'auth', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await page.click('#profile-avatar-btn');
+        await page.click('#menu-auth-action');
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+        expect(await page.$('.auth-modal')).not.toBeNull();
     });
 });
 
