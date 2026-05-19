@@ -209,6 +209,35 @@ test.describe('3. Panneau lateral filtres', () => {
         expect(items.length).toBe(totalDist);
     });
 
+    test('Tous : croix puis re-clic -> etats chip/panneau coherents', async ({ page }) => {
+        // 1) clic Tous : panneau ouvert + chip actif
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open', { timeout: 3000 });
+        let s = await page.evaluate(() => ({
+            open: document.getElementById('sidebar').classList.contains('open'),
+            active: document.querySelector('.filter-chip[data-type="all"]').classList.contains('active'),
+        }));
+        expect(s).toEqual({ open: true, active: true });
+
+        // 2) fermeture via la croix : panneau ferme + chip deselectionne
+        await page.click('#side-panel-close');
+        await page.waitForTimeout(400);
+        s = await page.evaluate(() => ({
+            open: document.getElementById('sidebar').classList.contains('open'),
+            active: document.querySelector('.filter-chip[data-type="all"]').classList.contains('active'),
+        }));
+        expect(s).toEqual({ open: false, active: false });
+
+        // 3) re-clic Tous : panneau ouvert ET chip actif (coherent)
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open', { timeout: 3000 });
+        s = await page.evaluate(() => ({
+            open: document.getElementById('sidebar').classList.contains('open'),
+            active: document.querySelector('.filter-chip[data-type="all"]').classList.contains('active'),
+        }));
+        expect(s).toEqual({ open: true, active: true });
+    });
+
     test('re-clic sur Tous ferme le panneau et deselectionne le chip', async ({ page }) => {
         await page.click('.filter-chip[data-type="all"]');
         await page.waitForSelector('.side-panel.open');
