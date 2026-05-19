@@ -164,24 +164,152 @@ export function triggerProductNotification(distributor, product) {
 function sendNotification(notif) {
     if (!NotificationPrefs.enabled) return;
 
+    notif.read = false;
+    notif.timestamp = notif.timestamp || Date.now();
     NotificationQueue.history.unshift(notif);
     if (NotificationQueue.history.length > 50) {
         NotificationQueue.history.pop();
     }
     saveNotificationQueue();
 
-    showNotificationBanner(notif);
+    // Vraie notification navigateur si permission accordee, sinon bandeau
+    // in-app (fallback : zero regression si refus / non supporte).
+    const supported = typeof window !== 'undefined' && 'Notification' in window;
+    if (supported && Notification.permission === 'default'
+        && NotificationPrefs.enabled) {
+        // Demande paresseuse au 1er envoi
+        requestNotificationPermission();
+    }
+    if (supported && Notification.permission === 'granted') {
+        try {
+            const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
+            const n = new Notification(typeInfo.title, {
+                body: notif.message,
+                icon: 'images/icon-192.png',
+                tag: notif.distributorId
+            });
+            n.onclick = () => {
+                window.focus();
+                if (typeof window.openConversation === 'function') {
+                    window.openConversation(notif.distributorId);
+                }
+                n.close();
+            };
+        } catch (e) {
+            showNotificationBanner(notif);
+        }
+    } else {
+        showNotificationBanner(notif);
+    }
 
     if (navigator.vibrate) {
         navigator.vibrate(200);
     }
 
     markNotified(notif.distributorId);
+    updateNotificationsBadge();
 
     addActivityItem('notification', notif.distributorId, {
         subtype: notif.type,
         message: notif.message
     });
+}
+
+// ============================================
+// CENTRE DE NOTIFICATIONS (cloche)
+// ============================================
+
+export function requestNotificationPermission() {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    try {
+        Notification.requestPermission();
+    } catch (e) { /* Safari ancien : API callback only, ignore */ }
+}
+
+export function getUnreadCount() {
+    return NotificationQueue.history.filter(n => n.read === false).length;
+}
+
+export function updateNotificationsBadge() {
+    const badge = document.getElementById('notifications-badge');
+    if (!badge) return;
+    const count = getUnreadCount();
+    if (count > 0) {
+        badge.textContent = count > 9 ? '9+' : String(count);
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function timeAgo(ts) {
+    const diff = Date.now() - (ts || 0);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "a l'instant";
+    if (m < 60) return `il y a ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `il y a ${h} h`;
+    const d = Math.floor(h / 24);
+    return `il y a ${d} j`;
+}
+
+const TRASH_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+
+function renderNotificationsList() {
+    const list = document.getElementById('notifications-list');
+    const empty = document.getElementById('notifications-empty');
+    const clearBtn = document.getElementById('clear-notifications');
+    if (!list) return;
+    const items = NotificationQueue.history;
+    if (clearBtn) clearBtn.style.display = items.length ? 'inline-flex' : 'none';
+    if (!items.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'flex';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    list.innerHTML = items.map((n, index) => {
+        const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
+        return `
+            <div class="notif-item ${n.read ? '' : 'unread'}">
+                <span class="notif-item-icon">${typeInfo.icon}</span>
+                <div class="notif-item-body">
+                    <strong>${escapeHTML(typeInfo.title)}</strong>
+                    <p>${escapeHTML(n.message || '')}</p>
+                    <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
+                </div>
+                <button class="notif-item-delete" aria-label="Supprimer cette notification" title="Supprimer" onclick="deleteNotification(${index})">${TRASH_SVG}</button>
+            </div>`;
+    }).join('');
+}
+
+export function deleteNotification(index) {
+    if (index < 0 || index >= NotificationQueue.history.length) return;
+    NotificationQueue.history.splice(index, 1);
+    saveNotificationQueue();
+    renderNotificationsList();
+    updateNotificationsBadge();
+}
+
+export function clearAllNotifications() {
+    if (typeof confirm === 'function'
+        && !confirm('Effacer toutes les notifications ?')) return;
+    NotificationQueue.history = [];
+    saveNotificationQueue();
+    renderNotificationsList();
+    updateNotificationsBadge();
+}
+
+export function openNotificationsView() {
+    renderNotificationsList();
+    // Marquer tout lu apres affichage
+    let changed = false;
+    NotificationQueue.history.forEach(n => {
+        if (n.read === false) { n.read = true; changed = true; }
+    });
+    if (changed) saveNotificationQueue();
+    updateNotificationsBadge();
 }
 
 function showNotificationBanner(notif) {
@@ -275,8 +403,32 @@ export function openNotificationSettings() {
     document.getElementById('radius-value').textContent = `${NotificationPrefs.geofence.radius / 1000} km`;
 
     updateFollowedProductsList();
+    refreshNotifPermissionLabel();
 
     switchView('notification-settings');
+}
+
+export function refreshNotifPermissionLabel() {
+    const label = document.getElementById('notif-permission-state');
+    const btn = document.getElementById('notif-permission-btn');
+    if (!label) return;
+    const supported = typeof window !== 'undefined' && 'Notification' in window;
+    const perm = supported ? Notification.permission : 'unsupported';
+    const map = {
+        granted: 'Notifications navigateur : activees',
+        denied: 'Notifications navigateur : bloquees (a reactiver dans le navigateur). Repli sur le bandeau in-app.',
+        default: 'Notifications navigateur : non autorisees',
+        unsupported: 'Notifications navigateur non supportees ici. Repli sur le bandeau in-app.'
+    };
+    label.textContent = map[perm] || map.default;
+    if (btn) btn.style.display = (perm === 'default') ? 'inline-flex' : 'none';
+}
+
+export function askNotifPermissionFromUI() {
+    requestNotificationPermission();
+    // requestPermission peut etre async (promesse) ou callback ; on
+    // rafraichit apres un court delai pour refleter le choix.
+    setTimeout(refreshNotifPermissionLabel, 300);
 }
 
 export function saveNotificationSettingsFromUI() {

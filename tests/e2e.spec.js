@@ -531,6 +531,46 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
 });
 
 // ============================================
+// 5ter. CENTRE DE NOTIFICATIONS (cloche)
+// ============================================
+
+test.describe('5ter. Centre de notifications', () => {
+    test('la cloche ouvre la vue notifications (empty state)', async ({ page }) => {
+        await page.click('.nav-icon-btn[data-view="notifications"]');
+        await page.waitForSelector('#notifications-view.view-active', { timeout: 3000 });
+        const r = await page.evaluate(() => ({
+            emptyVisible: getComputedStyle(document.getElementById('notifications-empty')).display !== 'none',
+            clearHidden: getComputedStyle(document.getElementById('clear-notifications')).display === 'none',
+        }));
+        expect(r.emptyVisible).toBe(true);
+        expect(r.clearHidden).toBe(true); // pas de "Tout effacer" si vide
+    });
+
+    test('la cloche n\'affiche plus le compteur favoris', async ({ page }) => {
+        // Ajouter un favori ne doit PAS faire apparaitre le badge de la cloche
+        await page.evaluate(() => {
+            const id = window.AppState.distributors[0].id;
+            window.AppState.subscriptions = [id];
+        });
+        const r = await page.evaluate(() => ({
+            hasOldBadge: !!document.getElementById('subscriptions-badge'),
+            notifBadgeDisplay: getComputedStyle(document.getElementById('notifications-badge')).display,
+        }));
+        expect(r.hasOldBadge).toBe(false);            // plus de badge favoris sur la cloche
+        expect(r.notifBadgeDisplay).toBe('none');     // pas de notif -> badge cache
+    });
+
+    test('reglages : bouton/etat permission navigateur present', async ({ page }) => {
+        const r = await page.evaluate(() => ({
+            stateEl: !!document.getElementById('notif-permission-state'),
+            btnEl: !!document.getElementById('notif-permission-btn'),
+        }));
+        expect(r.stateEl).toBe(true);
+        expect(r.btnEl).toBe(true);
+    });
+});
+
+// ============================================
 // 6. CHAT BOT (sans auth)
 // ============================================
 

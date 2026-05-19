@@ -172,7 +172,12 @@ export function loadNotificationQueue() {
     const parsed = loadStore(NOTIFICATION_QUEUE_KEY);
     if (parsed) {
         NotificationQueue.pending = parsed.pending || [];
-        NotificationQueue.history = parsed.history || [];
+        // Migration douce : les items d'historique sans flag `read` sont
+        // consideres lus (pas de gros badge au 1er chargement apres MAJ).
+        NotificationQueue.history = (parsed.history || []).map(n => ({
+            ...n,
+            read: n.read === undefined ? true : n.read
+        }));
     }
 }
 
