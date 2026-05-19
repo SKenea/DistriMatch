@@ -252,10 +252,12 @@ function refreshAuthUI(user = getCurrentUser()) {
     const indicator = document.getElementById('auth-indicator');
     const accountText = document.getElementById('account-auth-text');
     const menuAuth = document.getElementById('menu-auth-action');
+    const accountAuth = document.getElementById('account-auth-action');
     const profileName = document.getElementById('profile-name');
     if (indicator) indicator.classList.toggle('logged-in', authed);
     if (accountText) accountText.textContent = authed ? user.email : 'Non connecté';
     if (menuAuth) menuAuth.textContent = authed ? 'Déconnexion' : 'Connexion';
+    if (accountAuth) accountAuth.textContent = authed ? 'Se déconnecter' : 'Se connecter';
     if (profileName) profileName.textContent = authed ? user.email : 'Invité';
 }
 
@@ -558,6 +560,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             && !avatarBtn?.contains(e.target)) {
             closeProfileMenu();
         }
+    });
+
+    // Compte : bouton Connexion/Deconnexion (point d'entree unique de l'auth)
+    document.getElementById('account-auth-action')?.addEventListener('click', async () => {
+        if (isAuthenticated()) {
+            await signOut();
+        } else {
+            await requireAuth();
+        }
+        refreshAuthUI(getCurrentUser());
     });
 
     // Compte : acces aux reglages de notifications

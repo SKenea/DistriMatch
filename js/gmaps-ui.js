@@ -7,7 +7,8 @@ import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { openConversation } from './chat.js';
-import { requireAuth } from './auth.js';
+import { requireAuth, isAuthenticated } from './auth.js';
+import { switchView } from './navigation.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -193,14 +194,21 @@ export function initDistModal() {
         }
     });
 
-    // Bouton stylo "Modifier" : exige d'etre identifie (requireAuth).
-    // Non identifie -> modale email, on reste en lecture. Identifie ->
-    // re-render de la fiche en mode edition (conserve canEdit).
-    document.getElementById('dist-action-edit')?.addEventListener('click', async () => {
+    // Bouton stylo "Modifier" : visible uniquement si deja identifie
+    // (sinon c'est #dist-action-login qui s'affiche). On passe direct en
+    // mode edition (conserve canEdit).
+    document.getElementById('dist-action-edit')?.addEventListener('click', () => {
         const d = AppState.currentDistributor;
         if (!d) return;
-        if (!(await requireAuth())) return;
         openDistributorModal(d.id, true, true);
+    });
+
+    // Bouton "Se connecter" (remplace le stylo si non identifie) : on ferme
+    // la fiche et on emmene l'utilisateur vers la page Compte, point d'entree
+    // unique de la connexion (email + hCaptcha).
+    document.getElementById('dist-action-login')?.addEventListener('click', () => {
+        closeDistModal();
+        switchView('account');
     });
 
     // Bouton Discuter avec le bot (mode edit)
@@ -312,10 +320,15 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Boutons
     updateFavoriteButton();
 
-    // Stylo "Modifier" : visible uniquement si ouvert depuis Favoris (canEdit)
-    // ET en lecture (on le cache une fois en edition).
+    // Zone "Modifier" : visible seulement si ouvert depuis Favoris (canEdit)
+    // ET en lecture. Identifie -> stylo (passe en edition) ; non identifie
+    // -> bouton "Se connecter" (emmene vers la page Compte).
     const editBtn = document.getElementById('dist-action-edit');
-    if (editBtn) editBtn.style.display = (canEdit && !editMode) ? '' : 'none';
+    const loginBtn = document.getElementById('dist-action-login');
+    const showArea = canEdit && !editMode;
+    const authed = isAuthenticated();
+    if (editBtn) editBtn.style.display = (showArea && authed) ? '' : 'none';
+    if (loginBtn) loginBtn.style.display = (showArea && !authed) ? '' : 'none';
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');

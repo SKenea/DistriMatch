@@ -474,35 +474,36 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
     }
 
-    test('carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
+    test('carte favori non identifie : fiche en LECTURE, bouton "Se connecter" (pas le stylo)', async ({ page }) => {
         await openFirstFavoriteCard(page);
 
         const state = await page.evaluate(() => ({
             edit: window.AppState.modalEditMode,
             canEdit: window.AppState.modalCanEdit,
             addHidden: getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none',
+            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
         }));
         expect(state.edit).toBe(false);
         expect(state.canEdit).toBe(true);
         expect(state.addHidden).toBe(true);
-
-        const editBtn = page.locator('#dist-action-edit');
-        await expect(editBtn).toBeVisible();
+        // Non identifie (pas de session en e2e) -> stylo masque, "Se connecter" visible
+        expect(state.styloHidden).toBe(true);
+        await expect(page.locator('#dist-action-login')).toBeVisible();
     });
 
-    test('clic stylo non identifie -> mur d\'auth, pas d\'edition', async ({ page }) => {
-        await page.evaluate(() => localStorage.clear());
+    test('clic "Se connecter" -> ferme la fiche + ouvre la page Compte', async ({ page }) => {
         await openFirstFavoriteCard(page);
-        // Localhost saute le mur par defaut : on le reactive pour ce test
-        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
-        await page.click('#dist-action-edit');
-        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+        await page.click('#dist-action-login');
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
 
-        const stillReadonly = await page.evaluate(() =>
-            window.AppState.modalEditMode === false
-            && getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none'
-        );
-        expect(stillReadonly).toBe(true);
+        const r = await page.evaluate(() => ({
+            modalClosed: !document.getElementById('dist-modal-overlay').classList.contains('active'),
+            stillReadonly: window.AppState.modalEditMode === false,
+            authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
+        }));
+        expect(r.modalClosed).toBe(true);
+        expect(r.stillReadonly).toBe(true);
+        expect(r.authBtn).toBe('Se connecter');
     });
 
     test('mode edition affiche produits CRUD + ajout + chat, stylo masque', async ({ page }) => {
@@ -553,9 +554,11 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         const r = await page.evaluate(() => ({
             edit: window.AppState.modalEditMode,
             styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
+            loginHidden: getComputedStyle(document.getElementById('dist-action-login')).display === 'none',
         }));
         expect(r.edit).toBe(false);
         expect(r.styloHidden).toBe(true);
+        expect(r.loginHidden).toBe(true);
     });
 });
 
@@ -658,16 +661,30 @@ test.describe('7. Profil (Local Guides + menu avatar)', () => {
         expect(r.noStatCard).toBe(0);              // plus de mur de cartes
     });
 
-    test('menu -> Compte : etat + zone danger', async ({ page }) => {
+    test('menu -> Compte : etat + bouton connexion + reinitialisation (sans "danger")', async ({ page }) => {
         await page.click('#profile-avatar-btn');
         await page.click('#profile-menu [data-action="account"]');
         await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
         const r = await page.evaluate(() => ({
             authText: document.getElementById('account-auth-text').textContent,
-            danger: !!document.getElementById('clear-data-btn'),
+            authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
+            clearBtn: !!document.getElementById('clear-data-btn'),
+            noDanger: !/danger/i.test(document.getElementById('account-view').innerHTML),
         }));
         expect(r.authText).toBe('Non connecté');
-        expect(r.danger).toBe(true);
+        expect(r.authBtn).toBe('Se connecter');
+        expect(r.clearBtn).toBe(true);
+        expect(r.noDanger).toBe(true);
+    });
+
+    test('Compte : clic "Se connecter" -> mur d\'auth', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await page.click('#profile-avatar-btn');
+        await page.click('#profile-menu [data-action="account"]');
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        await page.click('#account-auth-action');
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+        expect(await page.$('.auth-modal')).not.toBeNull();
     });
 
     test('menu Connexion -> mur d\'auth', async ({ page }) => {
