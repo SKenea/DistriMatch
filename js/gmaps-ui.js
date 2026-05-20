@@ -6,6 +6,7 @@
 import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
+import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { switchView } from './navigation.js';
@@ -15,6 +16,10 @@ import { switchView } from './navigation.js';
 // ============================================
 
 let currentFilter = null;
+
+// Verrou de re-entrance pour l'upload de photos depuis la fiche
+// (handler async : double-clic / multi-selection rapide -> doublons).
+let isAddingPhoto = false;
 
 // Tranches de distance pour le regroupement du panneau lateral.
 // La liste est deja triee par distance croissante (sortByDistance, PR #43).
@@ -220,6 +225,78 @@ export function initDistModal() {
     document.getElementById('dist-open-chat')?.addEventListener('click', () => {
         if (AppState.currentDistributor) {
             openConversation(AppState.currentDistributor.id);
+        }
+    });
+
+    // Bouton "Photo" : ajoute une photo a un distributeur existant. Non
+    // identifie -> modale "Connexion requise" (meme parcours que Modifier).
+    // Identifie -> selecteur de fichier -> upload Supabase -> rechargement
+    // de la galerie + mise a jour du cache vignette pour le side panel.
+    document.getElementById('dist-action-add-photo')?.addEventListener('click', () => {
+        const d = AppState.currentDistributor;
+        if (!d) return;
+        if (!isAuthenticated()) {
+            showEditAuthGate();
+            return;
+        }
+        if (isAddingPhoto) return;
+        document.getElementById('dist-add-photo-input')?.click();
+    });
+
+    document.getElementById('dist-add-photo-input')?.addEventListener('change', async (ev) => {
+        const input = ev.target;
+        const files = Array.from(input.files || []).slice(0, 3);
+        input.value = ''; // reset pour re-selection du meme fichier ulterieurement
+        const d = AppState.currentDistributor;
+        if (!d || files.length === 0) return;
+        if (isAddingPhoto) return;
+
+        isAddingPhoto = true;
+        const btn = document.getElementById('dist-action-add-photo');
+        btn?.setAttribute('disabled', 'true');
+        btn?.classList.add('is-loading');
+
+        try {
+            const uploaded = await uploadDistributorPhotos(d.id, files);
+            if (uploaded.length === 0) {
+                showToast('Erreur lors de l\'envoi des photos', 'error');
+                return;
+            }
+            showToast(
+                `${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} ajoutee${uploaded.length > 1 ? 's' : ''}`,
+                'success'
+            );
+
+            // Recharge la galerie de la fiche (remplace le fallback ou les
+            // photos existantes par les vraies photos approuvees a jour).
+            const photos = await loadDistributorPhotos(d.id);
+            const photoGallery = document.getElementById('dist-modal-photos-gallery');
+            if (photos.length > 0 && photoGallery) {
+                photoGallery.innerHTML = photos.map(p =>
+                    `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
+                ).join('');
+            }
+
+            // Met a jour le cache vignette pour que le side panel affiche
+            // immediatement la 1ere photo (sans reload de la page).
+            if (supabaseClient && uploaded[0]) {
+                const { data } = supabaseClient.storage
+                    .from('distributor-photos')
+                    .getPublicUrl(uploaded[0]);
+                if (data?.publicUrl) {
+                    AppState.photoThumbs = AppState.photoThumbs || {};
+                    if (!AppState.photoThumbs[d.id]) {
+                        AppState.photoThumbs[d.id] = data.publicUrl;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[DistriMatch] addPhoto error:', e.message);
+            showToast('Erreur lors de l\'envoi des photos', 'error');
+        } finally {
+            isAddingPhoto = false;
+            btn?.removeAttribute('disabled');
+            btn?.classList.remove('is-loading');
         }
     });
 
