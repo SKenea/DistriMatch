@@ -69,7 +69,7 @@
 
 .chat-subscribe:hover {
     color: var(--primary);
-    background: rgba(230, 57, 70, 0.1);
+    background: rgba(var(--primary-rgb), 0.1);
 }
 
 .chat-subscribe.is-subscribed {
@@ -444,7 +444,7 @@
     width: 36px;
     height: 36px;
     border: none;
-    background: rgba(230, 57, 70, 0.1);
+    background: rgba(var(--primary-rgb), 0.1);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -1095,7 +1095,7 @@
 
 .report-type-btn.selected {
     border-color: var(--primary);
-    background: rgba(230, 57, 70, 0.1);
+    background: rgba(var(--primary-rgb), 0.1);
 }
 
 .report-icon {

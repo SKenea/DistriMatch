@@ -105,8 +105,8 @@ export const DISTRIBUTOR_TYPES = [
 export const STORAGE_KEY = 'snackmatch_user';
 export const PROFILE_KEY = 'snackmatch_profile';
 export const CONVERSATIONS_KEY = 'snackmatch_conversations';
-export const ACTIVITY_KEY = 'snackmatch_activity';
-export const VOTES_KEY = 'snackmatch_votes';
+// ACTIVITY_KEY est defini localement dans activity.js (consomme uniquement la-bas).
+// VOTES_KEY etait expose ici mais jamais importe : retire 2026-05-20.
 export const USER_DISTRIBUTORS_KEY = 'snackmatch_user_distributors';
 export const NOTIFICATION_PREFS_KEY = 'snackmatch_notification_prefs';
 export const NOTIFICATION_QUEUE_KEY = 'snackmatch_notification_queue';

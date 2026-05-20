@@ -26,6 +26,7 @@
 :root {
     /* Couleurs - Palette Basque Street Food (piment d'Espelette) */
     --primary: #E63946;        /* Rouge piment d'Espelette */
+    --primary-rgb: 230, 57, 70; /* version "r,g,b" pour rgba(var(--primary-rgb), alpha) */
     --primary-dark: #C1272D;   /* Hover / actif */
     --primary-light: #F17B82;  /* Versions claires */
     --success: #6A994E;        /* Vert olive - local / frais */
@@ -380,7 +381,7 @@ body {
 }
 
 .conversation-item.active {
-    background: rgba(230, 57, 70, 0.1);
+    background: rgba(var(--primary-rgb), 0.1);
 }
 
 .conversation-avatar {
@@ -452,7 +453,7 @@ body {
 /* Conversation abonnee */
 .conversation-item.subscribed {
     border-left: 3px solid var(--primary);
-    background: rgba(230, 57, 70, 0.03);
+    background: rgba(var(--primary-rgb), 0.03);
 }
 
 .conversation-item.subscribed .conversation-name {
