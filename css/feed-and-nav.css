@@ -347,7 +347,7 @@
 }
 
 .activity-icon.subscription {
-    background: rgba(230, 57, 70, 0.15);
+    background: rgba(var(--primary-rgb), 0.15);
 }
 
 .activity-content {
@@ -766,7 +766,7 @@
     background: var(--primary);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+    box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.4);
 }
 
 .radius-selector input[type="range"]::-moz-range-thumb {
@@ -776,7 +776,7 @@
     border-radius: 50%;
     cursor: pointer;
     border: none;
-    box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+    box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.4);
 }
 
 /* Setting Hint */
@@ -803,7 +803,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(230, 57, 70, 0.1);
+    background: rgba(var(--primary-rgb), 0.1);
     color: var(--primary);
     padding: 0.5rem 0.75rem;
     border-radius: 20px;

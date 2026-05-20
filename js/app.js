@@ -79,14 +79,12 @@ import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuth
 // ============================================
 
 function initSupabase() {
-    try {
-        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-            setSupabaseClient(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-            console.log('[DistriMatch] Supabase initialise');
-            return true;
-        }
-    } catch (e) {
-        console.warn('[DistriMatch] Supabase non disponible:', e.message);
+    // Pas de try/catch : si createClient leve, on veut le voir (probleme de
+    // config a corriger), pas l'avaler en mode hors-ligne silencieux.
+    if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+        setSupabaseClient(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+        console.log('[DistriMatch] Supabase initialise');
+        return true;
     }
     setSupabaseClient(null);
     console.log('[DistriMatch] Mode hors-ligne (pas de Supabase)');
