@@ -93,7 +93,10 @@ export function updateMapMarkers(fitBounds = true) {
 }
 
 function createDistributorIcon(d, isSubscribed) {
-    const color = isSubscribed ? '#F4A261' : '#E63946';
+    // Favori = rouge brand (--primary), coherent avec le coeur "Favori"
+    // de la fiche qui devient rouge quand actif. Non favori = orange
+    // terracotta (--warning).
+    const color = isSubscribed ? '#E63946' : '#F4A261';
 
     return L.divIcon({
         className: 'distributor-marker-container',
