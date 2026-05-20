@@ -37,7 +37,8 @@ import {
     renderProductsList,
     toggleAddProductForm, submitDetailProduct,
     updateProductField, toggleProductAvailability, deleteProduct,
-    toggleSubscription, displaySubscriptions
+    toggleSubscription, displaySubscriptions,
+    loadPhotoThumbnails
 } from './distributor.js';
 
 import {
@@ -444,6 +445,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // S'assurer que les distributeurs sont charges avant de continuer
     await distributorsPromise;
+
+    // Prefetch groupe des vignettes photos (1 requete pour tous les ids).
+    // Avant l'init du side panel pour que la liste affiche directement les
+    // photos quand elles existent (sinon fallback emoji).
+    await loadPhotoThumbnails();
 
     // Re-calculer les distances maintenant que userLocation EST set.
     // Necessaire car loadDistributors() tourne en parallele de l'overlay

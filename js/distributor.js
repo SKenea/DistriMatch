@@ -52,6 +52,36 @@ export async function loadDistributorPhotos(distributorId) {
     }
 }
 
+// Prefetch groupe : une seule requete pour la 1ere photo approuvee de tous
+// les distributeurs charges (vignettes du side panel). Evite N requetes
+// Supabase au rendu de la liste. Resultat mis en cache dans
+// AppState.photoThumbs (map id -> url). Sans Supabase : cache vide, fallback
+// emoji partout.
+export async function loadPhotoThumbnails() {
+    if (!supabaseClient) return;
+    const ids = AppState.distributors.map((d) => d.id);
+    if (ids.length === 0) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('distributor_photos')
+            .select('distributor_id, storage_path, created_at')
+            .in('distributor_id', ids)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: true });
+        if (error) throw error;
+        const thumbs = {};
+        (data || []).forEach((p) => {
+            // Ordre asc : on garde la premiere photo vue par distributeur.
+            if (!thumbs[p.distributor_id]) {
+                thumbs[p.distributor_id] = getPhotoUrl(p.storage_path);
+            }
+        });
+        AppState.photoThumbs = thumbs;
+    } catch (e) {
+        console.warn('[DistriMatch] Erreur chargement vignettes photos:', e.message);
+    }
+}
+
 // ============================================
 // CRUD PRODUITS
 // ============================================
