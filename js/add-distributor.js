@@ -181,7 +181,7 @@ export function removeAddPhoto(index) {
     renderPhotoPreview();
 }
 
-async function uploadDistributorPhotos(distributorId, files) {
+export async function uploadDistributorPhotos(distributorId, files) {
     if (!supabaseClient || !files || files.length === 0) return [];
 
     const { data: { session } } = await supabaseClient.auth.getSession();

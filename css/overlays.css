@@ -844,6 +844,27 @@
     border-color: var(--danger);
 }
 
+/* Etat chargement pendant un upload photo : bouton inerte + spinner discret */
+.dist-action-btn.is-loading {
+    opacity: 0.6;
+    cursor: progress;
+    pointer-events: none;
+}
+
+.dist-action-btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Rangee a 5 boutons : sur petit ecran, masquer le label texte pour ne
+   garder que l'icone (chaque bouton reste tap-friendly mais ne deborde
+   pas). Au-dessus de 380px, labels visibles comme avant. */
+@media (max-width: 380px) {
+    .dist-modal-actions .dist-action-btn span {
+        font-size: 0.7rem;
+    }
+}
+
 .dist-action-btn.favorited svg {
     fill: white;
 }
