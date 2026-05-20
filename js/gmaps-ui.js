@@ -4,7 +4,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast } from './utils.js';
+import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
@@ -232,7 +232,7 @@ export function initDistModal() {
     // identifie -> modale "Connexion requise" (meme parcours que Modifier).
     // Identifie -> selecteur de fichier -> upload Supabase -> rechargement
     // de la galerie + mise a jour du cache vignette pour le side panel.
-    document.getElementById('dist-action-add-photo')?.addEventListener('click', () => {
+    document.getElementById('dist-action-add-photo')?.addEventListener('click', async () => {
         const d = AppState.currentDistributor;
         if (!d) return;
         if (!isAuthenticated()) {
@@ -240,6 +240,31 @@ export function initDistModal() {
             return;
         }
         if (isAddingPhoto) return;
+
+        // Geofence : preuve de presence sommaire. Bloque les contributions
+        // "depuis le canape" sans verrouiller l'app (tolere l'erreur GPS
+        // urbaine ~10-15m). Cache AppState.userLocation prioritaire pour
+        // eviter un re-prompt OS quand l'onboarding l'a deja fourni ;
+        // fallback sur une requete fraiche si manquant.
+        const MAX_DIST_KM = 0.1; // 100m
+        let userLoc = AppState.userLocation;
+        if (!userLoc) {
+            try {
+                userLoc = await getUserLocation();
+            } catch (e) {
+                showToast('Active la geolocalisation pour ajouter une photo', 'warning');
+                return;
+            }
+        }
+        const distKm = calculateDistance(userLoc.lat, userLoc.lng, d.lat, d.lng);
+        if (distKm > MAX_DIST_KM) {
+            showToast(
+                `Tu dois etre pres de ${d.name} pour ajouter une photo (tu es a ${formatDistance(distKm)})`,
+                'warning'
+            );
+            return;
+        }
+
         document.getElementById('dist-add-photo-input')?.click();
     });
 
