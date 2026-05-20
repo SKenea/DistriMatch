@@ -4,7 +4,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation } from './utils.js';
+import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation, isLikelyDesktop } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
@@ -265,7 +265,15 @@ export function initDistModal() {
             return;
         }
 
-        document.getElementById('dist-add-photo-input')?.click();
+        // Routing : sur desktop avec webcam dispo, on ouvre la modale de
+        // capture (l'attribut HTML capture="environment" est ignore sur
+        // desktop). Sur mobile, on garde le prompt OS natif (superieur a
+        // toute UI custom).
+        if (isLikelyDesktop() && navigator.mediaDevices?.getUserMedia) {
+            openWebcamCapture(d);
+        } else {
+            document.getElementById('dist-add-photo-input')?.click();
+        }
     });
 
     document.getElementById('dist-add-photo-input')?.addEventListener('change', async (ev) => {
@@ -274,55 +282,7 @@ export function initDistModal() {
         input.value = ''; // reset pour re-selection du meme fichier ulterieurement
         const d = AppState.currentDistributor;
         if (!d || files.length === 0) return;
-        if (isAddingPhoto) return;
-
-        isAddingPhoto = true;
-        const btn = document.getElementById('dist-action-add-photo');
-        btn?.setAttribute('disabled', 'true');
-        btn?.classList.add('is-loading');
-
-        try {
-            const uploaded = await uploadDistributorPhotos(d.id, files);
-            if (uploaded.length === 0) {
-                showToast('Erreur lors de l\'envoi des photos', 'error');
-                return;
-            }
-            showToast(
-                `${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} ajoutee${uploaded.length > 1 ? 's' : ''}`,
-                'success'
-            );
-
-            // Recharge la galerie de la fiche (remplace le fallback ou les
-            // photos existantes par les vraies photos approuvees a jour).
-            const photos = await loadDistributorPhotos(d.id);
-            const photoGallery = document.getElementById('dist-modal-photos-gallery');
-            if (photos.length > 0 && photoGallery) {
-                photoGallery.innerHTML = photos.map(p =>
-                    `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
-                ).join('');
-            }
-
-            // Met a jour le cache vignette pour que le side panel affiche
-            // immediatement la 1ere photo (sans reload de la page).
-            if (supabaseClient && uploaded[0]) {
-                const { data } = supabaseClient.storage
-                    .from('distributor-photos')
-                    .getPublicUrl(uploaded[0]);
-                if (data?.publicUrl) {
-                    AppState.photoThumbs = AppState.photoThumbs || {};
-                    if (!AppState.photoThumbs[d.id]) {
-                        AppState.photoThumbs[d.id] = data.publicUrl;
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('[DistriMatch] addPhoto error:', e.message);
-            showToast('Erreur lors de l\'envoi des photos', 'error');
-        } finally {
-            isAddingPhoto = false;
-            btn?.removeAttribute('disabled');
-            btn?.classList.remove('is-loading');
-        }
+        await processPhotoUpload(d, files);
     });
 
     // Bouton Partager : copie URL avec ?id=<distId>
@@ -446,6 +406,151 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
 export function closeDistModal() {
     document.getElementById('dist-modal-overlay')?.classList.remove('active');
+}
+
+// Pipeline commun d'upload de photo(s) pour un distributeur : pose le
+// verrou anti-doublon, fait l'upload Supabase (max 3), rafraichit la
+// galerie de la fiche, met a jour le cache vignette du side panel, et
+// gere les toasts + cleanup. Reutilise par le change handler du file
+// picker et par la capture webcam (voir openWebcamCapture).
+async function processPhotoUpload(distributor, files) {
+    if (!distributor || !files || files.length === 0) return;
+    if (isAddingPhoto) return;
+
+    isAddingPhoto = true;
+    const btn = document.getElementById('dist-action-add-photo');
+    btn?.setAttribute('disabled', 'true');
+    btn?.classList.add('is-loading');
+
+    try {
+        const uploaded = await uploadDistributorPhotos(distributor.id, files);
+        if (uploaded.length === 0) {
+            showToast('Erreur lors de l\'envoi des photos', 'error');
+            return;
+        }
+        showToast(
+            `${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} ajoutee${uploaded.length > 1 ? 's' : ''}`,
+            'success'
+        );
+
+        // Recharge la galerie de la fiche (remplace le fallback ou les
+        // photos existantes par les vraies photos approuvees a jour).
+        const photos = await loadDistributorPhotos(distributor.id);
+        const photoGallery = document.getElementById('dist-modal-photos-gallery');
+        if (photos.length > 0 && photoGallery) {
+            photoGallery.innerHTML = photos.map(p =>
+                `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
+            ).join('');
+        }
+
+        // Met a jour le cache vignette pour que le side panel affiche
+        // immediatement la 1ere photo (sans reload de la page).
+        if (supabaseClient && uploaded[0]) {
+            const { data } = supabaseClient.storage
+                .from('distributor-photos')
+                .getPublicUrl(uploaded[0]);
+            if (data?.publicUrl) {
+                AppState.photoThumbs = AppState.photoThumbs || {};
+                if (!AppState.photoThumbs[distributor.id]) {
+                    AppState.photoThumbs[distributor.id] = data.publicUrl;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[DistriMatch] addPhoto error:', e.message);
+        showToast('Erreur lors de l\'envoi des photos', 'error');
+    } finally {
+        isAddingPhoto = false;
+        btn?.removeAttribute('disabled');
+        btn?.classList.remove('is-loading');
+    }
+}
+
+// Modale de capture webcam (desktop uniquement). Ouvre un <video> sur le
+// flux camera, propose Capturer / Annuler / Choisir un fichier. Sur
+// capture : drawImage sur canvas off-screen -> Blob JPEG -> File ->
+// processPhotoUpload. Tout chemin de sortie arrete le MediaStream pour
+// eviter une LED camera orpheline.
+async function openWebcamCapture(distributor) {
+    if (document.getElementById('webcam-modal')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'webcam-modal';
+    overlay.className = 'webcam-modal-overlay';
+    overlay.innerHTML = `
+        <div class="webcam-modal" role="dialog" aria-label="Prendre une photo">
+            <button class="webcam-modal-close" aria-label="Fermer">&times;</button>
+            <h3 class="webcam-modal-title">Prendre une photo</h3>
+            <video class="webcam-video" autoplay muted playsinline></video>
+            <div class="webcam-actions">
+                <button class="webcam-cancel-btn" type="button">Annuler</button>
+                <button class="webcam-capture-btn" type="button">Capturer</button>
+            </div>
+            <button class="webcam-fallback-link" type="button">Choisir un fichier a la place</button>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const videoEl = overlay.querySelector('.webcam-video');
+    let stream = null;
+
+    function closeWebcam() {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        document.removeEventListener('keydown', onEscape);
+        overlay.remove();
+    }
+
+    function onEscape(e) {
+        if (e.key === 'Escape') closeWebcam();
+    }
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        videoEl.srcObject = stream;
+    } catch (e) {
+        console.warn('[DistriMatch] getUserMedia error:', e.message);
+        closeWebcam();
+        showToast('Camera inaccessible - choisis un fichier', 'warning');
+        document.getElementById('dist-add-photo-input')?.click();
+        return;
+    }
+
+    // Listeners
+    document.addEventListener('keydown', onEscape);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeWebcam();
+    });
+    overlay.querySelector('.webcam-modal-close').addEventListener('click', closeWebcam);
+    overlay.querySelector('.webcam-cancel-btn').addEventListener('click', closeWebcam);
+    overlay.querySelector('.webcam-fallback-link').addEventListener('click', () => {
+        closeWebcam();
+        document.getElementById('dist-add-photo-input')?.click();
+    });
+
+    overlay.querySelector('.webcam-capture-btn').addEventListener('click', () => {
+        // Capture une frame du flux video courant.
+        const w = videoEl.videoWidth || 1280;
+        const h = videoEl.videoHeight || 720;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoEl, 0, 0, w, h);
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                closeWebcam();
+                showToast('Erreur lors de la capture', 'error');
+                return;
+            }
+            const file = new File([blob], `webcam_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            closeWebcam();
+            await processPhotoUpload(distributor, [file]);
+        }, 'image/jpeg', 0.92);
+    });
 }
 
 // Modale d'explication affichee quand on clique "Modifier" sans etre
