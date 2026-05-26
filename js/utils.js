@@ -22,6 +22,14 @@ export function escapeHTML(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Detection sommaire desktop vs mobile via userAgent. Utilisee pour
+// router la capture photo : sur desktop, on ouvre une modale webcam
+// (getUserMedia) car l'attribut HTML capture="environment" est ignore.
+// Sur mobile, le prompt natif OS est superieur a toute UI custom.
+export function isLikelyDesktop() {
+    return !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+}
+
 export function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
