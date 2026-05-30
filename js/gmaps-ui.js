@@ -48,7 +48,9 @@ function renderSidePanelItem(d, extraClass = '') {
             <div class="side-panel-item-info">
                 <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
                 <div class="side-panel-item-meta">
-                    <span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>
+                    ${(d.reviewCount ?? 0) > 0
+                        ? `<span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>`
+                        : `<span class="side-panel-item-new">Nouveau</span>`}
                     ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
                 </div>
             </div>
@@ -342,9 +344,22 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
     // Header
     document.getElementById('dist-modal-name').textContent = distributor.name;
-    document.getElementById('dist-modal-rating').textContent =
-        `${(distributor.rating || 0).toFixed(1)} ${generateStars(distributor.rating || 0)}`;
-    document.getElementById('dist-modal-reviews').textContent = `(${distributor.reviewCount || 0})`;
+    // Rating : on n'affiche pas "5.0 ★★★★★ (0)" quand il n'y a aucun
+    // avis, c'est trompeur (les user-added partent a 5.0 par defaut). A
+    // la place : "Pas encore d'avis" explicite.
+    const ratingEl = document.getElementById('dist-modal-rating');
+    const reviewsEl = document.getElementById('dist-modal-reviews');
+    if ((distributor.reviewCount || 0) > 0) {
+        ratingEl.textContent = `${(distributor.rating || 0).toFixed(1)} ${generateStars(distributor.rating || 0)}`;
+        ratingEl.classList.remove('no-reviews');
+        reviewsEl.textContent = `(${distributor.reviewCount})`;
+        reviewsEl.style.display = '';
+    } else {
+        ratingEl.textContent = 'Pas encore d\'avis';
+        ratingEl.classList.add('no-reviews');
+        reviewsEl.textContent = '';
+        reviewsEl.style.display = 'none';
+    }
     document.getElementById('dist-modal-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
     // Niveau de prix : valeur bornee a € / €€ / €€€ (defaut €€)
     const PRICE_LEVELS = ['€', '€€', '€€€'];

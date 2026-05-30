@@ -199,7 +199,12 @@ function handleDistributorAction(action, bot, displayText) {
 
             case 'info':
             case 'Infos':
-                response = `${d.name}\n${d.address}\nNote : ${d.rating}/5 (${d.reviewCount} avis)\n${d.distance ? 'Distance : ' + formatDistance(d.distance) : ''}`;
+                {
+                    const noteLine = (d.reviewCount ?? 0) > 0
+                        ? `Note : ${d.rating}/5 (${d.reviewCount} avis)`
+                        : 'Pas encore d\'avis';
+                    response = `${d.name}\n${d.address}\n${noteLine}\n${d.distance ? 'Distance : ' + formatDistance(d.distance) : ''}`;
+                }
                 newReplies = [
                     { text: 'Produits', action: 'products' },
                     { text: 'Itineraire', action: 'directions' }

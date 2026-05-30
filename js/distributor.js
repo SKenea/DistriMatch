@@ -369,7 +369,9 @@ export function displaySubscriptions() {
                     <p class="subscription-address">${escapeHTML(d.address)}</p>
                     <div class="subscription-meta">
                         <span class="subscription-distance">${distance}</span>
-                        <span class="subscription-rating">${generateStars(d.rating)} ${d.rating}</span>
+                        ${(d.reviewCount ?? 0) > 0
+                            ? `<span class="subscription-rating">${generateStars(d.rating)} ${d.rating}</span>`
+                            : `<span class="subscription-rating subscription-rating--new">Nouveau</span>`}
                     </div>
                 </div>
                 <button class="btn-unsubscribe" aria-label="Se desabonner" onclick="toggleSubscription('${d.id}', event)" title="Se desabonner">
