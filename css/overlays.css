@@ -636,6 +636,14 @@
     font-weight: 600;
 }
 
+/* Badge "Nouveau" affiche a la place du rating quand le distributeur
+   n'a aucun avis (sinon "5.0 ★" par defaut serait trompeur). */
+.side-panel-item-new {
+    color: var(--gray);
+    font-style: italic;
+    font-size: 0.85em;
+}
+
 .side-panel-item-distance {
     color: var(--dark);
     font-weight: 600;
@@ -797,6 +805,13 @@
 .dist-modal-rating {
     color: var(--warning);
     font-weight: 600;
+}
+
+/* Variante "Pas encore d'avis" : pas de couleur jaune, italic discret. */
+.dist-modal-rating.no-reviews {
+    color: var(--gray);
+    font-weight: 400;
+    font-style: italic;
 }
 
 .dist-modal-actions {
