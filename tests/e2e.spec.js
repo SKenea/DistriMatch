@@ -841,3 +841,129 @@ test.describe('9. Dedup distributeurs', () => {
         expect(hasGuard).toBe(true);
     });
 });
+
+// ============================================
+// 10. POLITIQUE D'AUTHENTIFICATION (verrouillage)
+// ============================================
+//
+// Verrouille la matrice 10 UC documentee dans CLAUDE.md > "Politique
+// d'authentification". Toute regression future (ex. oubli de requireAuth()
+// sur une contribution publique, ou ajout accidentel d'un gate sur une
+// action locale) doit faire echouer un de ces tests.
+//
+// Note : localhost bypass requireAuth() par defaut (auth.js:111-131). Les
+// tests qui verifient le gating posent `distrimatch_force_auth=1` pour
+// reactiver l'auth comme en prod. Les tests anti-regression "libre" ne le
+// posent pas : on verifie que meme en prod-like, ces actions n'ouvrent
+// aucune modale.
+
+test.describe('10. Politique d\'authentification', () => {
+
+    test('UC1 contribution publique : Ajouter un distributeur sans auth -> modale email', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await page.click('#btn-add-distributor');
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+
+        const modal = await page.$('.auth-modal');
+        expect(modal).not.toBeNull();
+    });
+
+    test('UC2 contribution publique : stylo Modifier sans auth -> gate "Connexion requise"', async ({ page }) => {
+        await page.evaluate(() => {
+            const id = window.AppState.distributors[0].id;
+            window.AppState.subscriptions = [id];
+        });
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active');
+        await page.waitForSelector('#subscriptions-list .subscription-card');
+        await page.click('#subscriptions-list .subscription-card');
+        await page.waitForSelector('#dist-modal-overlay.active');
+
+        await page.click('#dist-action-edit');
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+
+        const gateText = await page.textContent('#edit-auth-gate h2');
+        expect(gateText).toBe('Connexion requise');
+    });
+
+    test('UC3 contribution publique : bouton Photo sans auth -> gate "Connexion requise"', async ({ page }) => {
+        await openDistModal(page);
+        // Geofence : on s'assure d'etre tout pres pour ne pas bloquer avant le gate auth
+        await page.evaluate(() => {
+            const d = window.AppState.currentDistributor;
+            window.AppState.userLocation = { lat: d.lat + 0.0001, lng: d.lng + 0.0001 };
+        });
+
+        await page.click('#dist-action-add-photo');
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+
+        const r = await page.evaluate(() => ({
+            gateText: document.getElementById('edit-auth-gate')?.querySelector('h2')?.textContent,
+            webcamModalAppeared: !!document.getElementById('webcam-modal'),
+            filePickerTriggered: document.getElementById('dist-add-photo-input')?.files?.length || 0
+        }));
+        expect(r.gateText).toBe('Connexion requise');
+        expect(r.webcamModalAppeared).toBe(false);
+    });
+
+    test('UC4 contribution publique : Signaler sans auth -> modale email', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await openDistModal(page);
+        // openReportModal n'est pas sur window : import dynamique pour le declencher
+        // sans dependre du timing chat (-> Conversations.active -> dyn import -> ...)
+        await page.evaluate(async () => {
+            const m = await import('./js/activity.js');
+            // pas d'await : requireAuth() interne va resoudre via la modale, on ne
+            // veut pas bloquer la promesse.
+            m.openReportModal();
+        });
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
+
+        const modal = await page.$('.auth-modal');
+        expect(modal).not.toBeNull();
+    });
+
+    test('UC5 sociale locale : Favori SANS modale d\'auth (anti-regression regle #7)', async ({ page }) => {
+        // Pas de distrimatch_force_auth : meme en prod-like, favori reste libre
+        await page.evaluate(() => { window.AppState.subscriptions = []; localStorage.clear(); });
+        await openDistModal(page);
+        const id = await page.evaluate(() => window.AppState.currentDistributor.id);
+        await page.click('#dist-action-favorite');
+        await page.waitForTimeout(400);
+
+        const r = await page.evaluate((did) => ({
+            authShown: !!document.querySelector('.auth-modal-overlay'),
+            gateShown: !!document.getElementById('edit-auth-gate'),
+            subscribed: window.AppState.subscriptions.includes(did),
+        }), id);
+        expect(r.authShown).toBe(false);
+        expect(r.gateShown).toBe(false);
+        expect(r.subscribed).toBe(true);
+    });
+
+    test('UC8 preference perso : changer le rayon geofence SANS modale d\'auth', async ({ page }) => {
+        // Anti-regression : meme avec force_auth, les prefs notifs restent libres.
+        // On modifie le slider DOM via input event (le handler 'oninput' va
+        // appeler updateRadiusDisplay et eventuellement saveNotificationPrefs).
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+
+        const r = await page.evaluate(() => {
+            const slider = document.getElementById('geofence-radius');
+            if (!slider) return { sliderMissing: true };
+            const before = slider.value;
+            slider.value = before === '2000' ? '1500' : '2000';
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+            slider.dispatchEvent(new Event('change', { bubbles: true }));
+            return {
+                authShown: !!document.querySelector('.auth-modal-overlay'),
+                gateShown: !!document.getElementById('edit-auth-gate'),
+                newValue: slider.value,
+                changed: slider.value !== before,
+            };
+        });
+        expect(r.sliderMissing).toBeFalsy();
+        expect(r.authShown).toBe(false);
+        expect(r.gateShown).toBe(false);
+        expect(r.changed).toBe(true);
+    });
+});
