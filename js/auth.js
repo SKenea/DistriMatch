@@ -1,7 +1,11 @@
 /**
  * DistriMatch - Authentification Magic Link
- * Email obligatoire pour toute interaction (ecriture).
- * Lectures restent anonymes.
+ *
+ * Politique d'authentification : voir CLAUDE.md > "Politique d'authentification"
+ * pour la matrice complete des 10 use cases. Regle structurante : auth
+ * obligatoire des qu'une ecriture impacte les autres utilisateurs (contributions
+ * publiques) ; libre pour ce qui n'affecte que son propre appareil (favoris,
+ * prefs notifs, suivi produits, chat). Lectures toujours anonymes.
  */
 
 import { supabaseClient } from './state.js';

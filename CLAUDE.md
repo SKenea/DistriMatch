@@ -84,6 +84,33 @@ Chaque distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 - **XSS** : Toujours `escapeHTML()` pour tout contenu utilisateur affiche dans le DOM
 - Valider les donnees externes avant utilisation
 
+### Politique d'authentification
+
+**Regle structurante** : auth = obligatoire des qu'une ecriture **impacte les autres utilisateurs** (visible publiquement, agregee, moderable). Auth = libre pour tout ce qui n'affecte que **son propre appareil** (prefs, etat local, simulation chat). Lectures restent toujours anonymes.
+
+**Matrice des 10 use cases** :
+
+| # | Categorie | Use case | Auth ? | Storage |
+|---|---|---|:-:|---|
+| UC1 | Contribution publique | Ajouter un nouveau distributeur | OUI | Supabase `distributors` |
+| UC2 | Contribution publique | CRUD produits (ajout / rename / toggle dispo / delete) | OUI | Supabase `products` |
+| UC3 | Contribution publique | Upload photo sur distributeur existant | OUI | Supabase storage + `distributor_photos` |
+| UC4 | Contribution publique | Signalement / vote pour un signalement | OUI | Supabase RPC + ActivityFeed local |
+| UC5 | Sociale locale | Mettre / retirer favori (coeur) | non | localStorage `snackmatch_subscriptions` |
+| UC6 | Sociale locale | Suivre un produit (alertes dispo) | non | localStorage `snackmatch_notification_prefs` |
+| UC7 | Sociale locale | Discuter avec le bot d'un distributeur | non | localStorage `snackmatch_conversations` |
+| UC8 | Preference perso | Prefs notifs (heures calmes, geofence) | non | localStorage |
+| UC9 | Preference perso | Marquer notif lue / supprimer notif | non | localStorage |
+| UC10 | Preference perso | Reinitialiser ses donnees (clear data) | non | localStorage (confirm() suffit) |
+
+**Mecanismes** :
+- `requireAuth()` (auth.js) : prompt email + magic link Supabase. Bypass localhost dev sauf si `localStorage.distrimatch_force_auth='1'`.
+- `isAuthenticated()` (auth.js) : check sync sans prompt.
+- `showEditAuthGate()` (gmaps-ui.js) : modale "Connexion requise" pedagogique qui redirige vers la page Compte. Utilisee par UC2 (Modifier) et UC3 (Photo).
+- RLS Supabase (`supabase/001_schema.sql`, `003_photos.sql`) : verifie cote serveur que `auth.uid() = user_id` pour les INSERT.
+
+**Avant d'ajouter un nouveau bouton qui modifie** : trancher dans quelle categorie il tombe (public/social-local/pref-perso) et appliquer le bon pattern. Si doute -> auth requise par defaut.
+
 ### Performance
 - Batch DOM updates (pas de `innerHTML +=` en boucle)
 - Event delegation sur conteneurs
