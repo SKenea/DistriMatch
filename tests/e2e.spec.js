@@ -506,23 +506,29 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.stillReadonly).toBe(true);
     });
 
-    test('modale gate : clic "Se connecter" -> ferme tout + page Compte', async ({ page }) => {
+    test('modale gate : clic "Se connecter" -> ouvre directement la modale email (pas de detour Compte)', async ({ page }) => {
+        // Localhost saute requireAuth() par defaut : on le reactive pour
+        // que la modale email s'ouvre comme en prod.
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await openFirstFavoriteCard(page);
         await page.click('#dist-action-edit');
         await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
         await page.click('#edit-auth-gate-go');
-        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        // Apres clic, la modale email doit apparaitre directement (pattern
+        // Google Maps). Le gate doit etre ferme. On NE doit PAS atterrir
+        // sur la page Compte.
+        await page.waitForSelector('.auth-modal-overlay:not(#edit-auth-gate)', { timeout: 3000 });
 
         const r = await page.evaluate(() => ({
             gateGone: !document.getElementById('edit-auth-gate'),
-            modalClosed: !document.getElementById('dist-modal-overlay').classList.contains('active'),
+            emailModalShown: !!document.querySelector('.auth-modal-overlay'),
+            onAccountView: document.getElementById('account-view')?.classList.contains('view-active'),
             stillReadonly: window.AppState.modalEditMode === false,
-            authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
         }));
         expect(r.gateGone).toBe(true);
-        expect(r.modalClosed).toBe(true);
+        expect(r.emailModalShown).toBe(true);
+        expect(r.onAccountView).toBe(false); // plus de detour par Compte
         expect(r.stillReadonly).toBe(true);
-        expect(r.authBtn).toBe('Se connecter');
     });
 
     test('mode edition affiche produits CRUD + ajout + chat, stylo masque', async ({ page }) => {
@@ -678,30 +684,24 @@ test.describe('7. Profil (Local Guides + menu avatar)', () => {
         expect(r.noStatCard).toBe(0);              // plus de mur de cartes
     });
 
-    test('menu -> Compte : etat + bouton connexion + reinitialisation (sans "danger")', async ({ page }) => {
+    test('menu -> Compte : statut + hint + reinitialisation (sans bouton auth, sans "danger")', async ({ page }) => {
         await page.click('#profile-avatar-btn');
         await page.click('#profile-menu [data-action="account"]');
         await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
         const r = await page.evaluate(() => ({
             authText: document.getElementById('account-auth-text').textContent,
-            authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
+            // Pattern Google Maps : pas de bouton "Se connecter" sur la
+            // page Compte, l'unique point d'entree auth est le menu avatar.
+            noAuthBtn: !document.getElementById('account-auth-action'),
+            hintVisible: document.getElementById('account-auth-hint')?.offsetParent !== null,
             clearBtn: !!document.getElementById('clear-data-btn'),
             noDanger: !/danger/i.test(document.getElementById('account-view').innerHTML),
         }));
         expect(r.authText).toBe('Non connecté');
-        expect(r.authBtn).toBe('Se connecter');
+        expect(r.noAuthBtn).toBe(true);
+        expect(r.hintVisible).toBe(true);
         expect(r.clearBtn).toBe(true);
         expect(r.noDanger).toBe(true);
-    });
-
-    test('Compte : clic "Se connecter" -> mur d\'auth', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
-        await page.click('#profile-avatar-btn');
-        await page.click('#profile-menu [data-action="account"]');
-        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
-        await page.click('#account-auth-action');
-        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
-        expect(await page.$('.auth-modal')).not.toBeNull();
     });
 
     test('menu Connexion -> mur d\'auth', async ({ page }) => {

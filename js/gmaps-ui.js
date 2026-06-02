@@ -9,7 +9,6 @@ import { toggleSubscription, loadDistributorPhotos, renderProductsList } from '.
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
-import { switchView } from './navigation.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -568,9 +567,10 @@ async function openWebcamCapture(distributor) {
     });
 }
 
-// Modale d'explication affichee quand on clique "Modifier" sans etre
-// identifie. Invite a se connecter via la page Compte (point d'entree
-// unique de la connexion : email + hCaptcha), puis a revenir.
+// Modale d'explication affichee quand on clique "Modifier" ou "Photo"
+// sans etre identifie. Garde la pedagogie ("Connexion requise pour..."),
+// mais le bouton "Se connecter" lance DIRECTEMENT la modale email
+// (requireAuth) -- pas de detour par la page Compte (pattern Google Maps).
 function showEditAuthGate() {
     if (document.getElementById('edit-auth-gate')) return;
 
@@ -598,8 +598,11 @@ function showEditAuthGate() {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) remove(); });
     overlay.querySelector('#edit-auth-gate-go').addEventListener('click', () => {
         remove();
-        closeDistModal();
-        switchView('account');
+        // Lance directement la modale email (pas de detour par la page
+        // Compte). La fiche distributeur reste ouverte en arriere-plan ;
+        // apres auth via magic link, l'utilisateur retombera sur la map
+        // (rechargement de page) et pourra reprendre son action.
+        requireAuth();
     });
 }
 

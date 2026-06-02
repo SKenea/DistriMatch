@@ -251,12 +251,15 @@ function refreshAuthUI(user = getCurrentUser()) {
     const indicator = document.getElementById('auth-indicator');
     const accountText = document.getElementById('account-auth-text');
     const menuAuth = document.getElementById('menu-auth-action');
-    const accountAuth = document.getElementById('account-auth-action');
+    const accountHint = document.getElementById('account-auth-hint');
     const profileName = document.getElementById('profile-name');
     if (indicator) indicator.classList.toggle('logged-in', authed);
     if (accountText) accountText.textContent = authed ? user.email : 'Non connecté';
+    // Le menu avatar est le SEUL point d'entree pour l'action auth (pattern
+    // Google Maps). La page Compte affiche le statut + le hint, mais plus
+    // de bouton d'action -> evite le doublon avec le menu.
     if (menuAuth) menuAuth.textContent = authed ? 'Déconnexion' : 'Connexion';
-    if (accountAuth) accountAuth.textContent = authed ? 'Se déconnecter' : 'Se connecter';
+    if (accountHint) accountHint.style.display = authed ? 'none' : '';
     if (profileName) profileName.textContent = authed ? user.email : 'Invité';
 }
 
@@ -566,15 +569,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Compte : bouton Connexion/Deconnexion (point d'entree unique de l'auth)
-    document.getElementById('account-auth-action')?.addEventListener('click', async () => {
-        if (isAuthenticated()) {
-            await signOut();
-        } else {
-            await requireAuth();
-        }
-        refreshAuthUI(getCurrentUser());
-    });
+    // Listener pour #account-auth-action retire 2026-06-02 : le bouton
+    // primaire de la page Compte a ete supprime pour eviter le doublon
+    // avec le menu avatar (pattern Google Maps : 1 seul point d'entree
+    // auth = le dropdown). La page Compte conserve uniquement l'indicateur
+    // de statut + reglages + zone de reinitialisation.
 
     // Compte : acces aux reglages de notifications
     document.getElementById('account-notif-settings')?.addEventListener('click', openNotificationSettings);
