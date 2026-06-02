@@ -9,7 +9,8 @@ import {
 } from './state.js';
 import {
     escapeHTML, showToast, calculateDistance,
-    saveToLocalStorage, saveUserDistributor, saveProfile
+    saveToLocalStorage, saveUserDistributor, saveProfile,
+    compressImage
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
@@ -187,33 +188,51 @@ export async function uploadDistributorPhotos(distributorId, files) {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) return [];
 
-    const uploadedPaths = [];
+    // Limite a 3 photos et timestamp partage pour eviter collision de path
+    // (chaque upload en parallele ajoute son index a la fin du nom).
+    const items = Array.from(files).slice(0, 3);
+    const sharedTs = Date.now();
 
-    for (let i = 0; i < Math.min(files.length, 3); i++) {
+    // Pipeline par photo : compression -> upload storage -> insert metadata.
+    // Lance les 3 en parallele via Promise.all. Si une echoue, les autres
+    // continuent (Promise.allSettled n'est pas necessaire car chaque pipeline
+    // a son propre try/catch et retourne null en cas d'erreur).
+    const uploads = items.map((file, i) => (async () => {
         try {
-            const file = files[i];
-            const ext = file.name.split('.').pop().toLowerCase();
-            const path = `${session.user.id}/${distributorId}_${Date.now()}_${i}.${ext}`;
+            // 1. Compression cote client (1600px max, JPEG 0.80).
+            //    Fallback transparent : si le fichier n'est pas une image
+            //    ou que la compression echoue, on garde l'original.
+            const compressed = await compressImage(file, { maxDim: 1600, quality: 0.80 });
 
-            const { error } = await supabaseClient.storage
+            // 2. Path : la compression renomme en .jpg, donc on force l'ext.
+            const ext = (compressed.type === 'image/jpeg') ? 'jpg' : (compressed.name.split('.').pop() || 'jpg').toLowerCase();
+            const path = `${session.user.id}/${distributorId}_${sharedTs}_${i}.${ext}`;
+
+            // 3. Upload storage.
+            const { error: storageErr } = await supabaseClient.storage
                 .from('distributor-photos')
-                .upload(path, file, { contentType: file.type });
+                .upload(path, compressed, { contentType: compressed.type });
+            if (storageErr) throw storageErr;
 
-            if (error) throw error;
-
-            await supabaseClient.from('distributor_photos').insert({
+            // 4. Insert metadata (lie distributor + storage).
+            const { error: dbErr } = await supabaseClient.from('distributor_photos').insert({
                 distributor_id: distributorId,
                 user_id: session.user.id,
                 storage_path: path,
                 status: 'approved'
             });
+            if (dbErr) throw dbErr;
 
-            uploadedPaths.push(path);
             console.log('[DistriMatch] Photo uploadee:', path);
+            return path;
         } catch (e) {
             console.warn('[DistriMatch] Erreur upload photo:', e.message);
+            return null;
         }
-    }
+    })());
+
+    const results = await Promise.all(uploads);
+    const uploadedPaths = results.filter(p => p !== null);
 
     if (uploadedPaths.length > 0) {
         UserProfile.stats.photosUploaded = (UserProfile.stats.photosUploaded || 0) + uploadedPaths.length;

@@ -564,7 +564,7 @@ async function openWebcamCapture(distributor) {
             const file = new File([blob], `webcam_${Date.now()}.jpg`, { type: 'image/jpeg' });
             closeWebcam();
             await processPhotoUpload(distributor, [file]);
-        }, 'image/jpeg', 0.92);
+        }, 'image/jpeg', 0.80); // aligne sur compressImage() pour coherence taille
     });
 }
 

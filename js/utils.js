@@ -332,3 +332,74 @@ export function getUserLocation() {
         );
     });
 }
+
+// Compression d'image cote client (canvas + toBlob JPEG) pour reduire le
+// poids avant upload. Photo smartphone moderne = 3-10 MB, compresse ici
+// a ~500 KB sans perte visuelle notable (1600px de large max, qualite 0.80).
+// Si le fichier n'est pas une image ou que la compression echoue, on
+// retourne le fichier original (fallback transparent).
+export function compressImage(file, opts = {}) {
+    const maxDim = opts.maxDim || 1600;
+    const quality = opts.quality !== undefined ? opts.quality : 0.80;
+
+    return new Promise((resolve) => {
+        // Garde-fou : si pas une image, on retourne tel quel
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+            resolve(file);
+            return;
+        }
+
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+
+        img.onload = () => {
+            try {
+                // Calcule les dimensions cibles en preservant le ratio.
+                let { width, height } = img;
+                if (width > maxDim || height > maxDim) {
+                    if (width >= height) {
+                        height = Math.round(height * (maxDim / width));
+                        width = maxDim;
+                    } else {
+                        width = Math.round(width * (maxDim / height));
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    URL.revokeObjectURL(url);
+                    if (!blob) {
+                        // toBlob a echoue : fallback original
+                        resolve(file);
+                        return;
+                    }
+                    // Renomme en .jpg (toBlob produit toujours du JPEG ici)
+                    const originalName = file.name || 'photo';
+                    const baseName = originalName.replace(/\.[^.]+$/, '');
+                    const compressed = new File([blob], `${baseName}.jpg`, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    resolve(compressed);
+                }, 'image/jpeg', quality);
+            } catch (e) {
+                URL.revokeObjectURL(url);
+                console.warn('[DistriMatch] compressImage error:', e.message);
+                resolve(file);
+            }
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(file);
+        };
+
+        img.src = url;
+    });
+}
