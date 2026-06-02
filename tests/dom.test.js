@@ -76,7 +76,7 @@ const html = `<!DOCTYPE html>
     <div id="account-view" class="view-page view-hidden">
         <div class="account-status">
             <span class="auth-indicator" id="auth-indicator"><span id="account-auth-text"></span></span>
-            <button id="account-auth-action">Se connecter</button>
+            <p class="account-auth-hint" id="account-auth-hint">Connecte-toi via le bonhomme en haut a droite.</p>
         </div>
         <div class="account-reset">
             <h4 class="account-reset-title">Réinitialisation</h4>
@@ -287,11 +287,16 @@ describe('closeDistModal', () => {
     });
 });
 
-describe('Vue Compte (connexion + reinitialisation)', () => {
-    it('a un bouton "Se connecter" dans le bloc statut', () => {
+describe('Vue Compte (statut + reinitialisation, sans action auth)', () => {
+    it('pas de bouton "Se connecter" sur la page Compte (point d\'entree auth = menu avatar)', () => {
         const btn = document.getElementById('account-auth-action');
-        assert.ok(btn, 'bouton #account-auth-action present');
-        assert.equal(btn.textContent.trim(), 'Se connecter');
+        assert.equal(btn, null, 'le bouton #account-auth-action doit etre supprime (doublon avec le menu avatar)');
+    });
+
+    it('affiche le hint qui pointe vers le menu avatar', () => {
+        const hint = document.getElementById('account-auth-hint');
+        assert.ok(hint, 'hint #account-auth-hint present');
+        assert.ok(/bonhomme|menu|haut/i.test(hint.textContent), 'le hint mentionne ou se connecter');
     });
 
     it('aucun mot "danger" dans la vue Compte', () => {
