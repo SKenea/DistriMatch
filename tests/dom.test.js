@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 
 const html = `<!DOCTYPE html>
 <html><body>
-    <div id="toast-container"></div>
+    <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Modal distributeur Google Maps style -->
     <div id="dist-modal-overlay" class="dist-modal-overlay">
@@ -207,6 +207,35 @@ describe('showToast', () => {
         showToast('Message 1');
         showToast('Message 2');
         assert.equal(container.children.length, 2);
+    });
+
+    // WCAG 4.1.3 : les notifications doivent etre annoncees aux lecteurs
+    // d'ecran. Le container porte aria-live="polite" (annonces non-
+    // interruptives), et chaque toast d'erreur porte role="alert" pour
+    // forcer une lecture assertive (= interrompt l'utilisateur).
+    it('le container toast a aria-live="polite" et role="status"', () => {
+        const container = document.getElementById('toast-container');
+        assert.equal(container.getAttribute('aria-live'), 'polite');
+        assert.equal(container.getAttribute('role'), 'status');
+        assert.equal(container.getAttribute('aria-atomic'), 'true');
+    });
+
+    it('un toast type="error" porte role="alert" (annonce assertive)', () => {
+        const container = document.getElementById('toast-container');
+        container.innerHTML = '';
+        showToast('Echec de l\'envoi', 'error');
+        assert.equal(container.children.length, 1);
+        assert.equal(container.children[0].getAttribute('role'), 'alert');
+    });
+
+    it('un toast non-error n\'ajoute PAS role="alert" (reste polite via container)', () => {
+        const container = document.getElementById('toast-container');
+        container.innerHTML = '';
+        showToast('Sauvegarde OK', 'success');
+        assert.equal(container.children[0].getAttribute('role'), null);
+        container.innerHTML = '';
+        showToast('Info neutre');
+        assert.equal(container.children[0].getAttribute('role'), null);
     });
 });
 
