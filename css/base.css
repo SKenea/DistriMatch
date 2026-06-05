@@ -71,6 +71,24 @@
     box-sizing: border-box;
 }
 
+/* ==========================================
+   ACCESSIBILITE - FOCUS CLAVIER VISIBLE (WCAG 2.4.7 AA)
+   Anneau de focus uniquement au clavier (:focus-visible), donc invisible
+   a la souris/tactile. Les champs texte gardent leur retour par bordure
+   (regles plus specifiques) ; on retablit un anneau sur le slider qui
+   se met outline:none sur sa base.
+   ========================================== */
+:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+input[type="range"]:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--light);
@@ -501,4 +519,20 @@ body {
 /* ==========================================
    BOTTOM SHEET (Google Maps style)
    ========================================== */
+
+/* ==========================================
+   ACCESSIBILITE - prefers-reduced-motion (WCAG 2.3.3)
+   Coupe animations + transitions pour les utilisateurs ayant active
+   la preference systeme "Reduire les animations" (vestibulaire, TDAH,
+   sensibilite au mouvement). Couvre toast-in, slides sidebar/search/chat,
+   notification-pulse, animations d'icones, etc.
+   ========================================== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
 
