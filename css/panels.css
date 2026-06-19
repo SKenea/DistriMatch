@@ -1049,6 +1049,30 @@
     border-color: var(--gray-light);
 }
 
+/* Champ texte + rangee d'actions pour les modales propres (ex: suivre un
+   produit). Reutilisable par toute modal-clean a saisie simple. */
+.modal-input-clean {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--dark);
+}
+
+.modal-input-clean:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-actions-clean {
+    display: flex;
+    gap: 0.75rem;
+}
+
 /* ==========================================
    MODAL SIGNALEMENT
    ========================================== */

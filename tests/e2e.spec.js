@@ -1026,3 +1026,46 @@ test.describe('11. Accessibilite modales (focus-trap)', () => {
         await expect(page.locator('#chat-modal')).not.toHaveClass(/active/);
     });
 });
+
+// ============================================
+// 12. SUIVRE UN PRODUIT (modale maison, Lot 2.2)
+// ============================================
+
+test.describe('12. Suivre un produit (modale)', () => {
+    test('ouvre une modale maison (pas de prompt natif), focus au champ, valide et enregistre', async ({ page }) => {
+        // Si un prompt() natif etait encore utilise, Playwright recevrait un
+        // evenement "dialog" : on echoue alors explicitement.
+        let nativeDialog = false;
+        page.on('dialog', async (d) => { nativeDialog = true; await d.dismiss().catch(() => {}); });
+
+        await page.evaluate(() => window.promptAddProductFollow());
+
+        const modal = page.locator('#product-follow-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toHaveAttribute('role', 'dialog');
+
+        // Le focus est sur le champ (autofocus respecte par le focus-trap)
+        const focusOnInput = await page.evaluate(() => document.activeElement?.id === 'product-follow-input');
+        expect(focusOnInput).toBe(true);
+
+        await page.fill('#product-follow-input', 'Pizza Test E2E');
+        await page.click('#product-follow-form button[type="submit"]');
+
+        // Modale fermee + produit persiste en localStorage (normalise en minuscules)
+        await expect(modal).not.toHaveClass(/active/);
+        const stored = await page.evaluate(() => localStorage.getItem('snackmatch_notification_prefs'));
+        expect(stored).toContain('pizza test e2e');
+
+        expect(nativeDialog).toBe(false);
+    });
+
+    test('Echap ferme la modale sans rien enregistrer', async ({ page }) => {
+        await page.evaluate(() => window.promptAddProductFollow());
+        await expect(page.locator('#product-follow-modal')).toHaveClass(/active/);
+        await page.fill('#product-follow-input', 'Ne Doit Pas Etre Suivi');
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#product-follow-modal')).not.toHaveClass(/active/);
+        const stored = await page.evaluate(() => localStorage.getItem('snackmatch_notification_prefs') || '');
+        expect(stored.toLowerCase()).not.toContain('ne doit pas etre suivi');
+    });
+});
