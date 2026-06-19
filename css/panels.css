@@ -746,84 +746,188 @@
     color: var(--primary);
 }
 
-/* ===== Vue Compte ===== */
-.account-section {
+/* ===== Vue Compte (page de reglages standard : cartes nettes a bordure
+   subtile, sections etiquetees, un seul accent rouge reserve a l'action
+   destructive ; la deconnexion est neutre, pas rouge) ===== */
+.account-page {
+    padding: 1rem 1rem 2.5rem;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.account-card {
     background: var(--white);
-    margin: 1rem;
+    border: 1px solid var(--light-gray);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
     overflow: hidden;
 }
 
-.account-status {
-    padding: 1rem;
-    border-bottom: 1px solid var(--light);
+/* --- Carte identite --- */
+.account-identity {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1.25rem;
 }
 
-.account-auth-btn {
-    width: 100%;
+.account-avatar {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+#account-view:not(.is-authed) .account-avatar {
+    background: var(--light-gray);
+    color: var(--gray);
+}
+
+.account-identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.account-email {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--gray);
+}
+
+.account-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-light);
     flex: 0 0 auto;
 }
 
-.account-item {
+#account-view.is-authed .account-dot {
+    background: #16a34a; /* vert "connecte" */
+}
+
+/* --- Footer d'action des cartes --- */
+.account-card-footer {
+    border-top: 1px solid var(--light-gray);
+    padding: 0.875rem 1.25rem;
+    background: var(--light);
+}
+
+/* Bouton auth : CTA principal quand deconnecte (Se connecter)... */
+.account-auth-btn {
+    width: 100%;
+    padding: 0.7rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.account-auth-btn:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+/* ...neutre et discret quand connecte (Se deconnecter n'est PAS destructif) */
+#account-view.is-authed .account-auth-btn {
+    background: var(--white);
+    color: var(--gray);
+    border-color: var(--light-gray);
+}
+#account-view.is-authed .account-auth-btn:hover {
+    background: var(--white);
+    color: var(--dark);
+    border-color: var(--gray-light);
+}
+
+/* --- Labels de section --- */
+.account-section-label {
+    margin: 1.5rem 0.25rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray);
+}
+
+/* --- Rangee navigable (reglages) --- */
+.account-row {
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
     background: none;
     border: none;
-    font-size: 0.95rem;
     color: var(--dark);
     cursor: pointer;
     transition: background 0.15s;
 }
-
-.account-item:hover { background: var(--light); }
-.account-item svg { color: var(--gray-light); }
-
-.account-reset {
-    margin: 1.5rem 1rem;
-    padding: 1rem;
-    border-radius: var(--radius);
-    background: var(--white);
-    box-shadow: var(--shadow);
+.account-row:hover { background: var(--light); }
+.account-row-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
 }
+.account-row-icon { font-size: 1.1rem; line-height: 1; }
+.account-row-label { font-size: 0.95rem; font-weight: 500; }
+.account-row-chevron { color: var(--gray-light); flex: 0 0 auto; }
 
-.account-reset-title {
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 600;
+/* --- Reinitialisation : action destructive isolee (seul rouge de la page) --- */
+.account-card--reset {
+    border-color: rgba(214, 40, 40, 0.25);
+}
+.account-reset-desc {
+    margin: 0;
+    padding: 1.25rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
     color: var(--gray);
 }
-
-.btn-reset {
-    width: 100%;
-    padding: 0.75rem;
+.account-card-footer--reset {
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(214, 40, 40, 0.04);
+    border-top-color: rgba(214, 40, 40, 0.2);
+}
+.account-reset-btn {
+    padding: 0.6rem 1.15rem;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--danger);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--danger);
-    font-size: 0.9rem;
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s;
 }
-
-.btn-reset:hover {
-    background: var(--danger);
-    color: var(--white);
-}
-
-.account-reset-hint {
-    margin: 0.625rem 0 0;
-    font-size: 0.78rem;
-    color: var(--gray);
-}
+.account-reset-btn:hover { background: #B71C1C; }
 
 .profile-actions {
     padding: 1rem;
