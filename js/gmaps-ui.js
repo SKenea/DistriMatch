@@ -58,32 +58,36 @@ function renderSidePanelItem(d, extraClass = '') {
         </div>`;
 }
 
-function bindSidePanelItemClicks(list) {
-    list.querySelectorAll('.side-panel-item').forEach(item => {
-        item.addEventListener('click', () => {
-            openDistributorModal(item.dataset.id);
-        });
-    });
-}
+// Delegation d'evenements : un SEUL listener pose une fois sur le conteneur
+// #side-panel-list (cf. initSidePanel) gere a la fois les clics d'items et les
+// en-tetes d'accordeon, via closest(). Evite de re-attacher N listeners a
+// chaque re-rendu de la liste (innerHTML remplace les noeuds). Le conteneur,
+// lui, persiste -> le listener survit aux re-rendus.
+function handleSidePanelClick(e) {
+    // Accordeon : en-tete de groupe -> ouvre/ferme sa tranche (fermee par
+    // defaut, aria-expanded=false, items [hidden]).
+    const header = e.target.closest('.side-panel-group-header');
+    if (header) {
+        const open = header.getAttribute('aria-expanded') === 'true';
+        header.setAttribute('aria-expanded', String(!open));
+        const items = header.nextElementSibling;
+        if (items && items.classList.contains('side-panel-group-items')) {
+            items.hidden = open;
+        }
+        return;
+    }
 
-// Accordeon : chaque en-tete de groupe ouvre/ferme sa liste d'items.
-// Les 3 groupes sont fermes par defaut (aria-expanded=false, items [hidden]).
-function bindGroupAccordion(list) {
-    list.querySelectorAll('.side-panel-group-header').forEach(header => {
-        header.addEventListener('click', () => {
-            const open = header.getAttribute('aria-expanded') === 'true';
-            header.setAttribute('aria-expanded', String(!open));
-            const items = header.nextElementSibling;
-            if (items && items.classList.contains('side-panel-group-items')) {
-                items.hidden = open;
-            }
-        });
-    });
+    // Item distributeur -> ouvre la fiche.
+    const item = e.target.closest('.side-panel-item');
+    if (item) {
+        openDistributorModal(item.dataset.id);
+    }
 }
 
 export function initSidePanel() {
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
+    document.getElementById('side-panel-list')?.addEventListener('click', handleSidePanelClick);
 }
 
 export function openSidePanelForType(type) {
@@ -117,8 +121,8 @@ export function openSidePanelForFilters(types = []) {
         list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;
     } else if (!AppState.userLocation) {
         // Sans geoloc : pas de distance -> liste plate, comportement inchange.
+        // (Les clics sont geres par delegation, cf. initSidePanel.)
         list.innerHTML = matches.map(d => renderSidePanelItem(d)).join('');
-        bindSidePanelItemClicks(list);
     } else {
         // Avec geoloc : la liste est deja triee par distance croissante.
         // On la decoupe en tranches via DISTANCE_GROUPS.
@@ -153,10 +157,7 @@ export function openSidePanelForFilters(types = []) {
                   ).join('');
             return `<div class="side-panel-group">${header}<div class="side-panel-group-items" hidden>${rows}</div></div>`;
         }).join('');
-
-        bindGroupAccordion(list);
-
-        bindSidePanelItemClicks(list);
+        // Clics items + accordeon : delegation sur le conteneur (initSidePanel).
     }
 
     sidebar.classList.add('open');
