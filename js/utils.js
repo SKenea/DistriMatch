@@ -60,6 +60,12 @@ export function showToast(message, type = 'default') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    // Accessibilite WCAG 4.1.3 : les toasts d'erreur portent role="alert"
+    // pour interrompre le lecteur d'ecran (assertif). Les autres heritent
+    // de aria-live="polite" via le container -> annonce non-interruptive.
+    if (type === 'error') {
+        toast.setAttribute('role', 'alert');
+    }
     toast.textContent = message;
     container.appendChild(toast);
 

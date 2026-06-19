@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- WCAG 1.4.4 : pinch-zoom autorise (user-scalable=no retire). La carte
+         Leaflet gere ses propres gestures, donc pas de conflit. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#E63946">
     <meta name="description" content="DistriMatch - Trouvez les distributeurs alimentaires pres de chez vous">
     <meta name="mobile-web-app-capable" content="yes">
@@ -34,7 +36,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=23">
+    <link rel="stylesheet" href="css/base.css?v=25">
     <link rel="stylesheet" href="css/map.css?v=23">
     <link rel="stylesheet" href="css/panels.css?v=23">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=23">
@@ -779,12 +781,14 @@
     </nav>
 
     <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
+    <!-- Toasts annonces aux lecteurs d'ecran (WCAG 4.1.3). Polite par defaut ;
+         les toasts d'erreur portent role="alert" pour interrompre (cf. showToast). -->
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
-    <script type="module" src="js/app.js?v=22"></script>
+    <script type="module" src="js/app.js?v=23"></script>
 </body>
 </html>
