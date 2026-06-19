@@ -11,6 +11,35 @@
 
 ## Priorite normale
 
+<!-- Lot 3 du chantier a11y/UX (issu de l'audit Nielsen/WCAG du 2026-06-05).
+     Non bloquant : Lot 1 + Lot 2 livres = objectif "fini" atteint. Items de
+     polish a traiter au fil de l'eau. -->
+
+- [ ] a11y : cibles tactiles >= 44px (WCAG 2.5.5 / iOS HIG / Material)
+  - Constat : `.icon-btn` 40x40, `.btn-zoom` 40x40, croix de fermeture 36/32px.
+  - Acceptance : tout element tactile >= 44x44 (taille reelle OU zone etendue via
+    padding/pseudo-element) ; aucune regression visuelle desktop.
+
+- [ ] a11y : contraste du texte secondaire (WCAG 1.4.3 AA)
+  - Constat : `--gray-light #A89B8C` (~2.6:1 sur blanc) utilise pour horodatages
+    (`conversation-time`), `small`, hints -> sous le 4.5:1 requis pour petit texte.
+  - Acceptance : assombrir `--gray-light` (ou reserver son usage au non-texte)
+    jusqu'a >= 4.5:1 ; verifier au contrast checker.
+
+- [ ] UX : onglet "Avis" = cul-de-sac (fausse affordance)
+  - Constat : la fiche affiche une note + un onglet "Avis" qui ne contient qu'un
+    placeholder "Aucun avis", sans aucun moyen d'en ajouter.
+  - Acceptance : soit masquer l'onglet tant que non implemente, soit ouvrir un
+    parcours "Laisser un avis" (contribution publique -> auth requise, cf.
+    politique d'auth UC).
+
+- [ ] UX : confirm() natifs sur actions destructrices
+  - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
+    notifs -> visuellement etranger au reste du design.
+  - Acceptance : modale de confirmation maison reutilisable (titre + message +
+    bouton danger/annuler) reutilisant le focus-trap (js/focus-trap.js) ; OU
+    decision assumee de garder `confirm()` pour "Effacer mes donnees".
+
 ## Idees / a explorer
 
 - [ ] Mode sombre auto (prefers-color-scheme) avec palette adapter
@@ -76,3 +105,7 @@
 - [x] 2026-05-31 Docs auth : formaliser la politique d'authentification dans CLAUDE.md (matrice 10 use cases : UC1-4 contributions publiques = auth obligatoire ; UC5-10 actions sociales locales + prefs perso = libre). Commentaire en tete de js/auth.js + maj memoire projet_auth_architecture (PR #70, commit d338c9c)
 - [x] 2026-05-31 Tests auth : section 10 dans tests/e2e.spec.js avec 6 tests verrouillant la politique (UC1-4 gating : modale email ou gate "Connexion requise" ; UC5 favori + UC8 slider geofence = aucune modale, anti-regression regle #7). 56 + 1 flaky onboarding (PR #71, commit 12cd4da)
 - [x] 2026-06-01 Securite RLS : audit Supabase via pentest anonyme (10/12 actions bloquees par RLS code 42501) revele une faille RPC submit_report (SECURITY DEFINER sans check auth.uid IS NOT NULL -> insertion signalements anonymes possible). Migration 004_rls_hardening.sql ajoute le check defensif a submit_report ET cast_vote. Applique en prod, verifie : appel anonyme retourne maintenant error 42501 "Authentification requise". Notes hors scope (products / distributors UPDATE/DELETE / distributor_photos DELETE) documentees dans le SQL pour arbitrage futur (PR #72, commit 2380878)
+- [x] 2026-06-19 a11y Lot 1 : focus clavier visible global (:focus-visible), toasts annonces aux lecteurs d'ecran (role/aria-live + role=alert sur erreurs), prefers-reduced-motion, pinch-zoom reactive (retrait user-scalable=no) (PR #78, commit 41cad61)
+- [x] 2026-06-19 Fix resilience : init resiliente quand Supabase est injoignable (DNS/offline/pause free-tier). Les enrichissements non critiques (photos, signalements) passent en fire-and-forget pour ne plus geler l'UI (carte + listeners). Bonus : playwright.config en headless par defaut. e2e 41->57 (PR #79, commit 47a2eb6)
+- [x] 2026-06-19 a11y Lot 2.1 : focus-trap + semantique dialog sur les 5 modales (fiche, chat, signalement, auth, "Connexion requise"). Nouveau js/focus-trap.js (focus piege, Echap, retour focus, [autofocus], modales imbriquees). +5 dom, +2 e2e (PR #80, commit 99b3924)
+- [x] 2026-06-19 a11y Lot 2.2 : modale maison "Suivre un produit" remplace le prompt() natif (modal-clean + focus-trap + validation non vide/maxlength). +4 dom, +2 e2e (PR #81, commit 9e5669e)
