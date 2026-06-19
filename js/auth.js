@@ -11,6 +11,7 @@
 import { supabaseClient } from './state.js';
 import { showToast, escapeHTML } from './utils.js';
 import { getHcaptchaSitekey, isLocalhost } from './config.js';
+import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 
 // ============================================
 // ETAT AUTH
@@ -147,7 +148,7 @@ function openEmailModal(onClose) {
     const overlay = document.createElement('div');
     overlay.className = 'auth-modal-overlay';
     overlay.innerHTML = `
-        <div class="auth-modal">
+        <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" tabindex="-1">
             <button class="auth-modal-close" aria-label="Fermer">×</button>
             <div class="auth-modal-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -155,7 +156,7 @@ function openEmailModal(onClose) {
                     <polyline points="22,6 12,13 2,6"/>
                 </svg>
             </div>
-            <h2>Ton email pour interagir</h2>
+            <h2 id="auth-modal-title">Ton email pour interagir</h2>
             <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe, juste un lien a cliquer.</p>
             <form class="auth-modal-form">
                 <input type="email" placeholder="ton@email.com" required autofocus>
@@ -225,15 +226,18 @@ function openEmailModal(onClose) {
         setTimeout(() => clearInterval(interval), 10000);
     }
 
+    const dialog = overlay.querySelector('.auth-modal');
     const close = (success = false) => {
         modalOpen = false;
         if (captchaWidgetId !== null && window.hcaptcha) {
             try { window.hcaptcha.reset(captchaWidgetId); } catch (e) {}
         }
+        deactivateFocusTrap(dialog);
         overlay.remove();
         onClose(success);
     };
 
+    activateFocusTrap(dialog, () => close(false));
     overlay.querySelector('.auth-modal-close').addEventListener('click', () => close(false));
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
 

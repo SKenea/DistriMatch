@@ -152,6 +152,7 @@ const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, 
 const { updateUnreadCounts } = await import('../js/chat.js');
 const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications } = await import('../js/notifications.js');
 const { NotificationQueue } = await import('../js/state.js');
+const { activateFocusTrap, deactivateFocusTrap } = await import('../js/focus-trap.js');
 
 // ============================================
 // ESCAPEHTML (DOM)
@@ -805,5 +806,70 @@ describe('Centre de notifications', () => {
         NotificationQueue.history = [{ type: 'proximity', message: 'A', read: true, timestamp: Date.now() }];
         openNotificationsView();
         assert.notEqual(document.getElementById('clear-notifications').style.display, 'none');
+    });
+});
+
+// ============================================
+// FOCUS TRAP (modales accessibles - WCAG 2.4.3 / 2.1.2)
+// ============================================
+
+describe('focus-trap', () => {
+    // jsdom n'a pas de layout -> offsetWidth vaut 0 partout. On le stub sur les
+    // boutons du fixture pour que getFocusable les considere visibles.
+    function makeVisible(...els) {
+        els.forEach(el => Object.defineProperty(el, 'offsetWidth', { configurable: true, value: 10 }));
+    }
+
+    beforeEach(() => {
+        document.querySelectorAll('.ft-fixture').forEach(n => n.remove());
+        document.body.insertAdjacentHTML('beforeend', `
+            <button id="ft-trigger" class="ft-fixture">ouvrir</button>
+            <div id="ft-modal" class="ft-fixture" tabindex="-1">
+                <button id="ft-a">A</button>
+                <button id="ft-b">B</button>
+            </div>
+        `);
+        makeVisible(document.getElementById('ft-a'), document.getElementById('ft-b'));
+    });
+
+    it('deplace le focus sur le 1er focusable a l\'ouverture', () => {
+        document.getElementById('ft-trigger').focus();
+        activateFocusTrap(document.getElementById('ft-modal'), () => {});
+        assert.equal(document.activeElement, document.getElementById('ft-a'));
+    });
+
+    it('Echap declenche le callback onEscape', () => {
+        let escaped = false;
+        const modal = document.getElementById('ft-modal');
+        activateFocusTrap(modal, () => { escaped = true; });
+        modal.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert.equal(escaped, true);
+    });
+
+    it('Shift+Tab depuis le 1er element boucle vers le dernier', () => {
+        const modal = document.getElementById('ft-modal');
+        activateFocusTrap(modal, () => {});
+        // focus est sur ft-a (1er). Shift+Tab -> doit aller sur ft-b (dernier).
+        modal.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
+        assert.equal(document.activeElement, document.getElementById('ft-b'));
+    });
+
+    it('deactivate rend le focus au declencheur', () => {
+        const trigger = document.getElementById('ft-trigger');
+        trigger.focus();
+        const modal = document.getElementById('ft-modal');
+        activateFocusTrap(modal, () => {});
+        assert.equal(document.activeElement, document.getElementById('ft-a'));
+        deactivateFocusTrap(modal);
+        assert.equal(document.activeElement, trigger);
+    });
+
+    it('respecte [autofocus] s\'il est present', () => {
+        const modal = document.getElementById('ft-modal');
+        const b = document.getElementById('ft-b');
+        b.setAttribute('autofocus', '');
+        activateFocusTrap(modal, () => {});
+        assert.equal(document.activeElement, b);
+        b.removeAttribute('autofocus');
     });
 });

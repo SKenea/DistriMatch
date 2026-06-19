@@ -11,6 +11,7 @@ import {
 } from './utils.js';
 import { closeSidebar, updateConversationsBadge } from './navigation.js';
 import { toggleSubscription, getDirectionsTo } from './distributor.js';
+import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 
 // ============================================
 // BOT DISTRIBUTEUR
@@ -98,6 +99,7 @@ function displayChatModal(bot) {
     });
 
     modal.classList.add('active');
+    activateFocusTrap(modal, closeChatModal);
 
     updateChatSubscribeButton(bot.id);
 
@@ -107,7 +109,9 @@ function displayChatModal(bot) {
 }
 
 export function closeChatModal() {
-    document.getElementById('chat-modal').classList.remove('active');
+    const modal = document.getElementById('chat-modal');
+    modal.classList.remove('active');
+    deactivateFocusTrap(modal);
     Conversations.active = null;
 }
 

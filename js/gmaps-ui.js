@@ -10,6 +10,7 @@ import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { switchView } from './navigation.js';
+import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -416,11 +417,15 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     switchDistTab('produits');
 
     // Afficher la modal
-    document.getElementById('dist-modal-overlay')?.classList.add('active');
+    const overlay = document.getElementById('dist-modal-overlay');
+    overlay?.classList.add('active');
+    if (overlay) activateFocusTrap(overlay, closeDistModal);
 }
 
 export function closeDistModal() {
-    document.getElementById('dist-modal-overlay')?.classList.remove('active');
+    const overlay = document.getElementById('dist-modal-overlay');
+    overlay?.classList.remove('active');
+    if (overlay) deactivateFocusTrap(overlay);
 }
 
 // Pipeline commun d'upload de photo(s) pour un distributeur : pose le
@@ -578,7 +583,7 @@ function showEditAuthGate() {
     overlay.id = 'edit-auth-gate';
     overlay.className = 'auth-modal-overlay';
     overlay.innerHTML = `
-        <div class="auth-modal">
+        <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="edit-auth-gate-title" tabindex="-1">
             <button class="auth-modal-close" aria-label="Fermer">&times;</button>
             <div class="auth-modal-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -586,14 +591,19 @@ function showEditAuthGate() {
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
             </div>
-            <h2>Connexion requise</h2>
+            <h2 id="edit-auth-gate-title">Connexion requise</h2>
             <p class="auth-modal-subtitle">Pour faire une modification ou une mise &agrave; jour, il faut que tu sois connect&eacute;. Clique sur le bouton ci-dessous pour te connecter, puis reviens sur ce distributeur.</p>
             <button class="auth-modal-submit" id="edit-auth-gate-go" type="button">Se connecter</button>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    const remove = () => overlay.remove();
+    const dialog = overlay.querySelector('.auth-modal');
+    const remove = () => {
+        deactivateFocusTrap(dialog);
+        overlay.remove();
+    };
+    activateFocusTrap(dialog, remove);
     overlay.querySelector('.auth-modal-close').addEventListener('click', remove);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) remove(); });
     overlay.querySelector('#edit-auth-gate-go').addEventListener('click', () => {
