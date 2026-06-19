@@ -108,6 +108,19 @@ const html = `<!DOCTYPE html>
         <div id="notifications-list"></div>
         <div id="notifications-empty" style="display:none"></div>
     </div>
+    <div id="product-follow-modal" class="modal-clean" role="dialog" aria-modal="true" aria-labelledby="product-follow-title" tabindex="-1">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="product-follow-close"></button>
+            <h2 id="product-follow-title">Suivre un produit</h2>
+            <form id="product-follow-form">
+                <input type="text" id="product-follow-input" maxlength="50" autofocus>
+                <div class="modal-actions-clean">
+                    <button type="button" id="product-follow-cancel">Annuler</button>
+                    <button type="submit">Valider</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <nav class="bottom-nav">
         <button class="nav-tab active" data-tab="explore"></button>
         <button class="nav-tab" data-tab="favorites"></button>
@@ -150,7 +163,7 @@ const { renderProductsList, toggleSubscription, displaySubscriptions } = await i
 const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
-const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications } = await import('../js/notifications.js');
+const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../js/notifications.js');
 const { NotificationQueue } = await import('../js/state.js');
 const { activateFocusTrap, deactivateFocusTrap } = await import('../js/focus-trap.js');
 
@@ -871,5 +884,54 @@ describe('focus-trap', () => {
         activateFocusTrap(modal, () => {});
         assert.equal(document.activeElement, b);
         b.removeAttribute('autofocus');
+    });
+});
+
+// ============================================
+// SUIVRE UN PRODUIT (modale maison, plus de prompt() natif)
+// ============================================
+
+describe('promptAddProductFollow (modale)', () => {
+    beforeEach(() => {
+        NotificationPrefs.followedProducts = [];
+        const modal = document.getElementById('product-follow-modal');
+        modal.classList.remove('active');
+        document.getElementById('product-follow-input').value = '';
+        // NB: on ne reset PAS form.dataset.wired -> les listeners sont poses une
+        // seule fois (comportement reel), pas de doublon entre tests.
+    });
+
+    function submitForm() {
+        document.getElementById('product-follow-form')
+            .dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    }
+
+    it('ouvre la modale (active) sans prompt natif', () => {
+        promptAddProductFollow();
+        assert.ok(document.getElementById('product-follow-modal').classList.contains('active'));
+    });
+
+    it('submit avec une valeur -> produit suivi (normalise) + modale fermee', () => {
+        promptAddProductFollow();
+        document.getElementById('product-follow-input').value = 'Pizza Margherita';
+        submitForm();
+        assert.ok(NotificationPrefs.followedProducts.includes('pizza margherita'));
+        assert.ok(!document.getElementById('product-follow-modal').classList.contains('active'));
+    });
+
+    it('submit vide -> rien suivi, la modale reste ouverte', () => {
+        promptAddProductFollow();
+        document.getElementById('product-follow-input').value = '   ';
+        submitForm();
+        assert.equal(NotificationPrefs.followedProducts.length, 0);
+        assert.ok(document.getElementById('product-follow-modal').classList.contains('active'));
+    });
+
+    it('bouton Annuler ferme sans rien suivre', () => {
+        promptAddProductFollow();
+        document.getElementById('product-follow-input').value = 'Frites';
+        document.getElementById('product-follow-cancel').click();
+        assert.equal(NotificationPrefs.followedProducts.length, 0);
+        assert.ok(!document.getElementById('product-follow-modal').classList.contains('active'));
     });
 });

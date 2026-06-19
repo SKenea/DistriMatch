@@ -38,7 +38,7 @@
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=25">
     <link rel="stylesheet" href="css/map.css?v=23">
-    <link rel="stylesheet" href="css/panels.css?v=23">
+    <link rel="stylesheet" href="css/panels.css?v=24">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=23">
     <link rel="stylesheet" href="css/overlays.css?v=23">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -704,6 +704,28 @@
         </div>
     </div>
 
+    <!-- Modal "Suivre un produit" (remplace le prompt() natif) -->
+    <div id="product-follow-modal" class="modal-clean" role="dialog" aria-modal="true" aria-labelledby="product-follow-title" tabindex="-1">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="product-follow-close" aria-label="Fermer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+            <h2 id="product-follow-title">Suivre un produit</h2>
+            <p class="setting-hint">Sois notifie quand ce produit est disponible pres de toi.</p>
+            <form id="product-follow-form">
+                <input type="text" id="product-follow-input" class="modal-input-clean"
+                       maxlength="50" autocomplete="off" autofocus
+                       placeholder="Ex : pizza margherita" aria-label="Nom du produit a suivre">
+                <div class="modal-actions-clean">
+                    <button type="button" class="btn-secondary-clean" id="product-follow-cancel">Annuler</button>
+                    <button type="submit" class="btn-primary-clean">Valider</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ============================================
          PAGE ACTIVITE (Feed communautaire)
          ============================================ -->
@@ -789,6 +811,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
-    <script type="module" src="js/app.js?v=25"></script>
+    <script type="module" src="js/app.js?v=26"></script>
 </body>
 </html>

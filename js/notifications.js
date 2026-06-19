@@ -9,6 +9,7 @@ import {
 } from './utils.js';
 import { switchView } from './navigation.js';
 import { addActivityItem } from './activity.js';
+import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 
 // ============================================
 // HEURES CALMES ET COOLDOWN
@@ -452,9 +453,42 @@ export function updateRadiusDisplay() {
     document.getElementById('radius-value').textContent = `${value / 1000} km`;
 }
 
+// Fermeture de la modale "Suivre un produit" : retire l'etat actif et relache
+// le focus-trap (rend le focus au bouton declencheur).
+function closeProductFollowModal() {
+    const modal = document.getElementById('product-follow-modal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    deactivateFocusTrap(modal);
+}
+
+// Remplace le prompt() natif (boite systeme non stylable, hostile mobile) par
+// une modale maison coherente avec le design, accessible (focus-trap + Echap)
+// et validee (non vide, longueur bornee via maxlength=50 sur l'input).
 export function promptAddProductFollow() {
-    const product = prompt('Quel produit veux-tu suivre ?');
-    if (product && product.trim()) {
-        followProduct(product.trim());
-    }
+    const modal = document.getElementById('product-follow-modal');
+    const input = document.getElementById('product-follow-input');
+    const form = document.getElementById('product-follow-form');
+    if (!modal || !input || !form) return;
+
+    input.value = '';
+    modal.classList.add('active');
+    activateFocusTrap(modal, closeProductFollowModal);
+
+    // Listeners poses une seule fois (la modale est statique et reutilisee).
+    if (form.dataset.wired) return;
+    form.dataset.wired = '1';
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const value = input.value.trim();
+        if (!value) return;
+        followProduct(value);
+        closeProductFollowModal();
+    });
+    document.getElementById('product-follow-cancel').addEventListener('click', closeProductFollowModal);
+    document.getElementById('product-follow-close').addEventListener('click', closeProductFollowModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeProductFollowModal();
+    });
 }
