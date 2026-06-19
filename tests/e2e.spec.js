@@ -967,3 +967,62 @@ test.describe('10. Politique d\'authentification', () => {
         expect(r.changed).toBe(true);
     });
 });
+
+// ============================================
+// 11. ACCESSIBILITE DES MODALES (focus-trap, WCAG 2.4.3 / 2.1.2)
+// ============================================
+
+test.describe('11. Accessibilite modales (focus-trap)', () => {
+    test('dist-modal : role dialog + aria-labelledby + focus piege + Echap ferme + focus rendu', async ({ page }) => {
+        // Focaliser un declencheur connu (bouton recherche) pour verifier le
+        // retour du focus a la fermeture.
+        await page.evaluate(() => document.getElementById('search-toggle').focus());
+
+        await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            window.openDistributorModal(d.id);
+        });
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+
+        // Semantique dialog
+        const dialog = page.locator('#dist-modal');
+        await expect(dialog).toHaveAttribute('role', 'dialog');
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+        await expect(dialog).toHaveAttribute('aria-labelledby', 'dist-modal-name');
+        // Le titre reference existe et n'est pas vide
+        const titleText = await page.textContent('#dist-modal-name');
+        expect((titleText || '').trim().length).toBeGreaterThan(0);
+
+        // Le focus est passe DANS la modale
+        const focusInside = await page.evaluate(() =>
+            document.getElementById('dist-modal').contains(document.activeElement));
+        expect(focusInside).toBe(true);
+
+        // Echap ferme la modale...
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+
+        // ...et rend le focus au declencheur d'origine
+        const backId = await page.evaluate(() => document.activeElement?.id);
+        expect(backId).toBe('search-toggle');
+    });
+
+    test('chat-modal : focus piege dans la modale + Echap ferme', async ({ page }) => {
+        await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            window.openConversation(d.id);
+        });
+        await page.waitForSelector('#chat-modal.active', { timeout: 5000 });
+
+        const dialog = page.locator('#chat-modal');
+        await expect(dialog).toHaveAttribute('role', 'dialog');
+        await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+        const focusInside = await page.evaluate(() =>
+            document.getElementById('chat-modal').contains(document.activeElement));
+        expect(focusInside).toBe(true);
+
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#chat-modal')).not.toHaveClass(/active/);
+    });
+});

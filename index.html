@@ -278,7 +278,7 @@
          MODAL DISTRIBUTEUR (Google Maps style, centree, onglets)
          ============================================ -->
     <div class="dist-modal-overlay" id="dist-modal-overlay">
-        <div class="dist-modal" id="dist-modal">
+        <div class="dist-modal" id="dist-modal" role="dialog" aria-modal="true" aria-labelledby="dist-modal-name" tabindex="-1">
             <button class="dist-modal-close" id="dist-modal-close" aria-label="Fermer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -414,7 +414,7 @@
     <!-- ============================================
          MODAL CHAT (fenetre de conversation)
          ============================================ -->
-    <div class="chat-modal" id="chat-modal">
+    <div class="chat-modal" id="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-name" tabindex="-1">
         <div class="chat-header">
             <button class="chat-back" id="chat-back" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -650,14 +650,14 @@
     <!-- ============================================
          MODAL SIGNALEMENT
          ============================================ -->
-    <div id="report-modal" class="modal-clean">
+    <div id="report-modal" class="modal-clean" role="dialog" aria-modal="true" aria-labelledby="report-modal-title" tabindex="-1">
         <div class="modal-content-clean">
             <button class="close-modal" id="close-report" aria-label="Fermer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
             </button>
-            <h2>Signaler un probleme</h2>
+            <h2 id="report-modal-title">Signaler un probleme</h2>
             <div class="report-distributor-info" id="report-info">
                 <strong id="report-name"></strong>
                 <small id="report-address"></small>
@@ -789,6 +789,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
-    <script type="module" src="js/app.js?v=24"></script>
+    <script type="module" src="js/app.js?v=25"></script>
 </body>
 </html>

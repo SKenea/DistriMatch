@@ -9,6 +9,7 @@ import {
 import { escapeHTML, formatTime, showToast, saveToLocalStorage } from './utils.js';
 import { updateProfileStats } from './navigation.js';
 import { requireAuth } from './auth.js';
+import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 
 // ============================================
 // PERSISTANCE ACTIVITE
@@ -268,7 +269,18 @@ export async function openReportModal() {
         `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`
     ).join('');
 
-    document.getElementById('report-modal').classList.add('active');
+    const modal = document.getElementById('report-modal');
+    modal.classList.add('active');
+    activateFocusTrap(modal, closeReportModal);
+}
+
+// Fermeture centralisee de la modale signalement (X, Echap, apres envoi) :
+// retire l'etat actif ET relache le focus-trap. Utilisee partout pour eviter
+// les fermetures partielles (piege a focus non relache).
+export function closeReportModal() {
+    const modal = document.getElementById('report-modal');
+    modal.classList.remove('active');
+    deactivateFocusTrap(modal);
 }
 
 export function selectReportType(type) {
@@ -320,7 +332,7 @@ export async function submitReport() {
 
     showToast(`Merci pour ton signalement ! +${points} points`, 'success');
 
-    document.getElementById('report-modal').classList.remove('active');
+    closeReportModal();
     setSelectedReportType(null);
     updateActivityBadge();
 }

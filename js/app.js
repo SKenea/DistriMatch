@@ -52,7 +52,7 @@ import {
     loadActivityFeed, displayActivityFeed,
     updateActivityBadge, setActivityFilter,
     voteOnReport, loadReportsFromSupabase,
-    openReportModal, selectReportType, submitReport
+    openReportModal, selectReportType, submitReport, closeReportModal
 } from './activity.js';
 
 import {
@@ -635,9 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Modal signalement (close + submit)
-    document.getElementById('close-report').addEventListener('click', () => {
-        document.getElementById('report-modal').classList.remove('active');
-    });
+    document.getElementById('close-report').addEventListener('click', closeReportModal);
 
     document.querySelectorAll('.report-type-btn').forEach(btn => {
         btn.addEventListener('click', () => selectReportType(btn.dataset.type));
@@ -648,13 +646,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Profil
     document.getElementById('clear-data-btn').addEventListener('click', clearUserData);
 
-    // Escape pour fermer
+    // Escape pour fermer (fallback global pour les overlays non-modaux :
+    // recherche, sidebar, retour carte). Les vraies modales (dist, chat,
+    // report, auth) gerent Echap via leur focus-trap qui stoppe la propagation
+    // de l'evenement, donc ce handler ne se declenche pas quand l'une est
+    // ouverte et focalisee.
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeSearch();
             closeChatModal();
             closeSidebar();
-            document.getElementById('report-modal').classList.remove('active');
+            closeReportModal();
             switchTab('explore');
         }
     });
