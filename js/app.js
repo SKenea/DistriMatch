@@ -444,10 +444,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // S'assurer que les distributeurs sont charges avant de continuer
     await distributorsPromise;
 
-    // Prefetch groupe des vignettes photos (1 requete pour tous les ids).
-    // Avant l'init du side panel pour que la liste affiche directement les
-    // photos quand elles existent (sinon fallback emoji).
-    await loadPhotoThumbnails();
+    // Prefetch des vignettes photos : enrichissement NON critique, donc lance
+    // sans await (fire-and-forget). Si Supabase est injoignable, l'appel peut
+    // staller en monopolisant la boucle d'evenements ; l'attendre gelait alors
+    // toute la suite de l'init (carte + cablage des listeners morts). Les
+    // vignettes n'apparaissent que dans le panneau lateral, rendu paresseusement
+    // au clic : sur reseau OK elles sont deja chargees a l'ouverture.
+    loadPhotoThumbnails().catch(() => {});
 
     // Re-calculer les distances maintenant que userLocation EST set.
     // Necessaire car loadDistributors() tourne en parallele de l'overlay
@@ -457,8 +460,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         sortByDistance();
     }
 
-    // Charger les signalements communautaires depuis Supabase
-    await loadReportsFromSupabase();
+    // Charger les signalements communautaires : meme principe (fire-and-forget).
+    // Ils fusionnent dans le feed activite, rendu au changement d'onglet (pas la
+    // vue par defaut), donc aucun besoin de bloquer l'init pour les attendre.
+    loadReportsFromSupabase().catch(() => {});
 
     // Initialiser la carte
     initMainMap();
