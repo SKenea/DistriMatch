@@ -19,7 +19,7 @@ import {
     saveConversations, loadConversations,
     saveNotificationPrefs, loadNotificationPrefs,
     saveNotificationQueue, loadNotificationQueue,
-    loadUserDistributors, saveUserDistributor
+    loadUserDistributors, saveUserDistributor, getLevelInfo
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -246,18 +246,42 @@ function clearUserData() {
 // ============================================
 
 // Etat auth partage : indicateur Compte, libelle menu, nom du hero profil.
+// Initiales pour l'avatar de la page Compte (2 premieres lettres de l'email).
+function initialsFromEmail(email) {
+    const local = String(email || '').split('@')[0];
+    return (local.slice(0, 2) || '?').toUpperCase();
+}
+
 function refreshAuthUI(user = getCurrentUser()) {
     const authed = !!(user && !user.is_anonymous);
-    const indicator = document.getElementById('auth-indicator');
+    const accountView = document.getElementById('account-view');
     const accountText = document.getElementById('account-auth-text');
+    const accountMeta = document.getElementById('account-meta');
+    const accountAvatar = document.getElementById('account-avatar');
+    const indicator = document.getElementById('auth-indicator');
     const menuAuth = document.getElementById('menu-auth-action');
     const accountAuth = document.getElementById('account-auth-action');
     const profileName = document.getElementById('profile-name');
+
+    // Etat connecte/deconnecte : pilote le style (CTA rouge -> deconnexion
+    // neutre) et la couleur du point de statut via le CSS.
+    if (accountView) accountView.classList.toggle('is-authed', authed);
     if (indicator) indicator.classList.toggle('logged-in', authed);
+
     if (accountText) accountText.textContent = authed ? user.email : 'Non connecté';
     if (menuAuth) menuAuth.textContent = authed ? 'Déconnexion' : 'Connexion';
     if (accountAuth) accountAuth.textContent = authed ? 'Se déconnecter' : 'Se connecter';
     if (profileName) profileName.textContent = authed ? user.email : 'Invité';
+
+    if (accountAvatar) accountAvatar.textContent = authed ? initialsFromEmail(user.email) : '·';
+    if (accountMeta) {
+        if (authed) {
+            const info = getLevelInfo(AppState.points);
+            accountMeta.textContent = `Connecté · ${info.name} · ${info.points} pts`;
+        } else {
+            accountMeta.textContent = 'Connecte-toi pour contribuer et retrouver tes favoris';
+        }
+    }
 }
 
 registerViewCallback('subscriptions', displaySubscriptions);

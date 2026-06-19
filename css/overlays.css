@@ -371,34 +371,6 @@
     border: 1px solid #fca5a5;
 }
 
-/* Indicateur auth dans la top nav */
-.auth-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.8rem;
-    color: var(--gray);
-    padding: 0.25rem 0.625rem;
-    border-radius: 12px;
-    background: var(--light);
-}
-
-.auth-indicator.logged-in {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.auth-indicator .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gray-light);
-}
-
-.auth-indicator.logged-in .dot {
-    background: var(--success);
-}
-
 /* ==========================================
    PANNEAU LATERAL FILTRES (Google Maps style)
    ========================================== */
