@@ -4,91 +4,100 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-SnackMatch - PWA "Waze des distributeurs automatiques" pour la Cote Basque.
-Interface carte Leaflet + chatbot par distributeur avec robots proactifs et notifications intelligentes.
+**DistriMatch** - PWA "Waze des distributeurs automatiques" pour la Cote Basque.
+
+**Nom officiel : DistriMatch.** "SnackMatch" est l'ancien nom : ne plus l'employer (code, UI, doc, commits). Il subsiste volontairement dans les cles localStorage `snackmatch_*` (les renommer sans migration effacerait les donnees des utilisateurs) et dans le remote GitLab.
+Carte Leaflet + fiche distributeur style Google Maps + chatbot par distributeur + contributions communautaires (ajout, produits, photos, signalements) via Supabase.
 
 ## Stack
 
-- HTML5, CSS3, Vanilla JavaScript (ES6+) - **pas de frameworks, pas de build system**
-- Leaflet.js 1.9.4 + OpenStreetMap
-- LocalStorage pour la persistance
-- PWA (manifest.json, service worker desactive en dev)
+- HTML5, CSS3, Vanilla JavaScript ES modules - **pas de framework, pas de build system**
+- CDN charges dans `index.html` : Leaflet 1.9.4 (unpkg), `@supabase/supabase-js@2` (jsdelivr), hCaptcha
+- Supabase (Postgres + RLS + storage + auth magic link) ; localStorage pour l'etat purement local
+- PWA (manifest.json) ; service worker volontairement desactive
+- Deploiement : GitHub Pages (`skenea.github.io`) + `distrimatch.pages.dev` (voir `PROD_HOSTNAMES` dans `js/config.js`)
+
+## Commandes
+
+```bash
+# Lancer en local (requis aussi pour les tests e2e, port 8080 attendu)
+npx http-server -p 8080 -c-1
+
+# Tests unitaires + DOM (Node test runner, pas de serveur requis)
+npm test                      # unit puis dom
+npm run test:unit             # tests/unit.test.js (mocks DOM/Leaflet dans tests/setup.js)
+npm run test:dom              # tests/dom.test.js (jsdom)
+node --test --test-name-pattern="escapeHTML" tests/unit.test.js   # un seul test
+
+# Tests e2e Playwright (Chromium, serveur 8080 lance a part : pas de webServer dans la config)
+npx playwright test tests/e2e.spec.js --workers=1
+npx playwright test -g "nom du test"                              # un seul test
+PWDEBUG_HEADED=1 npx playwright test -g "..."                     # headed + slowMo (debug visuel)
+```
+
+Les tests e2e injectent une geoloc Bayonne et pilotent l'app via les globals `window.AppState` / `window.openDistributorModal`. Verification visuelle possible via le MCP Playwright (`.mcp.json`).
 
 ## Architecture
 
-Application single-page modulaire en ES modules (`<script type="module">`) :
+### Chargement et init (`js/app.js`)
 
-- `index.html` - Structure HTML, charge Leaflet/Supabase CDN + 5 fichiers CSS + `js/app.js`
-- `css/` - CSS decoupe en 5 modules (l'ordre des `<link>` dans `index.html` est strict, le cascade en depend) :
-  - `css/base.css` — variables, reset, layout fondamental, top nav, recherche, app container, sidebar
-  - `css/map.css` — bottom sheet, zone carte, filter bar, markers, popups, mode ajout distributeur
-  - `css/panels.css` — chat modal, pages overlay (favoris/profil), modals, boutons primary/secondary, modal signalement
-  - `css/feed-and-nav.css` — toast, responsive mobile, bottom nav, activity, notifications
-  - `css/overlays.css` — geoloc overlay, loader, auth modal magic link, side panel filtres + dist modal (Google Maps style)
-- `data/distributors.json` - Donnees des distributeurs (source de verite)
-- `sw.js` - Service Worker (desactive, se desinstalle automatiquement)
-- `supabase/` - Schemas SQL (001_schema, 002_seed, 003_photos)
+`index.html` charge les CDN puis `js/app.js` (seul point d'entree). Au `DOMContentLoaded` :
+1. `initSupabase()` (client cree seulement si le CDN est dispo, sinon mode hors-ligne) puis `initAuth()`
+2. Chargement de l'etat localStorage
+3. `loadDistributors()` lance **en parallele** de l'overlay de geolocalisation (pour que le deep link `?id=<distId>` ouvre la fiche avant le consentement geoloc)
+4. Apres geoloc : carte, side panel, filtres, geofence, notifications. Les vignettes photos et signalements Supabase sont en fire-and-forget (ne jamais les `await` : un Supabase injoignable gelait l'init)
+
+**Source des distributeurs, par priorite** : Supabase `distributors` (+ `products`) -> `fetch('data/distributors.json')` -> `EMBEDDED_DATA` (`js/state.js`, fallback `file://`). Puis fusion des distributeurs ajoutes localement (`snackmatch_user_distributors`) avec dedup par id **et** par signature nom+coords. Attention : avec Supabase, `typeConfig` vient de `EMBEDDED_DATA`, pas du JSON.
 
 ### Modules JS (`js/`)
 
 ```
-js/app.js             - Point d'entree, Supabase init, chargement donnees, event listeners, window globals
-js/state.js           - Etat global (AppState, Conversations, UserProfile...), constantes, donnees embarquees
-js/utils.js           - Utilitaires (escapeHTML, calculateDistance, showToast...), persistance localStorage, profil implicite, geolocalisation
-js/map.js             - Carte Leaflet (initMainMap, updateMapMarkers, popups, centrage)
-js/navigation.js      - Navigation (switchTab, switchView, VIEW_CONFIG), sidebar, recherche, filtres, profil stats
-js/distributor.js     - Page distributeur (showDetails), CRUD produits, photos, abonnements, itineraire
-js/chat.js            - Conversations (openConversation, messages bot), messages proactifs, non lus
-js/activity.js        - Feed activite, signalements (openReportModal, submitReport), votes communautaires
-js/notifications.js   - Geofencing, heures calmes, cooldown, produits suivis, parametres UI
-js/add-distributor.js - Mode ajout distributeur (clic carte, formulaire, photos, upload Supabase)
+app.js             - Point d'entree, init, chargement donnees, listeners, window globals, UI auth (refreshAuthUI)
+state.js           - Etat global mutable (AppState, Conversations, UserProfile, NotificationPrefs, AddMode...), constantes, EMBEDDED_DATA
+config.js          - Cles PUBLIQUES uniquement (Supabase anon key, sitekeys hCaptcha), isLocalhost()
+auth.js            - Magic link Supabase + hCaptcha, requireAuth()/isAuthenticated()/onAuthChange()
+gmaps-ui.js        - UI principale style Google Maps : side panel liste filtree (groupes par distance) + modal fiche distributeur a onglets, deep link, partage, auth gate edition
+map.js             - Carte Leaflet, marqueurs (marker.distributorId), popups
+navigation.js      - switchView/switchTab (VIEW_CONFIG + registerViewCallback), sidebar, recherche, filtres
+distributor.js     - CRUD produits, photos, abonnements (favoris)
+add-distributor.js - Mode ajout distributeur (placement carte, formulaire, upload photos)
+chat.js            - Chatbot par distributeur, messages proactifs, non lus
+activity.js        - Feed activite, signalements + votes (RPC Supabase)
+notifications.js   - Geofencing, heures calmes, cooldown, produits suivis, centre de notifications
+focus-trap.js      - Piege a focus + Echap pour toutes les vraies modales (a reutiliser pour toute nouvelle modale)
+utils.js           - escapeHTML, distances, showToast, persistance localStorage, profil implicite, geoloc
 ```
 
-Les fonctions appelees depuis `onclick` inline dans le HTML dynamique sont exposees sur `window` dans `js/app.js`.
+- Les `set*()` de `state.js` existent car les `export let` ne sont pas reassignables depuis un autre module.
+- Les fonctions appelees depuis des `onclick` inline dans le HTML genere sont exposees sur `window` dans `app.js` : **toute nouvelle fonction utilisee en inline doit y etre ajoutee**. `window.showDetails` est un alias legacy de `openDistributorModal`.
 
-### Objets d'etat globaux cles
+### CSS (`css/`)
 
-- **AppState** : distributeurs charges, abonnements, position, filtres actifs
-- **Conversations** : historique messages par distributeur, compteurs non lus
-- **NotificationPrefs** : heures calmes (22h-8h), rayon geofence, produits suivis
-- **UserProfile** : preferences implicites, stats, historique (pas d'authentification)
+5 fichiers, **l'ordre des `<link>` dans `index.html` est strict** (le cascade en depend) : `base.css` (variables, reset, top nav, sidebar) -> `map.css` (carte, markers, filter bar, mode ajout) -> `panels.css` (chat, pages overlay, modals, boutons) -> `feed-and-nav.css` (toast, responsive, bottom nav, activite, notifs) -> `overlays.css` (geoloc, loader, auth modal, side panel + dist modal).
 
-### Persistance LocalStorage
+### Cache-busting (important)
 
-8 cles distinctes : `snackmatch_user`, `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_activity`, `snackmatch_votes`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`
+Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html` (5 CSS + `js/app.js`). **Bumper le `?v=` du fichier modifie.** Limite connue : les `import` ES entre modules ne sont pas versionnes, donc un module modifie autre que `app.js` peut rester en cache cote client.
 
-Migration automatique `favorites` -> `subscriptions` dans `loadFromLocalStorage()`.
+### Supabase (`supabase/`)
+
+Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `006_audit_trail` (`updated_at`/`modified_by` par trigger). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
+
+Projet free-tier : s'il est en pause, les appels echouent en `ERR_NAME_NOT_RESOLVED` et l'app retombe sur le JSON/EMBEDDED_DATA - verifier le dashboard avant de chercher un bug.
+
+### Persistance localStorage
+
+Cles : `snackmatch_user` (abonnements/favoris, points ; migration auto `favorites` -> `subscriptions` dans `loadFromLocalStorage()`), `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_activity`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`. Flag dev : `distrimatch_force_auth`.
 
 ### Types de distributeurs
 
-9 types avec filtres : `pizza`, `bakery`, `fries`, `meals`, `cheese`, `dairy`, `meat`, `terroir`, `general`. Chaque type a un emoji, un label et un gradient CSS definis dans `data/distributors.json` (champ `typeConfig`).
+Definis a 3 endroits a garder coherents : `DISTRIBUTOR_TYPES` et `EMBEDDED_DATA.typeConfig` (`js/state.js`), `typeConfig` de `data/distributors.json`, et les chips `data-type` de `index.html`. Types actuels des chips : `pizza`, `bakery`, `fries`, `meals`, `cheese`, `dairy`, `agricultural`, `meat`, `terroir`, `ice`, `other` (+ `general` dans les donnees).
 
-### Donnees distributeurs (format JSON)
+Format distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `lng`, `rating`, `reviewCount`, `status` (verified/warning), `priceRange`, `products[]` (name, price, available). Mapping snake_case Supabase -> camelCase dans `loadDistributorsFromSupabase()`.
 
-Chaque distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `lng`, `rating`, `reviewCount`, `status` (verified/warning), `priceRange`, `products[]` (name, price, available).
+## Politique d'authentification
 
-## Conventions
-
-### Nommage
-- Fonctions JS : `camelCase`
-- Constantes JS : `UPPER_SNAKE_CASE`
-- CSS classes/IDs : `kebab-case`
-
-### JavaScript
-- `const`/`let` uniquement, jamais `var`
-- Fonctions nommees (pas arrow pour les declarations)
-- Early return pour lisibilite
-- Try/catch obligatoire pour localStorage et fetch
-
-### Securite
-- **XSS** : Toujours `escapeHTML()` pour tout contenu utilisateur affiche dans le DOM
-- Valider les donnees externes avant utilisation
-
-### Politique d'authentification
-
-**Regle structurante** : auth = obligatoire des qu'une ecriture **impacte les autres utilisateurs** (visible publiquement, agregee, moderable). Auth = libre pour tout ce qui n'affecte que **son propre appareil** (prefs, etat local, simulation chat). Lectures restent toujours anonymes.
-
-**Matrice des 10 use cases** :
+**Regle structurante** : auth obligatoire des qu'une ecriture **impacte les autres utilisateurs** (visible publiquement, agregee, moderable). Auth libre pour ce qui n'affecte que **son propre appareil**. Lectures toujours anonymes.
 
 | # | Categorie | Use case | Auth ? | Storage |
 |---|---|---|:-:|---|
@@ -96,7 +105,7 @@ Chaque distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 | UC2 | Contribution publique | CRUD produits (ajout / rename / toggle dispo / delete) | OUI | Supabase `products` |
 | UC3 | Contribution publique | Upload photo sur distributeur existant | OUI | Supabase storage + `distributor_photos` |
 | UC4 | Contribution publique | Signalement / vote pour un signalement | OUI | Supabase RPC + ActivityFeed local |
-| UC5 | Sociale locale | Mettre / retirer favori (coeur) | non | localStorage `snackmatch_subscriptions` |
+| UC5 | Sociale locale | Mettre / retirer favori (coeur) | non | localStorage `snackmatch_user` |
 | UC6 | Sociale locale | Suivre un produit (alertes dispo) | non | localStorage `snackmatch_notification_prefs` |
 | UC7 | Sociale locale | Discuter avec le bot d'un distributeur | non | localStorage `snackmatch_conversations` |
 | UC8 | Preference perso | Prefs notifs (heures calmes, geofence) | non | localStorage |
@@ -104,44 +113,28 @@ Chaque distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 | UC10 | Preference perso | Reinitialiser ses donnees (clear data) | non | localStorage (confirm() suffit) |
 
 **Mecanismes** :
-- `requireAuth()` (auth.js) : prompt email + magic link Supabase. Bypass localhost dev sauf si `localStorage.distrimatch_force_auth='1'`.
-- `isAuthenticated()` (auth.js) : check sync sans prompt.
-- `showEditAuthGate()` (gmaps-ui.js) : modale "Connexion requise" pedagogique qui redirige vers la page Compte. Utilisee par UC2 (Modifier) et UC3 (Photo).
-- RLS Supabase (`supabase/001_schema.sql`, `003_photos.sql`) : verifie cote serveur que `auth.uid() = user_id` pour les INSERT.
+- `requireAuth()` (auth.js) : modale email + magic link. **Bypass automatique sur localhost** (le magic link ne peut pas rediriger en local) sauf si `localStorage.distrimatch_force_auth='1'` - c'est ce que font les tests e2e qui verifient le mur d'auth.
+- `isAuthenticated()` (auth.js) : check synchrone sans prompt.
+- `showEditAuthGate()` (gmaps-ui.js) : modale pedagogique "Connexion requise" -> page Compte. Utilisee par UC2 (Modifier) et UC3 (Photo).
+- RLS Supabase : `auth.uid() = user_id` sur les INSERT ; les RPC `SECURITY DEFINER` doivent verifier `auth.uid()` eux-memes (cf. `004_rls_hardening.sql`).
 
-**Avant d'ajouter un nouveau bouton qui modifie** : trancher dans quelle categorie il tombe (public/social-local/pref-perso) et appliquer le bon pattern. Si doute -> auth requise par defaut.
+**Avant d'ajouter un bouton qui modifie** : classer le use case (public / social-local / pref-perso) et appliquer le bon pattern. En cas de doute -> auth requise.
 
-### Performance
-- Batch DOM updates (pas de `innerHTML +=` en boucle)
-- Event delegation sur conteneurs
-- Stocker ID sur marqueurs Leaflet (`marker.distributorId`), pas de comparaison lat/lng
+## Conventions
 
-### UI
-- Francais pour l'interface (sans accents dans le code source)
-- Mobile-first, touch-friendly
-- Toasts pour le feedback utilisateur (`showToast()`)
+- Fonctions `camelCase` (declarations nommees, pas d'arrow), constantes `UPPER_SNAKE_CASE`, CSS `kebab-case` ; `const`/`let` uniquement ; early return
+- Try/catch pour localStorage et fetch/Supabase
+- **XSS** : `escapeHTML()` sur tout contenu dynamique injecte via `innerHTML` (y compris dans les attributs)
+- DOM : pas de `innerHTML +=` en boucle ; delegation d'evenements sur les conteneurs ; identifier les marqueurs par `marker.distributorId`, jamais par lat/lng
+- UI en francais ; commentaires/source sans accents (les chaines UI recentes peuvent en contenir) ; mobile-first ; feedback via `showToast()`
+- Nouvelle modale : utiliser `activateFocusTrap`/`deactivateFocusTrap` (le handler Echap global d'`app.js` ne couvre que les overlays non modaux)
 
-## Commandes
+## Workflow
 
-```bash
-# Lancer en local (pas de build)
-# Ouvrir index.html dans Chrome, ou :
-npx http-server -p 8080 -c-1
-
-# Tester avec Playwright MCP
-# Naviguer vers http://localhost:8080 via browser_navigate
-# Utiliser browser_snapshot et browser_screenshot pour verifier l'UI
-
-# Debug
-# DevTools > Console (erreurs JS)
-# DevTools > Application > LocalStorage (donnees persistees)
-
-# Git
-git checkout -b feature/nom
-git commit -m "feat: description"
-```
+- Remotes : `github` (SKenea/DistriMatch : PR, merge, GitHub Pages) et `origin` (GitLab, historique). Branches `feat/...`, `fix/...`, commits conventionnels.
+- `BACKLOG.md` : backlog priorise avec acceptance criteria, consomme par le skill `/auto` (implementation -> `npm test` -> e2e -> PR -> merge -> suivi deploy Pages).
 
 ## Points d'attention
 
-- Le service worker est volontairement desactive (`sw.js` se desinstalle). Ne pas le reactiver sans plan de cache.
-- Les donnees distributeurs sont embarquees en dur dans `js/state.js` (EMBEDDED_DATA) comme fallback pour le mode `file://`. Le JSON dans `data/distributors.json` est la source de verite mais n'est charge que via fetch. Supabase est prioritaire quand disponible.
+- `sw.js` se desinstalle volontairement. Ne pas le reactiver sans plan de cache.
+- `data/distributors.json` et `EMBEDDED_DATA` sont des fallbacks ; en prod la verite est Supabase.
