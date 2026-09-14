@@ -128,11 +128,13 @@ Format distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 - DOM : pas de `innerHTML +=` en boucle ; delegation d'evenements sur les conteneurs ; identifier les marqueurs par `marker.distributorId`, jamais par lat/lng
 - UI en francais ; commentaires/source sans accents (les chaines UI recentes peuvent en contenir) ; mobile-first ; feedback via `showToast()`
 - Nouvelle modale : utiliser `activateFocusTrap`/`deactivateFocusTrap` (le handler Echap global d'`app.js` ne couvre que les overlays non modaux)
+- Pas de territoire en dur : l'app a vocation a s'etendre hors Cote Basque, toute nouvelle fonctionnalite doit marcher ailleurs (pas de ville, monnaie, langue ni type de machine code en dur ; cf. `docs/STRATEGIE.md`)
 
 ## Workflow
 
 - Remotes : `github` (SKenea/DistriMatch : PR, merge, GitHub Pages) et `origin` (GitLab, historique). Branches `feat/...`, `fix/...`, commits conventionnels.
 - `BACKLOG.md` : backlog priorise avec acceptance criteria, consomme par le skill `/auto` (implementation -> `npm test` -> e2e -> PR -> merge -> suivi deploy Pages).
+- `docs/STRATEGIE.md` : le cap produit (fraicheur horodatee = le produit, producteur passif, signal de dispo par produit anonyme en un tap). Y trancher toute hesitation d'implementation ; le backlog en decoule.
 
 ## Points d'attention
 
