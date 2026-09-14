@@ -3,11 +3,68 @@
 > Liste prioritisee des items a traiter en autonomie via `/auto`.
 > Plus haut = plus prioritaire. Marque `- [x]` quand un item est fait.
 > Ajoute des **acceptance criteria** clairs sous chaque item pour eviter l'ambiguite.
+> Le cap produit est dans `docs/STRATEGIE.md`. Les chantiers qui en decoulent sont
+> listes dans "Chantiers strategie" et montent en priorite une fois cadres avec Stephane.
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
 
 ## Priorite haute
+
+<!-- Lot 1 (2026-09-14) : socle + premiere brique de la strategie. Front seul,
+     aucune migration Supabase, executable en autonomie. -->
+
+- [ ] Socle : cache-busting des modules JS (un seul numero de version pour app.js ET ses imports)
+  - Constat : `index.html` versionne `js/app.js?v=N` et les 5 CSS, mais les `import`
+    ES entre modules (`utils.js`, `gmaps-ui.js`, `focus-trap.js`, `notifications.js`...)
+    ne le sont pas. Apres un deploiement, un client peut charger le nouvel `app.js`
+    avec un vieux module en cache (fenetre max-age GitHub Pages ~10 min) -> bundle
+    incoherent.
+  - Acceptance : un seul numero de version dans `index.html` s'applique a `app.js`
+    et a tous les modules de `js/` (import map dans `index.html` avec une entree par
+    module, OU suffixe `?v=N` sur chaque import ; l'import map est preferee : un seul
+    endroit a bumper). Un test unit ou dom echoue si un fichier de `js/` importe par
+    un autre n'est pas couvert par le mecanisme. `npm test` + e2e verts, l'app charge
+    sans erreur console en local. Mettre a jour la section "Cache-busting" de
+    `CLAUDE.md` (la limite connue disparait).
+
+- [ ] Socle : page Compte verifiee et corrigee en mobile 390 px
+  - Constat : la refonte de la page Compte (PR #84) n'a ete validee qu'en 1280 px
+    desktop, sur une app mobile-first.
+  - Acceptance : en viewport 390x844 (Playwright), la vue Compte n'a aucun
+    debordement horizontal (`scrollWidth <= clientWidth` sur le conteneur de la vue),
+    un email long est tronque avec ellipsis sans casser la mise en page, tous les
+    boutons (connexion, reglages notifs, reinitialisation) sont visibles et
+    cliquables sans chevaucher la bottom nav. Corriger le CSS si besoin (bumper le
+    `?v=` du CSS modifie). Ajouter un test e2e en viewport 390 qui verrouille le
+    non-debordement. Capture d'ecran 390 px verifiee visuellement.
+
+- [ ] Strategie chantier 1 : fraicheur visible ("Verifie il y a X") sur fiche et side panel
+  - Contexte : `docs/STRATEGIE.md`. La confiance = l'horodatage. Le champ existe
+    deja (`lastVerified` dans le JSON, `last_verified` Supabase mappe dans
+    `loadDistributorsFromSupabase()`) et n'est affiche nulle part.
+  - Acceptance : en tete de la fiche distributeur et sur chaque item du side panel,
+    afficher "Verifie il y a X min / h / j" a partir de `lastVerified`. Reutiliser
+    le formatage relatif de `notifications.js` (`il y a N min / h / j`, vers la
+    ligne 251) en l'extrayant dans `utils.js` (une seule implementation). Si
+    `lastVerified` est absent ou invalide : "Pas encore verifie", jamais un faux
+    etat. Code couleur : vert seulement si < 2 h, neutre sinon (jamais un vert
+    perime). Aucune ville, langue ni territoire code en dur au-dela des chaines UI
+    existantes. `escapeHTML` sur toute valeur injectee. Tests : unit sur le
+    formatage (bornes 59 min / 60 min / 24 h / absent), e2e : le texte est present
+    sur une fiche ouverte via `window.openDistributorModal`.
+
+- [ ] Nettoyage confiance (1/3) : retirer les notes et compteurs d'avis de l'affichage
+  - Contexte : `docs/STRATEGIE.md`, "Ce qu'on retire". Les 25 fiches de seed portent
+    des notes (4.8) et des compteurs (203 avis) inventes ; un produit qui vend de la
+    confiance n'affiche pas de faux chiffres. Decision Stephane 2026-09-14 : retirer
+    de l'affichage, garder les fiches et les colonnes (aucune migration).
+  - Acceptance : plus aucune note, etoile ni compteur d'avis affiches (fiche, side
+    panel, favoris, message d'accueil du chat, formulaire d'ajout le cas echeant).
+    Les mentions "Pas encore d'avis" / "Nouveau" issues de PR #68 disparaissent
+    avec. CSS et tests devenus morts supprimes ; tests unit/dom/e2e mis a jour et
+    verts. Les champs `rating` / `reviewCount` restent dans les donnees et le
+    mapping Supabase.
 
 ## Priorite normale
 
@@ -27,11 +84,11 @@
     jusqu'a >= 4.5:1 ; verifier au contrast checker.
 
 - [ ] UX : onglet "Avis" = cul-de-sac (fausse affordance)
-  - Constat : la fiche affiche une note + un onglet "Avis" qui ne contient qu'un
-    placeholder "Aucun avis", sans aucun moyen d'en ajouter.
-  - Acceptance : soit masquer l'onglet tant que non implemente, soit ouvrir un
-    parcours "Laisser un avis" (contribution publique -> auth requise, cf.
-    politique d'auth UC).
+  - Constat : la fiche affiche un onglet "Avis" qui ne contient qu'un placeholder
+    "Aucun avis", sans aucun moyen d'en ajouter.
+  - Acceptance : `docs/STRATEGIE.md` tranche : masquer l'onglet tant qu'aucun
+    parcours "Laisser un avis" n'existe (un tel parcours serait une contribution
+    publique -> auth requise). Tests mis a jour.
 
 - [ ] UX : confirm() natifs sur actions destructrices
   - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
@@ -40,18 +97,63 @@
     bouton danger/annuler) reutilisant le focus-trap (js/focus-trap.js) ; OU
     decision assumee de garder `confirm()` pour "Effacer mes donnees".
 
+## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
+
+<!-- Section NON lue par /auto (ni "Priorite haute" ni "Priorite normale").
+     Ordre = docs/STRATEGIE.md. Un chantier qui exige une migration Supabase le dit :
+     la migration s'execute a la main dans le dashboard AVANT le ticket front. -->
+
+- [ ] Chantier 2 : signal de disponibilite en un tap (UC11, anonyme) - MIGRATION 007 requise
+  - Table `availability_signals` (distributor_id, product_id, state, source, weight,
+    device_hash, created_at), vue "etat courant" par produit, RPC
+    `confirm_availability` ouverte a l'anonyme avec rate limit (1 signal / appareil /
+    produit / heure). Signaux dans leurs propres tables, separees des donnees
+    importees (ODbL).
+  - Front : panneau "Il reste quoi ?" (chaque produit de la fiche : vu dispo / vu
+    absent / pas regarde par defaut) + boutons machine "vide" / "en panne". Deep link
+    `?id=<distId>&confirm=1` ouvre le panneau directement ; `&src=qr` trace
+    l'origine. Fiche et marqueur montrent le resume ("3 produits sur 5 vus dispo il
+    y a 12 min").
+  - Politique d'auth : ajouter UC11 au tableau de `CLAUDE.md`.
+
+- [ ] Chantier 3 (2/3 et 3/3) : masquer le chatbot par distributeur et la gamification (points, niveaux)
+  - A cadrer : masquer derriere un flag ou retirer le code et ses tests.
+
+- [ ] Chantier 4 : couche 0 - import OpenStreetMap + rythme de remplissage
+  - Overpass `amenity=vending_machine` + `vending=*` (32 machines sur la zone pilote
+    au 2026-09-14), mapping `vending` -> type, dedup par signature nom+coords
+    (existante), attribution ODbL visible dans l'app.
+  - Champs de rythme sur `distributors` (horaire de remplissage, creneaux vides) -
+    MIGRATION requise ; saisis a l'inventaire, affiches en fiche.
+
+- [ ] Chantier 5 : alertes reelles "previens-moi quand c'est plein" (Supabase Realtime +
+  Web Push), branchees sur les signaux ; fermeture de boucle apres l'alerte ("Tu y es
+  alle ? Il en restait ?").
+
+- [ ] Chantier 6 : rythme infere (couche 2) - agregation des signaux par heure et jour
+  ("habituellement plein le matin"), affichee quand une machine a assez de signaux.
+
+- [ ] Chantier 7 : producteur optionnel - `owner_user_id` sur `distributors`
+  (MIGRATION), revendication de fiche, bouton "rempli" a poids 1.0.
+
+- [ ] Mesure : table `events` (type, distributor_id, source, device_hash, created_at ;
+  aucune donnee personnelle) - MIGRATION - alimentee en fire-and-forget, et les 5
+  KPI de depart en vues SQL : % machines avec signal < 24 h (directeur), signaux par
+  source, ouvertures QR vs organique, taux de contribution (signaux / fiches
+  ouvertes), fiches ouvertes par distributeur.
+
 ## Idees / a explorer
 
-- [ ] Mode sombre auto (prefers-color-scheme) avec palette adapter
+- [ ] Mode sombre auto (prefers-color-scheme) avec palette adaptee
 - [ ] Service Worker reactive (cache offline des distributeurs deja vus)
-- [ ] Notifications push reelles via Supabase Realtime + Web Push API
 - [ ] Filtres avances : "ouverts maintenant", "photo verifiee", "ajoute < 7 jours"
-- [ ] Heatmap des distributeurs les plus consultes (analytics)
 - [ ] Side panel : mode de transport comme discriminant de filtre ("a pied / velo / voiture-bus") - reutiliser DISTANCE_GROUPS de gmaps-ui.js (idee notee lors de PR #48)
 - [ ] Tutorial premiere visite (3 slides : decouvrir / s'abonner / contribuer)
-- [ ] Open Graph meta tags pour partage social (1 image + description)
 - [ ] Mode "Itineraire multiple" : selectionner 3 distributeurs et generer un parcours optimal
-- [ ] Statistiques perso : "Tu as parcouru 12 km cette semaine" / "5 nouveaux distributeurs decouverts"
+
+<!-- Absorbes par docs/STRATEGIE.md le 2026-09-14 : notifications push reelles
+     (chantier 5), heatmap analytics (table events), statistiques perso (gamification,
+     retiree). Open Graph : fait (PR #41). -->
 
 ## A clarifier (auto-ajoutes par /auto)
 <!-- Le skill /auto place ici les items ambigus qu'il n'a pas pu traiter -->
