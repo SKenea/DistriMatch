@@ -28,3 +28,6 @@ node_modules/
 # Playwright
 test-results/
 playwright-report/
+
+# Claude Code : reglages personnels (mode auto, permissions locales)
+.claude/settings.local.json
