@@ -90,6 +90,18 @@
     parcours "Laisser un avis" n'existe (un tel parcours serait une contribution
     publique -> auth requise). Tests mis a jour.
 
+- [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
+  - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
+    page Compte, ou il faut encore cliquer "Se connecter" : 3 etapes avant la modale
+    email. PR #77 le corrigeait mais est partie en conflit avec #80 et #84.
+  - Acceptance : le bouton "Se connecter" de la gate appelle `requireAuth()`
+    directement (modale email) et la fiche distributeur reste ouverte derriere. Le
+    bouton "Se connecter" de la page Compte est CONSERVE (design #84, contrairement
+    a #77). Focus-trap de la gate conserve (PR #80). Import `switchView` retire de
+    gmaps-ui.js s'il devient inutile. Tests e2e de la section auth (UC2 Modifier,
+    UC3 Photo) adaptes : attendre la modale email, plus la page Compte. `npm test`
+    + e2e verts.
+
 - [ ] UX : confirm() natifs sur actions destructrices
   - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
     notifs -> visuellement etranger au reste du design.
