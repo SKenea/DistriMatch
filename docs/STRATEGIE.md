@@ -23,8 +23,9 @@ l'echelle. La reponse n'est pas une personne qui inventorie, c'est :
    machines, et les modeles recents ont une telemetrie. A terme la machine est
    le capteur, pas l'humain.
 
-**Ce que le pilote doit prouver, avec des seuils fixes a l'avance** (ordres
-de grandeur a confirmer avec Stephane) :
+**Ce que le pilote doit prouver, avec des seuils fixes a l'avance** (valides
+par Stephane le 2026-09-14 ; ce sont des ordres de grandeur, l'important est
+qu'ils soient ecrits avant de demarrer) :
 - taux de contribution au QR : >= 5 % des scans produisent un signal ;
 - >= 30 % des machines de la zone avec un signal de moins de 7 jours apres
   3 mois ;
