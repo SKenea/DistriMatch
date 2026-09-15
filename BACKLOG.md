@@ -20,13 +20,8 @@
 
 <!-- Lot 3 du chantier a11y/UX (issu de l'audit Nielsen/WCAG du 2026-06-05).
      Non bloquant : Lot 1 + Lot 2 livres = objectif "fini" atteint. Items de
-     polish a traiter au fil de l'eau. Cibles tactiles 44 px : fait (PR #95). -->
-
-- [ ] a11y : contraste du texte secondaire (WCAG 1.4.3 AA)
-  - Constat : `--gray-light #A89B8C` (~2.6:1 sur blanc) utilise pour horodatages
-    (`conversation-time`), `small`, hints -> sous le 4.5:1 requis pour petit texte.
-  - Acceptance : assombrir `--gray-light` (ou reserver son usage au non-texte)
-    jusqu'a >= 4.5:1 ; verifier au contrast checker.
+     polish a traiter au fil de l'eau. Cibles tactiles 44 px : fait (PR #95).
+     Contraste texte secondaire : fait (PR #96). -->
 
 - [ ] UX : confirm() natifs sur actions destructrices
   - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
@@ -155,3 +150,4 @@
 - [x] 2026-09-15 Strategie chantier 2 - "Il reste quoi ?" : signal de dispo en un tap sans compte (UC11). Nouveau js/availability.js : modale maison (segment vu dispo / vu absent / pas regarde par produit + machine vide / en panne exclusifs, Envoyer desactive tant que rien n'est choisi), envoi RPC confirm_availability avec device id aleatoire local, "vu dispo il y a X" sous chaque produit + bandeau "Signalee vide il y a X", badge Verifie au vert apres envoi, deep link ?id=&confirm=1&src=qr. Fix : products(id) manquait au mapping Supabase. +4 unit, +4 e2e (RPC interceptee), import map ?v=31 (PR #93, commit a47e421)
 - [x] 2026-09-15 UX auth : la modale "Connexion requise" ouvre la modale email directement (2 etapes au lieu de 3), fiche restee ouverte derriere, bouton de la page Compte conserve (design #84), import switchView retire de gmaps-ui.js, import map ?v=32, test e2e "modale gate" adapte (PR #94, commit a1008e7)
 - [x] 2026-09-15 a11y Lot 3 : cibles tactiles >= 44x44 (WCAG 2.5.5) sans changer la taille visuelle : pseudo-element ::after centre de max(100%, 44px) sur tous les petits boutons (regle commune base.css), filter-bar padding 5px, slider en boite 44 px, heures calmes et segments "Il reste quoi ?" min-height 44, marqueur de position non interactif ; +2 e2e (section 14 : mesure de la zone effective sur 10 ecrans en 390 px + preuve elementFromPoint) (PR #95, commit 5122a93)
+- [x] 2026-09-15 a11y Lot 3 : contraste du texte secondaire (WCAG 1.4.3 AA). Nouvelle variable --text-muted #7A6C60 (5,07:1 blanc, 4,80:1 creme) pour les 15 declarations color: var(--gray-light) (horodatages, sous-titres, small, icones chevron/chat/suppression) ; --gray-light reserve au non-texte ; les 5 CSS bumpes ; +3 tests unit (ratios calcules, aucune regle color: --gray-light) (PR #96, commit 72be87e)
