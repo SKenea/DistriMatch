@@ -138,15 +138,21 @@ machine, personne ne fait un magic link.
 
 ## Ce qu'on retire
 
-Un produit qui vend de la confiance ne contient pas de faux chiffres. Le jour
-ou un utilisateur remarque une note inventee, il ne croit plus le
-« il y a 12 min ».
+Un produit qui vend de la confiance ne contient pas de faux chiffres. Mais le
+seed actuel est une **maquette** (precision de Stephane, 2026-09-15) :
+distributeurs, produits, notes et compteurs d'avis y sont inventes au meme
+titre, pour voir ce que ca donne. Tant que la maquette est en place, une
+note fausse ne trompe personne de plus qu'un distributeur faux. La question
+« veut-on une notation dans le produit ? » se tranche donc **a l'arrivee des
+vraies donnees** (import OSM, chantier 4), pas avant, et pas par /auto.
 
-- Notes et compteurs d'avis du seed (4.8, 203 avis) : remplaces par des
-  signaux reels (« 47 confirmations ce mois ») ou rien.
+- Notes, compteurs d'avis, onglet « Avis » : decision differee a l'import OSM.
+  Soit un parcours « Laisser un avis » existe (contribution publique, auth
+  requise) et l'onglet vit avec de vrais chiffres, soit on les masque. La
+  strategie penche pour l'etat factuel (il reste du pain, vu a quelle heure)
+  plutot que l'opinion, terrain ou Google Maps est imbattable.
 - Chatbot par distributeur (simule) : masque.
 - Gamification (points) : masquee.
-- Onglet « Avis » : masque tant qu'il n'y a pas de parcours.
 - « Previens-moi » : une seule alerte, le reapprovisionnement.
 
 ## Terrain (hors code, c'est Stephane)
@@ -182,8 +188,8 @@ doit le dire, `/auto` ne peut pas le faire seul.
    (vu dispo / vu absent / pas regarde, ce dernier par defaut), et deux
    boutons machine (« vide », « en panne »). Mode `&confirm=1` du deep link.
    Migration 007.
-3. **Nettoyage confiance** : retirer notes et avis factices, masquer chatbot,
-   gamification, onglet Avis.
+3. **Nettoyage confiance** : masquer chatbot et gamification. Notes, avis et
+   onglet Avis : decision differee au chantier 4 (le seed est une maquette).
 4. **Couche 0** : import OpenStreetMap via Overpass (`amenity=vending_machine`
    + `vending=*`, mapping `vending` -> type, dedup par signature nom+coords
    qui existe deja pour les distributeurs locaux, attribution ODbL) ; champs de

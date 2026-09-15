@@ -11,32 +11,11 @@
 
 ## Priorite haute
 
-<!-- Lot 2 (2026-09-15) : nettoyage confiance (docs/STRATEGIE.md, "Ce qu'on
-     retire") + auth en 2 etapes. Front seul, aucune migration Supabase,
-     executable en autonomie. Lot 1 (socle + fraicheur) livre le 2026-09-15. -->
-
-- [ ] Nettoyage confiance : retirer les notes et compteurs d'avis de l'affichage
-  - Contexte : `docs/STRATEGIE.md`, "Ce qu'on retire". Les 25 fiches de seed portent
-    des notes (4.8) et des compteurs (203 avis) inventes ; un produit qui vend de la
-    confiance n'affiche pas de faux chiffres. Decision Stephane 2026-09-14 : retirer
-    de l'affichage, garder les fiches et les colonnes (aucune migration).
-  - Acceptance : plus aucune note, etoile ni compteur d'avis affiches (fiche, side
-    panel, favoris, message d'accueil du chat, formulaire d'ajout le cas echeant).
-    Les mentions "Pas encore d'avis" / "Nouveau" issues de PR #68 disparaissent
-    avec. La ligne de fraicheur (PR #89) reste et devient la seule meta de
-    confiance. CSS et tests devenus morts supprimes ; tests unit/dom/e2e mis a
-    jour et verts. Les champs `rating` / `reviewCount` restent dans les donnees et
-    le mapping Supabase. Bumper l'import map (modules modifies) et le CSS touche.
-
-- [ ] Nettoyage confiance : masquer l'onglet "Avis" (cul-de-sac, fausse affordance)
-  - Constat : la fiche affiche un onglet "Avis" qui ne contient qu'un placeholder
-    "Aucun avis", sans aucun moyen d'en ajouter.
-  - Acceptance : `docs/STRATEGIE.md` tranche : masquer l'onglet et son pane tant
-    qu'aucun parcours "Laisser un avis" n'existe (un tel parcours serait une
-    contribution publique -> auth requise). Les onglets restants (Produits,
-    A propos) fonctionnent, Produits reste actif par defaut. Tests e2e "3 onglets
-    presents" et "clic onglet Avis" adaptes (2 onglets). Bumper l'import map si un
-    module change, le CSS si touche.
+<!-- Lot 2 (2026-09-15) : auth en 2 etapes + polish a11y. Front seul, aucune
+     migration Supabase, executable en autonomie. Lot 1 (socle + fraicheur)
+     livre le 2026-09-15. Les tickets notes/avis et onglet Avis ont ete retires
+     du lot : le seed est une maquette, la decision se prend a l'import OSM
+     (cf. "Chantiers strategie", chantier 4). -->
 
 - [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
   - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
@@ -121,6 +100,14 @@
     (existante), attribution ODbL visible dans l'app.
   - Champs de rythme sur `distributors` (horaire de remplissage, creneaux vides) -
     MIGRATION requise ; saisis a l'inventaire, affiches en fiche.
+  - Decision a prendre A CE MOMENT, avec Stephane (2026-09-15 : le seed est une
+    maquette, ses notes et compteurs d'avis sont inventes au meme titre que ses
+    distributeurs) : que deviennent notes, compteurs d'avis et onglet "Avis" quand
+    les vraies donnees remplacent la maquette ? Soit un parcours "Laisser un avis"
+    (contribution publique -> auth requise) et l'onglet vit avec de vrais chiffres,
+    soit masquer l'affichage (champs `rating` / `reviewCount` conserves, mentions
+    "Pas encore d'avis" / "Nouveau" de PR #68 retirees, tests e2e "3 onglets" et
+    "clic onglet Avis" adaptes). Pas un ticket /auto tant que ce n'est pas tranche.
 
 - [ ] Chantier 5 : alertes reelles "previens-moi quand c'est plein" (Supabase Realtime +
   Web Push), branchees sur les signaux ; fermeture de boucle apres l'alerte ("Tu y es
