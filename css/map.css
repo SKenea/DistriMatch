@@ -110,7 +110,7 @@
     border: none;
     cursor: pointer;
     padding: 0.5rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
     transition: color 0.2s, transform 0.2s;
     flex-shrink: 0;
 }
@@ -209,7 +209,7 @@
 }
 
 .meta-separator {
-    color: var(--gray-light);
+    color: var(--text-muted);
 }
 
 .bs-type-text {

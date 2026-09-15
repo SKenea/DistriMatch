@@ -129,6 +129,64 @@ describe('signal de dispo (UC11) : getDeviceId / buildAvailabilityPayload', () =
 });
 
 // ============================================
+// A11Y - CONTRASTE DU TEXTE SECONDAIRE (WCAG 1.4.3 AA)
+// ============================================
+// --gray-light (#A89B8C) est trop clair pour du texte (~2,6:1). Le texte et
+// les icones secondaires utilisent --text-muted, qui doit tenir >= 4,5:1 sur
+// les trois fonds clairs de l'app ; --gray-light reste reserve au non-texte.
+
+function relativeLuminance(hex) {
+    const c = hex.replace('#', '');
+    const [r, g, b] = [0, 2, 4]
+        .map(i => parseInt(c.substr(i, 2), 16) / 255)
+        .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a, b) {
+    const [l1, l2] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+    return (l1 + 0.05) / (l2 + 0.05);
+}
+
+describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
+    const cssDir = new URL('../css/', import.meta.url);
+    const base = readFileSync(new URL('base.css', cssDir), 'utf8');
+    const cssVar = (name) => base.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+    const BACKGROUNDS = ['--white', '--light', '--lighter'];
+
+    it('les variables de couleur sont definies dans base.css', () => {
+        for (const name of ['--text-muted', '--gray', '--gray-light', ...BACKGROUNDS]) {
+            assert.ok(cssVar(name), `${name} manquante dans :root`);
+        }
+    });
+
+    it('--text-muted et --gray tiennent >= 4.5:1 sur --white, --light et --lighter', () => {
+        for (const fg of ['--text-muted', '--gray']) {
+            for (const bg of BACKGROUNDS) {
+                const ratio = contrastRatio(cssVar(fg), cssVar(bg));
+                assert.ok(ratio >= 4.5, `${fg} ${cssVar(fg)} sur ${bg} ${cssVar(bg)} : ${ratio.toFixed(2)}:1 < 4.5`);
+            }
+        }
+    });
+
+    it('aucune regle CSS n\'utilise --gray-light comme couleur de texte (color:)', () => {
+        const offenders = [];
+        for (const file of readdirSync(cssDir).filter(f => f.endsWith('.css'))) {
+            const css = readFileSync(new URL(file, cssDir), 'utf8');
+            for (const block of css.split('}')) {
+                const open = block.indexOf('{');
+                if (open === -1) continue;
+                const body = block.slice(open + 1);
+                if (/(^|[\s;{])color:\s*var\(--gray-light\)/.test(body)) {
+                    offenders.push(`${file} : ${block.slice(0, open).trim().split('\n').pop().trim()}`);
+                }
+            }
+        }
+        assert.deepEqual(offenders, [], `texte en --gray-light :\n${offenders.join('\n')}`);
+    });
+});
+
+// ============================================
 // CACHE-BUSTING - IMPORT MAP DE index.html
 // ============================================
 // Pas de build : la version des modules ES est portee par l'import map de
