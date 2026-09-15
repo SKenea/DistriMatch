@@ -14,21 +14,6 @@
 <!-- Lot 1 (2026-09-14) : socle + premiere brique de la strategie. Front seul,
      aucune migration Supabase, executable en autonomie. -->
 
-- [ ] Strategie chantier 1 : fraicheur visible ("Verifie il y a X") sur fiche et side panel
-  - Contexte : `docs/STRATEGIE.md`. La confiance = l'horodatage. Le champ existe
-    deja (`lastVerified` dans le JSON, `last_verified` Supabase mappe dans
-    `loadDistributorsFromSupabase()`) et n'est affiche nulle part.
-  - Acceptance : en tete de la fiche distributeur et sur chaque item du side panel,
-    afficher "Verifie il y a X min / h / j" a partir de `lastVerified`. Reutiliser
-    le formatage relatif de `notifications.js` (`il y a N min / h / j`, vers la
-    ligne 251) en l'extrayant dans `utils.js` (une seule implementation). Si
-    `lastVerified` est absent ou invalide : "Pas encore verifie", jamais un faux
-    etat. Code couleur : vert seulement si < 2 h, neutre sinon (jamais un vert
-    perime). Aucune ville, langue ni territoire code en dur au-dela des chaines UI
-    existantes. `escapeHTML` sur toute valeur injectee. Tests : unit sur le
-    formatage (bornes 59 min / 60 min / 24 h / absent), e2e : le texte est present
-    sur une fiche ouverte via `window.openDistributorModal`.
-
 - [ ] Nettoyage confiance (1/3) : retirer les notes et compteurs d'avis de l'affichage
   - Contexte : `docs/STRATEGIE.md`, "Ce qu'on retire". Les 25 fiches de seed portent
     des notes (4.8) et des compteurs (203 avis) inventes ; un produit qui vend de la
@@ -200,3 +185,4 @@
 - [x] 2026-06-19 a11y Lot 2.2 : modale maison "Suivre un produit" remplace le prompt() natif (modal-clean + focus-trap + validation non vide/maxlength). +4 dom, +2 e2e (PR #81, commit 9e5669e)
 - [x] 2026-09-15 Cache-busting : import map dans index.html versionnant les 14 modules JS d'un seul numero (?v=29), app.js charge via la map (plus de src a part), +5 tests unit "cache-busting" (couverture, version unique, fichiers existants), CLAUDE.md a jour, limite connue levee (PR #87, commit 9ed25aa)
 - [x] 2026-09-15 Page Compte verifiee en mobile 390x844 : aucune correction CSS necessaire (pas de debordement, email long tronque, boutons au-dessus de la bottom nav) ; +1 test e2e "page Compte en 390x844" qui verrouille l'etat et clique reellement la rangee Reglages (PR #88, commit 9ff0a08)
+- [x] 2026-09-15 Strategie chantier 1 - fraicheur visible : "Vérifié il y a X min/h/j" ou "Pas encore vérifié" en tete de fiche (#dist-modal-verified) et sur chaque item du side panel ; getFreshness() + timeAgo() unifies dans utils.js (vert seulement < 2 h, jamais un vert perime) ; +8 unit, +2 e2e ; import map ?v=30, overlays.css ?v=25 (PR #89, commit f6266fd)
