@@ -12,6 +12,7 @@ import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
 import { generateWelcomeMessage } from './chat.js';
 import { requireAuth } from './auth.js';
+import { confirmDialog } from './confirm-dialog.js';
 
 // ============================================
 // PAGE DISTRIBUTEUR
@@ -263,8 +264,12 @@ export async function deleteProduct(index) {
     const product = distributor.products[index];
     if (!product) return;
 
-    if (typeof confirm === 'function'
-        && !confirm(`Supprimer "${product.name}" ?`)) return;
+    const ok = await confirmDialog({
+        title: 'Supprimer ce produit ?',
+        message: `« ${product.name} » sera retiré de la fiche pour tout le monde.`,
+        confirmLabel: 'Supprimer'
+    });
+    if (!ok) return;
 
     if (!(await requireAuth())) return;
 

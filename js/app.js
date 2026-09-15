@@ -73,6 +73,7 @@ import {
 import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
+import { confirmDialog } from './confirm-dialog.js';
 
 // ============================================
 // SUPABASE
@@ -204,42 +205,48 @@ async function loadDistributors() {
 // CLEAR DATA
 // ============================================
 
-function clearUserData() {
-    if (confirm('Effacer toutes tes donnees ?')) {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(PROFILE_KEY);
-        localStorage.removeItem(CONVERSATIONS_KEY);
-        localStorage.removeItem(NOTIFICATION_PREFS_KEY);
-        localStorage.removeItem(NOTIFICATION_QUEUE_KEY);
-        AppState.subscriptions = [];
-        AppState.reports = 0;
-        AppState.points = 0;
-        Conversations.list = [];
-        Conversations.history = {};
-        Conversations.active = null;
-        Object.assign(NotificationPrefs, {
-            enabled: true,
-            quietHours: { enabled: true, start: 22, end: 8 },
-            geofence: { enabled: true, radius: 1000 },
-            perDistributor: {},
-            followedProducts: [],
-            lastNotifications: {}
-        });
-        NotificationQueue.pending = [];
-        NotificationQueue.history = [];
-        Object.assign(UserProfile, {
-            preferences: { types: {}, maxDistance: null, priceRange: null, timeSlots: {} },
-            stats: { totalViews: 0, totalSubscriptions: 0, detailsViewed: 0, searchQueries: [], conversationsStarted: 0 },
-            history: { lastTypes: [], lastVisit: null, visitedIds: [] },
-            confidence: 0
-        });
-        updateBadges();
-        updateProfileStats();
-        updateMapMarkers();
-        updateConversationsList();
-        closeChatModal();
-        showToast('Donnees effacees', 'success');
-    }
+async function clearUserData() {
+    // Modale maison (plus de confirm() natif), Annuler est le defaut
+    const ok = await confirmDialog({
+        title: 'Effacer mes données ?',
+        message: 'Favoris, contributions, conversations et réglages seront supprimés de cet appareil. Cette action est irréversible.',
+        confirmLabel: 'Effacer'
+    });
+    if (!ok) return;
+
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(CONVERSATIONS_KEY);
+    localStorage.removeItem(NOTIFICATION_PREFS_KEY);
+    localStorage.removeItem(NOTIFICATION_QUEUE_KEY);
+    AppState.subscriptions = [];
+    AppState.reports = 0;
+    AppState.points = 0;
+    Conversations.list = [];
+    Conversations.history = {};
+    Conversations.active = null;
+    Object.assign(NotificationPrefs, {
+        enabled: true,
+        quietHours: { enabled: true, start: 22, end: 8 },
+        geofence: { enabled: true, radius: 1000 },
+        perDistributor: {},
+        followedProducts: [],
+        lastNotifications: {}
+    });
+    NotificationQueue.pending = [];
+    NotificationQueue.history = [];
+    Object.assign(UserProfile, {
+        preferences: { types: {}, maxDistance: null, priceRange: null, timeSlots: {} },
+        stats: { totalViews: 0, totalSubscriptions: 0, detailsViewed: 0, searchQueries: [], conversationsStarted: 0 },
+        history: { lastTypes: [], lastVisit: null, visitedIds: [] },
+        confidence: 0
+    });
+    updateBadges();
+    updateProfileStats();
+    updateMapMarkers();
+    updateConversationsList();
+    closeChatModal();
+    showToast('Donnees effacees', 'success');
 }
 
 // ============================================
