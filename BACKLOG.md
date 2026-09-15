@@ -11,10 +11,11 @@
 
 ## Priorite haute
 
-<!-- Lot 1 (2026-09-14) : socle + premiere brique de la strategie. Front seul,
-     aucune migration Supabase, executable en autonomie. -->
+<!-- Lot 2 (2026-09-15) : nettoyage confiance (docs/STRATEGIE.md, "Ce qu'on
+     retire") + auth en 2 etapes. Front seul, aucune migration Supabase,
+     executable en autonomie. Lot 1 (socle + fraicheur) livre le 2026-09-15. -->
 
-- [ ] Nettoyage confiance (1/3) : retirer les notes et compteurs d'avis de l'affichage
+- [ ] Nettoyage confiance : retirer les notes et compteurs d'avis de l'affichage
   - Contexte : `docs/STRATEGIE.md`, "Ce qu'on retire". Les 25 fiches de seed portent
     des notes (4.8) et des compteurs (203 avis) inventes ; un produit qui vend de la
     confiance n'affiche pas de faux chiffres. Decision Stephane 2026-09-14 : retirer
@@ -22,9 +23,32 @@
   - Acceptance : plus aucune note, etoile ni compteur d'avis affiches (fiche, side
     panel, favoris, message d'accueil du chat, formulaire d'ajout le cas echeant).
     Les mentions "Pas encore d'avis" / "Nouveau" issues de PR #68 disparaissent
-    avec. CSS et tests devenus morts supprimes ; tests unit/dom/e2e mis a jour et
-    verts. Les champs `rating` / `reviewCount` restent dans les donnees et le
-    mapping Supabase.
+    avec. La ligne de fraicheur (PR #89) reste et devient la seule meta de
+    confiance. CSS et tests devenus morts supprimes ; tests unit/dom/e2e mis a
+    jour et verts. Les champs `rating` / `reviewCount` restent dans les donnees et
+    le mapping Supabase. Bumper l'import map (modules modifies) et le CSS touche.
+
+- [ ] Nettoyage confiance : masquer l'onglet "Avis" (cul-de-sac, fausse affordance)
+  - Constat : la fiche affiche un onglet "Avis" qui ne contient qu'un placeholder
+    "Aucun avis", sans aucun moyen d'en ajouter.
+  - Acceptance : `docs/STRATEGIE.md` tranche : masquer l'onglet et son pane tant
+    qu'aucun parcours "Laisser un avis" n'existe (un tel parcours serait une
+    contribution publique -> auth requise). Les onglets restants (Produits,
+    A propos) fonctionnent, Produits reste actif par defaut. Tests e2e "3 onglets
+    presents" et "clic onglet Avis" adaptes (2 onglets). Bumper l'import map si un
+    module change, le CSS si touche.
+
+- [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
+  - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
+    page Compte, ou il faut encore cliquer "Se connecter" : 3 etapes avant la modale
+    email. PR #77 le corrigeait mais est partie en conflit avec #80 et #84.
+  - Acceptance : le bouton "Se connecter" de la gate appelle `requireAuth()`
+    directement (modale email) et la fiche distributeur reste ouverte derriere. Le
+    bouton "Se connecter" de la page Compte est CONSERVE (design #84, contrairement
+    a #77). Focus-trap de la gate conserve (PR #80). Import `switchView` retire de
+    gmaps-ui.js s'il devient inutile. Tests e2e de la section auth (UC2 Modifier,
+    UC3 Photo) et "modale gate : clic Se connecter" adaptes : attendre la modale
+    email, plus la page Compte. Bumper l'import map. `npm test` + e2e verts.
 
 ## Priorite normale
 
@@ -43,25 +67,6 @@
   - Acceptance : assombrir `--gray-light` (ou reserver son usage au non-texte)
     jusqu'a >= 4.5:1 ; verifier au contrast checker.
 
-- [ ] UX : onglet "Avis" = cul-de-sac (fausse affordance)
-  - Constat : la fiche affiche un onglet "Avis" qui ne contient qu'un placeholder
-    "Aucun avis", sans aucun moyen d'en ajouter.
-  - Acceptance : `docs/STRATEGIE.md` tranche : masquer l'onglet tant qu'aucun
-    parcours "Laisser un avis" n'existe (un tel parcours serait une contribution
-    publique -> auth requise). Tests mis a jour.
-
-- [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
-  - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
-    page Compte, ou il faut encore cliquer "Se connecter" : 3 etapes avant la modale
-    email. PR #77 le corrigeait mais est partie en conflit avec #80 et #84.
-  - Acceptance : le bouton "Se connecter" de la gate appelle `requireAuth()`
-    directement (modale email) et la fiche distributeur reste ouverte derriere. Le
-    bouton "Se connecter" de la page Compte est CONSERVE (design #84, contrairement
-    a #77). Focus-trap de la gate conserve (PR #80). Import `switchView` retire de
-    gmaps-ui.js s'il devient inutile. Tests e2e de la section auth (UC2 Modifier,
-    UC3 Photo) adaptes : attendre la modale email, plus la page Compte. `npm test`
-    + e2e verts.
-
 - [ ] UX : confirm() natifs sur actions destructrices
   - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
     notifs -> visuellement etranger au reste du design.
@@ -75,20 +80,39 @@
      Ordre = docs/STRATEGIE.md. Un chantier qui exige une migration Supabase le dit :
      la migration s'execute a la main dans le dashboard AVANT le ticket front. -->
 
-- [ ] Chantier 2 : signal de disponibilite en un tap (UC11, anonyme) - MIGRATION 007 requise
-  - Table `availability_signals` (distributor_id, product_id, state, source, weight,
-    device_hash, created_at), vue "etat courant" par produit, RPC
-    `confirm_availability` ouverte a l'anonyme avec rate limit (1 signal / appareil /
-    produit / heure). Signaux dans leurs propres tables, separees des donnees
-    importees (ODbL).
-  - Front : panneau "Il reste quoi ?" (chaque produit de la fiche : vu dispo / vu
-    absent / pas regarde par defaut) + boutons machine "vide" / "en panne". Deep link
-    `?id=<distId>&confirm=1` ouvre le panneau directement ; `&src=qr` trace
-    l'origine. Fiche et marqueur montrent le resume ("3 produits sur 5 vus dispo il
-    y a 12 min").
-  - Politique d'auth : ajouter UC11 au tableau de `CLAUDE.md`.
+- [ ] Chantier 2 : signal de disponibilite en un tap (UC11, anonyme) - MIGRATION 007 ECRITE, A EXECUTER
+  - Migration : `supabase/007_availability_signals.sql` (ecrite le 2026-09-15, PR #90).
+    Table `availability_signals` (append-only, lecture publique, aucune ecriture
+    directe), vues `product_availability` (dernier signal par produit) et
+    `distributor_status` (dernier signal machine), RPC `confirm_availability(
+    p_distributor_id, p_device_hash, p_product_signals, p_machine_state)` ouverte a
+    l'anonyme : poids 0.5 anonyme / 0.8 connecte, 1 signal par appareil, par produit
+    (ou machine) et par heure, 60 max par appareil et par heure, et rafraichit
+    `distributors.last_verified` (= le badge "Vérifié il y a"). Procedure de
+    verification en bas du fichier. **A executer par Stephane dans le SQL Editor,
+    PUIS monter le ticket front ci-dessous en Priorite haute.**
+  - Front (ticket a monter apres la migration) :
+    - `device_hash` : identifiant aleatoire (`crypto.randomUUID()`) genere une fois
+      et stocke en localStorage (`snackmatch_device`), aucune donnee personnelle.
+    - Panneau "Il reste quoi ?" dans la fiche : chaque produit en trois etats (vu
+      dispo / vu absent / pas regarde par defaut) + deux boutons machine ("Vide",
+      "En panne") ; un bouton "Envoyer" appelle `supabase.rpc('confirm_availability',
+      ...)` sans auth (UC11), toast de merci, `inserted: 0` = "deja signale il y a
+      moins d'une heure". Modale ou pane avec focus-trap.
+    - Deep link `?id=<distId>&confirm=1` ouvre la fiche directement sur le panneau ;
+      `&src=qr` conserve dans l'URL nettoyee -> memorise pour la mesure.
+    - Affichage : la fiche lit `product_availability` pour le distributeur ouvert
+      ("vu dispo il y a 12 min" a cote de chaque produit) et `distributor_status`
+      pour le bandeau machine ("signalee vide il y a 40 min" en rouge). Le badge
+      "Vérifié il y a" (PR #89) se rafraichit apres envoi (recharger le
+      distributeur). Jamais un vert perime : meme regle 2 h.
+    - Tests : unit sur la construction du payload (produits "pas regarde" exclus),
+      e2e avec Supabase mocke ou en localhost sans reseau (le panneau s'ouvre,
+      `&confirm=1` l'ouvre directement, l'envoi sans reseau affiche une erreur
+      propre). Bumper l'import map.
+  - Politique d'auth : UC11 ajoute au tableau de `CLAUDE.md` (fait, PR #90).
 
-- [ ] Chantier 3 (2/3 et 3/3) : masquer le chatbot par distributeur et la gamification (points, niveaux)
+- [ ] Chantier 3 : masquer le chatbot par distributeur et la gamification (points, niveaux)
   - A cadrer : masquer derriere un flag ou retirer le code et ses tests.
 
 - [ ] Chantier 4 : couche 0 - import OpenStreetMap + rythme de remplissage

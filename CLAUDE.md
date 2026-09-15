@@ -83,7 +83,7 @@ Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html`
 
 ### Supabase (`supabase/`)
 
-Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `005_open_writes_for_authenticated` (tout user authentifie peut editer `products` et le `price_range` d'un distributeur, modele collaboratif ; pas de DELETE sur `distributors`/`distributor_photos`), `006_audit_trail` (`updated_at`/`modified_by` par trigger). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
+Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `005_open_writes_for_authenticated` (tout user authentifie peut editer `products` et le `price_range` d'un distributeur, modele collaboratif ; pas de DELETE sur `distributors`/`distributor_photos`), `006_audit_trail` (`updated_at`/`modified_by` par trigger), `007_availability_signals` (table `availability_signals` + vues `product_availability`/`distributor_status` + RPC `confirm_availability` ouverte a l'anonyme avec rate limit, rafraichit `last_verified` ; cf. UC11). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
 
 Projet free-tier : s'il est en pause, les appels echouent en `ERR_NAME_NOT_RESOLVED` et l'app retombe sur le JSON/EMBEDDED_DATA - verifier le dashboard avant de chercher un bug.
 
@@ -113,6 +113,9 @@ Format distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 | UC8 | Preference perso | Prefs notifs (heures calmes, geofence) | non | localStorage |
 | UC9 | Preference perso | Marquer notif lue / supprimer notif | non | localStorage |
 | UC10 | Preference perso | Reinitialiser ses donnees (clear data) | non | localStorage (confirm() suffit) |
+| UC11 | Signal de fraicheur | Signal de dispo par produit (vu dispo / vu absent) ou machine (vide / en panne), en un tap | **non** (exception assumee) | Supabase RPC `confirm_availability` (migration 007) : rate limit par appareil, poids 0.5 anonyme / 0.8 connecte, aucune ecriture directe dans la table |
+
+UC11 deroge a la regle structurante (cf. `docs/STRATEGIE.md`) : ce n'est pas du contenu editable mais un horodatage a poids reduit, qui perime tout seul (2 h) et se noie dans les signaux suivants. Devant une machine, personne ne fait un magic link ; quand les signaux sont rares, chaque friction en tue la moitie. Reversible : remettre le mur d'auth sur UC11 en une ligne si l'abus apparait.
 
 **Mecanismes** :
 - `requireAuth()` (auth.js) : modale email + magic link. **Bypass automatique sur localhost** (le magic link ne peut pas rediriger en local) sauf si `localStorage.distrimatch_force_auth='1'` - c'est ce que font les tests e2e qui verifient le mur d'auth.
