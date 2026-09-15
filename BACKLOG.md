@@ -14,20 +14,6 @@
 <!-- Lot 1 (2026-09-14) : socle + premiere brique de la strategie. Front seul,
      aucune migration Supabase, executable en autonomie. -->
 
-- [ ] Socle : cache-busting des modules JS (un seul numero de version pour app.js ET ses imports)
-  - Constat : `index.html` versionne `js/app.js?v=N` et les 5 CSS, mais les `import`
-    ES entre modules (`utils.js`, `gmaps-ui.js`, `focus-trap.js`, `notifications.js`...)
-    ne le sont pas. Apres un deploiement, un client peut charger le nouvel `app.js`
-    avec un vieux module en cache (fenetre max-age GitHub Pages ~10 min) -> bundle
-    incoherent.
-  - Acceptance : un seul numero de version dans `index.html` s'applique a `app.js`
-    et a tous les modules de `js/` (import map dans `index.html` avec une entree par
-    module, OU suffixe `?v=N` sur chaque import ; l'import map est preferee : un seul
-    endroit a bumper). Un test unit ou dom echoue si un fichier de `js/` importe par
-    un autre n'est pas couvert par le mecanisme. `npm test` + e2e verts, l'app charge
-    sans erreur console en local. Mettre a jour la section "Cache-busting" de
-    `CLAUDE.md` (la limite connue disparait).
-
 - [ ] Socle : page Compte verifiee et corrigee en mobile 390 px
   - Constat : la refonte de la page Compte (PR #84) n'a ete validee qu'en 1280 px
     desktop, sur une app mobile-first.
@@ -223,3 +209,4 @@
 - [x] 2026-06-19 Fix resilience : init resiliente quand Supabase est injoignable (DNS/offline/pause free-tier). Les enrichissements non critiques (photos, signalements) passent en fire-and-forget pour ne plus geler l'UI (carte + listeners). Bonus : playwright.config en headless par defaut. e2e 41->57 (PR #79, commit 47a2eb6)
 - [x] 2026-06-19 a11y Lot 2.1 : focus-trap + semantique dialog sur les 5 modales (fiche, chat, signalement, auth, "Connexion requise"). Nouveau js/focus-trap.js (focus piege, Echap, retour focus, [autofocus], modales imbriquees). +5 dom, +2 e2e (PR #80, commit 99b3924)
 - [x] 2026-06-19 a11y Lot 2.2 : modale maison "Suivre un produit" remplace le prompt() natif (modal-clean + focus-trap + validation non vide/maxlength). +4 dom, +2 e2e (PR #81, commit 9e5669e)
+- [x] 2026-09-15 Cache-busting : import map dans index.html versionnant les 14 modules JS d'un seul numero (?v=29), app.js charge via la map (plus de src a part), +5 tests unit "cache-busting" (couverture, version unique, fichiers existants), CLAUDE.md a jour, limite connue levee (PR #87, commit 9ed25aa)
