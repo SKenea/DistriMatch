@@ -81,7 +81,7 @@ Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html`
 
 ### Supabase (`supabase/`)
 
-Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `006_audit_trail` (`updated_at`/`modified_by` par trigger). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
+Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `005_open_writes_for_authenticated` (tout user authentifie peut editer `products` et le `price_range` d'un distributeur, modele collaboratif ; pas de DELETE sur `distributors`/`distributor_photos`), `006_audit_trail` (`updated_at`/`modified_by` par trigger). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
 
 Projet free-tier : s'il est en pause, les appels echouent en `ERR_NAME_NOT_RESOLVED` et l'app retombe sur le JSON/EMBEDDED_DATA - verifier le dashboard avant de chercher un bug.
 
