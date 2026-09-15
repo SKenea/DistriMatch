@@ -14,21 +14,15 @@
 <!-- Lot 2 (2026-09-15) livre : chantier 2 signal en un tap (PR #93) + auth en
      2 etapes (PR #94). Les tickets notes/avis et onglet Avis ont ete retires du
      lot : le seed est une maquette, la decision se prend a l'import OSM (cf.
-     "Chantiers strategie", chantier 4). Prochains items : Priorite normale. -->
+     "Chantiers strategie", chantier 4). -->
 
 ## Priorite normale
 
-<!-- Lot 3 du chantier a11y/UX (issu de l'audit Nielsen/WCAG du 2026-06-05).
-     Non bloquant : Lot 1 + Lot 2 livres = objectif "fini" atteint. Items de
-     polish a traiter au fil de l'eau. Cibles tactiles 44 px : fait (PR #95).
-     Contraste texte secondaire : fait (PR #96). -->
-
-- [ ] UX : confirm() natifs sur actions destructrices
-  - Constat : `confirm()` pour effacer donnees, supprimer produit, tout effacer
-    notifs -> visuellement etranger au reste du design.
-  - Acceptance : modale de confirmation maison reutilisable (titre + message +
-    bouton danger/annuler) reutilisant le focus-trap (js/focus-trap.js) ; OU
-    decision assumee de garder `confirm()` pour "Effacer mes donnees".
+<!-- Lot 3 a11y/UX (audit Nielsen/WCAG du 2026-06-05) ENTIEREMENT LIVRE le
+     2026-09-15 : cibles tactiles 44 px (PR #95), contraste texte secondaire
+     (PR #96), modale de confirmation maison (PR #97). Backlog /auto vide :
+     les prochains items viennent de "Chantiers strategie", a cadrer avec
+     Stephane (import OSM en premier). -->
 
 ## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
 
@@ -151,3 +145,4 @@
 - [x] 2026-09-15 UX auth : la modale "Connexion requise" ouvre la modale email directement (2 etapes au lieu de 3), fiche restee ouverte derriere, bouton de la page Compte conserve (design #84), import switchView retire de gmaps-ui.js, import map ?v=32, test e2e "modale gate" adapte (PR #94, commit a1008e7)
 - [x] 2026-09-15 a11y Lot 3 : cibles tactiles >= 44x44 (WCAG 2.5.5) sans changer la taille visuelle : pseudo-element ::after centre de max(100%, 44px) sur tous les petits boutons (regle commune base.css), filter-bar padding 5px, slider en boite 44 px, heures calmes et segments "Il reste quoi ?" min-height 44, marqueur de position non interactif ; +2 e2e (section 14 : mesure de la zone effective sur 10 ecrans en 390 px + preuve elementFromPoint) (PR #95, commit 5122a93)
 - [x] 2026-09-15 a11y Lot 3 : contraste du texte secondaire (WCAG 1.4.3 AA). Nouvelle variable --text-muted #7A6C60 (5,07:1 blanc, 4,80:1 creme) pour les 15 declarations color: var(--gray-light) (horodatages, sous-titres, small, icones chevron/chat/suppression) ; --gray-light reserve au non-texte ; les 5 CSS bumpes ; +3 tests unit (ratios calcules, aucune regle color: --gray-light) (PR #96, commit 72be87e)
+- [x] 2026-09-15 UX : modale de confirmation maison (js/confirm-dialog.js, role alertdialog, focus-trap, Echap = annuler, focus sur Annuler) a la place des 3 confirm() natifs (Effacer mes donnees, Supprimer un produit, Tout effacer les notifs) ; .btn-danger-clean ; tests dom sur le vrai parcours Confirmer / Annuler, +2 e2e ; import map ?v=34 (PR #97, commit 4e2e78b)
