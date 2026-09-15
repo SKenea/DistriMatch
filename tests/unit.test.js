@@ -28,8 +28,70 @@ import {
 
 import { isQuietHours, canNotify, markNotified } from '../js/notifications.js';
 import { generateGreetingMessage } from '../js/chat.js';
+import { readFileSync, readdirSync } from 'node:fs';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
+
+// ============================================
+// CACHE-BUSTING - IMPORT MAP DE index.html
+// ============================================
+// Pas de build : la version des modules ES est portee par l'import map de
+// index.html. Ce test verrouille que tout module de js/ importe par un autre
+// (ou par index.html) y figure, avec une seule et meme version ?v=N.
+
+describe('cache-busting : import map de index.html', () => {
+    const root = new URL('../', import.meta.url);
+    const jsDir = new URL('js/', root);
+    const html = readFileSync(new URL('index.html', root), 'utf8');
+    const match = html.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);
+    const imports = match ? JSON.parse(match[1]).imports : {};
+    const modules = readdirSync(jsDir).filter(f => f.endsWith('.js'));
+
+    // Modules de js/ importes (statiquement ou dynamiquement) par un autre module
+    function importedModules() {
+        const found = new Set(['app.js']); // point d'entree charge par index.html
+        const staticRe = /import\s+(?:[^'"]*?\s+from\s+)?['"]\.\/([\w-]+\.js)['"]/g;
+        const dynamicRe = /import\(\s*['"]\.\/([\w-]+\.js)['"]\s*\)/g;
+        for (const file of modules) {
+            const src = readFileSync(new URL(file, jsDir), 'utf8');
+            for (const m of src.matchAll(staticRe)) if (modules.includes(m[1])) found.add(m[1]);
+            for (const m of src.matchAll(dynamicRe)) if (modules.includes(m[1])) found.add(m[1]);
+        }
+        return found;
+    }
+
+    it('index.html declare une import map avec des entrees', () => {
+        assert.ok(match, 'pas de <script type="importmap"> dans index.html');
+        assert.ok(Object.keys(imports).length > 0, 'import map vide');
+    });
+
+    it('chaque module importe est couvert par l\'import map', () => {
+        for (const file of importedModules()) {
+            assert.ok(imports[`./js/${file}`], `js/${file} est importe mais absent de l'import map`);
+        }
+    });
+
+    it('toutes les entrees partagent une seule version ?v=N et pointent vers leur propre fichier', () => {
+        const versions = new Set();
+        for (const [key, value] of Object.entries(imports)) {
+            const m = value.match(/^(\.\/js\/[\w-]+\.js)\?v=(\d+)$/);
+            assert.ok(m, `entree ${key} -> ${value} : attendu ./js/<fichier>.js?v=N`);
+            assert.equal(m[1], key, `entree ${key} pointe vers un autre fichier (${m[1]})`);
+            versions.add(m[2]);
+        }
+        assert.equal(versions.size, 1, `plusieurs versions dans l'import map : ${[...versions].join(', ')}`);
+    });
+
+    it('aucune entree ne pointe vers un fichier absent de js/', () => {
+        for (const key of Object.keys(imports)) {
+            assert.ok(modules.includes(key.replace('./js/', '')), `${key} n'existe pas dans js/`);
+        }
+    });
+
+    it('app.js est charge via l\'import map, pas via un src="js/app.js?v=" a part', () => {
+        assert.doesNotMatch(html, /src="js\/app\.js/);
+    });
+});
 
 // ============================================
 // UTILS - FONCTIONS PURES

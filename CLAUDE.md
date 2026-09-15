@@ -77,7 +77,9 @@ utils.js           - escapeHTML, distances, showToast, persistance localStorage,
 
 ### Cache-busting (important)
 
-Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html` (5 CSS + `js/app.js`). **Bumper le `?v=` du fichier modifie.** Limite connue : les `import` ES entre modules ne sont pas versionnes, donc un module modifie autre que `app.js` peut rester en cache cote client.
+Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html`.
+- **CSS** : bumper le `?v=` du `<link>` du fichier modifie.
+- **Modules JS** : une **import map** dans `index.html` mappe chaque module de `js/` vers `./js/<fichier>.js?v=N` (`app.js` compris, charge par un `import` inline, plus de `src="js/app.js"`). **Toute modification d'un module de `js/` = bumper le `?v=` de TOUTES les entrees de l'import map a la meme valeur.** Le test `cache-busting` de `tests/unit.test.js` echoue si un module importe manque dans la map, si les versions divergent, ou si une entree pointe vers un fichier absent. Import maps : Chrome 89+, Firefox 108+, Safari 16.4+.
 
 ### Supabase (`supabase/`)
 
