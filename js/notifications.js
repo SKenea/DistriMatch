@@ -10,6 +10,7 @@ import {
 import { switchView } from './navigation.js';
 import { addActivityItem } from './activity.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { confirmDialog } from './confirm-dialog.js';
 
 // ============================================
 // HEURES CALMES ET COOLDOWN
@@ -284,9 +285,13 @@ export function deleteNotification(index) {
     updateNotificationsBadge();
 }
 
-export function clearAllNotifications() {
-    if (typeof confirm === 'function'
-        && !confirm('Effacer toutes les notifications ?')) return;
+export async function clearAllNotifications() {
+    const ok = await confirmDialog({
+        title: 'Effacer toutes les notifications ?',
+        message: 'Le centre de notifications sera vidé sur cet appareil.',
+        confirmLabel: 'Tout effacer'
+    });
+    if (!ok) return;
     NotificationQueue.history = [];
     saveNotificationQueue();
     renderNotificationsList();

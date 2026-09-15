@@ -36,9 +36,9 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=27">
+    <link rel="stylesheet" href="css/base.css?v=28">
     <link rel="stylesheet" href="css/map.css?v=25">
-    <link rel="stylesheet" href="css/panels.css?v=28">
+    <link rel="stylesheet" href="css/panels.css?v=29">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=25">
     <link rel="stylesheet" href="css/overlays.css?v=27">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -784,6 +784,26 @@
     </div>
 
     <!-- ============================================
+         MODALE DE CONFIRMATION (remplace confirm() natif ; js/confirm-dialog.js)
+         Titre, message et libelles remplis a l'appel ; Annuler a le focus initial
+         ============================================ -->
+    <div id="confirm-modal" class="modal-clean" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabindex="-1">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="confirm-close" aria-label="Fermer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+            <h2 id="confirm-title">Confirmer ?</h2>
+            <p class="setting-hint" id="confirm-message"></p>
+            <div class="modal-actions-clean">
+                <button type="button" class="btn-secondary-clean" id="confirm-cancel" autofocus>Annuler</button>
+                <button type="button" class="btn-danger-clean" id="confirm-ok">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
          PAGE ACTIVITE (Feed communautaire)
          ============================================ -->
     <div id="activity-view" class="view-page view-hidden">
@@ -877,21 +897,22 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=33",
-            "./js/state.js": "./js/state.js?v=33",
-            "./js/config.js": "./js/config.js?v=33",
-            "./js/utils.js": "./js/utils.js?v=33",
-            "./js/auth.js": "./js/auth.js?v=33",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=33",
-            "./js/map.js": "./js/map.js?v=33",
-            "./js/navigation.js": "./js/navigation.js?v=33",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=33",
-            "./js/distributor.js": "./js/distributor.js?v=33",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=33",
-            "./js/chat.js": "./js/chat.js?v=33",
-            "./js/activity.js": "./js/activity.js?v=33",
-            "./js/notifications.js": "./js/notifications.js?v=33",
-            "./js/availability.js": "./js/availability.js?v=33"
+            "./js/app.js": "./js/app.js?v=34",
+            "./js/state.js": "./js/state.js?v=34",
+            "./js/config.js": "./js/config.js?v=34",
+            "./js/utils.js": "./js/utils.js?v=34",
+            "./js/auth.js": "./js/auth.js?v=34",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=34",
+            "./js/map.js": "./js/map.js?v=34",
+            "./js/navigation.js": "./js/navigation.js?v=34",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=34",
+            "./js/distributor.js": "./js/distributor.js?v=34",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=34",
+            "./js/chat.js": "./js/chat.js?v=34",
+            "./js/activity.js": "./js/activity.js?v=34",
+            "./js/notifications.js": "./js/notifications.js?v=34",
+            "./js/availability.js": "./js/availability.js?v=34",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=34"
         }
     }
     </script>

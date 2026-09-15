@@ -121,6 +121,17 @@ const html = `<!DOCTYPE html>
             </form>
         </div>
     </div>
+    <div id="confirm-modal" class="modal-clean" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" tabindex="-1">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="confirm-close"></button>
+            <h2 id="confirm-title">Confirmer ?</h2>
+            <p id="confirm-message"></p>
+            <div class="modal-actions-clean">
+                <button type="button" id="confirm-cancel" autofocus>Annuler</button>
+                <button type="button" id="confirm-ok">Confirmer</button>
+            </div>
+        </div>
+    </div>
     <nav class="bottom-nav">
         <button class="nav-tab active" data-tab="explore"></button>
         <button class="nav-tab" data-tab="favorites"></button>
@@ -791,27 +802,34 @@ describe('Centre de notifications', () => {
         assert.equal(NotificationQueue.history.length, 1);
     });
 
-    it('clearAllNotifications vide tout (confirm ok) + empty state + bouton cache', () => {
-        const prev = globalThis.confirm;
-        globalThis.confirm = () => true;
+    // Plus de confirm() natif : la modale maison (#confirm-modal, js/confirm-dialog.js)
+    // s'ouvre, et l'action n'a lieu qu'apres le clic sur Confirmer.
+    it('clearAllNotifications ouvre la modale maison ; Confirmer vide tout + empty state + bouton cache', async () => {
         NotificationQueue.history = [
             { type: 'proximity', message: 'A', read: false },
             { type: 'stock', message: 'B', read: false }
         ];
-        clearAllNotifications();
-        globalThis.confirm = prev;
+        const done = clearAllNotifications();
+        const modal = document.getElementById('confirm-modal');
+        assert.ok(modal.classList.contains('active'), 'modale de confirmation ouverte');
+        assert.equal(document.getElementById('confirm-ok').textContent, 'Tout effacer');
+        assert.equal(NotificationQueue.history.length, 2, 'rien n\'est efface avant confirmation');
+
+        document.getElementById('confirm-ok').click();
+        await done;
+        assert.ok(!modal.classList.contains('active'), 'modale fermee');
         assert.equal(NotificationQueue.history.length, 0);
         assert.notEqual(document.getElementById('notifications-empty').style.display, 'none');
         assert.equal(document.getElementById('clear-notifications').style.display, 'none');
         assert.equal(document.getElementById('notifications-badge').style.display, 'none');
     });
 
-    it('clearAllNotifications annule si confirm refuse', () => {
-        const prev = globalThis.confirm;
-        globalThis.confirm = () => false;
+    it('clearAllNotifications : Annuler conserve les notifications', async () => {
         NotificationQueue.history = [{ type: 'proximity', message: 'A', read: false }];
-        clearAllNotifications();
-        globalThis.confirm = prev;
+        const done = clearAllNotifications();
+        document.getElementById('confirm-cancel').click();
+        await done;
+        assert.ok(!document.getElementById('confirm-modal').classList.contains('active'));
         assert.equal(NotificationQueue.history.length, 1);
     });
 

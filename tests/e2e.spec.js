@@ -1343,3 +1343,60 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
         expect(hit).toBe(true);
     });
 });
+
+// ============================================
+// 15. CONFIRMATION MAISON (plus de confirm() natif sur les actions destructrices)
+// ============================================
+
+test.describe('15. Confirmation maison', () => {
+    test('Effacer mes données : modale maison, Annuler conserve, Effacer vide le localStorage, aucun dialogue natif', async ({ page }) => {
+        let nativeDialog = false;
+        page.on('dialog', async (d) => { nativeDialog = true; await d.dismiss().catch(() => {}); });
+
+        await page.evaluate(() => {
+            localStorage.setItem('snackmatch_profile', JSON.stringify({ marker: 'e2e-confirm' }));
+            window.switchView('account');
+        });
+        await page.waitForSelector('#account-view.view-active');
+        await page.click('#clear-data-btn');
+
+        const modal = page.locator('#confirm-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toHaveAttribute('role', 'alertdialog');
+        // L'action destructrice n'est jamais le defaut : le focus est sur Annuler
+        expect(await page.evaluate(() => document.activeElement?.id)).toBe('confirm-cancel');
+
+        await page.click('#confirm-cancel');
+        await expect(modal).not.toHaveClass(/active/);
+        expect(await page.evaluate(() => localStorage.getItem('snackmatch_profile'))).toContain('e2e-confirm');
+
+        await page.click('#clear-data-btn');
+        await expect(modal).toHaveClass(/active/);
+        await page.click('#confirm-ok');
+        await expect(modal).not.toHaveClass(/active/);
+        expect(await page.evaluate(() => localStorage.getItem('snackmatch_profile'))).toBeNull();
+        expect(nativeDialog).toBe(false);
+    });
+
+    test('Supprimer un produit : modale par-dessus la fiche en edition, Echap annule et garde le produit', async ({ page }) => {
+        await page.evaluate(() => {
+            const d = window.AppState.distributors.find(x => (x.products || []).length > 0) || window.AppState.distributors[0];
+            window.openDistributorModal(d.id, true, true);
+        });
+        await page.waitForSelector('#dist-modal-overlay.active');
+        const before = await page.evaluate(() => window.AppState.currentDistributor.products.length);
+        expect(before).toBeGreaterThan(0);
+
+        await page.click('#dist-products-list .product-btn-delete');
+        const modal = page.locator('#confirm-modal');
+        await expect(modal).toHaveClass(/active/);
+        const firstName = await page.evaluate(() => window.AppState.currentDistributor.products[0].name);
+        await expect(page.locator('#confirm-message')).toContainText(firstName);
+
+        await page.keyboard.press('Escape');
+        await expect(modal).not.toHaveClass(/active/);
+        const after = await page.evaluate(() => window.AppState.currentDistributor.products.length);
+        expect(after).toBe(before);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+    });
+});

@@ -1247,6 +1247,27 @@
     border-color: var(--gray-light);
 }
 
+/* Bouton d'action destructrice de la modale de confirmation (seul rouge de
+   la boite, comme "Effacer mes donnees" sur la page Compte). */
+.btn-danger-clean {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-danger-clean:hover { background: #B71C1C; }
+
+/* Par-dessus la fiche distributeur (10500) et les modales de saisie (11000) */
+#confirm-modal {
+    z-index: 11500;
+}
+
 /* Champ texte + rangee d'actions pour les modales propres (ex: suivre un
    produit). Reutilisable par toute modal-clean a saisie simple. */
 .modal-input-clean {
