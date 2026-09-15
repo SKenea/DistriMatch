@@ -114,7 +114,7 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
     productsList.innerHTML = distributor.products.map((p, index) => {
         if (readonly) {
             return `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
+        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
             <div class="product-info-clean">
                 <div class="product-name-clean">${escapeHTML(p.name)}</div>
             </div>
@@ -125,7 +125,7 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
         }
         // Mode edition : nom editable + dispo + supprimer (pas de prix).
         return `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}">
+        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
             <div class="product-info-clean">
                 <input class="product-edit-name" type="text" value="${escapeHTML(p.name)}"
                     onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">

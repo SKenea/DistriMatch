@@ -806,6 +806,32 @@
 .dist-modal-verified.is-fresh { color: #16a34a; font-weight: 600; }
 .dist-modal-verified.is-unknown { font-style: italic; }
 
+/* Bandeau machine (signal "vide" / "en panne" de moins de 24 h, UC11) :
+   cache par defaut, visible seulement avec un signal recent. */
+.dist-status-banner {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.dist-status-banner.is-visible { display: block; }
+.dist-status-banner.is-empty { background: rgba(244, 162, 97, 0.18); color: #9a3412; }
+.dist-status-banner.is-broken { background: rgba(214, 40, 40, 0.10); color: var(--danger); }
+
+/* "vu dispo il y a 12 min" a cote de chaque produit : meme regle que la
+   fraicheur, vert seulement si < 2 h. */
+.product-seen {
+    display: block;
+    margin-top: 0.125rem;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--gray);
+}
+.product-seen.is-fresh.is-available { color: #16a34a; font-weight: 600; }
+.product-seen.is-fresh.is-absent { color: var(--danger); font-weight: 600; }
+
 .dist-modal-actions {
     display: flex;
     gap: 0.5rem;

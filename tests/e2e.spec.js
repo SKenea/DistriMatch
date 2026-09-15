@@ -1142,3 +1142,98 @@ test.describe('12. Suivre un produit (modale)', () => {
         expect(stored.toLowerCase()).not.toContain('ne doit pas etre suivi');
     });
 });
+
+// ============================================
+// 13. SIGNAL DE DISPO EN UN TAP (UC11, chantier 2)
+// ============================================
+// Aucun vrai signal n'est envoye : la RPC est interceptee par page.route.
+
+const RPC_ROUTE = '**/rest/v1/rpc/confirm_availability';
+
+// Choisit "vu dispo" sur le 1er produit s'il y en a, sinon "Machine vide" :
+// la fiche de test peut venir du fallback JSON (produits sans id Supabase).
+async function pickSomething(page) {
+    const row = page.locator('#availability-products .availability-row').first();
+    if (await row.count() > 0) {
+        await row.locator('.availability-seg-btn[data-state="available"]').click();
+    } else {
+        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
+    }
+}
+
+test.describe('13. Signal de dispo en un tap', () => {
+    test('"Il reste quoi ?" ouvre la modale sans auth ; un choix active Envoyer ; succes -> toast + badge vert', async ({ page }) => {
+        await page.route(RPC_ROUTE, route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
+        }));
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+
+        const modal = page.locator('#availability-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toHaveAttribute('role', 'dialog');
+        expect(await page.$('.auth-modal-overlay')).toBeNull();          // UC11 : pas de mur d'auth
+        await expect(page.locator('#availability-submit')).toBeDisabled();
+
+        await pickSomething(page);
+        await expect(page.locator('#availability-submit')).toBeEnabled();
+        await page.click('#availability-submit');
+
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
+        await expect(modal).not.toHaveClass(/active/);
+        await expect(page.locator('#dist-modal-verified')).toHaveClass(/is-fresh/);
+        // La fiche distributeur est restee ouverte derriere
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+    });
+
+    test('"Vide" et "En panne" sont exclusifs, un second clic desactive', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        const empty = page.locator('#availability-modal .availability-machine-btn[data-machine="empty"]');
+        const broken = page.locator('#availability-modal .availability-machine-btn[data-machine="broken"]');
+        await empty.click();
+        await expect(empty).toHaveAttribute('aria-pressed', 'true');
+        await broken.click();
+        await expect(broken).toHaveAttribute('aria-pressed', 'true');
+        await expect(empty).toHaveAttribute('aria-pressed', 'false');
+        await broken.click();
+        await expect(broken).toHaveAttribute('aria-pressed', 'false');
+        await expect(page.locator('#availability-submit')).toBeDisabled();
+    });
+
+    test('erreur serveur (503) -> toast d\'erreur, la modale reste ouverte', async ({ page }) => {
+        await page.route(RPC_ROUTE, route => route.fulfill({
+            status: 503, contentType: 'application/json',
+            body: JSON.stringify({ message: 'indisponible' })
+        }));
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        await pickSomething(page);
+        await page.click('#availability-submit');
+        await expect(page.locator('#toast-container .toast.error')).toBeVisible();
+        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+    });
+});
+
+test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
+    test.beforeEach(async () => { /* override : pas de setupApp */ });
+
+    test('ouvre la fiche puis directement la modale, memorise la source, nettoie l\'URL', async ({ browser }) => {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
+        const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
+
+        await page.goto(`${BASE_URL}/?id=${firstId}&confirm=1&src=qr`);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+
+        const src = await page.evaluate(() => sessionStorage.getItem('distrimatch_src'));
+        expect(src).toBe('qr');
+        expect(page.url()).not.toContain('confirm=');
+        await context.close();
+    });
+});

@@ -124,6 +124,46 @@ export function getFreshness(lastVerified, now = Date.now()) {
     return { state, label: `Vérifié ${timeAgo(ts, now)}` };
 }
 
+// ============================================
+// SIGNAL DE DISPO EN UN TAP (UC11)
+// ============================================
+
+// Identifiant d'appareil pour le rate limit des signaux : aleatoire, genere
+// une fois, garde en localStorage. Pas d'empreinte navigateur, pas d'IP,
+// aucune donnee personnelle. Memoise pour rester stable meme sans localStorage.
+export const DEVICE_ID_KEY = 'snackmatch_device';
+let memoDeviceId = null;
+
+export function getDeviceId() {
+    if (memoDeviceId) return memoDeviceId;
+    let id = null;
+    try { id = localStorage.getItem(DEVICE_ID_KEY); } catch (e) { /* localStorage indisponible */ }
+    if (!id || id.length < 16) {
+        id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `dev-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+        try { localStorage.setItem(DEVICE_ID_KEY, id); } catch (e) { /* on garde l'id en memoire */ }
+    }
+    memoDeviceId = id;
+    return id;
+}
+
+// Payload de la RPC confirm_availability a partir des choix du panneau
+// "Il reste quoi ?". choices : { [productId]: 'available' | 'absent' | 'unseen' }.
+// Les produits "pas regarde" et les ids non numeriques sont exclus ; l'etat
+// machine est borne a 'empty' / 'broken', sinon null.
+export function buildAvailabilityPayload(distributorId, deviceId, choices = {}, machineState = null) {
+    const productSignals = Object.entries(choices)
+        .filter(([id, state]) => Number.isInteger(Number(id)) && (state === 'available' || state === 'absent'))
+        .map(([id, state]) => ({ product_id: Number(id), state }));
+    return {
+        p_distributor_id: distributorId,
+        p_device_hash: deviceId,
+        p_product_signals: productSignals,
+        p_machine_state: (machineState === 'empty' || machineState === 'broken') ? machineState : null
+    };
+}
+
 export function getFilteredDistributors() {
     if (AppState.activeFilters.length === 0) {
         return AppState.distributors;

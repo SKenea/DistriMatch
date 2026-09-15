@@ -1003,6 +1003,98 @@
     color: white;
 }
 
+/* ===== Modale "Il reste quoi ?" (signal de dispo en un tap, UC11) =====
+   Une ligne par produit avec un segment a 3 etats (vu dispo / vu absent /
+   pas regarde), deux boutons machine exclusifs, Envoyer desactive tant que
+   rien n'est choisi. */
+.availability-products {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin: 1rem 0;
+    max-height: 45vh;
+    overflow-y: auto;
+}
+
+.availability-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.availability-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--dark);
+}
+
+.availability-seg {
+    display: flex;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.availability-seg-btn {
+    flex: 1;
+    padding: 0.5rem 0.25rem;
+    background: var(--white);
+    border: none;
+    border-right: 1px solid var(--light-gray);
+    color: var(--gray);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.availability-seg-btn:last-child { border-right: none; }
+.availability-seg-btn:hover { background: var(--light); }
+.availability-seg-btn.is-selected { background: var(--light); color: var(--dark); font-weight: 600; }
+.availability-seg-btn.is-selected[data-state="available"] { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.availability-seg-btn.is-selected[data-state="absent"] { background: rgba(214, 40, 40, 0.10); color: var(--danger); }
+
+.availability-empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.availability-machine {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.availability-machine-btn {
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--light-gray);
+    background: var(--white);
+    color: var(--gray);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.availability-machine-btn:hover { background: var(--light); }
+.availability-machine-btn.is-selected {
+    background: rgba(214, 40, 40, 0.10);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-primary-clean[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* S'ouvre PAR-DESSUS la fiche distributeur (dist-modal-overlay : 10500),
+   comme le mur d'auth (11000). */
+#availability-modal {
+    z-index: 11000;
+}
+
 /* Modal details */
 .detail-header-clean {
     margin-bottom: 1.25rem;
