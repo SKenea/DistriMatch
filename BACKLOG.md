@@ -11,24 +11,10 @@
 
 ## Priorite haute
 
-<!-- Lot 2 (2026-09-15) : auth en 2 etapes + polish a11y. Front seul, aucune
-     migration Supabase, executable en autonomie. Lot 1 (socle + fraicheur)
-     livre le 2026-09-15, chantier 2 (signal en un tap) livre le meme jour
-     (PR #93). Les tickets notes/avis et onglet Avis ont ete retires du lot :
-     le seed est une maquette, la decision se prend a l'import OSM (cf.
-     "Chantiers strategie", chantier 4). -->
-
-- [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
-  - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
-    page Compte, ou il faut encore cliquer "Se connecter" : 3 etapes avant la modale
-    email. PR #77 le corrigeait mais est partie en conflit avec #80 et #84.
-  - Acceptance : le bouton "Se connecter" de la gate appelle `requireAuth()`
-    directement (modale email) et la fiche distributeur reste ouverte derriere. Le
-    bouton "Se connecter" de la page Compte est CONSERVE (design #84, contrairement
-    a #77). Focus-trap de la gate conserve (PR #80). Import `switchView` retire de
-    gmaps-ui.js s'il devient inutile. Tests e2e de la section auth (UC2 Modifier,
-    UC3 Photo) et "modale gate : clic Se connecter" adaptes : attendre la modale
-    email, plus la page Compte. Bumper l'import map. `npm test` + e2e verts.
+<!-- Lot 2 (2026-09-15) livre : chantier 2 signal en un tap (PR #93) + auth en
+     2 etapes (PR #94). Les tickets notes/avis et onglet Avis ont ete retires du
+     lot : le seed est une maquette, la decision se prend a l'import OSM (cf.
+     "Chantiers strategie", chantier 4). Prochains items : Priorite normale. -->
 
 ## Priorite normale
 
@@ -172,3 +158,4 @@
 - [x] 2026-09-15 Page Compte verifiee en mobile 390x844 : aucune correction CSS necessaire (pas de debordement, email long tronque, boutons au-dessus de la bottom nav) ; +1 test e2e "page Compte en 390x844" qui verrouille l'etat et clique reellement la rangee Reglages (PR #88, commit 9ff0a08)
 - [x] 2026-09-15 Strategie chantier 1 - fraicheur visible : "Vérifié il y a X min/h/j" ou "Pas encore vérifié" en tete de fiche (#dist-modal-verified) et sur chaque item du side panel ; getFreshness() + timeAgo() unifies dans utils.js (vert seulement < 2 h, jamais un vert perime) ; +8 unit, +2 e2e ; import map ?v=30, overlays.css ?v=25 (PR #89, commit f6266fd)
 - [x] 2026-09-15 Strategie chantier 2 - "Il reste quoi ?" : signal de dispo en un tap sans compte (UC11). Nouveau js/availability.js : modale maison (segment vu dispo / vu absent / pas regarde par produit + machine vide / en panne exclusifs, Envoyer desactive tant que rien n'est choisi), envoi RPC confirm_availability avec device id aleatoire local, "vu dispo il y a X" sous chaque produit + bandeau "Signalee vide il y a X", badge Verifie au vert apres envoi, deep link ?id=&confirm=1&src=qr. Fix : products(id) manquait au mapping Supabase. +4 unit, +4 e2e (RPC interceptee), import map ?v=31 (PR #93, commit a47e421)
+- [x] 2026-09-15 UX auth : la modale "Connexion requise" ouvre la modale email directement (2 etapes au lieu de 3), fiche restee ouverte derriere, bouton de la page Compte conserve (design #84), import switchView retire de gmaps-ui.js, import map ?v=32, test e2e "modale gate" adapte (PR #94, commit a1008e7)
