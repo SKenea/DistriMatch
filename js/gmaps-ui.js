@@ -4,7 +4,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation, isLikelyDesktop } from './utils.js';
+import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
@@ -43,6 +43,9 @@ function renderSidePanelItem(d, extraClass = '') {
     const photoCell = thumb
         ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${emoji}'"><span class="side-panel-item-cat" aria-hidden="true">${emoji}</span>`
         : emoji;
+    // Fraicheur : l'age de la derniere verification, toujours affiche
+    // (docs/STRATEGIE.md : la confiance = l'horodatage).
+    const fresh = getFreshness(d.lastVerified);
     return `
         <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
             <div class="side-panel-item-photo">${photoCell}</div>
@@ -54,6 +57,7 @@ function renderSidePanelItem(d, extraClass = '') {
                         : `<span class="side-panel-item-new">Nouveau</span>`}
                     ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
                 </div>
+                <div class="side-panel-item-verified is-${fresh.state}">${escapeHTML(fresh.label)}</div>
             </div>
         </div>`;
 }
@@ -363,6 +367,14 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
         reviewsEl.style.display = 'none';
     }
     document.getElementById('dist-modal-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
+    // Fraicheur : age de la derniere verification, toujours affiche
+    // (docs/STRATEGIE.md : la confiance = l'horodatage, jamais un vert perime).
+    const verifiedEl = document.getElementById('dist-modal-verified');
+    if (verifiedEl) {
+        const fresh = getFreshness(distributor.lastVerified);
+        verifiedEl.textContent = fresh.label;
+        verifiedEl.className = `dist-modal-verified is-${fresh.state}`;
+    }
     // Niveau de prix : valeur bornee a € / €€ / €€€ (defaut €€)
     const PRICE_LEVELS = ['€', '€€', '€€€'];
     const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : '€€';

@@ -95,6 +95,35 @@ export function formatTime(timestamp) {
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
+// Formatage relatif "il y a N min / h / j". Implementation unique, partagee
+// par le centre de notifications et la fraicheur des distributeurs.
+export function timeAgo(ts, now = Date.now()) {
+    const diff = now - (ts || 0);
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "a l'instant";
+    if (m < 60) return `il y a ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `il y a ${h} h`;
+    const d = Math.floor(h / 24);
+    return `il y a ${d} j`;
+}
+
+// Fraicheur d'un distributeur a partir de lastVerified (ISO Supabase, date
+// courte du JSON, Date ou timestamp). La confiance = l'horodatage
+// (docs/STRATEGIE.md) : on affiche toujours l'age de l'info, jamais un vert
+// perime. state : 'fresh' (< 2 h), 'stale' (au-dela), 'unknown' (absent,
+// invalide ou dans le futur).
+export const FRESH_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+export function getFreshness(lastVerified, now = Date.now()) {
+    const ts = lastVerified instanceof Date ? lastVerified.getTime() : new Date(lastVerified).getTime();
+    if (!lastVerified || Number.isNaN(ts) || ts > now + 60000) {
+        return { state: 'unknown', label: 'Pas encore vérifié' };
+    }
+    const state = now - ts < FRESH_MAX_AGE_MS ? 'fresh' : 'stale';
+    return { state, label: `Vérifié ${timeAgo(ts, now)}` };
+}
+
 export function getFilteredDistributors() {
     if (AppState.activeFilters.length === 0) {
         return AppState.distributors;

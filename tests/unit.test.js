@@ -16,7 +16,8 @@ import {
     getTimeSlot, formatTime, getFilteredDistributors,
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
-    saveUserDistributor, loadUserDistributors, getLevelInfo
+    saveUserDistributor, loadUserDistributors, getLevelInfo,
+    timeAgo, getFreshness
 } from '../js/utils.js';
 
 import {
@@ -31,6 +32,66 @@ import { generateGreetingMessage } from '../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
+
+// ============================================
+// FRAICHEUR - getFreshness / timeAgo
+// ============================================
+// La confiance = l'horodatage : vert seulement si < 2 h, jamais un vert perime,
+// "Pas encore verifie" quand la date est absente, invalide ou dans le futur.
+
+describe('getFreshness / timeAgo (fraicheur distributeur)', () => {
+    const now = Date.parse('2026-09-15T12:00:00Z');
+    const MIN = 60000;
+    const H = 3600000;
+
+    it('59 min -> fresh, "Vérifié il y a 59 min"', () => {
+        const f = getFreshness(new Date(now - 59 * MIN), now);
+        assert.equal(f.state, 'fresh');
+        assert.equal(f.label, 'Vérifié il y a 59 min');
+    });
+
+    it('60 min -> fresh (< 2 h), "Vérifié il y a 1 h"', () => {
+        const f = getFreshness(now - 60 * MIN, now);
+        assert.equal(f.state, 'fresh');
+        assert.equal(f.label, 'Vérifié il y a 1 h');
+    });
+
+    it('2 h pile -> stale (le vert s\'eteint a 2 h)', () => {
+        const f = getFreshness(now - 2 * H, now);
+        assert.equal(f.state, 'stale');
+        assert.equal(f.label, 'Vérifié il y a 2 h');
+    });
+
+    it('24 h -> stale, "Vérifié il y a 1 j"', () => {
+        const f = getFreshness(now - 24 * H, now);
+        assert.equal(f.state, 'stale');
+        assert.equal(f.label, 'Vérifié il y a 1 j');
+    });
+
+    it('absent ou invalide -> unknown, "Pas encore vérifié"', () => {
+        for (const v of [undefined, null, '', 'n/a', 'demain']) {
+            const f = getFreshness(v, now);
+            assert.equal(f.state, 'unknown', `valeur ${String(v)}`);
+            assert.equal(f.label, 'Pas encore vérifié');
+        }
+    });
+
+    it('date dans le futur -> unknown (jamais un faux vert)', () => {
+        assert.equal(getFreshness(now + 10 * MIN, now).state, 'unknown');
+    });
+
+    it('accepte l\'ISO Supabase et la date courte du JSON', () => {
+        for (const v of ['2025-12-05T00:00:00+00:00', '2025-12-05']) {
+            const f = getFreshness(v, now);
+            assert.equal(f.state, 'stale');
+            assert.match(f.label, /^Vérifié il y a \d+ j$/);
+        }
+    });
+
+    it('timeAgo : moins d\'une minute -> "a l\'instant"', () => {
+        assert.equal(timeAgo(now - 30000, now), "a l'instant");
+    });
+});
 
 // ============================================
 // CACHE-BUSTING - IMPORT MAP DE index.html

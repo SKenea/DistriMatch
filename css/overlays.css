@@ -616,6 +616,20 @@
     font-size: 0.85em;
 }
 
+/* Fraicheur : age de la derniere verification, toujours affiche (la
+   confiance = l'horodatage). Vert seulement si < 2 h, neutre au-dela,
+   italic quand inconnu : jamais un vert perime. */
+.side-panel-item-verified {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-top: 0.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.side-panel-item-verified.is-fresh { color: #16a34a; font-weight: 600; }
+.side-panel-item-verified.is-unknown { font-style: italic; }
+
 .side-panel-item-distance {
     color: var(--dark);
     font-weight: 600;
@@ -785,6 +799,12 @@
     font-weight: 400;
     font-style: italic;
 }
+
+/* Fraicheur en tete de fiche : meme regle que le side panel (vert < 2 h,
+   neutre au-dela, italic si inconnu). */
+.dist-modal-verified { color: var(--gray); }
+.dist-modal-verified.is-fresh { color: #16a34a; font-weight: 600; }
+.dist-modal-verified.is-unknown { font-style: italic; }
 
 .dist-modal-actions {
     display: flex;
