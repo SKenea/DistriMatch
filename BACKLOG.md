@@ -14,17 +14,6 @@
 <!-- Lot 1 (2026-09-14) : socle + premiere brique de la strategie. Front seul,
      aucune migration Supabase, executable en autonomie. -->
 
-- [ ] Socle : page Compte verifiee et corrigee en mobile 390 px
-  - Constat : la refonte de la page Compte (PR #84) n'a ete validee qu'en 1280 px
-    desktop, sur une app mobile-first.
-  - Acceptance : en viewport 390x844 (Playwright), la vue Compte n'a aucun
-    debordement horizontal (`scrollWidth <= clientWidth` sur le conteneur de la vue),
-    un email long est tronque avec ellipsis sans casser la mise en page, tous les
-    boutons (connexion, reglages notifs, reinitialisation) sont visibles et
-    cliquables sans chevaucher la bottom nav. Corriger le CSS si besoin (bumper le
-    `?v=` du CSS modifie). Ajouter un test e2e en viewport 390 qui verrouille le
-    non-debordement. Capture d'ecran 390 px verifiee visuellement.
-
 - [ ] Strategie chantier 1 : fraicheur visible ("Verifie il y a X") sur fiche et side panel
   - Contexte : `docs/STRATEGIE.md`. La confiance = l'horodatage. Le champ existe
     deja (`lastVerified` dans le JSON, `last_verified` Supabase mappe dans
@@ -210,3 +199,4 @@
 - [x] 2026-06-19 a11y Lot 2.1 : focus-trap + semantique dialog sur les 5 modales (fiche, chat, signalement, auth, "Connexion requise"). Nouveau js/focus-trap.js (focus piege, Echap, retour focus, [autofocus], modales imbriquees). +5 dom, +2 e2e (PR #80, commit 99b3924)
 - [x] 2026-06-19 a11y Lot 2.2 : modale maison "Suivre un produit" remplace le prompt() natif (modal-clean + focus-trap + validation non vide/maxlength). +4 dom, +2 e2e (PR #81, commit 9e5669e)
 - [x] 2026-09-15 Cache-busting : import map dans index.html versionnant les 14 modules JS d'un seul numero (?v=29), app.js charge via la map (plus de src a part), +5 tests unit "cache-busting" (couverture, version unique, fichiers existants), CLAUDE.md a jour, limite connue levee (PR #87, commit 9ed25aa)
+- [x] 2026-09-15 Page Compte verifiee en mobile 390x844 : aucune correction CSS necessaire (pas de debordement, email long tronque, boutons au-dessus de la bottom nav) ; +1 test e2e "page Compte en 390x844" qui verrouille l'etat et clique reellement la rangee Reglages (PR #88, commit 9ff0a08)
