@@ -38,9 +38,9 @@
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=25">
     <link rel="stylesheet" href="css/map.css?v=23">
-    <link rel="stylesheet" href="css/panels.css?v=25">
+    <link rel="stylesheet" href="css/panels.css?v=26">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=23">
-    <link rel="stylesheet" href="css/overlays.css?v=25">
+    <link rel="stylesheet" href="css/overlays.css?v=26">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -303,6 +303,8 @@
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-verified" id="dist-modal-verified"></span>
                 </div>
+                <!-- Signal machine recent (vide / en panne), rempli par availability.js -->
+                <div class="dist-status-banner" id="dist-status-banner" aria-live="polite"></div>
             </div>
 
             <!-- Boutons d'action en haut -->
@@ -334,6 +336,13 @@
                     <span>Photo</span>
                 </button>
                 <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
+                <button class="dist-action-btn" id="dist-action-confirm" aria-label="Dire ce qu'il reste dans ce distributeur">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <span>Il reste quoi ?</span>
+                </button>
                 <button class="dist-action-btn" id="dist-action-share" aria-label="Partager le distributeur">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="18" cy="5" r="3"/>
@@ -750,6 +759,31 @@
     </div>
 
     <!-- ============================================
+         MODALE "IL RESTE QUOI ?" (signal de dispo en un tap, UC11, sans auth)
+         Remplie par js/availability.js, s'ouvre par-dessus la fiche distributeur
+         ============================================ -->
+    <div id="availability-modal" class="modal-clean" role="dialog" aria-modal="true" aria-labelledby="availability-title" tabindex="-1">
+        <div class="modal-content-clean">
+            <button class="close-modal" id="availability-close" aria-label="Fermer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+            <h2 id="availability-title">Il reste quoi ?</h2>
+            <p class="setting-hint">Dis ce que tu vois devant la machine. Un tap suffit, pas besoin de compte.</p>
+            <div id="availability-products" class="availability-products"></div>
+            <div class="availability-machine" role="group" aria-label="Etat de la machine">
+                <button type="button" class="availability-machine-btn" data-machine="empty" aria-pressed="false">Machine vide</button>
+                <button type="button" class="availability-machine-btn" data-machine="broken" aria-pressed="false">En panne</button>
+            </div>
+            <div class="modal-actions-clean">
+                <button type="button" class="btn-secondary-clean" id="availability-cancel">Annuler</button>
+                <button type="button" class="btn-primary-clean" id="availability-submit" disabled>Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
          PAGE ACTIVITE (Feed communautaire)
          ============================================ -->
     <div id="activity-view" class="view-page view-hidden">
@@ -843,20 +877,21 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=30",
-            "./js/state.js": "./js/state.js?v=30",
-            "./js/config.js": "./js/config.js?v=30",
-            "./js/utils.js": "./js/utils.js?v=30",
-            "./js/auth.js": "./js/auth.js?v=30",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=30",
-            "./js/map.js": "./js/map.js?v=30",
-            "./js/navigation.js": "./js/navigation.js?v=30",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=30",
-            "./js/distributor.js": "./js/distributor.js?v=30",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=30",
-            "./js/chat.js": "./js/chat.js?v=30",
-            "./js/activity.js": "./js/activity.js?v=30",
-            "./js/notifications.js": "./js/notifications.js?v=30"
+            "./js/app.js": "./js/app.js?v=31",
+            "./js/state.js": "./js/state.js?v=31",
+            "./js/config.js": "./js/config.js?v=31",
+            "./js/utils.js": "./js/utils.js?v=31",
+            "./js/auth.js": "./js/auth.js?v=31",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=31",
+            "./js/map.js": "./js/map.js?v=31",
+            "./js/navigation.js": "./js/navigation.js?v=31",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=31",
+            "./js/distributor.js": "./js/distributor.js?v=31",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=31",
+            "./js/chat.js": "./js/chat.js?v=31",
+            "./js/activity.js": "./js/activity.js?v=31",
+            "./js/notifications.js": "./js/notifications.js?v=31",
+            "./js/availability.js": "./js/availability.js?v=31"
         }
     }
     </script>

@@ -105,7 +105,7 @@ async function loadDistributorsFromSupabase() {
     try {
         const { data, error } = await supabaseClient
             .from('distributors')
-            .select('*, products(name, price, available)');
+            .select('*, products(id, name, price, available)');
         if (error) throw error;
         if (!data || data.length === 0) return null;
 
@@ -125,6 +125,7 @@ async function loadDistributorsFromSupabase() {
             priceRange: d.price_range,
             isUserAdded: d.is_user_added || false,
             products: (d.products || []).map(p => ({
+                id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
                 name: p.name,
                 price: parseFloat(p.price) || 0,
                 available: p.available

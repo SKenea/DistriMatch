@@ -11,6 +11,7 @@ import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { switchView } from './navigation.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { openAvailabilityPanel, loadAvailabilityForDistributor } from './availability.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -196,6 +197,9 @@ export function initDistModal() {
         tab.addEventListener('click', () => switchDistTab(tab.dataset.tab));
     });
 
+    // "Il reste quoi ?" : signal de dispo en un tap, sans auth (UC11)
+    document.getElementById('dist-action-confirm')?.addEventListener('click', () => openAvailabilityPanel());
+
     // Boutons d'action
     document.getElementById('dist-action-directions')?.addEventListener('click', () => {
         const d = AppState.currentDistributor;
@@ -325,8 +329,18 @@ export function openModalFromUrlParam() {
     const id = params.get('id');
     if (!id) return;
 
+    // Origine du lien (sticker QR sur la machine : &src=qr), memorisee pour
+    // la mesure avant le nettoyage de l'URL. Aucune donnee personnelle.
+    const src = params.get('src');
+    if (src) {
+        try { sessionStorage.setItem('distrimatch_src', src); } catch (e) { /* sessionStorage indisponible */ }
+    }
+
     if (AppState.distributors.find(d => d.id === id)) {
         openDistributorModal(id);
+        // &confirm=1 : le QR colle sur la machine ouvre directement
+        // "Il reste quoi ?" (UC11), la fiche reste derriere.
+        if (params.get('confirm') === '1') openAvailabilityPanel();
     } else {
         showToast('Distributeur introuvable', 'error');
     }
@@ -391,6 +405,9 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
     // Produits : mode edit (boutons CRUD) ou readonly
     renderProductsList(distributor, 'dist-products-list', { readonly: !editMode });
+    // Signaux de dispo (UC11) : "vu dispo il y a X" par produit + bandeau
+    // machine. Fire-and-forget, jamais await : Supabase absent = rien.
+    loadAvailabilityForDistributor(distributor.id);
 
     // En mode edit, afficher la section "+ Ajouter produit" + "Discuter"
     const addSection = document.getElementById('dist-products-add-section');

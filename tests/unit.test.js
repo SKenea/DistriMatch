@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload
 } from '../js/utils.js';
 
 import {
@@ -90,6 +90,41 @@ describe('getFreshness / timeAgo (fraicheur distributeur)', () => {
 
     it('timeAgo : moins d\'une minute -> "a l\'instant"', () => {
         assert.equal(timeAgo(now - 30000, now), "a l'instant");
+    });
+});
+
+// ============================================
+// SIGNAL DE DISPO EN UN TAP (UC11) - payload + identifiant d'appareil
+// ============================================
+
+describe('signal de dispo (UC11) : getDeviceId / buildAvailabilityPayload', () => {
+    const DEVICE = 'device-0123456789abcdef';
+
+    it('getDeviceId est stable entre deux appels et assez long pour la RPC (>= 16)', () => {
+        const a = getDeviceId();
+        const b = getDeviceId();
+        assert.equal(a, b);
+        assert.ok(a.length >= 16);
+    });
+
+    it('exclut les produits "pas regarde" et les ids non numeriques', () => {
+        const p = buildAvailabilityPayload('dist-001', DEVICE, { 1: 'available', 2: 'unseen', abc: 'absent', 3: 'absent' }, null);
+        assert.deepEqual(p.p_product_signals, [{ product_id: 1, state: 'available' }, { product_id: 3, state: 'absent' }]);
+        assert.equal(p.p_machine_state, null);
+        assert.equal(p.p_distributor_id, 'dist-001');
+        assert.equal(p.p_device_hash, DEVICE);
+    });
+
+    it('etat machine borne a empty / broken, sinon null', () => {
+        assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'empty').p_machine_state, 'empty');
+        assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'broken').p_machine_state, 'broken');
+        assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'autre').p_machine_state, null);
+    });
+
+    it('rien de coche -> payload vide (cote UI, Envoyer reste desactive)', () => {
+        const p = buildAvailabilityPayload('d', DEVICE);
+        assert.deepEqual(p.p_product_signals, []);
+        assert.equal(p.p_machine_state, null);
     });
 });
 

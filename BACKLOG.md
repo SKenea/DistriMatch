@@ -13,54 +13,10 @@
 
 <!-- Lot 2 (2026-09-15) : auth en 2 etapes + polish a11y. Front seul, aucune
      migration Supabase, executable en autonomie. Lot 1 (socle + fraicheur)
-     livre le 2026-09-15. Les tickets notes/avis et onglet Avis ont ete retires
-     du lot : le seed est une maquette, la decision se prend a l'import OSM
-     (cf. "Chantiers strategie", chantier 4). Le chantier 2 (front) est monte en
-     tete le 2026-09-15, migration 007 executee et verifiee. -->
-
-- [ ] Strategie chantier 2 : signal de disponibilite en un tap (UC11, anonyme) - migration 007 EXECUTEE
-  - Contexte : `docs/STRATEGIE.md` chantier 2. `supabase/007_availability_signals.sql`
-    est appliquee et verifiee le 2026-09-15 : RPC `confirm_availability` repond
-    `{ inserted, skipped, source }`, insert direct refuse (42501), vues
-    `product_availability` / `distributor_status` lisibles en anonyme,
-    `distributors.last_verified` rafraichi a chaque signal retenu. Politique d'auth :
-    UC11 dans `CLAUDE.md` (pas d'auth, exception assumee). Le client Supabase est
-    `supabaseClient` (state.js) ; peut etre null hors ligne.
-  - Acceptance :
-    - `device_hash` : identifiant aleatoire (`crypto.randomUUID()`, fallback
-      `Math.random`) genere une fois, stocke en localStorage sous `snackmatch_device`
-      (try/catch), aucune donnee personnelle. Helper `getDeviceId()` dans utils.js.
-    - Dans la fiche distributeur, un bouton "Il reste quoi ?" (a cote de Itineraire /
-      Favori / Photo / Partager) ouvre une modale maison (focus-trap.js, Echap) qui
-      liste les produits de la fiche, chacun en trois etats : "vu dispo" / "vu absent"
-      / "pas regarde" (defaut), plus deux boutons machine exclusifs "Vide" et "En
-      panne". Seuls les produits ayant un id Supabase numerique sont listes. Bouton
-      "Envoyer" desactive tant que rien n'est coche. Envoi :
-      `supabaseClient.rpc('confirm_availability', { p_distributor_id, p_device_hash,
-      p_product_signals: [{ product_id, state }], p_machine_state })` SANS
-      requireAuth (UC11) ; "pas regarde" jamais envoye. Retour : toast de merci ;
-      `inserted: 0` -> toast "Deja signale il y a moins d'une heure" ; erreur ou
-      client null -> toast d'erreur propre, jamais de crash.
-    - Deep link : `?id=<distId>&confirm=1` ouvre la fiche puis directement la modale ;
-      `&src=qr` est lu avant le nettoyage de l'URL et memorise en sessionStorage
-      (`distrimatch_src`) pour la mesure future.
-    - Affichage dans la fiche (fire-and-forget, jamais un await bloquant, cf. init
-      resiliente) : `product_availability` du distributeur -> a cote de chaque produit
-      "vu dispo il y a 12 min" / "vu absent il y a 3 h" (timeAgo de utils.js, meme
-      code couleur que la fraicheur : vert < 2 h, neutre au-dela) ; `distributor_status`
-      -> bandeau en haut de la fiche "Signalee vide il y a 40 min" / "En panne signalee
-      il y a 2 h" si le signal a moins de 24 h. Apres un envoi reussi : recharger ces
-      infos et mettre `lastVerified = now` sur le distributeur en memoire (AppState)
-      pour que le badge "Vérifié il y a" passe au vert immediatement.
-    - Aucun territoire, ville ou langue en dur ; `escapeHTML` sur tout contenu
-      injecte ; toute fonction appelee en inline exposee sur window (app.js).
-    - Tests : unit (construction du payload : exclusion "pas regarde" et produits sans
-      id, etat machine exclusif ; `getDeviceId` stable entre deux appels) ; e2e : le
-      bouton ouvre la modale, `&confirm=1` l'ouvre directement, envoi intercepte par
-      `page.route('**/rest/v1/rpc/confirm_availability', ...)` (jamais de vrai signal
-      depuis les tests) avec un cas succes `{inserted:1}` -> toast merci, et un cas 503
-      -> toast d'erreur. Bumper l'import map (modules modifies) et les CSS touches.
-      `npm test` + e2e verts.
+     livre le 2026-09-15, chantier 2 (signal en un tap) livre le meme jour
+     (PR #93). Les tickets notes/avis et onglet Avis ont ete retires du lot :
+     le seed est une maquette, la decision se prend a l'import OSM (cf.
+     "Chantiers strategie", chantier 4). -->
 
 - [ ] UX auth : la modale "Connexion requise" ouvre la modale email directement (reprise de PR #77, fermee le 2026-09-14)
   - Constat : `showEditAuthGate()` (js/gmaps-ui.js) ferme la fiche et envoie vers la
@@ -215,3 +171,4 @@
 - [x] 2026-09-15 Cache-busting : import map dans index.html versionnant les 14 modules JS d'un seul numero (?v=29), app.js charge via la map (plus de src a part), +5 tests unit "cache-busting" (couverture, version unique, fichiers existants), CLAUDE.md a jour, limite connue levee (PR #87, commit 9ed25aa)
 - [x] 2026-09-15 Page Compte verifiee en mobile 390x844 : aucune correction CSS necessaire (pas de debordement, email long tronque, boutons au-dessus de la bottom nav) ; +1 test e2e "page Compte en 390x844" qui verrouille l'etat et clique reellement la rangee Reglages (PR #88, commit 9ff0a08)
 - [x] 2026-09-15 Strategie chantier 1 - fraicheur visible : "Vérifié il y a X min/h/j" ou "Pas encore vérifié" en tete de fiche (#dist-modal-verified) et sur chaque item du side panel ; getFreshness() + timeAgo() unifies dans utils.js (vert seulement < 2 h, jamais un vert perime) ; +8 unit, +2 e2e ; import map ?v=30, overlays.css ?v=25 (PR #89, commit f6266fd)
+- [x] 2026-09-15 Strategie chantier 2 - "Il reste quoi ?" : signal de dispo en un tap sans compte (UC11). Nouveau js/availability.js : modale maison (segment vu dispo / vu absent / pas regarde par produit + machine vide / en panne exclusifs, Envoyer desactive tant que rien n'est choisi), envoi RPC confirm_availability avec device id aleatoire local, "vu dispo il y a X" sous chaque produit + bandeau "Signalee vide il y a X", badge Verifie au vert apres envoi, deep link ?id=&confirm=1&src=qr. Fix : products(id) manquait au mapping Supabase. +4 unit, +4 e2e (RPC interceptee), import map ?v=31 (PR #93, commit a47e421)
