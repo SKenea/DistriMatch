@@ -170,6 +170,23 @@ test.describe('3. Panneau lateral filtres', () => {
         expect(items.length).toBeGreaterThan(0);
     });
 
+    // Fraicheur (docs/STRATEGIE.md, chantier 1) : chaque item porte l'age de
+    // sa derniere verification, ou "Pas encore vérifié".
+    test('chaque item du panneau affiche sa fraicheur', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+        await page.waitForSelector('#side-panel-list .side-panel-item', { state: 'attached', timeout: 3000 });
+
+        const r = await page.$$eval('#side-panel-list .side-panel-item', items => ({
+            total: items.length,
+            avecFraicheur: items.filter(i =>
+                /^(Vérifié |Pas encore vérifié)/.test(i.querySelector('.side-panel-item-verified')?.textContent.trim() || '')
+            ).length,
+        }));
+        expect(r.total).toBeGreaterThan(0);
+        expect(r.avecFraicheur).toBe(r.total);
+    });
+
     test('clic sur un item du panneau ouvre la modal', async ({ page }) => {
         await page.click('.filter-chip[data-type="pizza"]');
         await page.waitForSelector('.side-panel.open');
@@ -422,6 +439,19 @@ test.describe('4. Modal distributeur', () => {
         await openDistModal(page);
         expect(await page.$('#dist-action-directions')).not.toBeNull();
         expect(await page.$('#dist-action-favorite')).not.toBeNull();
+    });
+
+    // Fraicheur (docs/STRATEGIE.md, chantier 1) : l'age de la derniere
+    // verification est toujours affiche en tete de fiche, ou "Pas encore
+    // vérifié" ; jamais un etat vide ou faux.
+    test('fraicheur : "Vérifié il y a X" ou "Pas encore vérifié" en tete de fiche', async ({ page }) => {
+        await openDistModal(page);
+        const r = await page.evaluate(() => {
+            const el = document.getElementById('dist-modal-verified');
+            return { text: el?.textContent.trim(), cls: el?.className };
+        });
+        expect(r.text).toMatch(/^(Vérifié (il y a \d+ (min|h|j)|a l'instant)|Pas encore vérifié)$/);
+        expect(r.cls).toMatch(/\bis-(fresh|stale|unknown)\b/);
     });
 
 });

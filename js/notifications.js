@@ -4,7 +4,7 @@
 
 import { AppState, NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES } from './state.js';
 import {
-    calculateDistance, escapeHTML, showToast,
+    calculateDistance, escapeHTML, showToast, timeAgo,
     saveNotificationPrefs, saveNotificationQueue
 } from './utils.js';
 import { switchView } from './navigation.js';
@@ -244,16 +244,7 @@ export function updateNotificationsBadge() {
     }
 }
 
-function timeAgo(ts) {
-    const diff = Date.now() - (ts || 0);
-    const m = Math.floor(diff / 60000);
-    if (m < 1) return "a l'instant";
-    if (m < 60) return `il y a ${m} min`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `il y a ${h} h`;
-    const d = Math.floor(h / 24);
-    return `il y a ${d} j`;
-}
+// timeAgo() vit dans utils.js (partage avec la fraicheur des distributeurs).
 
 const TRASH_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
 
