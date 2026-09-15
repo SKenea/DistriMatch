@@ -536,23 +536,28 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.stillReadonly).toBe(true);
     });
 
-    test('modale gate : clic "Se connecter" -> ferme tout + page Compte', async ({ page }) => {
+    test('modale gate : clic "Se connecter" -> modale email directement, fiche toujours ouverte', async ({ page }) => {
+        // Auth comme en prod (sinon requireAuth() est contourne sur localhost)
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await openFirstFavoriteCard(page);
         await page.click('#dist-action-edit');
         await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
         await page.click('#edit-auth-gate-go');
-        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        // 2 etapes : la modale email s'ouvre sans detour par la page Compte
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
 
         const r = await page.evaluate(() => ({
             gateGone: !document.getElementById('edit-auth-gate'),
-            modalClosed: !document.getElementById('dist-modal-overlay').classList.contains('active'),
+            emailModal: !!document.querySelector('.auth-modal'),
+            modalStillOpen: document.getElementById('dist-modal-overlay').classList.contains('active'),
+            accountNotOpened: !document.getElementById('account-view').classList.contains('view-active'),
             stillReadonly: window.AppState.modalEditMode === false,
-            authBtn: document.getElementById('account-auth-action')?.textContent.trim(),
         }));
         expect(r.gateGone).toBe(true);
-        expect(r.modalClosed).toBe(true);
+        expect(r.emailModal).toBe(true);
+        expect(r.modalStillOpen).toBe(true);
+        expect(r.accountNotOpened).toBe(true);
         expect(r.stillReadonly).toBe(true);
-        expect(r.authBtn).toBe('Se connecter');
     });
 
     test('mode edition affiche produits CRUD + ajout + chat, stylo masque', async ({ page }) => {

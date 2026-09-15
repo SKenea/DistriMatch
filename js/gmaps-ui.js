@@ -9,7 +9,6 @@ import { toggleSubscription, loadDistributorPhotos, renderProductsList } from '.
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
-import { switchView } from './navigation.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { openAvailabilityPanel, loadAvailabilityForDistributor } from './availability.js';
 
@@ -603,9 +602,12 @@ async function openWebcamCapture(distributor) {
     });
 }
 
-// Modale d'explication affichee quand on clique "Modifier" sans etre
-// identifie. Invite a se connecter via la page Compte (point d'entree
-// unique de la connexion : email + hCaptcha), puis a revenir.
+// Modale d'explication affichee quand on clique "Modifier" ou "Photo" sans
+// etre identifie. Garde la pedagogie ("Connexion requise pour..."), mais son
+// bouton "Se connecter" lance DIRECTEMENT la modale email (requireAuth) :
+// 2 etapes au lieu de 3 (gate -> page Compte -> bouton -> email). La fiche
+// distributeur reste ouverte derriere ; le bouton "Se connecter" de la page
+// Compte, lui, est conserve (design PR #84).
 function showEditAuthGate() {
     if (document.getElementById('edit-auth-gate')) return;
 
@@ -638,8 +640,10 @@ function showEditAuthGate() {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) remove(); });
     overlay.querySelector('#edit-auth-gate-go').addEventListener('click', () => {
         remove();
-        closeDistModal();
-        switchView('account');
+        // Modale email directement (pas de detour par la page Compte). La fiche
+        // reste ouverte derriere ; apres le magic link, la page se recharge et
+        // l'utilisateur reprend son action.
+        requireAuth();
     });
 }
 
