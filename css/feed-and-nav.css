@@ -374,7 +374,7 @@
 
 .activity-time {
     font-size: 0.75rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
 }
 
 .activity-points {
@@ -593,7 +593,7 @@
 
 .notif-item-time {
     font-size: 0.72rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
 }
 
 .notif-item-delete {
@@ -603,7 +603,7 @@
     border: none;
     background: none;
     border-radius: 50%;
-    color: var(--gray-light);
+    color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;

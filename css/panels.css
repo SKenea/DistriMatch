@@ -62,7 +62,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--gray-light);
+    color: var(--text-muted);
     transition: all 0.2s;
     margin-right: 0.25rem;
 }
@@ -90,7 +90,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--gray-light);
+    color: var(--text-muted);
     transition: all 0.2s;
 }
 
@@ -481,7 +481,7 @@
 
 .empty-icon {
     margin-bottom: 0.5rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
     font-size: 3rem;
 }
 
@@ -897,7 +897,7 @@
 }
 .account-row-icon { font-size: 1.1rem; line-height: 1; }
 .account-row-label { font-size: 0.95rem; font-weight: 500; }
-.account-row-chevron { color: var(--gray-light); flex: 0 0 auto; }
+.account-row-chevron { color: var(--text-muted); flex: 0 0 auto; }
 
 /* --- Reinitialisation : action destructive isolee (seul rouge de la page) --- */
 .account-card--reset {

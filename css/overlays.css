@@ -493,7 +493,7 @@
 
 .spg-chevron {
     font-size: 0.7rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
     transition: transform 0.15s ease;
 }
 
@@ -518,7 +518,7 @@
 
 .spg-sub {
     font-size: 0.68rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
 }
 
 .spg-count {

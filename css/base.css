@@ -34,7 +34,8 @@
     --warning: #F4A261;        /* Orange terracota - artisanal */
     --dark: #2B2B2B;           /* Noir chaleureux (sans teinte bleue) */
     --gray: #6B5E54;           /* Gris brun chaud */
-    --gray-light: #A89B8C;     /* Gris creme */
+    --gray-light: #A89B8C;     /* Gris creme : NON-TEXTE seulement (fonds, bordures, poignees) : 2,6:1 */
+    --text-muted: #7A6C60;     /* Texte et icones secondaires : >= 4,5:1 sur blanc et creme (WCAG 1.4.3 AA) */
     --light: #FDF8F3;          /* Creme tres claire */
     --lighter: #FEFCF9;        /* Creme pale (fond) */
     --white: #ffffff;
@@ -411,7 +412,7 @@ body {
 
 .empty-conversations small {
     font-size: 0.85rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
     line-height: 1.4;
 }
 
@@ -477,7 +478,7 @@ body {
 
 .conversation-time {
     font-size: 0.7rem;
-    color: var(--gray-light);
+    color: var(--text-muted);
 }
 
 .conversation-badge {
