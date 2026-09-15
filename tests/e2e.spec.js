@@ -736,6 +736,49 @@ test.describe('8. Mobile', () => {
         const visible = await page.$('.bottom-nav');
         expect(await visible.isVisible()).toBe(true);
     });
+
+    // Page Compte (refonte PR #84) verrouillee en 390x844 : pas de debordement
+    // horizontal, email long tronque avec ellipsis, boutons visibles et
+    // cliquables au-dessus de la bottom nav.
+    test('page Compte en 390x844 : aucun debordement, email long tronque, boutons au-dessus de la bottom nav', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        await page.evaluate(() => window.switchView('account'));
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        // La vue glisse en place : mesurer apres la transition, pas pendant
+        await page.waitForTimeout(500);
+
+        const r = await page.evaluate(() => {
+            const view = document.getElementById('account-view');
+            const email = document.getElementById('account-auth-text');
+            email.textContent = 'prenom.nom.tres.long.adresse@sous-domaine.exemple-vraiment-long.fr';
+            const box = (id) => document.getElementById(id).getBoundingClientRect();
+            const nav = document.querySelector('.bottom-nav').getBoundingClientRect();
+            const inView = (b) => b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= nav.top;
+            const es = getComputedStyle(email);
+            return {
+                viewOverflow: view.scrollWidth - view.clientWidth,
+                docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+                emailEllipsis: es.textOverflow === 'ellipsis' && es.whiteSpace === 'nowrap' && es.overflow === 'hidden',
+                emailInView: inView(box('account-auth-text')),
+                authBtn: inView(box('account-auth-action')),
+                notifRow: inView(box('account-notif-settings')),
+                clearBtn: inView(box('clear-data-btn')),
+            };
+        });
+        expect(r.viewOverflow).toBe(0);
+        expect(r.docOverflow).toBe(0);
+        expect(r.emailEllipsis).toBe(true);
+        expect(r.emailInView).toBe(true);
+        expect(r.authBtn).toBe(true);
+        expect(r.notifRow).toBe(true);
+        expect(r.clearBtn).toBe(true);
+
+        // Cliquable pour de vrai (pas recouvert par la bottom nav) : la rangee
+        // Reglages ouvre bien la page des notifications
+        await page.click('#account-notif-settings');
+        await page.waitForSelector('#notification-settings.view-active', { timeout: 3000 });
+    });
 });
 
 // ============================================
