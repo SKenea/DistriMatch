@@ -20,12 +20,7 @@
 
 <!-- Lot 3 du chantier a11y/UX (issu de l'audit Nielsen/WCAG du 2026-06-05).
      Non bloquant : Lot 1 + Lot 2 livres = objectif "fini" atteint. Items de
-     polish a traiter au fil de l'eau. -->
-
-- [ ] a11y : cibles tactiles >= 44px (WCAG 2.5.5 / iOS HIG / Material)
-  - Constat : `.icon-btn` 40x40, `.btn-zoom` 40x40, croix de fermeture 36/32px.
-  - Acceptance : tout element tactile >= 44x44 (taille reelle OU zone etendue via
-    padding/pseudo-element) ; aucune regression visuelle desktop.
+     polish a traiter au fil de l'eau. Cibles tactiles 44 px : fait (PR #95). -->
 
 - [ ] a11y : contraste du texte secondaire (WCAG 1.4.3 AA)
   - Constat : `--gray-light #A89B8C` (~2.6:1 sur blanc) utilise pour horodatages
@@ -159,3 +154,4 @@
 - [x] 2026-09-15 Strategie chantier 1 - fraicheur visible : "Vérifié il y a X min/h/j" ou "Pas encore vérifié" en tete de fiche (#dist-modal-verified) et sur chaque item du side panel ; getFreshness() + timeAgo() unifies dans utils.js (vert seulement < 2 h, jamais un vert perime) ; +8 unit, +2 e2e ; import map ?v=30, overlays.css ?v=25 (PR #89, commit f6266fd)
 - [x] 2026-09-15 Strategie chantier 2 - "Il reste quoi ?" : signal de dispo en un tap sans compte (UC11). Nouveau js/availability.js : modale maison (segment vu dispo / vu absent / pas regarde par produit + machine vide / en panne exclusifs, Envoyer desactive tant que rien n'est choisi), envoi RPC confirm_availability avec device id aleatoire local, "vu dispo il y a X" sous chaque produit + bandeau "Signalee vide il y a X", badge Verifie au vert apres envoi, deep link ?id=&confirm=1&src=qr. Fix : products(id) manquait au mapping Supabase. +4 unit, +4 e2e (RPC interceptee), import map ?v=31 (PR #93, commit a47e421)
 - [x] 2026-09-15 UX auth : la modale "Connexion requise" ouvre la modale email directement (2 etapes au lieu de 3), fiche restee ouverte derriere, bouton de la page Compte conserve (design #84), import switchView retire de gmaps-ui.js, import map ?v=32, test e2e "modale gate" adapte (PR #94, commit a1008e7)
+- [x] 2026-09-15 a11y Lot 3 : cibles tactiles >= 44x44 (WCAG 2.5.5) sans changer la taille visuelle : pseudo-element ::after centre de max(100%, 44px) sur tous les petits boutons (regle commune base.css), filter-bar padding 5px, slider en boite 44 px, heures calmes et segments "Il reste quoi ?" min-height 44, marqueur de position non interactif ; +2 e2e (section 14 : mesure de la zone effective sur 10 ecrans en 390 px + preuve elementFromPoint) (PR #95, commit 5122a93)

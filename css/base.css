@@ -89,6 +89,38 @@ input[type="range"]:focus-visible {
     outline-offset: 2px;
 }
 
+/* ===== A11Y : cibles tactiles >= 44x44 (WCAG 2.5.5, iOS HIG, Material) =====
+   Les petits boutons (icones de 28 a 40 px, chips, votes, fermetures) gardent
+   leur taille visuelle : un pseudo-element transparent, centre, etend la zone
+   cliquable a 44 px minimum dans chaque dimension. Ne pas mettre position:
+   relative sur les elements deja positionnes en absolu (fermetures de modales,
+   centrage carte, marqueurs Leaflet) : ils sont deja un bloc conteneur.
+   Le test e2e "14. Cibles tactiles" mesure la zone effective. */
+.close-search, .side-panel-close, .chat-back, .chat-close, .chat-subscribe,
+.chat-report, .back-btn, .btn-unsubscribe, .notif-item-delete, .btn-zoom,
+.vote-btn, .filter-chip, .activity-filter, .quick-reply-btn,
+.account-auth-btn, .account-reset-btn, .btn-primary-clean, .btn-secondary-clean {
+    position: relative;
+}
+
+.icon-btn::after, .close-search::after, .side-panel-close::after,
+.chat-back::after, .chat-close::after, .chat-subscribe::after, .chat-report::after,
+.back-btn::after, .btn-unsubscribe::after, .notif-item-delete::after,
+.close-modal::after, .auth-modal-close::after, .dist-modal-close::after,
+.webcam-modal-close::after, .btn-center-map::after, .btn-zoom::after,
+.vote-btn::after, .filter-chip::after, .activity-filter::after,
+.quick-reply-btn::after, .account-auth-btn::after, .account-reset-btn::after,
+.btn-primary-clean::after, .btn-secondary-clean::after,
+.distributor-marker-container::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: var(--light);

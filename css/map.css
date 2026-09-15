@@ -894,7 +894,9 @@
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 4px;
+    /* 5px vertical : la zone de tap etendue des chips (34 -> 44 px, voir
+       base.css "cibles tactiles") ne doit pas etre rognee par overflow-x */
+    padding: 5px 4px;
     scrollbar-width: none;
     -ms-overflow-style: none;
     transition: left 0.3s ease;

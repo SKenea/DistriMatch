@@ -1242,3 +1242,104 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         await context.close();
     });
 });
+
+// ============================================
+// 14. CIBLES TACTILES >= 44 px (WCAG 2.5.5, iOS HIG, Material)
+// ============================================
+// Mesure la zone effective de chaque element interactif visible : sa boite,
+// le <label> qui l'enveloppe (toggles), ou son pseudo-element ::after
+// d'extension (base.css, "cibles tactiles"). Ecrans : carte + side panel,
+// fiche + "Il reste quoi ?", chat, compte, notifications, profil, reglages
+// notifs, favoris, activite.
+
+const TARGET_MIN = 44;
+// Hors perimetre : attribution Leaflet (tiers) et marqueur de position (non actionnable)
+const TARGET_ALLOWLIST = ['.leaflet-control-attribution', '.user-marker-container'];
+
+async function collectSmallTargets(page, screen) {
+    await page.waitForTimeout(400);
+    return page.evaluate(({ min, allow, screen }) => {
+        const sel = 'button, a[href], [role="button"], input, select, .filter-chip, .nav-tab';
+        const out = [];
+        for (const el of document.querySelectorAll(sel)) {
+            if (allow.some(s => el.matches(s) || el.closest(s))) continue;
+            if (el.type === 'hidden' || el.type === 'file') continue;
+            const cs = getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0 || cs.visibility === 'hidden' || cs.display === 'none') continue;
+            // Une vue glissee hors ecran n'est pas testable sur cet ecran
+            if (r.right < 0 || r.bottom < 0 || r.left > innerWidth || r.top > innerHeight) continue;
+            const label = el.closest('label');
+            const base = label ? label.getBoundingClientRect() : r;
+            let w = base.width;
+            let h = base.height;
+            const ps = getComputedStyle(el, '::after');
+            if (ps.content !== 'none' && ps.position === 'absolute') {
+                const pw = parseFloat(ps.width);
+                const ph = parseFloat(ps.height);
+                if (pw > 0) w = Math.max(w, pw);
+                if (ph > 0) h = Math.max(h, ph);
+            }
+            if (w < min - 0.5 || h < min - 0.5) {
+                const key = (el.id ? '#' + el.id : '') + '.' + String(el.className || '').trim().split(/\s+/).slice(0, 2).join('.');
+                out.push(`${screen} ${key} ${Math.round(w)}x${Math.round(h)}`);
+            }
+        }
+        return out;
+    }, { min: TARGET_MIN, allow: TARGET_ALLOWLIST, screen });
+}
+
+test.describe('14. Cibles tactiles >= 44 px', () => {
+    test('aucun element interactif visible sous 44x44 (zone etendue comprise) sur les ecrans principaux, en 390 px', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        const violations = [];
+
+        violations.push(...await collectSmallTargets(page, 'carte'));
+
+        await page.click('.filter-chip[data-type="pizza"]');
+        await page.waitForSelector('.side-panel.open');
+        for (const h of await page.$$('#side-panel-list .side-panel-group-header')) await h.click();
+        violations.push(...await collectSmallTargets(page, 'side-panel'));
+
+        await openDistModal(page);
+        violations.push(...await collectSmallTargets(page, 'fiche'));
+        await page.click('#dist-action-confirm');
+        await page.waitForSelector('#availability-modal.active');
+        violations.push(...await collectSmallTargets(page, 'il-reste-quoi'));
+        await page.click('#availability-cancel');
+        await page.click('#dist-modal-close');
+
+        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
+        await page.waitForSelector('#chat-modal.active');
+        violations.push(...await collectSmallTargets(page, 'chat'));
+        await page.keyboard.press('Escape');
+
+        for (const view of ['account', 'notifications', 'profile']) {
+            await page.evaluate((v) => window.switchView(v), view);
+            violations.push(...await collectSmallTargets(page, view));
+        }
+        await page.evaluate(() => window.switchView('account'));
+        await page.click('#account-notif-settings');
+        violations.push(...await collectSmallTargets(page, 'reglages-notifs'));
+
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        violations.push(...await collectSmallTargets(page, 'favoris'));
+        await page.click('.bottom-nav [data-tab="activity"]');
+        violations.push(...await collectSmallTargets(page, 'activite'));
+
+        expect(violations, `cibles < 44px :\n${violations.join('\n')}`).toEqual([]);
+    });
+
+    test('la zone etendue est reellement cliquable : un point 4 px au-dessus d\'un chip de filtre l\'atteint', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        const hit = await page.evaluate(() => {
+            const chip = document.querySelector('.filter-chip[data-type="pizza"]');
+            const r = chip.getBoundingClientRect();
+            const el = document.elementFromPoint(r.left + r.width / 2, r.top - 4);
+            return el === chip || chip.contains(el);
+        });
+        expect(hit).toBe(true);
+    });
+});

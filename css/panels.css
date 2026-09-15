@@ -1037,6 +1037,7 @@
 
 .availability-seg-btn {
     flex: 1;
+    min-height: 44px; /* cible tactile (le conteneur .availability-seg rogne, pas de pseudo-element possible) */
     padding: 0.5rem 0.25rem;
     background: var(--white);
     border: none;
@@ -1067,6 +1068,7 @@
 
 .availability-machine-btn {
     flex: 1;
+    min-height: 44px; /* cible tactile */
     padding: 0.6rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--light-gray);

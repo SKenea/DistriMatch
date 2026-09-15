@@ -42,9 +42,13 @@ export function initMainMap() {
             iconAnchor: [8, 8]
         });
 
+        // Non interactif : ce marqueur n'a aucune action au clic, il ne doit
+        // pas etre annonce comme un bouton (ni compte comme cible tactile).
         setUserMarker(L.marker([AppState.userLocation.lat, AppState.userLocation.lng], {
             icon: userIcon,
-            zIndexOffset: 1000
+            zIndexOffset: 1000,
+            interactive: false,
+            keyboard: false
         }).addTo(mainMap));
 
         userMarker.bindPopup('<strong>Vous etes ici</strong>');
