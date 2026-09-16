@@ -128,10 +128,10 @@ BEGIN
   END LOOP;
 
   -- Le badge "Verifie il y a" suit le dernier signal, comme le ferait la RPC
-  UPDATE distributors d SET last_verified = s.last_ts
+  UPDATE distributors dist SET last_verified = s.last_ts
   FROM (SELECT distributor_id, max(created_at) AS last_ts
         FROM availability_signals WHERE device_hash LIKE 'demo-%' GROUP BY distributor_id) s
-  WHERE s.distributor_id = d.id;
+  WHERE s.distributor_id = dist.id;
 
   -- Evenements de mesure : 30 jours de consultations, scans QR, signaux, itineraires
   SELECT array_agg(id) INTO v_dist_ids FROM distributors;
@@ -188,8 +188,8 @@ BEGIN
   GET DIAGNOSTICS v_s = ROW_COUNT;
   DELETE FROM events WHERE device_hash LIKE 'demo-%';
   GET DIAGNOSTICS v_e = ROW_COUNT;
-  UPDATE distributors d SET last_verified = b.last_verified
-  FROM demo_backup b WHERE b.distributor_id = d.id;
+  UPDATE distributors dist SET last_verified = b.last_verified
+  FROM demo_backup b WHERE b.distributor_id = dist.id;
   RETURN jsonb_build_object('signaux_supprimes', v_s, 'evenements_supprimes', v_e);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
