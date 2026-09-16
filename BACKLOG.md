@@ -8,7 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- Mesure (front) : 5 evenements via la RPC `log_event` (session /auto 3 du 2026-09-16)
+- Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin" (session /auto 3 du 2026-09-16)
 
 ## Priorite haute
 
@@ -17,23 +17,6 @@
      le 2026-09-16 (vues kpi_* et product_rhythm lisibles) ; 009 + seed_demo_signals()
      a lancer par Stephane pour VOIR les resultats, mais les 3 tickets se livrent
      et se testent sans (RPC et vues interceptees par page.route). Front seul. -->
-
-- [ ] Mesure (front) : 5 evenements via la RPC `log_event`
-  - Contexte : `supabase/008_events_kpi_rhythm.sql` (table `events` sans lecture ni
-    ecriture directe, RPC `log_event(p_type, p_device_hash, p_distributor_id, p_source)`
-    ouverte a l'anonyme, anti-spam 300/h/appareil). Aucune donnee personnelle :
-    `getDeviceId()` de utils.js.
-  - Acceptance : nouveau `js/events.js` avec `logEvent(type, { distributorId, source })`
-    fire-and-forget (jamais await bloquant, jamais d'erreur visible, no-op si
-    `supabaseClient` null). Appels : `app_ouverte` a l'init (source = `distrimatch_src`
-    de sessionStorage sinon 'organic') ; `qr_scan` quand l'URL porte `&src=qr` ;
-    `fiche_ouverte` dans `openDistributorModal()` (source 'qr' si ouverte par le deep
-    link QR, sinon 'organic') ; `signal_envoye` dans availability.js apres
-    `inserted > 0` (meme source) ; `itineraire` au clic du bouton Itineraire. Import map
-    + nouvelle entree. Tests : unit sur la construction des arguments (type invalide
-    rejete, source par defaut), e2e avec `page.route('**/rest/v1/rpc/log_event')` qui
-    compte les appels sur un parcours ouverture app -> fiche -> itineraire (aucun vrai
-    evenement envoye par les tests).
 
 - [ ] Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin"
   - Contexte : vue `product_rhythm` (distributor_id, tranche matin/midi/apres-midi/soir,
@@ -211,3 +194,4 @@
 - [x] 2026-09-15 a11y Lot 3 : cibles tactiles >= 44x44 (WCAG 2.5.5) sans changer la taille visuelle : pseudo-element ::after centre de max(100%, 44px) sur tous les petits boutons (regle commune base.css), filter-bar padding 5px, slider en boite 44 px, heures calmes et segments "Il reste quoi ?" min-height 44, marqueur de position non interactif ; +2 e2e (section 14 : mesure de la zone effective sur 10 ecrans en 390 px + preuve elementFromPoint) (PR #95, commit 5122a93)
 - [x] 2026-09-15 a11y Lot 3 : contraste du texte secondaire (WCAG 1.4.3 AA). Nouvelle variable --text-muted #7A6C60 (5,07:1 blanc, 4,80:1 creme) pour les 15 declarations color: var(--gray-light) (horodatages, sous-titres, small, icones chevron/chat/suppression) ; --gray-light reserve au non-texte ; les 5 CSS bumpes ; +3 tests unit (ratios calcules, aucune regle color: --gray-light) (PR #96, commit 72be87e)
 - [x] 2026-09-15 UX : modale de confirmation maison (js/confirm-dialog.js, role alertdialog, focus-trap, Echap = annuler, focus sur Annuler) a la place des 3 confirm() natifs (Effacer mes donnees, Supprimer un produit, Tout effacer les notifs) ; .btn-danger-clean ; tests dom sur le vrai parcours Confirmer / Annuler, +2 e2e ; import map ?v=34 (PR #97, commit 4e2e78b)
+- [x] 2026-09-16 Mesure (front) : 5 evenements du pilote via la RPC log_event, js/events.js fire-and-forget, +6 unit +3 e2e, RPC interceptee dans tous les tests (PR #104, commit 3a453b3)

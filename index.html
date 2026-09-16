@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=25">
     <link rel="stylesheet" href="css/panels.css?v=29">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=25">
-    <link rel="stylesheet" href="css/overlays.css?v=27">
+    <link rel="stylesheet" href="css/overlays.css?v=28">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -303,6 +303,8 @@
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-verified" id="dist-modal-verified"></span>
                 </div>
+                <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
+                <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
                 <!-- Signal machine recent (vide / en panne), rempli par availability.js -->
                 <div class="dist-status-banner" id="dist-status-banner" aria-live="polite"></div>
             </div>
@@ -897,23 +899,23 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=35",
-            "./js/state.js": "./js/state.js?v=35",
-            "./js/config.js": "./js/config.js?v=35",
-            "./js/utils.js": "./js/utils.js?v=35",
-            "./js/auth.js": "./js/auth.js?v=35",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=35",
-            "./js/map.js": "./js/map.js?v=35",
-            "./js/navigation.js": "./js/navigation.js?v=35",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=35",
-            "./js/distributor.js": "./js/distributor.js?v=35",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=35",
-            "./js/chat.js": "./js/chat.js?v=35",
-            "./js/activity.js": "./js/activity.js?v=35",
-            "./js/notifications.js": "./js/notifications.js?v=35",
-            "./js/availability.js": "./js/availability.js?v=35",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=35",
-            "./js/events.js": "./js/events.js?v=35"
+            "./js/app.js": "./js/app.js?v=36",
+            "./js/state.js": "./js/state.js?v=36",
+            "./js/config.js": "./js/config.js?v=36",
+            "./js/utils.js": "./js/utils.js?v=36",
+            "./js/auth.js": "./js/auth.js?v=36",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=36",
+            "./js/map.js": "./js/map.js?v=36",
+            "./js/navigation.js": "./js/navigation.js?v=36",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=36",
+            "./js/distributor.js": "./js/distributor.js?v=36",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=36",
+            "./js/chat.js": "./js/chat.js?v=36",
+            "./js/activity.js": "./js/activity.js?v=36",
+            "./js/notifications.js": "./js/notifications.js?v=36",
+            "./js/availability.js": "./js/availability.js?v=36",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=36",
+            "./js/events.js": "./js/events.js?v=36"
         }
     }
     </script>

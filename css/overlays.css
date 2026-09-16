@@ -806,6 +806,11 @@
 .dist-modal-verified.is-fresh { color: #16a34a; font-weight: 600; }
 .dist-modal-verified.is-unknown { font-style: italic; }
 
+/* Rythme infere (docs/STRATEGIE.md, couche 2) : une phrase sous la fraicheur,
+   seulement quand les signaux la justifient (sinon rien, jamais inventee). */
+.dist-modal-rhythm { display: none; margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.dist-modal-rhythm.is-visible { display: block; }
+
 /* Bandeau machine (signal "vide" / "en panne" de moins de 24 h, UC11) :
    cache par defaut, visible seulement avec un signal recent. */
 .dist-status-banner {
