@@ -80,9 +80,9 @@ BEGIN
       CONTINUE;
     END IF;
 
-    -- Historique : 3 passages par jour (8 h, 12 h, 18 h heure locale) sur p_days jours
+    -- Historique : 3 passages par jour (8 h, 12 h, 19 h heure locale : la tranche "soir" commence a 19 h) sur p_days jours
     FOR v_day IN REVERSE (p_days - 1)..0 LOOP
-      FOREACH v_hour IN ARRAY ARRAY[8, 12, 18] LOOP
+      FOREACH v_hour IN ARRAY ARRAY[8, 12, 19] LOOP
         v_ts := (((now() AT TIME ZONE v_tz)::date - v_day) + make_time(v_hour, (random() * 50)::integer, 0)) AT TIME ZONE v_tz;
         CONTINUE WHEN v_ts > now();
         IF random() < 0.3 THEN v_source := 'user'; v_weight := 0.8; ELSE v_source := 'anon'; v_weight := 0.5; END IF;
