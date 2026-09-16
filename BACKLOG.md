@@ -8,43 +8,11 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin" (session /auto 3 du 2026-09-16)
 
 ## Priorite haute
 
-<!-- Lot 4 (2026-09-16) : mesure + demo, decision Stephane "un systeme fonctionnel
-     avec des donnees fictives pour apprehender les sujets". Migration 008 EXECUTEE
-     le 2026-09-16 (vues kpi_* et product_rhythm lisibles) ; 009 + seed_demo_signals()
-     a lancer par Stephane pour VOIR les resultats, mais les 3 tickets se livrent
-     et se testent sans (RPC et vues interceptees par page.route). Front seul. -->
+<!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 : evenements (PR #104),     rythme infere (PR #105), tableau de bord du pilote (PR #106). Migrations 008 et     009 executees, seed de demo lance. Prochains items : Priorite normale, puis     "Chantiers strategie" a cadrer avec Stephane (import OSM en premier). -->
 
-- [ ] Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin"
-  - Contexte : vue `product_rhythm` (distributor_id, tranche matin/midi/apres-midi/soir,
-    signaux_produit, pct_dispo, signaux_machine_ko), lisible en anonyme (008).
-  - Acceptance : fonction pure `describeRhythm(rows)` dans utils.js -> phrase ou null :
-    tranche "pleine" si signaux_produit >= 3 et pct_dispo >= 70, "souvent vide" si
-    <= 30 ; ex. "Habituellement plein le matin, souvent vide l'apres-midi et le soir" ;
-    null si aucune tranche qualifiee (rien d'affiche : jamais une phrase inventee).
-    Affichee dans la fiche sous le badge "Vérifié il y a" (`#dist-modal-rhythm`,
-    chargement fire-and-forget avec les autres signaux dans availability.js). Tests :
-    unit sur describeRhythm (seuils, ordre des tranches, null), e2e avec `page.route`
-    sur `**/rest/v1/product_rhythm*` renvoyant un profil boulangerie -> la phrase
-    attendue apparait ; sans lignes -> rien. Import map bumpee.
-
-- [ ] Tableau de bord du pilote (front) : les KPI de docs/STRATEGIE.md lisibles dans l'app
-  - Contexte : vues `kpi_coverage`, `kpi_contribution`, `kpi_events_daily`,
-    `kpi_signals_daily`, `kpi_top_distributors` (agregats, lecture anonyme, 008).
-  - Acceptance : vue `#stats-view` (view-page, meme gabarit que Compte, cf. la
-    direction design : cartes nettes, sections etiquetees), ouverte depuis la page
-    Compte par une rangee "Tableau de bord du pilote". Cartes : KPI directeur "% de
-    machines avec un signal < 24 h" (machines_signal_24h / machines, gros chiffre +
-    seuil pilote 30 % a 7 j rappele), taux de contribution (signaux_via_qr_30j /
-    scans_qr_30j, seuil 5 %), QR vs organique (fiches_via_qr_30j /
-    fiches_ouvertes_30j), signaux des 7 derniers jours (liste jour : n, texte, pas de
-    lib graphique), top 5 fiches consultees. Etat vide explicite si Supabase absent ou
-    aucune donnee. Aucun territoire en dur. Tests : dom sur le rendu a partir de
-    donnees fixes (pourcentages, arrondis, etat vide), e2e avec `page.route` sur
-    `**/rest/v1/kpi_*` -> les chiffres attendus s'affichent. CSS et import map bumpes.
 
 ## Priorite normale
 
@@ -195,3 +163,5 @@
 - [x] 2026-09-15 a11y Lot 3 : contraste du texte secondaire (WCAG 1.4.3 AA). Nouvelle variable --text-muted #7A6C60 (5,07:1 blanc, 4,80:1 creme) pour les 15 declarations color: var(--gray-light) (horodatages, sous-titres, small, icones chevron/chat/suppression) ; --gray-light reserve au non-texte ; les 5 CSS bumpes ; +3 tests unit (ratios calcules, aucune regle color: --gray-light) (PR #96, commit 72be87e)
 - [x] 2026-09-15 UX : modale de confirmation maison (js/confirm-dialog.js, role alertdialog, focus-trap, Echap = annuler, focus sur Annuler) a la place des 3 confirm() natifs (Effacer mes donnees, Supprimer un produit, Tout effacer les notifs) ; .btn-danger-clean ; tests dom sur le vrai parcours Confirmer / Annuler, +2 e2e ; import map ?v=34 (PR #97, commit 4e2e78b)
 - [x] 2026-09-16 Mesure (front) : 5 evenements du pilote via la RPC log_event, js/events.js fire-and-forget, +6 unit +3 e2e, RPC interceptee dans tous les tests (PR #104, commit 3a453b3)
+- [x] 2026-09-16 Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin, souvent vide ..." sous la fraicheur de la fiche (describeRhythm dans utils.js, vue product_rhythm chargee avec les signaux, #dist-modal-rhythm), +5 unit +2 e2e, overlays.css v28, import map v36 (PR #105, commit 3b86f47)
+- [x] 2026-09-16 Tableau de bord du pilote (front) : vue #stats-view depuis la page Compte (rangee "Tableau de bord du pilote"), KPI directeur % machines avec signal < 24 h + seuil 30 % a 7 j, contribution (signaux via QR / scans, seuil 5 %), QR vs organique, signaux 7 jours, top 5 fiches ; etat vide explicite ; js/stats.js, panels.css v30, import map v37, +6 dom +2 e2e (PR #106, commit 248470c)

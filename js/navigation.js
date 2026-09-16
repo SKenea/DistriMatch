@@ -19,6 +19,7 @@ const VIEW_CONFIG = {
     subscriptions:           { id: 'subscriptions-view',   onShow: null },
     profile:                 { id: 'profile-view',         onShow: null },
     account:                  { id: 'account-view',         onShow: null },
+    stats:                   { id: 'stats-view',           onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
     notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }

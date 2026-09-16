@@ -83,6 +83,16 @@ const html = `<!DOCTYPE html>
             <button id="clear-data-btn">Effacer mes données</button>
         </div>
     </div>
+    <div id="stats-view" class="view-page view-hidden">
+        <p id="stats-empty" hidden></p>
+        <div id="stats-content" hidden>
+            <span id="stats-coverage-24h"></span><span id="stats-coverage-detail"></span><p id="stats-coverage-threshold"></p>
+            <div id="stats-contrib-cell" class="stats-cell"><span id="stats-contrib-rate"></span><span id="stats-contrib-detail"></span></div>
+            <span id="stats-qr-share"></span><span id="stats-qr-detail"></span>
+            <span id="stats-signals-30j"></span><span id="stats-routes-30j"></span>
+            <ul id="stats-daily"></ul><ul id="stats-top"></ul>
+        </div>
+    </div>
     <div id="favorites-badge" style="display:none">0</div>
     <div id="conversations-count" style="display:none">0</div>
     <div id="chat-modal">
@@ -177,6 +187,7 @@ const { updateUnreadCounts } = await import('../js/chat.js');
 const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../js/notifications.js');
 const { NotificationQueue } = await import('../js/state.js');
 const { activateFocusTrap, deactivateFocusTrap } = await import('../js/focus-trap.js');
+const { buildStatsModel, renderStatsView, percent, formatPercent } = await import('../js/stats.js');
 
 // ============================================
 // ESCAPEHTML (DOM)
@@ -951,5 +962,107 @@ describe('promptAddProductFollow (modale)', () => {
         document.getElementById('product-follow-cancel').click();
         assert.equal(NotificationPrefs.followedProducts.length, 0);
         assert.ok(!document.getElementById('product-follow-modal').classList.contains('active'));
+    });
+});
+
+// ============================================
+// TABLEAU DE BORD DU PILOTE (js/stats.js)
+// ============================================
+// Rendu a partir de donnees fixes : pourcentages arrondis, denominateur nul
+// -> "—", 7 jours completes a 0, top 5 max, etat vide explicite.
+
+describe('Tableau de bord du pilote (buildStatsModel / renderStatsView)', () => {
+    const NOW = Date.parse('2026-09-16T14:00:00Z');
+    const raw = {
+        coverage: { machines: 30, machines_signal_24h: 21, machines_signal_7j: 25, machines_verifiees_24h: 21, signaux_7j: 1500, signaux_30j: 3320 },
+        contribution: { signaux_30j: 3320, fiches_ouvertes_30j: 267, fiches_via_qr_30j: 60, scans_qr_30j: 60, signaux_envoyes_30j: 200, signaux_via_qr_30j: 15, itineraires_30j: 85 },
+        signalsDaily: [
+            { jour: '2026-09-16', source: 'anon', signaux: 100 }, { jour: '2026-09-16', source: 'user', signaux: 20 },
+            { jour: '2026-09-15', source: 'anon', signaux: 80 }, { jour: '2026-09-01', source: 'anon', signaux: 999 }
+        ],
+        topDistributors: Array.from({ length: 6 }, (_, i) => ({
+            id: `dist-00${i}`, name: `Machine ${i} <b>x</b>`, type: 'bakery',
+            fiches_ouvertes_30j: 60 - i, signaux_30j: 10 * i, last_verified: i === 0 ? '2026-09-16T13:50:00Z' : null
+        }))
+    };
+
+    it('percent : arrondi entier, null si denominateur nul', () => {
+        assert.equal(percent(21, 30), 70);
+        assert.equal(percent(15, 60), 25);
+        assert.equal(percent(2, 3), 67);
+        assert.equal(percent(5, 0), null);
+        assert.equal(percent(5, undefined), null);
+        assert.equal(formatPercent(null), '—');
+        assert.equal(formatPercent(70), '70 %');
+    });
+
+    it('modele : KPI directeur, seuils, contribution, 7 jours completes a 0 (sources additionnees), top 5', () => {
+        const m = buildStatsModel(raw, NOW);
+        assert.equal(m.empty, false);
+        assert.equal(m.coverage24h.pct, 70);
+        assert.equal(m.coverage7d.pct, 83);
+        assert.equal(m.coverage7d.threshold, 30);
+        assert.equal(m.contribution.pct, 25);
+        assert.equal(m.contribution.threshold, 5);
+        assert.equal(m.qrShare.pct, 22);
+        assert.equal(m.signals30d, 3320);
+        assert.equal(m.routes30d, 85);
+        assert.equal(m.daily.length, 7);
+        assert.deepEqual(m.daily.slice(0, 3).map(d => [d.day, d.n]), [['2026-09-16', 120], ['2026-09-15', 80], ['2026-09-14', 0]]);
+        assert.equal(m.top.length, 5);
+        assert.equal(m.top[0].freshness.state, 'fresh');
+        assert.equal(m.top[1].freshness.state, 'unknown');
+    });
+
+    it('modele sans donnees : vide, denominateurs nuls -> null, 7 jours a 0', () => {
+        const m = buildStatsModel({}, NOW);
+        assert.equal(m.empty, true);
+        assert.equal(m.coverage24h.pct, null);
+        assert.equal(m.contribution.pct, null);
+        assert.deepEqual(m.daily.map(d => d.n), [0, 0, 0, 0, 0, 0, 0]);
+        assert.deepEqual(m.top, []);
+    });
+
+    it('rendu : chiffres, seuils atteints (is-ok), 7 lignes, top 5 echappe', () => {
+        renderStatsView(buildStatsModel(raw, NOW));
+        assert.equal(document.getElementById('stats-empty').hidden, true);
+        assert.equal(document.getElementById('stats-content').hidden, false);
+        assert.equal(document.getElementById('stats-coverage-24h').textContent, '70 %');
+        assert.equal(document.getElementById('stats-coverage-detail').textContent, '21 machines sur 30');
+        assert.match(document.getElementById('stats-coverage-threshold').textContent, /30 %.*7 j.*83 %/);
+        assert.ok(document.getElementById('stats-coverage-threshold').classList.contains('is-ok'));
+        assert.equal(document.getElementById('stats-contrib-rate').textContent, '25 %');
+        assert.equal(document.getElementById('stats-contrib-detail').textContent, '15 signaux pour 60 scans · seuil 5 %');
+        assert.ok(document.getElementById('stats-contrib-cell').classList.contains('is-ok'));
+        assert.equal(document.getElementById('stats-qr-share').textContent, '22 %');
+        assert.equal(document.getElementById('stats-signals-30j').textContent, '3320');
+        assert.equal(document.getElementById('stats-routes-30j').textContent, '85');
+        assert.equal(document.querySelectorAll('#stats-daily .stats-row').length, 7);
+        assert.equal(document.querySelector('#stats-daily .stats-row-value').textContent, '120');
+        const top = document.querySelectorAll('#stats-top .stats-row');
+        assert.equal(top.length, 5);
+        assert.ok(top[0].innerHTML.includes('Machine 0 &lt;b&gt;x&lt;/b&gt;'), 'nom echappe');
+        assert.equal(top[0].querySelector('b'), null);
+    });
+
+    it('rendu : sous les seuils -> is-ko ; denominateur nul -> "—" ; aucune fiche -> ligne vide', () => {
+        renderStatsView(buildStatsModel({
+            coverage: { machines: 30, machines_signal_24h: 3, machines_signal_7j: 6, signaux_30j: 40 },
+            contribution: { signaux_via_qr_30j: 1, scans_qr_30j: 100, fiches_via_qr_30j: 0, fiches_ouvertes_30j: 0 }
+        }, NOW));
+        assert.ok(document.getElementById('stats-coverage-threshold').classList.contains('is-ko'));
+        assert.ok(document.getElementById('stats-contrib-cell').classList.contains('is-ko'));
+        assert.equal(document.getElementById('stats-qr-share').textContent, '—');
+        assert.equal(document.querySelector('#stats-top .stats-row--empty').textContent.trim(), 'Aucune fiche ouverte sur 30 jours');
+    });
+
+    it('etat vide explicite : aucune donnee, puis message service', () => {
+        renderStatsView(buildStatsModel({}, NOW));
+        assert.equal(document.getElementById('stats-empty').hidden, false);
+        assert.equal(document.getElementById('stats-content').hidden, true);
+        assert.match(document.getElementById('stats-empty').textContent, /Pas encore de données/);
+        renderStatsView(buildStatsModel(raw, NOW), 'Service indisponible');
+        assert.equal(document.getElementById('stats-empty').textContent, 'Service indisponible');
+        assert.equal(document.getElementById('stats-content').hidden, true);
     });
 });
