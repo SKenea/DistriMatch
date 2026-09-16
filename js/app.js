@@ -23,6 +23,7 @@ import {
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
+import { logEvent, rememberEntrySource } from './events.js';
 
 import {
     switchView, switchTab, goBackToMap,
@@ -445,6 +446,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser Supabase
     initSupabase();
+    // Mesure (008), fire-and-forget : ouverture de l'app et scan QR eventuel.
+    // L'origine (&src=qr) est memorisee pour la session avant tout nettoyage d'URL.
+    const entrySrc = rememberEntrySource(window.location.search);
+    logEvent('app_ouverte');
+    if (entrySrc === 'qr') logEvent('qr_scan', { distributorId: new URLSearchParams(window.location.search).get('id') });
     await initAuth();
 
     // Charger les donnees locales

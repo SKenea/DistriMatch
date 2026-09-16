@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- Mesure (front) : 5 evenements via la RPC `log_event` (session /auto 3 du 2026-09-16)
 
 ## Priorite haute
 

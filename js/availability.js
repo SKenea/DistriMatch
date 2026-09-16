@@ -12,6 +12,7 @@
 import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload } from './utils.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { logEvent } from './events.js';
 
 // Meme regle que la fraicheur : vert < 2 h. Bandeau machine : signal < 24 h.
 const SEEN_FRESH_MS = 2 * 60 * 60 * 1000;
@@ -224,6 +225,7 @@ async function submitAvailability() {
                 verifiedEl.className = `dist-modal-verified is-${fresh.state}`;
             }
             showToast('Merci ! Ton signal aide les suivants', 'success');
+            logEvent('signal_envoye', { distributorId: distributor.id });   // mesure (008)
         } else {
             showToast('Déjà signalé il y a moins d\'une heure, merci quand même', 'default');
         }

@@ -7,11 +7,26 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = 'http://localhost:8080';
 
+// Mesure (008) : la RPC log_event est interceptee dans TOUS les tests, aucun vrai
+// evenement n'atteint Supabase. captureEvents() renvoie la liste des appels.
+const EVENTS_ROUTE = '**/rest/v1/rpc/log_event';
+
+async function captureEvents(page, status = 200) {
+    const events = [];
+    await page.route(EVENTS_ROUTE, route => {
+        const body = route.request().postDataJSON() || {};
+        events.push({ type: body.p_type, distributorId: body.p_distributor_id, source: body.p_source, device: body.p_device_hash, raw: body });
+        route.fulfill({ status, contentType: 'application/json', body: 'null' });
+    });
+    return events;
+}
+
 // ============================================
 // HELPERS
 // ============================================
 
 async function setupApp(page, context) {
+    await captureEvents(page);
     await context.grantPermissions(['geolocation'], { origin: BASE_URL });
     await context.setGeolocation({ latitude: 43.4929, longitude: -1.4748 });
     await page.goto(BASE_URL);
@@ -80,6 +95,7 @@ test.describe('1bis. Deep link sans consentement geoloc', () => {
     test('lien partage ouvre la modal meme avant clic geoloc', async ({ browser }) => {
         // Nouveau context vierge : pas de permission geoloc accordee
         const context = await browser.newContext();
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
 
         // Recuperer un id de distributeur reel via une 1ere visite normale
@@ -1227,7 +1243,9 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
 
     test('ouvre la fiche puis directement la modale, memorise la source, nettoie l\'URL', async ({ browser }) => {
         const context = await browser.newContext();
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
+        const events = await captureEvents(page);
         await page.goto(BASE_URL);
         await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
         const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
@@ -1239,6 +1257,9 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         const src = await page.evaluate(() => sessionStorage.getItem('distrimatch_src'));
         expect(src).toBe('qr');
         expect(page.url()).not.toContain('confirm=');
+        // Mesure : l'arrivee par QR compte app_ouverte + qr_scan + fiche_ouverte, source 'qr'
+        await expect.poll(() => events.filter(e => e.source === 'qr').map(e => e.type).sort()).toEqual(['app_ouverte', 'fiche_ouverte', 'qr_scan']);
+        expect(events.find(e => e.type === 'qr_scan').distributorId).toBe(firstId);
         await context.close();
     });
 });
@@ -1398,5 +1419,51 @@ test.describe('15. Confirmation maison', () => {
         const after = await page.evaluate(() => window.AppState.currentDistributor.products.length);
         expect(after).toBe(before);
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+    });
+});
+
+// ============================================
+// 16. MESURE DU PILOTE (RPC log_event, migration 008)
+// ============================================
+// setupApp bloque deja la RPC pour tous les tests ; ici captureEvents() la
+// remplace (le dernier handler enregistre gagne) pour lire ce qui part.
+
+test.describe('16. Mesure du pilote (log_event)', () => {
+    test('fiche_ouverte puis itineraire : un evenement chacun, meme appareil, source organic, aucune donnee personnelle', async ({ page }) => {
+        const events = await captureEvents(page);
+        const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
+        await page.evaluate(() => { window.open = () => null; });   // pas de vrai onglet Google Maps
+        await openDistModal(page);
+        await page.click('#dist-action-directions');
+
+        await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'itineraire']);
+        const device = await page.evaluate(() => localStorage.getItem('snackmatch_device'));
+        for (const e of events) {
+            expect(e).toMatchObject({ distributorId: firstId, source: 'organic', device });
+            expect(Object.keys(e.raw).sort()).toEqual(['p_device_hash', 'p_distributor_id', 'p_source', 'p_type']);
+        }
+    });
+
+    test('le passage en mode edition ne recompte pas la fiche', async ({ page }) => {
+        const events = await captureEvents(page);
+        await openDistModal(page);
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id, true, true));
+        await page.waitForTimeout(300);
+        expect(events.filter(e => e.type === 'fiche_ouverte')).toHaveLength(1);
+    });
+
+    test('signal retenu (inserted > 0) -> signal_envoye ; RPC de mesure en erreur -> aucun toast', async ({ page }) => {
+        const events = await captureEvents(page, 503);
+        await page.route(RPC_ROUTE, route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
+        }));
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        await pickSomething(page);
+        await page.click('#availability-submit');
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
+        await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'signal_envoye']);
+        expect(await page.$('#toast-container .toast.error')).toBeNull();
     });
 });

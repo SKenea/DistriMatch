@@ -11,12 +11,16 @@ import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { openAvailabilityPanel, loadAvailabilityForDistributor } from './availability.js';
+import { logEvent, rememberEntrySource } from './events.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
 // ============================================
 
 let currentFilter = null;
+// Source de la prochaine ouverture de fiche pour la mesure ('qr' quand elle
+// vient du deep link d'un sticker, sinon 'organic'). Remise a 'organic' apres.
+let modalOpenSource = 'organic';
 
 // Verrou de re-entrance pour l'upload de photos depuis la fiche
 // (handler async : double-clic / multi-selection rapide -> doublons).
@@ -202,7 +206,9 @@ export function initDistModal() {
     // Boutons d'action
     document.getElementById('dist-action-directions')?.addEventListener('click', () => {
         const d = AppState.currentDistributor;
-        if (d) window.open(`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`, '_blank');
+        if (!d) return;
+        logEvent('itineraire', { distributorId: d.id });   // mesure (008) : intention de deplacement
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`, '_blank');
     });
 
     document.getElementById('dist-action-favorite')?.addEventListener('click', async () => {
@@ -329,13 +335,11 @@ export function openModalFromUrlParam() {
     if (!id) return;
 
     // Origine du lien (sticker QR sur la machine : &src=qr), memorisee pour
-    // la mesure avant le nettoyage de l'URL. Aucune donnee personnelle.
-    const src = params.get('src');
-    if (src) {
-        try { sessionStorage.setItem('distrimatch_src', src); } catch (e) { /* sessionStorage indisponible */ }
-    }
+    // la session avant le nettoyage de l'URL. Aucune donnee personnelle.
+    const src = rememberEntrySource(window.location.search);
 
     if (AppState.distributors.find(d => d.id === id)) {
+        modalOpenSource = src || 'organic';
         openDistributorModal(id);
         // &confirm=1 : le QR colle sur la machine ouvre directement
         // "Il reste quoi ?" (UC11), la fiche reste derriere.
@@ -357,6 +361,10 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     AppState.currentDistributor = distributor;
     AppState.modalEditMode = editMode;
     AppState.modalCanEdit = canEdit;
+    // Mesure (008) : une ouverture de fiche = un evenement. Le passage en mode
+    // edition re-rend la meme fiche : pas recompte.
+    if (!editMode) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
+    modalOpenSource = 'organic';
 
     const typeConfig = AppState.typeConfig[distributor.type] || {};
     const distance = distributor.distance ? formatDistance(distributor.distance) : '';
