@@ -24,6 +24,7 @@ import {
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
 import { logEvent, rememberEntrySource } from './events.js';
+import { loadStats } from './stats.js';
 
 import {
     switchView, switchTab, goBackToMap,
@@ -297,6 +298,7 @@ registerViewCallback('subscriptions', displaySubscriptions);
 registerViewCallback('favorites', displaySubscriptions);
 registerViewCallback('profile', () => { updateProfileStats(); refreshAuthUI(); });
 registerViewCallback('account', () => refreshAuthUI());
+registerViewCallback('stats', loadStats);
 registerViewCallback('activity', displayActivityFeed);
 registerViewCallback('notifications', openNotificationsView);
 
@@ -565,6 +567,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('account'));
+    document.getElementById('back-from-stats')?.addEventListener('click', () => switchView('account'));
+    document.getElementById('account-stats-row')?.addEventListener('click', () => switchView('stats'));
 
     // Etat auth : indicateur Compte + libelle Connexion/Deconnexion du menu
     // + nom du hero profil. refreshAuthUI() est aussi le callback des vues

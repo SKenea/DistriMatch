@@ -1509,3 +1509,77 @@ test.describe('17. Rythme infere', () => {
         expect(await rhythm.textContent()).toBe('');
     });
 });
+
+// ============================================
+// 18. TABLEAU DE BORD DU PILOTE (vues kpi_*, js/stats.js)
+// ============================================
+// Les vues sont interceptees ; on verifie les chiffres, le seuil, la
+// navigation Compte -> tableau de bord -> retour, l'etat vide, et l'absence
+// de debordement en 390 px.
+
+const KPI_ROUTE = '**/rest/v1/kpi_*';
+
+function kpiFixture() {
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+        kpi_coverage: [{ machines: 30, machines_signal_24h: 21, machines_signal_7j: 25, machines_verifiees_24h: 21, signaux_7j: 1500, signaux_30j: 3320 }],
+        kpi_contribution: [{ signaux_30j: 3320, fiches_ouvertes_30j: 267, fiches_via_qr_30j: 60, scans_qr_30j: 60, signaux_envoyes_30j: 200, signaux_via_qr_30j: 15, itineraires_30j: 85 }],
+        kpi_signals_daily: [{ jour: today, source: 'anon', signaux: 100 }, { jour: today, source: 'user', signaux: 20 }],
+        kpi_top_distributors: Array.from({ length: 6 }, (_, i) => ({
+            id: `dist-00${i}`, name: `Machine ${i}`, type: 'bakery',
+            fiches_ouvertes_30j: 60 - i, signaux_30j: 10 * i, last_verified: new Date().toISOString()
+        }))
+    };
+}
+
+async function routeKpi(page, fixture) {
+    await page.route(KPI_ROUTE, route => {
+        const url = route.request().url();
+        const key = Object.keys(fixture).find(k => url.includes(`/rest/v1/${k}`));
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(key ? fixture[key] : []) });
+    });
+}
+
+test.describe('18. Tableau de bord du pilote', () => {
+    test('Compte -> rangee "Tableau de bord du pilote" -> chiffres, seuil, listes ; retour vers Compte ; aucun debordement en 390 px', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await routeKpi(page, kpiFixture());
+        await page.evaluate(() => window.switchView('account'));
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        await page.click('#account-stats-row');
+        await page.waitForSelector('#stats-view.view-active', { timeout: 3000 });
+
+        await expect(page.locator('#stats-coverage-24h')).toHaveText('70 %');
+        await expect(page.locator('#stats-coverage-detail')).toHaveText('21 machines sur 30');
+        await expect(page.locator('#stats-coverage-threshold')).toHaveClass(/is-ok/);
+        await expect(page.locator('#stats-coverage-threshold')).toContainText('83 %');
+        await expect(page.locator('#stats-contrib-rate')).toHaveText('25 %');
+        await expect(page.locator('#stats-qr-share')).toHaveText('22 %');
+        await expect(page.locator('#stats-signals-30j')).toHaveText('3320');
+        await expect(page.locator('#stats-routes-30j')).toHaveText('85');
+        await expect(page.locator('#stats-daily .stats-row')).toHaveCount(7);
+        await expect(page.locator('#stats-daily .stats-row-value').first()).toHaveText('120');
+        await expect(page.locator('#stats-top .stats-row')).toHaveCount(5);
+        await expect(page.locator('#stats-top .stats-row').first()).toContainText('Machine 0');
+        await expect(page.locator('#stats-empty')).toBeHidden();
+
+        const overflow = await page.evaluate(() => ({
+            doc: document.documentElement.scrollWidth,
+            view: document.getElementById('stats-view').scrollWidth
+        }));
+        expect(overflow.doc).toBeLessThanOrEqual(390);
+        expect(overflow.view).toBeLessThanOrEqual(390);
+
+        await page.click('#back-from-stats');
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        expect(await page.$('#stats-view.view-active')).toBeNull();
+    });
+
+    test('aucune donnee -> etat vide explicite, pas de cartes', async ({ page }) => {
+        await routeKpi(page, {});
+        await page.evaluate(() => window.switchView('stats'));
+        await page.waitForSelector('#stats-view.view-active', { timeout: 3000 });
+        await expect(page.locator('#stats-empty')).toContainText('Pas encore de données');
+        await expect(page.locator('#stats-content')).toBeHidden();
+    });
+});
