@@ -478,3 +478,39 @@ export function compressImage(file, opts = {}) {
         img.src = url;
     });
 }
+
+// ============================================
+// RYTHME INFERE (docs/STRATEGIE.md, couche 2)
+// ============================================
+// A partir des lignes de la vue product_rhythm (une par tranche horaire
+// locale : signaux_produit, pct_dispo), compose "Habituellement plein le
+// matin, souvent vide l'après-midi et le soir". Une tranche est "pleine" si
+// >= RHYTHM_MIN_SIGNALS signaux produit et >= 70 % de "vu dispo", "souvent
+// vide" si <= 30 %. Aucune tranche qualifiee -> null : rien n'est affiche,
+// jamais une phrase inventee.
+export const RHYTHM_SLOTS = ['matin', 'midi', 'apres-midi', 'soir'];
+export const RHYTHM_MIN_SIGNALS = 3;
+const RHYTHM_LABELS = { matin: 'le matin', midi: 'à midi', 'apres-midi': 'l\'après-midi', soir: 'le soir' };
+
+function joinSlotLabels(labels) {
+    if (labels.length === 1) return labels[0];
+    return `${labels.slice(0, -1).join(', ')} et ${labels[labels.length - 1]}`;
+}
+
+export function describeRhythm(rows) {
+    const full = [];
+    const empty = [];
+    for (const slot of RHYTHM_SLOTS) {
+        const row = (Array.isArray(rows) ? rows : []).find(r => r && r.tranche === slot);
+        if (!row || Number(row.signaux_produit) < RHYTHM_MIN_SIGNALS) continue;
+        const pct = Number(row.pct_dispo);
+        if (Number.isNaN(pct)) continue;
+        if (pct >= 70) full.push(RHYTHM_LABELS[slot]);
+        else if (pct <= 30) empty.push(RHYTHM_LABELS[slot]);
+    }
+    if (!full.length && !empty.length) return null;
+    const parts = [];
+    if (full.length) parts.push(`Habituellement plein ${joinSlotLabels(full)}`);
+    if (empty.length) parts.push(`${full.length ? 'souvent' : 'Souvent'} vide ${joinSlotLabels(empty)}`);
+    return parts.join(', ');
+}

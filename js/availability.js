@@ -10,7 +10,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload } from './utils.js';
+import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm } from './utils.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { logEvent } from './events.js';
 
@@ -22,7 +22,7 @@ const PRODUCT_STATES = ['available', 'absent', 'unseen'];
 const STATE_LABELS = { available: 'Vu dispo', absent: 'Vu absent', unseen: 'Pas regardé' };
 
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
-let loaded = { distributorId: null, products: {}, status: null };
+let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
 // Choix en cours dans le panneau : { [productId]: 'available' | 'absent' | 'unseen' }
 let choices = {};
 let machineState = null;   // 'empty' | 'broken' | null
@@ -35,19 +35,20 @@ let isSending = false;
 // Fire-and-forget : l'appelant ne l'await jamais. Un Supabase absent ou
 // injoignable ne produit ni erreur ni indication : la fiche reste utilisable.
 export function loadAvailabilityForDistributor(distributorId) {
-    loaded = { distributorId, products: {}, status: null };
+    loaded = { distributorId, products: {}, status: null, rhythm: [] };
     renderAvailabilityHints();
     if (!supabaseClient || !distributorId) return;
 
     Promise.all([
         supabaseClient.from('product_availability').select('*').eq('distributor_id', distributorId),
-        supabaseClient.from('distributor_status').select('*').eq('distributor_id', distributorId).limit(1)
-    ]).then(([productsRes, statusRes]) => {
+        supabaseClient.from('distributor_status').select('*').eq('distributor_id', distributorId).limit(1),
+        supabaseClient.from('product_rhythm').select('*').eq('distributor_id', distributorId)
+    ]).then(([productsRes, statusRes, rhythmRes]) => {
         // La fiche a pu changer pendant la requete
         if (AppState.currentDistributor?.id !== distributorId) return;
         const products = {};
         for (const row of productsRes.data || []) products[row.product_id] = row;
-        loaded = { distributorId, products, status: (statusRes.data || [])[0] || null };
+        loaded = { distributorId, products, status: (statusRes.data || [])[0] || null, rhythm: rhythmRes.data || [] };
         renderAvailabilityHints();
     }).catch(() => { /* hors ligne : pas d'indication, pas d'erreur */ });
 }
@@ -77,6 +78,15 @@ export function renderAvailabilityHints() {
         hint.textContent = `${row.state === 'available' ? 'vu dispo' : 'vu absent'} ${timeAgo(ts)}`;
         hint.className = `product-seen is-${row.state} ${fresh ? 'is-fresh' : 'is-stale'}`;
     });
+
+    // Rythme infere (couche 2) sous la fraicheur : une phrase seulement quand
+    // les signaux la justifient, sinon rien.
+    const rhythmEl = document.getElementById('dist-modal-rhythm');
+    if (rhythmEl) {
+        const phrase = describeRhythm(loaded.rhythm);
+        rhythmEl.textContent = phrase || '';
+        rhythmEl.className = `dist-modal-rhythm${phrase ? ' is-visible' : ''}`;
+    }
 
     const banner = document.getElementById('dist-status-banner');
     if (!banner) return;

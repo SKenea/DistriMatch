@@ -1467,3 +1467,45 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         expect(await page.$('#toast-container .toast.error')).toBeNull();
     });
 });
+
+// ============================================
+// 17. RYTHME INFERE (vue product_rhythm, couche 2)
+// ============================================
+// La vue est interceptee : un profil boulangerie donne la phrase attendue sous
+// la fraicheur ; sans lignes, rien n'est affiche (jamais une phrase inventee).
+
+const RHYTHM_ROUTE = '**/rest/v1/product_rhythm*';
+
+test.describe('17. Rythme infere', () => {
+    test('profil boulangerie -> phrase sous le badge de fraicheur ; la tranche a 2 signaux est ignoree', async ({ page }) => {
+        await page.route(RHYTHM_ROUTE, route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify([
+                { distributor_id: 'x', tranche: 'apres-midi', signaux_produit: 40, pct_dispo: 15, signaux_machine_ko: 0 },
+                { distributor_id: 'x', tranche: 'matin', signaux_produit: 40, pct_dispo: 86, signaux_machine_ko: 0 },
+                { distributor_id: 'x', tranche: 'midi', signaux_produit: 40, pct_dispo: 7, signaux_machine_ko: 2 },
+                { distributor_id: 'x', tranche: 'soir', signaux_produit: 2, pct_dispo: 0, signaux_machine_ko: 0 }
+            ])
+        }));
+        await openDistModal(page);
+        const rhythm = page.locator('#dist-modal-rhythm');
+        await expect(rhythm).toHaveText('Habituellement plein le matin, souvent vide à midi et l\'après-midi');
+        await expect(rhythm).toBeVisible();
+        const pos = await page.evaluate(() => ({
+            rhythmTop: document.getElementById('dist-modal-rhythm').getBoundingClientRect().top,
+            verifiedBottom: document.getElementById('dist-modal-verified').getBoundingClientRect().bottom
+        }));
+        expect(pos.rhythmTop).toBeGreaterThanOrEqual(pos.verifiedBottom - 1);
+    });
+
+    test('sans lignes -> rien n\'est affiche', async ({ page }) => {
+        let served = false;
+        await page.route(RHYTHM_ROUTE, route => { served = true; route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }); });
+        await openDistModal(page);
+        await expect.poll(() => served).toBe(true);
+        await page.waitForTimeout(300);
+        const rhythm = page.locator('#dist-modal-rhythm');
+        await expect(rhythm).toBeHidden();
+        expect(await rhythm.textContent()).toBe('');
+    });
+});

@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm
 } from '../js/utils.js';
 
 import {
@@ -208,6 +208,46 @@ describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', (
         setSupabaseClient({ rpc: async () => { throw new Error('reseau'); } });
         assert.doesNotThrow(() => logEvent('app_ouverte'));
         await new Promise(r => setTimeout(r, 10));
+    });
+});
+
+// ============================================
+// RYTHME INFERE (couche 2) : describeRhythm
+// ============================================
+// Jamais une phrase inventee : il faut >= 3 signaux produit sur la tranche,
+// >= 70 % de "vu dispo" pour "plein", <= 30 % pour "souvent vide".
+
+describe('describeRhythm (rythme infere depuis product_rhythm)', () => {
+    const row = (tranche, signaux_produit, pct_dispo) => ({ distributor_id: 'dist-002', tranche, signaux_produit, pct_dispo, signaux_machine_ko: 0 });
+
+    it('profil boulangerie : plein le matin, souvent vide l\'apres-midi et le soir', () => {
+        const rows = [row('matin', 40, 86), row('midi', 40, 55), row('apres-midi', 40, 15), row('soir', 40, 4)];
+        assert.equal(describeRhythm(rows), 'Habituellement plein le matin, souvent vide l\'après-midi et le soir');
+    });
+
+    it('les tranches sortent toujours dans l\'ordre de la journee, quel que soit l\'ordre des lignes', () => {
+        const rows = [row('soir', 10, 90), row('matin', 10, 90), row('midi', 10, 90)];
+        assert.equal(describeRhythm(rows), 'Habituellement plein le matin, à midi et le soir');
+    });
+
+    it('seuils : 70 % est plein, 30 % est vide, entre les deux rien ; moins de 3 signaux ne compte pas', () => {
+        assert.equal(describeRhythm([row('matin', 3, 70)]), 'Habituellement plein le matin');
+        assert.equal(describeRhythm([row('matin', 3, 30)]), 'Souvent vide le matin');
+        assert.equal(describeRhythm([row('matin', 3, 69)]), null);
+        assert.equal(describeRhythm([row('matin', 3, 31)]), null);
+        assert.equal(describeRhythm([row('matin', 2, 100)]), null);
+        assert.equal(describeRhythm([row('matin', 0, null)]), null);
+    });
+
+    it('valeurs numeriques en chaines (PostgREST) acceptees', () => {
+        assert.equal(describeRhythm([row('soir', '12', '75')]), 'Habituellement plein le soir');
+    });
+
+    it('rien a dire -> null (aucune ligne, tableau vide, valeur absente, tranche inconnue)', () => {
+        assert.equal(describeRhythm([]), null);
+        assert.equal(describeRhythm(null), null);
+        assert.equal(describeRhythm(undefined), null);
+        assert.equal(describeRhythm([row('nuit', 50, 100)]), null);
     });
 });
 
