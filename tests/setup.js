@@ -95,3 +95,12 @@ globalThis.L = {
 
 // Mock supabase
 globalThis.supabase = undefined;
+
+// Mock sessionStorage (origine de la visite, js/events.js)
+const sessionStore = {};
+globalThis.sessionStorage = {
+    getItem: (k) => (k in sessionStore ? sessionStore[k] : null),
+    setItem: (k, v) => { sessionStore[k] = String(v); },
+    removeItem: (k) => { delete sessionStore[k]; },
+    clear: () => { for (const k of Object.keys(sessionStore)) delete sessionStore[k]; }
+};

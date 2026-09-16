@@ -4,7 +4,7 @@
  */
 
 import './setup.js';
-import { describe, it } from 'node:test';
+import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ============================================
@@ -30,6 +30,8 @@ import {
 import { isQuietHours, canNotify, markNotified } from '../js/notifications.js';
 import { generateGreetingMessage } from '../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
+import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY } from '../js/events.js';
+import { setSupabaseClient } from '../js/state.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
@@ -147,6 +149,67 @@ function contrastRatio(a, b) {
     const [l1, l2] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
     return (l1 + 0.05) / (l2 + 0.05);
 }
+
+// ============================================
+// MESURE DU PILOTE (008) : buildEventArgs / rememberEntrySource / logEvent
+// ============================================
+// Les evenements passent par la RPC log_event et ne portent aucune donnee
+// personnelle ; un type inconnu n'est jamais envoye ; sans client Supabase
+// c'est un no-op silencieux : la mesure ne casse jamais l'app.
+
+describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', () => {
+    beforeEach(() => { sessionStorage.clear(); setSupabaseClient(null); });
+
+    it('type inconnu -> null (rien n\'est envoye)', () => {
+        assert.equal(buildEventArgs('clic_random'), null);
+        assert.equal(buildEventArgs(undefined), null);
+        assert.equal(EVENT_TYPES.length, 6);
+    });
+
+    it('arguments nommes comme la RPC, source organic par defaut, sans distributeur', () => {
+        const args = buildEventArgs('app_ouverte', {}, 'device-0123456789abcdef');
+        assert.deepEqual(args, {
+            p_type: 'app_ouverte', p_device_hash: 'device-0123456789abcdef', p_distributor_id: null, p_source: 'organic'
+        });
+    });
+
+    it('l\'appareil est identifie par getDeviceId (aleatoire local), rien d\'autre ne part', () => {
+        const args = buildEventArgs('fiche_ouverte', { distributorId: 'dist-002' });
+        assert.equal(args.p_device_hash, getDeviceId());
+        assert.equal(args.p_distributor_id, 'dist-002');
+        assert.deepEqual(Object.keys(args).sort(), ['p_device_hash', 'p_distributor_id', 'p_source', 'p_type']);
+    });
+
+    it('la source suit l\'origine de la session (&src=qr) ; une source explicite prime', () => {
+        assert.equal(rememberEntrySource('?id=dist-001'), null);
+        assert.equal(getEntrySource(), 'organic');
+        assert.equal(rememberEntrySource('?id=dist-001&confirm=1&src=qr'), 'qr');
+        assert.equal(getEntrySource(), 'qr');
+        assert.equal(sessionStorage.getItem(ENTRY_SOURCE_KEY), 'qr');
+        assert.equal(buildEventArgs('qr_scan', { distributorId: 'dist-001' }).p_source, 'qr');
+        assert.equal(buildEventArgs('itineraire', { source: 'organic' }).p_source, 'organic');
+    });
+
+    it('logEvent sans client Supabase : no-op silencieux', () => {
+        assert.doesNotThrow(() => logEvent('app_ouverte'));
+    });
+
+    it('logEvent appelle la RPC log_event en fire-and-forget, ignore les types inconnus et avale les erreurs', async () => {
+        const calls = [];
+        setSupabaseClient({ rpc: async (name, args) => { calls.push([name, args]); return { error: { message: 'boom' } }; } });
+        logEvent('itineraire', { distributorId: 'dist-003' });
+        logEvent('type_inconnu');
+        await new Promise(r => setTimeout(r, 10));
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0][0], 'log_event');
+        assert.equal(calls[0][1].p_type, 'itineraire');
+        assert.equal(calls[0][1].p_distributor_id, 'dist-003');
+
+        setSupabaseClient({ rpc: async () => { throw new Error('reseau'); } });
+        assert.doesNotThrow(() => logEvent('app_ouverte'));
+        await new Promise(r => setTimeout(r, 10));
+    });
+});
 
 describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
     const cssDir = new URL('../css/', import.meta.url);
