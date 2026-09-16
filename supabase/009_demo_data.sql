@@ -107,9 +107,10 @@ BEGIN
     IF v_profile = 'vide' THEN
       INSERT INTO availability_signals (distributor_id, product_id, state, source, weight, device_hash, created_at)
       VALUES (d.id, NULL, 'empty', 'anon', 0.5, 'demo-' || md5(random()::text), now() - INTERVAL '40 minutes');
+      -- Colonnes qualifiees (pr.) : d.id et products.id s'appelleraient tous deux "id"
       INSERT INTO availability_signals (distributor_id, product_id, state, source, weight, device_hash, created_at)
-      SELECT d.id, id, 'absent', 'anon', 0.5, 'demo-' || md5(random()::text), now() - INTERVAL '40 minutes'
-      FROM products WHERE distributor_id = d.id;
+      SELECT d.id, pr.id, 'absent', 'anon', 0.5, 'demo-' || md5(random()::text), now() - INTERVAL '40 minutes'
+      FROM products pr WHERE pr.distributor_id = d.id;
       GET DIAGNOSTICS v_n = ROW_COUNT;
       v_signals := v_signals + 1 + v_n;
     ELSIF v_profile = 'panne' THEN
@@ -119,8 +120,8 @@ BEGIN
     ELSIF v_profile = 'frais' THEN
       -- Un passage tout recent sur 1 ou 2 produits : badge vert "il y a X min"
       INSERT INTO availability_signals (distributor_id, product_id, state, source, weight, device_hash, created_at)
-      SELECT d.id, id, 'available', 'anon', 0.5, 'demo-' || md5(random()::text), now() - make_interval(mins => 5 + (random() * 25)::integer)
-      FROM products WHERE distributor_id = d.id ORDER BY id LIMIT 2;
+      SELECT d.id, pr.id, 'available', 'anon', 0.5, 'demo-' || md5(random()::text), now() - make_interval(mins => 5 + (random() * 25)::integer)
+      FROM products pr WHERE pr.distributor_id = d.id ORDER BY pr.id LIMIT 2;
       GET DIAGNOSTICS v_n = ROW_COUNT;
       v_signals := v_signals + v_n;
     END IF;
