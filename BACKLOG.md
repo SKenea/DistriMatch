@@ -11,8 +11,10 @@
 
 ## Priorite haute
 
-<!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 : evenements (PR #104),     rythme infere (PR #105), tableau de bord du pilote (PR #106). Migrations 008 et     009 executees, seed de demo lance. Prochains items : Priorite normale, puis     "Chantiers strategie" a cadrer avec Stephane (import OSM en premier). -->
-
+<!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 : evenements (PR #104),
+     rythme infere (PR #105), tableau de bord du pilote (PR #106). Migrations 008 et
+     009 executees, seed de demo lance. Prochains items : Priorite normale, puis
+     "Chantiers strategie" a cadrer avec Stephane (import OSM en premier). -->
 
 ## Priorite normale
 
