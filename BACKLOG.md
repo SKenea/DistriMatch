@@ -11,32 +11,13 @@
 
 ## Priorite haute
 
-<!-- Lot 2 (2026-09-15) livre : chantier 2 signal en un tap (PR #93) + auth en
-     2 etapes (PR #94). Les tickets notes/avis et onglet Avis ont ete retires du
-     lot : le seed est une maquette, la decision se prend a l'import OSM (cf.
-     "Chantiers strategie", chantier 4). -->
+<!-- Lot 4 (2026-09-16) : mesure + demo, decision Stephane "un systeme fonctionnel
+     avec des donnees fictives pour apprehender les sujets". Migration 008 EXECUTEE
+     le 2026-09-16 (vues kpi_* et product_rhythm lisibles) ; 009 + seed_demo_signals()
+     a lancer par Stephane pour VOIR les resultats, mais les 3 tickets se livrent
+     et se testent sans (RPC et vues interceptees par page.route). Front seul. -->
 
-## Priorite normale
-
-<!-- Lot 3 a11y/UX (audit Nielsen/WCAG du 2026-06-05) ENTIEREMENT LIVRE le
-     2026-09-15 : cibles tactiles 44 px (PR #95), contraste texte secondaire
-     (PR #96), modale de confirmation maison (PR #97). Backlog /auto vide :
-     les prochains items viennent de "Chantiers strategie", a cadrer avec
-     Stephane (import OSM en premier). -->
-
-## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
-
-<!-- Section NON lue par /auto (ni "Priorite haute" ni "Priorite normale").
-     Ordre = docs/STRATEGIE.md. Un chantier qui exige une migration Supabase le dit :
-     la migration s'execute a la main dans le dashboard AVANT le ticket front. -->
-
-<!-- Decision Stephane 2026-09-16 : avant d'importer du reel, un systeme FONCTIONNEL
-     avec des donnees fictives, pour apprehender chaque couche. D'ou l'ordre : mesure
-     (008) + jeu de demo (009) -> les 3 tickets front ci-dessous -> import OSM. Les 3
-     tickets montent en Priorite haute des que Stephane confirme "Success" sur 008 et
-     009 et a lance SELECT seed_demo_signals(). -->
-
-- [ ] Mesure (front) : 5 evenements via la RPC `log_event` - REQUIERT 008 EXECUTEE
+- [ ] Mesure (front) : 5 evenements via la RPC `log_event`
   - Contexte : `supabase/008_events_kpi_rhythm.sql` (table `events` sans lecture ni
     ecriture directe, RPC `log_event(p_type, p_device_hash, p_distributor_id, p_source)`
     ouverte a l'anonyme, anti-spam 300/h/appareil). Aucune donnee personnelle :
@@ -53,9 +34,9 @@
     compte les appels sur un parcours ouverture app -> fiche -> itineraire (aucun vrai
     evenement envoye par les tests).
 
-- [ ] Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin" - REQUIERT 008 EXECUTEE + 009 pour le voir
+- [ ] Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin"
   - Contexte : vue `product_rhythm` (distributor_id, tranche matin/midi/apres-midi/soir,
-    signaux_produit, pct_dispo, signaux_machine_ko), lisible en anonyme.
+    signaux_produit, pct_dispo, signaux_machine_ko), lisible en anonyme (008).
   - Acceptance : fonction pure `describeRhythm(rows)` dans utils.js -> phrase ou null :
     tranche "pleine" si signaux_produit >= 3 et pct_dispo >= 70, "souvent vide" si
     <= 30 ; ex. "Habituellement plein le matin, souvent vide l'apres-midi et le soir" ;
@@ -66,20 +47,34 @@
     sur `**/rest/v1/product_rhythm*` renvoyant un profil boulangerie -> la phrase
     attendue apparait ; sans lignes -> rien. Import map bumpee.
 
-- [ ] Tableau de bord du pilote (front) : les KPI de docs/STRATEGIE.md lisibles dans l'app - REQUIERT 008 EXECUTEE
+- [ ] Tableau de bord du pilote (front) : les KPI de docs/STRATEGIE.md lisibles dans l'app
   - Contexte : vues `kpi_coverage`, `kpi_contribution`, `kpi_events_daily`,
-    `kpi_signals_daily`, `kpi_top_distributors` (agregats, lecture anonyme).
-  - Acceptance : vue `#stats-view` (view-page, meme gabarit que Compte, cf.
-    [[design-direction]]), ouverte depuis la page Compte par une rangee "Tableau de
-    bord du pilote". Cartes : KPI directeur "% de machines avec un signal < 24 h"
-    (machines_signal_24h / machines, gros chiffre + seuil pilote 30 % a 7 j rappele),
-    taux de contribution (signaux_via_qr_30j / scans_qr_30j, seuil 5 %), QR vs
-    organique (fiches_via_qr_30j / fiches_ouvertes_30j), signaux des 7 derniers jours
-    (liste jour : n, texte, pas de lib graphique), top 5 fiches consultees. Etat vide
-    explicite si Supabase absent. Aucun territoire en dur. Tests : dom sur le rendu a
-    partir de donnees fixes (pourcentages, arrondis, etat vide), e2e avec `page.route`
-    sur `**/rest/v1/kpi_*` -> les chiffres attendus s'affichent. CSS et import map
-    bumpes.
+    `kpi_signals_daily`, `kpi_top_distributors` (agregats, lecture anonyme, 008).
+  - Acceptance : vue `#stats-view` (view-page, meme gabarit que Compte, cf. la
+    direction design : cartes nettes, sections etiquetees), ouverte depuis la page
+    Compte par une rangee "Tableau de bord du pilote". Cartes : KPI directeur "% de
+    machines avec un signal < 24 h" (machines_signal_24h / machines, gros chiffre +
+    seuil pilote 30 % a 7 j rappele), taux de contribution (signaux_via_qr_30j /
+    scans_qr_30j, seuil 5 %), QR vs organique (fiches_via_qr_30j /
+    fiches_ouvertes_30j), signaux des 7 derniers jours (liste jour : n, texte, pas de
+    lib graphique), top 5 fiches consultees. Etat vide explicite si Supabase absent ou
+    aucune donnee. Aucun territoire en dur. Tests : dom sur le rendu a partir de
+    donnees fixes (pourcentages, arrondis, etat vide), e2e avec `page.route` sur
+    `**/rest/v1/kpi_*` -> les chiffres attendus s'affichent. CSS et import map bumpes.
+
+## Priorite normale
+
+<!-- Lot 3 a11y/UX (audit Nielsen/WCAG du 2026-06-05) ENTIEREMENT LIVRE le
+     2026-09-15 : cibles tactiles 44 px (PR #95), contraste texte secondaire
+     (PR #96), modale de confirmation maison (PR #97). Backlog /auto vide :
+     les prochains items viennent de "Chantiers strategie", a cadrer avec
+     Stephane (import OSM en premier). -->
+
+## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
+
+<!-- Section NON lue par /auto (ni "Priorite haute" ni "Priorite normale").
+     Ordre = docs/STRATEGIE.md. Un chantier qui exige une migration Supabase le dit :
+     la migration s'execute a la main dans le dashboard AVANT le ticket front. -->
 
 - [x] Chantier 2, partie migration : `supabase/007_availability_signals.sql` ecrite
   (PR #90) et EXECUTEE par Stephane le 2026-09-15, verifiee en anonyme (RPC
@@ -108,13 +103,13 @@
   Web Push), branchees sur les signaux ; fermeture de boucle apres l'alerte ("Tu y es
   alle ? Il en restait ?").
 
-- [ ] Chantier 6 : rythme infere (couche 2) - agregation des signaux par heure et jour
+- [x] Chantier 6 : vue product_rhythm livree en 008 (2026-09-16) ; la partie front est en Priorite haute. Ancien enonce : agregation des signaux par heure et jour
   ("habituellement plein le matin"), affichee quand une machine a assez de signaux.
 
 - [ ] Chantier 7 : producteur optionnel - `owner_user_id` sur `distributors`
   (MIGRATION), revendication de fiche, bouton "rempli" a poids 1.0.
 
-- [ ] Mesure : table `events` (type, distributor_id, source, device_hash, created_at ;
+- [x] Mesure, partie migration : livree en 008 (2026-09-16), front en Priorite haute. Ancien enonce : table `events` (type, distributor_id, source, device_hash, created_at ;
   aucune donnee personnelle) - MIGRATION - alimentee en fire-and-forget, et les 5
   KPI de depart en vues SQL : % machines avec signal < 24 h (directeur), signaux par
   source, ouvertures QR vs organique, taux de contribution (signaux / fiches
