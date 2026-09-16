@@ -70,6 +70,24 @@
      les prochains items viennent de "Chantiers strategie", a cadrer avec
      Stephane (import OSM en premier). -->
 
+- [ ] Fiche : le badge statique "Disponible" contredit le dernier signal produit
+  - Contexte : vu en prod le 2026-09-16 grace au jeu de demo (dist-007 "Legumes Bio
+    Cambo") : "Panier legumes saison / vu absent il y a 44 min / Disponible". Le badge
+    vient du flag editorial `products.available` (seed = maquette, rendu dans
+    `js/distributor.js` `renderProducts`, `.product-availability-clean`), l'indice vient
+    de la vue `product_availability` (availability.js). Deux verites cote a cote =
+    confiance perdue, alors que la fraicheur horodatee est LE produit (STRATEGIE).
+  - Option retenue par defaut (Stephane peut trancher autrement) : le badge suit le
+    signal quand il existe et est frais (< `FRESH_MAX_AGE_MS`) : "Vu dispo" (vert) /
+    "Vu absent" (gris) ; sans signal frais, badge neutre "Au catalogue" a la place de
+    "Disponible" (le flag editorial ne dit rien de l'instant). L'indice "vu ... il y a X"
+    reste sous le nom. Le chip cliquable du mode edition (toggle du flag) ne change pas.
+  - Acceptance : fonction pure `resolveAvailabilityBadge(product, signalRow, now)` dans
+    utils.js -> `{ label, tone }` (tests unit : signal frais dispo / absent, signal perime,
+    aucun signal) ; rendu dans la fiche (lecture seule) ; e2e avec
+    `page.route('**/rest/v1/product_availability*')` : une ligne absent recente ->
+    badge "Vu absent", aucune ligne -> "Au catalogue". Import map bumpee, CSS bumpe.
+
 ## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
 
 <!-- Section NON lue par /auto (ni "Priorite haute" ni "Priorite normale").
