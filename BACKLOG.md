@@ -30,6 +30,57 @@
      Ordre = docs/STRATEGIE.md. Un chantier qui exige une migration Supabase le dit :
      la migration s'execute a la main dans le dashboard AVANT le ticket front. -->
 
+<!-- Decision Stephane 2026-09-16 : avant d'importer du reel, un systeme FONCTIONNEL
+     avec des donnees fictives, pour apprehender chaque couche. D'ou l'ordre : mesure
+     (008) + jeu de demo (009) -> les 3 tickets front ci-dessous -> import OSM. Les 3
+     tickets montent en Priorite haute des que Stephane confirme "Success" sur 008 et
+     009 et a lance SELECT seed_demo_signals(). -->
+
+- [ ] Mesure (front) : 5 evenements via la RPC `log_event` - REQUIERT 008 EXECUTEE
+  - Contexte : `supabase/008_events_kpi_rhythm.sql` (table `events` sans lecture ni
+    ecriture directe, RPC `log_event(p_type, p_device_hash, p_distributor_id, p_source)`
+    ouverte a l'anonyme, anti-spam 300/h/appareil). Aucune donnee personnelle :
+    `getDeviceId()` de utils.js.
+  - Acceptance : nouveau `js/events.js` avec `logEvent(type, { distributorId, source })`
+    fire-and-forget (jamais await bloquant, jamais d'erreur visible, no-op si
+    `supabaseClient` null). Appels : `app_ouverte` a l'init (source = `distrimatch_src`
+    de sessionStorage sinon 'organic') ; `qr_scan` quand l'URL porte `&src=qr` ;
+    `fiche_ouverte` dans `openDistributorModal()` (source 'qr' si ouverte par le deep
+    link QR, sinon 'organic') ; `signal_envoye` dans availability.js apres
+    `inserted > 0` (meme source) ; `itineraire` au clic du bouton Itineraire. Import map
+    + nouvelle entree. Tests : unit sur la construction des arguments (type invalide
+    rejete, source par defaut), e2e avec `page.route('**/rest/v1/rpc/log_event')` qui
+    compte les appels sur un parcours ouverture app -> fiche -> itineraire (aucun vrai
+    evenement envoye par les tests).
+
+- [ ] Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin" - REQUIERT 008 EXECUTEE + 009 pour le voir
+  - Contexte : vue `product_rhythm` (distributor_id, tranche matin/midi/apres-midi/soir,
+    signaux_produit, pct_dispo, signaux_machine_ko), lisible en anonyme.
+  - Acceptance : fonction pure `describeRhythm(rows)` dans utils.js -> phrase ou null :
+    tranche "pleine" si signaux_produit >= 3 et pct_dispo >= 70, "souvent vide" si
+    <= 30 ; ex. "Habituellement plein le matin, souvent vide l'apres-midi et le soir" ;
+    null si aucune tranche qualifiee (rien d'affiche : jamais une phrase inventee).
+    Affichee dans la fiche sous le badge "Vérifié il y a" (`#dist-modal-rhythm`,
+    chargement fire-and-forget avec les autres signaux dans availability.js). Tests :
+    unit sur describeRhythm (seuils, ordre des tranches, null), e2e avec `page.route`
+    sur `**/rest/v1/product_rhythm*` renvoyant un profil boulangerie -> la phrase
+    attendue apparait ; sans lignes -> rien. Import map bumpee.
+
+- [ ] Tableau de bord du pilote (front) : les KPI de docs/STRATEGIE.md lisibles dans l'app - REQUIERT 008 EXECUTEE
+  - Contexte : vues `kpi_coverage`, `kpi_contribution`, `kpi_events_daily`,
+    `kpi_signals_daily`, `kpi_top_distributors` (agregats, lecture anonyme).
+  - Acceptance : vue `#stats-view` (view-page, meme gabarit que Compte, cf.
+    [[design-direction]]), ouverte depuis la page Compte par une rangee "Tableau de
+    bord du pilote". Cartes : KPI directeur "% de machines avec un signal < 24 h"
+    (machines_signal_24h / machines, gros chiffre + seuil pilote 30 % a 7 j rappele),
+    taux de contribution (signaux_via_qr_30j / scans_qr_30j, seuil 5 %), QR vs
+    organique (fiches_via_qr_30j / fiches_ouvertes_30j), signaux des 7 derniers jours
+    (liste jour : n, texte, pas de lib graphique), top 5 fiches consultees. Etat vide
+    explicite si Supabase absent. Aucun territoire en dur. Tests : dom sur le rendu a
+    partir de donnees fixes (pourcentages, arrondis, etat vide), e2e avec `page.route`
+    sur `**/rest/v1/kpi_*` -> les chiffres attendus s'affichent. CSS et import map
+    bumpes.
+
 - [x] Chantier 2, partie migration : `supabase/007_availability_signals.sql` ecrite
   (PR #90) et EXECUTEE par Stephane le 2026-09-15, verifiee en anonyme (RPC
   inserted/skipped, insert direct 42501, gardes 22023/P0002, vues, `last_verified`).

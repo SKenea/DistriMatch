@@ -188,21 +188,31 @@ doit le dire, `/auto` ne peut pas le faire seul.
    (vu dispo / vu absent / pas regarde, ce dernier par defaut), et deux
    boutons machine (« vide », « en panne »). Mode `&confirm=1` du deep link.
    Migration 007.
-3. **Nettoyage confiance** : masquer chatbot et gamification. Notes, avis et
-   onglet Avis : decision differee au chantier 4 (le seed est une maquette).
+3. **Mesure + jeu de demo** (decision de Stephane, 2026-09-16 : un systeme
+   FONCTIONNEL avec des donnees fictives avant d'importer du reel, pour
+   apprehender chaque couche). Migration 008 : table `events` + RPC
+   `log_event` anonyme, vues KPI `kpi_*` (couverture, contribution, QR vs
+   organique, top fiches), vue `product_rhythm` par tranche horaire locale
+   (colonne `distributors.tz`, donnee et non constante). Migration 009 :
+   `seed_demo_signals()` genere signaux et evenements fictifs marques `demo-`
+   selon un profil par type de machine (boulangerie pleine le matin, pizza le
+   soir, une machine vide, une en panne, une dormante), regenerable,
+   `purge_demo_data()` avant le vrai pilote. Front : `log_event` sur 5
+   evenements, **rythme infere dans la fiche** (« Habituellement plein le
+   matin, souvent vide le soir », ex-chantier 6), **tableau de bord du pilote**
+   dans l'app avec les seuils go/no-go en regard des chiffres.
 4. **Couche 0** : import OpenStreetMap via Overpass (`amenity=vending_machine`
    + `vending=*`, mapping `vending` -> type, dedup par signature nom+coords
    qui existe deja pour les distributeurs locaux, attribution ODbL) ; champs de
-   rythme sur `distributors` (horaire de remplissage, creneaux vides), saisis
-   a l'inventaire, affiches en fiche. Garder les signaux dans leurs propres
-   tables, separees des donnees importees (base collective, pas derivee, pour
-   ne pas soumettre tout DistriMatch au partage a l'identique ODbL ; a
-   verifier).
-5. **Alertes reelles** : « previens-moi quand c'est plein » branche sur les
+   rythme declare sur `distributors` (horaire de remplissage, creneaux vides),
+   saisis a l'inventaire, affiches en fiche. Garder les signaux dans leurs
+   propres tables, separees des donnees importees (base collective, pas
+   derivee, pour ne pas soumettre tout DistriMatch au partage a l'identique
+   ODbL ; a verifier). Decision notes / avis / onglet Avis a ce moment.
+5. **Nettoyage confiance** : masquer chatbot simule et gamification.
+6. **Alertes reelles** : « previens-moi quand c'est plein » branche sur les
    signaux (Supabase Realtime + Web Push). Fermer la boucle apres l'alerte :
    « Tu y es alle ? Il en restait ? » genere le signal suivant.
-6. **Rythme infere (couche 2)** : agregation des signaux par heure et jour,
-   affichee quand une machine a assez de signaux.
 7. **Producteur optionnel** : `owner_user_id` sur `distributors`,
    revendication de fiche, bouton « rempli » a poids 1.0.
 
