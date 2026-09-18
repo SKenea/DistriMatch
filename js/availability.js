@@ -110,6 +110,16 @@ function getModal() {
     return document.getElementById('availability-modal');
 }
 
+// Message d'erreur dans la modale elle-meme (retourne true si affiche) : sur
+// mobile, un toast passerait sous la fiche ou recouvrirait les boutons de la modale.
+function setPanelError(message) {
+    const el = document.getElementById('availability-error');
+    if (!el) return false;
+    el.textContent = message || '';
+    el.hidden = !message;
+    return !!message;
+}
+
 export function openAvailabilityPanel() {
     const distributor = AppState.currentDistributor;
     const modal = getModal();
@@ -117,6 +127,7 @@ export function openAvailabilityPanel() {
 
     choices = {};
     machineState = null;
+    setPanelError(null);
     renderPanel(distributor);
     modal.classList.add('active');
     activateFocusTrap(modal, closeAvailabilityPanel);
@@ -213,11 +224,14 @@ async function submitAvailability() {
     const distributor = AppState.currentDistributor;
     if (!distributor || isSending || !hasSomethingToSend()) return;
     if (!supabaseClient) {
-        showToast('Signal non envoyé : service indisponible, réessaie plus tard', 'error');
+        if (!setPanelError('Service indisponible, réessaie plus tard')) {
+            showToast('Signal non envoyé : service indisponible, réessaie plus tard', 'error');
+        }
         return;
     }
 
     isSending = true;
+    setPanelError(null);
     updateSubmitState();
     try {
         const payload = buildAvailabilityPayload(distributor.id, getDeviceId(), choices, machineState);
@@ -243,7 +257,9 @@ async function submitAvailability() {
         loadAvailabilityForDistributor(distributor.id);
     } catch (e) {
         console.warn('[DistriMatch] Signal de dispo refuse :', e?.message || e);
-        showToast('Signal non envoyé, réessaie plus tard', 'error');
+        if (!setPanelError('Signal non envoyé, réessaie plus tard')) {
+            showToast('Signal non envoyé, réessaie plus tard', 'error');
+        }
     } finally {
         isSending = false;
         updateSubmitState();

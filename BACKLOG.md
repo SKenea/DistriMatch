@@ -15,20 +15,6 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
 
-- [ ] UX-01 Toasts visibles partout : au-dessus des modales et de la bottom nav
-  - Contexte : `#toast-container` est en z-index 300, la fiche `#dist-modal-overlay` en
-    10500 (confirm 11500) : apres « Envoyer » (Merci !), apres « Partager » (lien copie)
-    et en erreur 503, le toast est rendu SOUS la fiche, l'utilisateur ne voit rien
-    (capture 10). Sur la carte, le toast (top 551) recouvre la bottom nav (top 604)
-    (capture 11). UX-01 / UX-10 / UX-25 du rapport.
-  - Acceptance : z-index du conteneur superieur a toutes les modales ; position au-dessus
-    de la bottom nav quand elle est visible (variable CSS de hauteur de nav + safe-area) ;
-    en erreur 503, un message inline dans la modale de signal en plus du toast ; aucune
-    regression desktop. Tests e2e : (1) apres envoi d'un signal (RPC interceptee),
-    `document.elementFromPoint` au centre du toast est le toast ; (2) sur la carte,
-    `toast.bottom <= bottomNav.top` ; (3) 503 -> `#availability-modal` contient le
-    message d'erreur. CSS bumpe.
-
 - [ ] UX-03 Liste « Tous les distributeurs » vide a l'ouverture par le hamburger
   - Contexte : sur mobile, `#sidebar-toggle` ouvre le panneau « Tous les distributeurs »
     avec `#side-panel-list` vide (0 element apres 2,5 s, WebKit et Chromium, capture 05).
@@ -324,3 +310,4 @@
 - [x] 2026-09-16 Mesure (front) : 5 evenements du pilote via la RPC log_event, js/events.js fire-and-forget, +6 unit +3 e2e, RPC interceptee dans tous les tests (PR #104, commit 3a453b3)
 - [x] 2026-09-16 Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin, souvent vide ..." sous la fraicheur de la fiche (describeRhythm dans utils.js, vue product_rhythm chargee avec les signaux, #dist-modal-rhythm), +5 unit +2 e2e, overlays.css v28, import map v36 (PR #105, commit 3b86f47)
 - [x] 2026-09-16 Tableau de bord du pilote (front) : vue #stats-view depuis la page Compte (rangee "Tableau de bord du pilote"), KPI directeur % machines avec signal < 24 h + seuil 30 % a 7 j, contribution (signaux via QR / scans, seuil 5 %), QR vs organique, signaux 7 jours, top 5 fiches ; etat vide explicite ; js/stats.js, panels.css v30, import map v37, +6 dom +2 e2e (PR #106, commit 248470c)
+- [x] 2026-09-18 UX-01 Toasts visibles partout : --z-toast 12000 (au-dessus des modales), conteneur au-dessus de la bottom nav (--bottom-nav-h + safe-area, pilule desktop), erreur d'envoi en ligne dans la modale de signal (#availability-error), +3 e2e (PR #109, commit 6a53a77)

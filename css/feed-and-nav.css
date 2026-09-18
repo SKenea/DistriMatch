@@ -4,7 +4,9 @@
 
 .toast-container {
     position: fixed;
-    bottom: 24px;
+    /* Au-dessus de la bottom nav (60 px en mobile) et de la barre systeme */
+    bottom: calc(var(--bottom-nav-h) + 12px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 32px);
     left: 50%;
     transform: translateX(-50%);
     z-index: var(--z-toast);
@@ -38,6 +40,11 @@
 
 .toast.warning {
     background: var(--warning);
+}
+
+/* Desktop : la nav est une pilule a 16 px du bas, le toast passe au-dessus */
+@media (min-width: 769px) {
+    .toast-container { bottom: calc(16px + var(--bottom-nav-h) + 12px); }
 }
 
 @keyframes toastIn {
@@ -167,7 +174,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: var(--bottom-nav-h);
     background: var(--white);
     display: flex;
     justify-content: center;
