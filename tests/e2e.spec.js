@@ -1120,9 +1120,9 @@ test.describe('11. Accessibilite modales (focus-trap)', () => {
         await expect(dialog).toHaveAttribute('role', 'dialog');
         await expect(dialog).toHaveAttribute('aria-modal', 'true');
 
-        const focusInside = await page.evaluate(() =>
-            document.getElementById('chat-modal').contains(document.activeElement));
-        expect(focusInside).toBe(true);
+        await expect.poll(() => page.evaluate(() =>
+            document.getElementById('chat-modal').contains(document.activeElement))).toBe(true);
+
 
         await page.keyboard.press('Escape');
         await expect(page.locator('#chat-modal')).not.toHaveClass(/active/);
@@ -2010,5 +2010,50 @@ test.describe('28. Favori et menu avatar', () => {
         const heights = await page.$$eval('#profile-menu .profile-menu-item', els => els.map(e => e.getBoundingClientRect().height));
         expect(heights.length).toBeGreaterThan(0);
         for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
+    });
+});
+
+// ============================================
+// 29. VUES CACHEES INERTES, POLICE DES CONTROLES (audit UX-20/21)
+// ============================================
+
+test.describe('29. Vues cachees et police des controles', () => {
+    test('une vue cachee et le chat ferme ne sont ni visibles ni focusables ; la vue active l\'est', async ({ page }) => {
+        const r = await page.evaluate(() => {
+            const view = document.querySelector('.view-page.view-hidden');
+            const btn = view.querySelector('button, a[href], input');
+            btn.focus();
+            const chat = document.getElementById('chat-modal');
+            const chatBtn = chat.querySelector('button, input');
+            chatBtn.focus();
+            return {
+                viewInert: view.hasAttribute('inert'),
+                viewFocusable: document.activeElement === btn,
+                chatInert: chat.hasAttribute('inert'),
+                chatFocusable: document.activeElement === chatBtn
+            };
+        });
+        expect(r.viewInert).toBe(true);
+        expect(r.viewFocusable).toBe(false);
+        expect(r.chatInert).toBe(true);
+        expect(r.chatFocusable).toBe(false);
+        await page.evaluate(() => window.switchView('account'));
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        await expect(page.locator('#account-auth-action')).toBeVisible();
+        expect(await page.evaluate(() => { const b = document.getElementById('account-auth-action'); b.focus(); return document.activeElement === b; })).toBe(true);
+    });
+
+    test('boutons et champs utilisent la police du site', async ({ page }) => {
+        await openDistModal(page);
+        const r = await page.evaluate(() => {
+            const body = getComputedStyle(document.body).fontFamily;
+            const same = sel => getComputedStyle(document.querySelector(sel)).fontFamily === body;
+            return { body, cta: same('#dist-action-confirm'), chip: same('.filter-chip'), tab: same('.dist-tab'), navTab: same('.nav-tab'), search: same('#quick-search') };
+        });
+        expect(r.cta).toBe(true);
+        expect(r.chip).toBe(true);
+        expect(r.tab).toBe(true);
+        expect(r.navTab).toBe(true);
+        expect(r.search).toBe(true);
     });
 });

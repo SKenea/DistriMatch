@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-20/21 Vues cachees inertes, controles avec la police du site (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 

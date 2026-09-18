@@ -34,6 +34,7 @@ export function hideAllViews() {
     document.querySelectorAll('.view-page').forEach(v => {
         v.classList.remove('view-active');
         v.classList.add('view-hidden');
+        v.setAttribute('inert', '');   // hors clavier et lecteur d'ecran (audit UX-20)
     });
 }
 
@@ -47,6 +48,7 @@ export function switchView(viewName) {
     const el = document.getElementById(config.id);
     el.classList.remove('view-hidden');
     el.classList.add('view-active');
+    el.removeAttribute('inert');
     if (config.onShow) config.onShow();
     if (wasOnMap) pushLayer('view', goBackToMap);
 }

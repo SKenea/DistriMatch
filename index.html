@@ -36,7 +36,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=30">
+    <link rel="stylesheet" href="css/base.css?v=31">
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=35">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=27">
@@ -435,7 +435,7 @@
     <!-- ============================================
          MODAL CHAT (fenetre de conversation)
          ============================================ -->
-    <div class="chat-modal" id="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-name" tabindex="-1">
+    <div class="chat-modal" id="chat-modal" inert role="dialog" aria-modal="true" aria-labelledby="chat-name" tabindex="-1">
         <div class="chat-header">
             <button class="chat-back" id="chat-back" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -483,7 +483,7 @@
     <!-- ============================================
          PAGE MES ABONNEMENTS
          ============================================ -->
-    <div id="subscriptions-view" class="view-page view-hidden">
+    <div id="subscriptions-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-subscriptions" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -510,7 +510,7 @@
     <!-- ============================================
          PAGE PROFIL
          ============================================ -->
-    <div id="profile-view" class="view-page view-hidden">
+    <div id="profile-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-profile" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -568,7 +568,7 @@
         </div>
     </div>
 
-    <div id="account-view" class="view-page view-hidden">
+    <div id="account-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-account" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -628,7 +628,7 @@
     <!-- ============================================
          PAGE TABLEAU DE BORD DU PILOTE (vues kpi_*, js/stats.js)
          ============================================ -->
-    <div id="stats-view" class="view-page view-hidden">
+    <div id="stats-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-stats" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -693,7 +693,7 @@
     <!-- ============================================
          PAGE PARAMETRES NOTIFICATIONS
          ============================================ -->
-    <div id="notification-settings" class="view-page view-hidden">
+    <div id="notification-settings" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-notif-settings" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -888,7 +888,7 @@
     <!-- ============================================
          PAGE ACTIVITE (Feed communautaire)
          ============================================ -->
-    <div id="activity-view" class="view-page view-hidden">
+    <div id="activity-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-activity" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -913,7 +913,7 @@
         </div>
     </div>
 
-    <div id="notifications-view" class="view-page view-hidden">
+    <div id="notifications-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-notifications" aria-label="Retour">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -979,25 +979,25 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=47",
-            "./js/state.js": "./js/state.js?v=47",
-            "./js/config.js": "./js/config.js?v=47",
-            "./js/utils.js": "./js/utils.js?v=47",
-            "./js/auth.js": "./js/auth.js?v=47",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=47",
-            "./js/map.js": "./js/map.js?v=47",
-            "./js/navigation.js": "./js/navigation.js?v=47",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=47",
-            "./js/distributor.js": "./js/distributor.js?v=47",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=47",
-            "./js/chat.js": "./js/chat.js?v=47",
-            "./js/activity.js": "./js/activity.js?v=47",
-            "./js/notifications.js": "./js/notifications.js?v=47",
-            "./js/availability.js": "./js/availability.js?v=47",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=47",
-            "./js/events.js": "./js/events.js?v=47",
-            "./js/stats.js": "./js/stats.js?v=47",
-            "./js/history.js": "./js/history.js?v=47"
+            "./js/app.js": "./js/app.js?v=48",
+            "./js/state.js": "./js/state.js?v=48",
+            "./js/config.js": "./js/config.js?v=48",
+            "./js/utils.js": "./js/utils.js?v=48",
+            "./js/auth.js": "./js/auth.js?v=48",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=48",
+            "./js/map.js": "./js/map.js?v=48",
+            "./js/navigation.js": "./js/navigation.js?v=48",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=48",
+            "./js/distributor.js": "./js/distributor.js?v=48",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=48",
+            "./js/chat.js": "./js/chat.js?v=48",
+            "./js/activity.js": "./js/activity.js?v=48",
+            "./js/notifications.js": "./js/notifications.js?v=48",
+            "./js/availability.js": "./js/availability.js?v=48",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=48",
+            "./js/events.js": "./js/events.js?v=48",
+            "./js/stats.js": "./js/stats.js?v=48",
+            "./js/history.js": "./js/history.js?v=48"
         }
     }
     </script>
