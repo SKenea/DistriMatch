@@ -8,27 +8,12 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- UX-07/08 Contraste et tailles : rouge texte, vert fraicheur, nav et indices lisibles (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 
 <!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 (PR #104, #105, #106).
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
-
-- [ ] UX-07/08 Contraste et tailles : rouge texte, vert fraicheur, nav et indices lisibles
-  - Contexte : mesures de l'audit (styles calcules) : `--primary` #E63946 sur blanc =
-    4,17:1 (< 4,5 AA) en texte 12-14 px sur les 5 boutons d'action de la fiche, les
-    onglets, la bottom nav et les boutons pleins (Envoyer, Se connecter, Recevoir le
-    lien) ; vert fraicheur #16a34a = 3,30:1 (« Vérifié a l'instant »,
-    `.product-seen.is-fresh`) ; « +10 pts » 3,34:1. Polices : bottom nav 10,4 px, indices
-    « vu absent il y a… » 11,5 px (l'information cle), groupes du panneau 10,9-11,5 px.
-  - Acceptance : token `--primary-text` #D62828 (5,0:1) pour tout texte rouge et tout
-    fond de bouton portant du texte blanc, `--primary` reste pour les aplats sans texte ;
-    vert fraicheur #15803d (5,0:1) partout (badge, indices, tableau de bord) ; bottom nav
-    >= 12 px, indices produits >= 13 px, groupes du panneau >= 12 px. Test unit : etendre
-    le test de ratio existant (« a11y : contraste ») aux nouveaux tokens ; test e2e : aucune
-    police calculee < 12 px sur carte, panneau, fiche et modale de signal en 390 px.
 
 - [ ] UX-02 Entrer sans geolocalisation, et pas de mur apres un scan QR
   - Contexte : l'overlay d'accueil n'a qu'une issue (« Activer la localisation ») ; apres
@@ -304,3 +289,4 @@
 - [x] 2026-09-16 Tableau de bord du pilote (front) : vue #stats-view depuis la page Compte (rangee "Tableau de bord du pilote"), KPI directeur % machines avec signal < 24 h + seuil 30 % a 7 j, contribution (signaux via QR / scans, seuil 5 %), QR vs organique, signaux 7 jours, top 5 fiches ; etat vide explicite ; js/stats.js, panels.css v30, import map v37, +6 dom +2 e2e (PR #106, commit 248470c)
 - [x] 2026-09-18 UX-01 Toasts visibles partout : --z-toast 12000 (au-dessus des modales), conteneur au-dessus de la bottom nav (--bottom-nav-h + safe-area, pilule desktop), erreur d'envoi en ligne dans la modale de signal (#availability-error), +3 e2e (PR #109, commit 6a53a77)
 - [x] 2026-09-18 UX-03 Liste via le hamburger : le panneau s'ouvre avec la liste du filtre courant, premier groupe de distance deplie, second tap ferme ; +2 e2e, test 3ter adapte ; import map v39 (PR #110, commit d981f71)
+- [x] 2026-09-18 UX-07/08 Contraste et tailles : tokens --primary-text #D62828 et --success-dark #4E7A33 (>= 4,5:1) pour le texte rouge/vert et les fonds a texte blanc, vert fraicheur #15803d, polices nav 12 px / indices 13 px / panneau 12 px ; +2 unit, +1 e2e (section 21, mesure des styles calcules en 390 px) ; 5 CSS bumpes (PR #111, commit 6b2c69e)
