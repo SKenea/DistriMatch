@@ -1839,3 +1839,40 @@ test.describe('23. Bouton retour', () => {
         expect(await page.evaluate(() => window.__distrimatchLayers ? window.__distrimatchLayers() : [])).toEqual([]);
     });
 });
+
+// ============================================
+// 24. HIERARCHIE DE LA FICHE (audit UX-05/13)
+// ============================================
+// La fraicheur avant la note, « Il reste quoi ? » en action primaire pleine
+// largeur, hero reduit sans photo, pas de separateur orphelin.
+
+test.describe('24. Hierarchie de la fiche', () => {
+    test('fraicheur au-dessus de la note, CTA large, hero reduit, meta sans separateur final', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await openDistModal(page);
+        await page.waitForTimeout(500);
+        const r = await page.evaluate(() => {
+            const rect = id => document.getElementById(id).getBoundingClientRect();
+            const meta = document.querySelector('.dist-modal-meta');
+            const visibleChildren = [...meta.children].filter(c => c.offsetParent !== null && c.textContent.trim());
+            const last = visibleChildren[visibleChildren.length - 1];
+            return {
+                verifiedBottom: rect('dist-modal-verified').bottom,
+                ratingTop: rect('dist-modal-rating').top,
+                ctaWidth: rect('dist-action-confirm').width,
+                ficheWidth: document.getElementById('dist-modal').getBoundingClientRect().width,
+                ctaAboveActions: rect('dist-action-confirm').bottom <= rect('dist-action-directions').top,
+                heroHeight: rect('dist-modal-photo').height,
+                heroIsFallback: document.getElementById('dist-modal-photo').classList.contains('is-fallback'),
+                lastMetaIsSeparator: !!last && last.classList.contains('meta-separator'),
+                typeOccurrences: (document.getElementById('dist-modal').textContent.match(new RegExp(document.getElementById('dist-modal-type').textContent.trim().replace(/[^\w\s]/g, '').trim(), 'g')) || []).length
+            };
+        });
+        expect(r.verifiedBottom).toBeLessThanOrEqual(r.ratingTop + 1);
+        expect(r.ctaWidth).toBeGreaterThan(0.6 * r.ficheWidth);
+        expect(r.ctaAboveActions).toBe(true);
+        if (r.heroIsFallback) expect(r.heroHeight).toBeLessThanOrEqual(120);
+        expect(r.lastMetaIsSeparator).toBe(false);
+        expect(r.typeOccurrences).toBe(1);
+    });
+});

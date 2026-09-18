@@ -439,12 +439,13 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     photoGallery.innerHTML = `
         <div class="dist-photo-fallback" style="background:${escapeHTML(typeConfig.gradient || '#E63946')}">
             <span class="dist-photo-fallback-emoji">${escapeHTML(distributor.emoji || '📍')}</span>
-            <span class="dist-photo-fallback-label">${escapeHTML(typeConfig.label || distributor.type || '')}</span>
         </div>`;
     photoSection.style.display = 'block';
+    photoSection.classList.add('is-fallback');   // hero reduit sans photo (audit UX-05)
 
     loadDistributorPhotos(distributor.id).then(photos => {
         if (photos.length > 0) {
+            photoSection.classList.remove('is-fallback');
             photoGallery.innerHTML = photos.map(p =>
                 `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
             ).join('');

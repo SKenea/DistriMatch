@@ -781,6 +781,7 @@
 
 .dist-modal-meta {
     display: flex;
+    margin-top: 0.5rem;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -802,13 +803,13 @@
 
 /* Fraicheur en tete de fiche : meme regle que le side panel (vert < 2 h,
    neutre au-dela, italic si inconnu). */
-.dist-modal-verified { color: var(--gray); }
+.dist-modal-verified { display: block; margin: 0 0 0.35rem; font-size: 0.875rem; color: var(--gray); }
 .dist-modal-verified.is-fresh { color: #15803d; font-weight: 600; }
 .dist-modal-verified.is-unknown { font-style: italic; }
 
 /* Rythme infere (docs/STRATEGIE.md, couche 2) : une phrase sous la fraicheur,
    seulement quand les signaux la justifient (sinon rien, jamais inventee). */
-.dist-modal-rhythm { display: none; margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.dist-modal-rhythm { display: none; margin: 0 0 0.35rem; font-size: 0.85rem; color: var(--text-muted); }
 .dist-modal-rhythm.is-visible { display: block; }
 
 /* Bandeau machine (signal "vide" / "en panne" de moins de 24 h, UC11) :
@@ -1166,3 +1167,32 @@
     color: var(--text-muted);
     border-bottom: 1px solid var(--light-gray);
 }
+
+/* ===== Fiche : hierarchie (audit UX-05/13) ===== */
+/* Hero sans photo : reduit, emoji seul (le type est deja dans la ligne meta) */
+.dist-modal-photo.is-fallback { height: 120px; }
+.dist-modal-photo.is-fallback .dist-photo-fallback-emoji { font-size: 44px; }
+
+/* Action primaire : « Il reste quoi ? » pleine largeur au-dessus des secondaires */
+.dist-modal-cta {
+    padding: 0.75rem 1.25rem 0;
+}
+.dist-cta-btn {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    background: var(--primary-text);
+    color: #fff;
+    border: 1px solid var(--primary-text);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.dist-cta-btn:hover { background: var(--primary-dark); }
+.dist-cta-btn svg { flex: 0 0 auto; }
