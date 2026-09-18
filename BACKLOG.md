@@ -8,7 +8,6 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- UX-16 Accents des libelles UI (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
@@ -28,17 +27,6 @@
      Stephane (import OSM en premier). -->
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
-
-- [ ] UX-16 Accents des libelles UI
-  - Contexte : melange dans l'UI : « Itineraire », « Activite », « Reessayer »,
-    « Geolocalisation refusee », « Vérifié a l'instant », « Lien copie », « abonne a »,
-    « Reglages », « General », « Notifications activees », « apparaitront »… a cote de
-    libelles accentues. Impression de brouillon sur mobile (captures 06, 14).
-  - Acceptance : toutes les chaines visibles (index.html, templates JS, toasts)
-    accentuees ; commentaires et identifiants restent sans accents. Test unit : une liste
-    de chaines connues (« Itineraire », « Activite », « Reessayer », « a l'instant »,
-    « Lien copie », « abonne a ») est introuvable dans index.html et js/*.js hors
-    commentaires.
 
 - [ ] UX-18/19 Favori et menu avatar : un seul mot, etat accessible, cibles 44 px
   - Contexte : le bouton passe de « Favori » a « Retirer » sans `aria-pressed`, toast
@@ -221,3 +209,4 @@
 - [x] 2026-09-18 Fiche : badge produit aligne sur le dernier signal frais (resolveAvailabilityBadge : Vu dispo / Vu absent, sinon Au catalogue ou Indisponible), bordure de l'item alignee ; +3 unit +1 e2e ; panels v33, import map v43 (PR #116, commit 85e0eff)
 - [x] 2026-09-18 UX-09 Modale de signal : croix de la fiche masquee tant que la modale est active, « Pas regardé » neutre par defaut (is-default, aria-pressed=false) ; +1 e2e ; overlays v32, panels v34, import map v44 (PR #117, commit 52a3a68)
 - [x] 2026-09-18 UX-11/12 Filtres et panneau : fondu de defilement des chips, bouton « Tous » en tete du panneau filtre, compte dans le titre (plus de toast), tranches vides masquees ; +1 e2e, 3ter adapte ; map v27, overlays v33, import map v45 (PR #118, commit b25daa3)
+- [x] 2026-09-18 UX-16 Accents des libelles UI : passe d'accentuation sur index.html (texte, attributs visibles) et les chaines JS hors commentaires ; +2 unit, attentes e2e alignees ; import map v46 (PR #119, commit 5cbc990)
