@@ -8,7 +8,6 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- UX-05/13 Fiche : la fraicheur d'abord, « Il reste quoi ? » en action primaire (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 
@@ -16,21 +15,6 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
 
-- [ ] UX-05/13 Fiche : la fraicheur d'abord, « Il reste quoi ? » en action primaire
-  - Contexte : capture 06. La note inventee « 4.8 ★★★★½ (89) » vient avant « Vérifié il y
-    a 1 j » (gris, petit) ; hero de 220 px (emoji + type, type repete dans la ligne meta) ;
-    « Il reste quoi ? » est le 4e de 5 boutons identiques, seul « Itineraire » est en
-    primaire ; separateur « · » orphelin en fin de ligne meta quand « Vérifié » passe a la
-    ligne. A livrer avec le ticket « badge Disponible » (Priorite normale) qui traite la
-    meme zone.
-  - Acceptance : ordre du header = nom, badge fraicheur (couleur, 14 px, sur sa propre
-    ligne, plus de separateur orphelin), rythme, puis note / type / prix ; hero <= 120 px
-    sans photo (avec photo : inchange) ; « Il reste quoi ? » bouton primaire pleine largeur
-    au-dessus de la rangee Itineraire / Favori / Photo / Partager (secondaires) ; le type
-    n'apparait qu'une fois. Tests e2e : `#dist-modal-verified` au-dessus de
-    `#dist-modal-rating` (getBoundingClientRect) ; largeur de `#dist-action-confirm`
-    > 60 % de la fiche ; aucun `.meta-separator` en dernier enfant visible de
-    `.dist-modal-meta` ; section 14 (cibles 44 px) toujours verte. CSS et import map bumpes.
 
 ## Priorite normale
 
@@ -268,3 +252,4 @@
 - [x] 2026-09-18 UX-07/08 Contraste et tailles : tokens --primary-text #D62828 et --success-dark #4E7A33 (>= 4,5:1) pour le texte rouge/vert et les fonds a texte blanc, vert fraicheur #15803d, polices nav 12 px / indices 13 px / panneau 12 px ; +2 unit, +1 e2e (section 21, mesure des styles calcules en 390 px) ; 5 CSS bumpes (PR #111, commit 6b2c69e)
 - [x] 2026-09-18 UX-02 Entrer sans geolocalisation : lien « Voir la carte sans me localiser », carte centree sur la fiche du deep link ou sur le centre des distributeurs (centroidOf, aucune coordonnee en dur), panneau trie par nom avec rappel, fermer une fiche deep link ne reaffiche plus le mur ; +2 unit +2 e2e, overlays v30, import map v40 (PR #112, commit 8066c24)
 - [x] 2026-09-18 UX-04 Bouton retour : js/history.js (pushLayer / popstate / popLayer), couches fiche, panneau, modale de signal, chat, confirmation, vues ; +4 e2e ; import map v41 (PR #113, commit 57f3e21)
+- [x] 2026-09-18 UX-05/13 Fiche : fraicheur sous le nom (sa propre ligne, plus de separateur orphelin), rythme, bandeau, puis note / type / prix ; hero sans photo 120 px emoji seul ; « Il reste quoi ? » en CTA primaire pleine largeur au-dessus des actions secondaires ; +1 e2e ; overlays v31, import map v42 (PR #114, commit 5bdd138)
