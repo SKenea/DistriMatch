@@ -694,8 +694,9 @@ function updateFavoriteButton() {
     if (btn) {
         btn.classList.toggle('favorited', isFav);
         btn.setAttribute('aria-label', isFav ? 'Retirer des favoris' : 'Ajouter aux favoris');
+        btn.setAttribute('aria-pressed', String(isFav));   // etat accessible (audit UX-19)
     }
-    if (label) label.textContent = isFav ? 'Retirer' : 'Favori';
+    if (label) label.textContent = 'Favori';   // un seul mot, l'etat est porte par le coeur plein et aria-pressed
 }
 
 // ============================================

@@ -1981,3 +1981,34 @@ test.describe('27. Filtres et panneau', () => {
         await expect(page.locator('.filter-chip[data-type="pizza"]')).not.toHaveClass(/active/);
     });
 });
+
+// ============================================
+// 28. FAVORI ET MENU AVATAR (audit UX-18/19)
+// ============================================
+
+test.describe('28. Favori et menu avatar', () => {
+    test('favori : libelle constant, aria-pressed bascule, toast et vue Favoris parlent de favoris', async ({ page }) => {
+        await openDistModal(page);
+        const btn = page.locator('#dist-action-favorite');
+        await expect(btn).toHaveAttribute('aria-pressed', 'false');
+        await btn.click();
+        await expect(btn).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#dist-action-favorite-label')).toHaveText('Favori');
+        await expect(page.locator('#toast-container .toast').last()).toContainText('favoris');
+        await page.click('#dist-modal-close');
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await expect(page.locator('#subscriptions-count')).toHaveText(/favori/);
+        await expect(page.locator('#subscriptions-list .btn-unsubscribe').first()).toHaveAttribute('aria-label', 'Retirer des favoris');
+        await page.click('#subscriptions-list .btn-unsubscribe');
+        await expect(page.locator('#subscriptions-count')).toHaveText('0 favori');
+        const emptyPath = await page.getAttribute('#subscriptions-empty svg path', 'd');
+        expect(emptyPath.startsWith('M20.84')).toBe(true);   // coeur, plus la cloche
+    });
+
+    test('menu avatar : chaque item fait au moins 44 px de haut', async ({ page }) => {
+        await page.click('#profile-avatar-btn');
+        const heights = await page.$$eval('#profile-menu .profile-menu-item', els => els.map(e => e.getBoundingClientRect().height));
+        expect(heights.length).toBeGreaterThan(0);
+        for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
+    });
+});

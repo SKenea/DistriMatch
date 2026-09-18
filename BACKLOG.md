@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-18/19 Favori et menu avatar : un seul mot, etat accessible, cibles 44 px (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
