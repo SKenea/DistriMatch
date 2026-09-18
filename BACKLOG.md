@@ -47,25 +47,43 @@
      fois tranchee, elle monte en Priorite haute telle quelle, ses criteres sont deja
      ecrits pour /auto. -->
 
-- [ ] US-1 Une fiche qui ne dit que du vrai (notes et avis)
-  - En tant que visiteur devant une fiche, je veux ne voir que des informations
-    verifiables (fraicheur, signaux, rythme), afin de ne pas douter de l'app a cause
-    d'une note inventee ou d'un onglet « Avis » vide.
-  - Constat : « 4.8 ★★★★½ (89) » et « Aucun avis » cohabitent (audit UX-14) ; les notes
-    du seed sont une maquette ; l'import OSM (US-5) n'apporte aucune note.
-  - Options : (A, recommandee) masquer note, compteur d'avis et onglet Avis derriere un
-    flag, jusqu'a ce qu'un vrai parcours d'avis existe ; (B) garder la note reculee
-    derriere la fraicheur (etat actuel) ; (C) remplacer la note par « N signaux cette
-    semaine » calcule depuis product_rhythm.
-  - Decision Stephane : ___
-  - Acceptance (A) : `FEATURES.reviews = false` dans js/config.js ; `#dist-modal-rating`,
-    `#dist-modal-reviews`, l'onglet « Avis » et `.side-panel-item-rating` non rendus quand
-    le flag est faux ; la ligne meta de la fiche = type · prix ; champs `rating` /
-    `reviewCount` conserves en base et dans le mapping ; tests e2e « rating + reviews +
-    type visibles », « 3 onglets » et « clic onglet Avis » conditionnes au flag ; section
-    21 (lisibilite) sans exclusion pour la note. Import map bumpee.
-  - TS-1 : objet `FEATURES` dans js/config.js (cles publiques), lu par gmaps-ui.js et
-    distributor.js ; aucune migration.
+- [ ] US-1 Des avis realistes dans la maquette (correction Stephane 2026-09-18 : on ne
+  masque rien, la maquette doit etre realiste)
+  - En tant que visiteur d'une fiche de demo, je veux voir des avis coherents avec la note
+    et le compteur affiches (« 4.8 ★★★★½ (89) » -> 89 avis lisibles, datés, signés),
+    afin que la maquette ressemble a une vraie app et que l'onglet « Avis » ne soit
+    jamais un cul-de-sac.
+  - Constat (audit UX-14) : l'en-tete annonce N avis, l'onglet dit « Aucun avis pour le
+    moment ». Le probleme n'est pas la note, c'est l'incoherence. Le seed porte 2 635 avis
+    au total (0 a 234 par fiche, note moyenne 4,58) et aucun texte derriere.
+  - Decision Stephane : les avis existent pour de vrai, generes comme le reste de la demo
+    et identifiables (fiche is_demo). Rien de masque.
+  - Acceptance : chaque fiche demo a exactement `review_count` avis en base, de note
+    moyenne egale a `rating` (+/- 0,1) ; l'onglet « Avis » liste les avis du plus recent
+    au plus ancien (prenom + initiale, etoiles, « il y a X », texte court en francais
+    adapte au type de machine : pain, pizza, legumes...), 10 par page avec « Voir plus » ;
+    l'en-tete (note, compteur) est calcule depuis les avis reels, plus depuis les
+    colonnes `rating` / `review_count` du seed ; une fiche sans avis (Gaztainbidea, une
+    fiche ajoutee) affiche « Pas encore d'avis » et l'onglet reste honnete ; le panneau
+    lateral suit ; sections 14 et 21 des e2e vertes ; aucun avis genere sur une fiche
+    reelle ; purge = les avis des fiches demo partent avec `DELETE ... WHERE is_demo`.
+  - Hors perimetre (story a part, plus tard) : « Laisser un avis » par un vrai
+    utilisateur (contribution publique -> auth requise, UC4), moderation.
+  - TS-1a Migration `supabase/011_reviews.sql` : table `reviews` (id, distributor_id FK
+    ON DELETE CASCADE, author_name TEXT, rating SMALLINT 1..5, body TEXT, device_hash
+    TEXT, created_at) ; RLS lecture publique, aucune ecriture par l'API pour l'instant ;
+    vue `distributor_ratings` (distributor_id, avis, note moyenne) lisible en anonyme ;
+    fonction `seed_demo_reviews()` reservee au SQL Editor (comme 009) : pour chaque
+    fiche `is_demo`, genere `review_count` avis marques `device_hash 'demo-…'`, notes
+    tirees autour de `rating`, dates etalees sur 18 mois, textes par type de machine
+    (banque de ~15 phrases par type, combinees) ; `purge_demo_data()` les supprime aussi.
+    Executee par Claude via `scripts/supabase-sql.mjs`.
+  - TS-1b Front : `js/reviews.js` (chargement fire-and-forget des avis de la fiche
+    ouverte, rendu pagine dans l'onglet, `describeReviews` pure pour l'en-tete) ;
+    `mapDistributorRow` lit la vue `distributor_ratings` (jointure dans le select) ;
+    `renderSidePanelItem` et l'en-tete de fiche utilisent ces valeurs ; e2e avec
+    `page.route` sur `**/rest/v1/reviews*` (liste, pagination, fiche sans avis) ; tests
+    unit sur la moyenne et l'arrondi. Import map bumpee.
 
 - [ ] US-2 Une demo toujours vivante
   - En tant que Stephane qui montre l'app (elus, producteurs, testeurs), je veux que la
