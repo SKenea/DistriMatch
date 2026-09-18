@@ -10,6 +10,7 @@ import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { pushLayer, popLayer } from './history.js';
 import { openAvailabilityPanel, loadAvailabilityForDistributor } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 
@@ -173,11 +174,14 @@ export function openSidePanelForFilters(types = []) {
         // Clics items + accordeon : delegation sur le conteneur (initSidePanel).
     }
 
+    // Couche d'historique (audit UX-04) : le bouton retour ferme le panneau
+    if (!sidebar.classList.contains('open')) pushLayer('panel', closeSidePanel);
     sidebar.classList.add('open');
 }
 
 export function closeSidePanel() {
     document.getElementById('sidebar')?.classList.remove('open');
+    popLayer('panel');
     // Le chip "Tous" (= aucun filtre) ne doit pas rester selectionne quand
     // le panneau est ferme : evite la desync (le clic "Tous" suivant ouvrait
     // le panneau en deselectionnant le chip). Sans effet sur la carte.
@@ -460,6 +464,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
     // Afficher la modal
     const overlay = document.getElementById('dist-modal-overlay');
+    // Couche d'historique (audit UX-04) : le bouton retour ferme la fiche
+    if (overlay && !overlay.classList.contains('active')) pushLayer('fiche', closeDistModal);
     overlay?.classList.add('active');
     if (overlay) activateFocusTrap(overlay, closeDistModal);
 }
@@ -467,6 +473,7 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 export function closeDistModal() {
     const overlay = document.getElementById('dist-modal-overlay');
     overlay?.classList.remove('active');
+    popLayer('fiche');
     if (overlay) deactivateFocusTrap(overlay);
     // CustomEvent de la fenetre du document (en test jsdom, le global est celui de Node)
     document.dispatchEvent(new (document.defaultView?.CustomEvent || CustomEvent)('distmodal:closed'));

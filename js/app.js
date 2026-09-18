@@ -25,6 +25,7 @@ import {
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
 import { logEvent, rememberEntrySource } from './events.js';
 import { loadStats } from './stats.js';
+import { openLayers } from './history.js';
 
 import {
     switchView, switchTab, goBackToMap,
@@ -325,6 +326,7 @@ window.submitDetailProduct = submitDetailProduct;
 // Abonnements
 window.toggleSubscription = toggleSubscription;
 window.goBackToMap = goBackToMap;
+window.__distrimatchLayers = openLayers;   // tests e2e (bouton retour, audit UX-04)
 
 // Activite
 window.voteOnReport = voteOnReport;

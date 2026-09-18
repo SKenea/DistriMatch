@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-04 Bouton retour (Android) : fermer la fiche ou la modale au lieu de quitter l'app (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 

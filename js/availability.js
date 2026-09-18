@@ -12,6 +12,7 @@
 import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm } from './utils.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { pushLayer, popLayer } from './history.js';
 import { logEvent } from './events.js';
 
 // Meme regle que la fraicheur : vert < 2 h. Bandeau machine : signal < 24 h.
@@ -130,6 +131,7 @@ export function openAvailabilityPanel() {
     setPanelError(null);
     renderPanel(distributor);
     modal.classList.add('active');
+    pushLayer('signal', closeAvailabilityPanel);   // bouton retour = fermer (audit UX-04)
     activateFocusTrap(modal, closeAvailabilityPanel);
     wirePanelOnce(modal);
 }
@@ -138,6 +140,7 @@ export function closeAvailabilityPanel() {
     const modal = getModal();
     if (!modal) return;
     modal.classList.remove('active');
+    popLayer('signal');
     deactivateFocusTrap(modal);
 }
 

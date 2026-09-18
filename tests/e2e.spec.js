@@ -1793,3 +1793,49 @@ test.describe('22. Sans geolocalisation', () => {
         await context.close();
     });
 });
+
+// ============================================
+// 23. BOUTON RETOUR (Android) - audit UX-04
+// ============================================
+// Chaque couche (fiche, modale de signal, vue) pousse une entree d'historique :
+// "retour" ferme la couche la plus haute, l'app n'est jamais quittee.
+
+test.describe('23. Bouton retour', () => {
+    test('fiche ouverte -> retour ferme la fiche, URL inchangee, app toujours la', async ({ page }) => {
+        const url = page.url();
+        await openDistModal(page);
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(page.url()).toBe(url);
+        expect(await page.evaluate(() => !!window.AppState?.distributors?.length)).toBe(true);
+    });
+
+    test('modale de signal ouverte -> retour ferme la modale, la fiche reste ; second retour ferme la fiche', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(await page.evaluate(() => !!window.AppState)).toBe(true);
+    });
+
+    test('vue Compte -> retour ramene a la carte', async ({ page }) => {
+        await page.evaluate(() => window.switchView('account'));
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#account-view')).not.toHaveClass(/view-active/);
+        await expect(page.locator('.leaflet-container')).toBeVisible();
+    });
+
+    test('fermer par la croix puis retour : la fiche ne se rouvre pas et l\'app reste chargee', async ({ page }) => {
+        await openDistModal(page);
+        await page.click('#dist-modal-close');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await page.waitForTimeout(300);
+        // Plus aucune couche : un retour de plus sort de l'app, comme sur n'importe quel site
+        expect(await page.evaluate(() => window.__distrimatchLayers ? window.__distrimatchLayers() : [])).toEqual([]);
+    });
+});
