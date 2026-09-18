@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-05/13 Fiche : la fraicheur d'abord, « Il reste quoi ? » en action primaire (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 

@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=26">
     <link rel="stylesheet" href="css/panels.css?v=32">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=27">
-    <link rel="stylesheet" href="css/overlays.css?v=30">
+    <link rel="stylesheet" href="css/overlays.css?v=31">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -295,6 +295,12 @@
             <!-- Header titre + meta -->
             <div class="dist-modal-header">
                 <h2 id="dist-modal-name">Nom du distributeur</h2>
+                <!-- La fraicheur d'abord (docs/STRATEGIE.md, audit UX-05) : sa propre ligne, avant la note -->
+                <div class="dist-modal-verified" id="dist-modal-verified"></div>
+                <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
+                <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
+                <!-- Signal machine recent (vide / en panne), rempli par availability.js -->
+                <div class="dist-status-banner" id="dist-status-banner" aria-live="polite"></div>
                 <div class="dist-modal-meta">
                     <span class="dist-modal-rating" id="dist-modal-rating"></span>
                     <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
@@ -302,18 +308,23 @@
                     <span class="dist-modal-type" id="dist-modal-type"></span>
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-pricerange" id="dist-modal-pricerange"></span>
-                    <span class="meta-separator">·</span>
-                    <span class="dist-modal-verified" id="dist-modal-verified"></span>
                 </div>
-                <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
-                <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
-                <!-- Signal machine recent (vide / en panne), rempli par availability.js -->
-                <div class="dist-status-banner" id="dist-status-banner" aria-live="polite"></div>
             </div>
 
-            <!-- Boutons d'action en haut -->
+            <!-- Action primaire de la fiche (audit UX-05) : le signal, pleine largeur -->
+            <div class="dist-modal-cta">
+                <button class="dist-cta-btn" id="dist-action-confirm" aria-label="Dire ce qu'il reste dans ce distributeur">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <span>Il reste quoi ?</span>
+                </button>
+            </div>
+
+            <!-- Actions secondaires -->
             <div class="dist-modal-actions">
-                <button class="dist-action-btn primary" id="dist-action-directions" aria-label="Itineraire">
+                <button class="dist-action-btn" id="dist-action-directions" aria-label="Itineraire">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 11l19-9-9 19-2-8-8-2z"/>
                     </svg>
@@ -340,13 +351,6 @@
                     <span>Photo</span>
                 </button>
                 <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
-                <button class="dist-action-btn" id="dist-action-confirm" aria-label="Dire ce qu'il reste dans ce distributeur">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <span>Il reste quoi ?</span>
-                </button>
                 <button class="dist-action-btn" id="dist-action-share" aria-label="Partager le distributeur">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="18" cy="5" r="3"/>
@@ -974,25 +978,25 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=41",
-            "./js/state.js": "./js/state.js?v=41",
-            "./js/config.js": "./js/config.js?v=41",
-            "./js/utils.js": "./js/utils.js?v=41",
-            "./js/auth.js": "./js/auth.js?v=41",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=41",
-            "./js/map.js": "./js/map.js?v=41",
-            "./js/navigation.js": "./js/navigation.js?v=41",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=41",
-            "./js/distributor.js": "./js/distributor.js?v=41",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=41",
-            "./js/chat.js": "./js/chat.js?v=41",
-            "./js/activity.js": "./js/activity.js?v=41",
-            "./js/notifications.js": "./js/notifications.js?v=41",
-            "./js/availability.js": "./js/availability.js?v=41",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=41",
-            "./js/events.js": "./js/events.js?v=41",
-            "./js/stats.js": "./js/stats.js?v=41",
-            "./js/history.js": "./js/history.js?v=41"
+            "./js/app.js": "./js/app.js?v=42",
+            "./js/state.js": "./js/state.js?v=42",
+            "./js/config.js": "./js/config.js?v=42",
+            "./js/utils.js": "./js/utils.js?v=42",
+            "./js/auth.js": "./js/auth.js?v=42",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=42",
+            "./js/map.js": "./js/map.js?v=42",
+            "./js/navigation.js": "./js/navigation.js?v=42",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=42",
+            "./js/distributor.js": "./js/distributor.js?v=42",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=42",
+            "./js/chat.js": "./js/chat.js?v=42",
+            "./js/activity.js": "./js/activity.js?v=42",
+            "./js/notifications.js": "./js/notifications.js?v=42",
+            "./js/availability.js": "./js/availability.js?v=42",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=42",
+            "./js/events.js": "./js/events.js?v=42",
+            "./js/stats.js": "./js/stats.js?v=42",
+            "./js/history.js": "./js/history.js?v=42"
         }
     }
     </script>
