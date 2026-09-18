@@ -36,10 +36,10 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=28">
+    <link rel="stylesheet" href="css/base.css?v=29">
     <link rel="stylesheet" href="css/map.css?v=25">
-    <link rel="stylesheet" href="css/panels.css?v=30">
-    <link rel="stylesheet" href="css/feed-and-nav.css?v=25">
+    <link rel="stylesheet" href="css/panels.css?v=31">
+    <link rel="stylesheet" href="css/feed-and-nav.css?v=26">
     <link rel="stylesheet" href="css/overlays.css?v=28">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
@@ -850,6 +850,7 @@
                 <button type="button" class="availability-machine-btn" data-machine="empty" aria-pressed="false">Machine vide</button>
                 <button type="button" class="availability-machine-btn" data-machine="broken" aria-pressed="false">En panne</button>
             </div>
+            <p class="availability-error" id="availability-error" role="alert" hidden></p>
             <div class="modal-actions-clean">
                 <button type="button" class="btn-secondary-clean" id="availability-cancel">Annuler</button>
                 <button type="button" class="btn-primary-clean" id="availability-submit" disabled>Envoyer</button>
@@ -971,24 +972,24 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=37",
-            "./js/state.js": "./js/state.js?v=37",
-            "./js/config.js": "./js/config.js?v=37",
-            "./js/utils.js": "./js/utils.js?v=37",
-            "./js/auth.js": "./js/auth.js?v=37",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=37",
-            "./js/map.js": "./js/map.js?v=37",
-            "./js/navigation.js": "./js/navigation.js?v=37",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=37",
-            "./js/distributor.js": "./js/distributor.js?v=37",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=37",
-            "./js/chat.js": "./js/chat.js?v=37",
-            "./js/activity.js": "./js/activity.js?v=37",
-            "./js/notifications.js": "./js/notifications.js?v=37",
-            "./js/availability.js": "./js/availability.js?v=37",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=37",
-            "./js/events.js": "./js/events.js?v=37",
-            "./js/stats.js": "./js/stats.js?v=37"
+            "./js/app.js": "./js/app.js?v=38",
+            "./js/state.js": "./js/state.js?v=38",
+            "./js/config.js": "./js/config.js?v=38",
+            "./js/utils.js": "./js/utils.js?v=38",
+            "./js/auth.js": "./js/auth.js?v=38",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=38",
+            "./js/map.js": "./js/map.js?v=38",
+            "./js/navigation.js": "./js/navigation.js?v=38",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=38",
+            "./js/distributor.js": "./js/distributor.js?v=38",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=38",
+            "./js/chat.js": "./js/chat.js?v=38",
+            "./js/activity.js": "./js/activity.js?v=38",
+            "./js/notifications.js": "./js/notifications.js?v=38",
+            "./js/availability.js": "./js/availability.js?v=38",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=38",
+            "./js/events.js": "./js/events.js?v=38",
+            "./js/stats.js": "./js/stats.js?v=38"
         }
     }
     </script>

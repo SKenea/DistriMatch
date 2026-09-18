@@ -63,7 +63,8 @@
     --z-nav: 110;
     --z-overlay: 150;
     --z-modal: 200;
-    --z-toast: 300;
+    --z-toast: 12000;        /* au-dessus de toutes les modales (fiche 10500, auth 11000, confirm 11500) : un toast doit toujours se voir */
+    --bottom-nav-h: 60px;
 }
 
 * {

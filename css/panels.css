@@ -1060,6 +1060,18 @@
     color: var(--gray);
 }
 
+/* Erreur d'envoi affichee dans la modale (le toast seul peut passer inapercu) */
+.availability-error {
+    margin: 0.75rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: rgba(214, 40, 40, 0.08);
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.availability-error[hidden] { display: none; }
+
 .availability-machine {
     display: flex;
     gap: 0.5rem;

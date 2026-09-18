@@ -1233,8 +1233,10 @@ test.describe('13. Signal de dispo en un tap', () => {
         await page.click('#dist-action-confirm');
         await pickSomething(page);
         await page.click('#availability-submit');
-        await expect(page.locator('#toast-container .toast.error')).toBeVisible();
         await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+        // Audit UX-01 : l'erreur est aussi ecrite dans la modale (le toast peut passer inapercu)
+        await expect(page.locator('#availability-error')).toBeVisible();
+        await expect(page.locator('#availability-error')).toContainText('réessaie');
     });
 });
 
@@ -1581,5 +1583,60 @@ test.describe('18. Tableau de bord du pilote', () => {
         await page.waitForSelector('#stats-view.view-active', { timeout: 3000 });
         await expect(page.locator('#stats-empty')).toContainText('Pas encore de données');
         await expect(page.locator('#stats-content')).toBeHidden();
+    });
+});
+
+// ============================================
+// 19. TOASTS VISIBLES (au-dessus des modales et de la bottom nav)
+// ============================================
+// Audit UX 2026-09-18 (UX-01/10) : le toast etait rendu sous la fiche
+// (z-index 300 vs 10500) et recouvrait la bottom nav sur la carte.
+
+async function toastGeometry(page) {
+    return page.evaluate(() => {
+        const t = document.querySelector('#toast-container .toast');
+        if (!t) return null;
+        const r = t.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const nav = document.querySelector('.bottom-nav')?.getBoundingClientRect();
+        return { onTop: !!(top && t.contains(top)), bottom: r.bottom, right: r.right, navTop: nav ? nav.top : null, navVisible: !!nav && nav.height > 0, vw: innerWidth };
+    });
+}
+
+test.describe('19. Toasts visibles', () => {
+    test('apres un signal envoye, le toast est au-dessus de la fiche (elementFromPoint)', async ({ page }) => {
+        await page.route(RPC_ROUTE, route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
+        }));
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        await pickSomething(page);
+        await page.click('#availability-submit');
+        await expect(page.locator('#toast-container .toast.success')).toBeVisible();
+        const g = await toastGeometry(page);
+        expect(g.onTop).toBe(true);
+        expect(await page.locator('#availability-error').isVisible()).toBe(false);
+    });
+
+    test('sur la carte en 390 px, le toast reste au-dessus de la bottom nav et dans l\'ecran', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        await page.evaluate(async () => { const u = await import('./js/utils.js'); u.showToast('Toast de test, un peu long pour verifier la largeur en mobile', 'success'); });
+        await expect(page.locator('#toast-container .toast')).toBeVisible();
+        await page.waitForTimeout(400);   // fin de l'animation toastIn (translateY 20px -> 0)
+        const g = await toastGeometry(page);
+        expect(g.navVisible).toBe(true);
+        expect(g.bottom).toBeLessThanOrEqual(g.navTop);
+        expect(g.right).toBeLessThanOrEqual(g.vw);
+        expect(g.onTop).toBe(true);
+    });
+
+    test('en desktop aussi, le toast ne recouvre pas la pilule de navigation', async ({ page }) => {
+        await page.evaluate(async () => { const u = await import('./js/utils.js'); u.showToast('Toast de test', 'default'); });
+        await expect(page.locator('#toast-container .toast')).toBeVisible();
+        await page.waitForTimeout(400);   // fin de l'animation toastIn (translateY 20px -> 0)
+        const g = await toastGeometry(page);
+        if (g.navVisible) expect(g.bottom).toBeLessThanOrEqual(g.navTop);
     });
 });
