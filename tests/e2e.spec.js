@@ -333,28 +333,33 @@ test.describe('3ter. Groupes par distance (accordeon)', () => {
         expect(sumCounts).toBe(itemCount);
     });
 
-    test('groupes fermes par defaut, clic en-tete deplie', async ({ page }) => {
+    test('premier groupe non vide ouvert par defaut, les autres fermes ; clic en-tete replie / deplie', async ({ page }) => {
         await page.click('.filter-chip[data-type="all"]');
         await page.waitForSelector('#side-panel-list .side-panel-group-header');
 
-        // Tous fermes : aria-expanded=false, items caches
-        const allClosed = await page.$$eval(
-            '#side-panel-list .side-panel-group-header',
-            els => els.every(e => e.getAttribute('aria-expanded') === 'false')
+        // Audit UX-03/12 : le premier groupe qui a des items est deplie d'emblee
+        const states = await page.$$eval(
+            '#side-panel-list .side-panel-group',
+            els => els.map(g => ({
+                expanded: g.querySelector('.side-panel-group-header').getAttribute('aria-expanded'),
+                count: parseInt(g.querySelector('.spg-count').textContent, 10),
+                hidden: g.querySelector('.side-panel-group-items').hidden
+            }))
         );
-        expect(allClosed).toBe(true);
-        const visibleBefore = await page.$('#side-panel-list .side-panel-group-items:not([hidden])');
-        expect(visibleBefore).toBeNull();
+        const firstNonEmpty = states.findIndex(s => s.count > 0);
+        states.forEach((s, i) => {
+            expect(s.expanded).toBe(i === firstNonEmpty ? 'true' : 'false');
+            expect(s.hidden).toBe(i !== firstNonEmpty);
+        });
+        expect(await page.$('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item')).not.toBeNull();
 
-        // Clic sur la 1ere en-tete -> sa tranche se deplie
-        await page.click('#side-panel-list .side-panel-group-header');
-        const expanded = await page.$eval(
-            '#side-panel-list .side-panel-group-header',
-            el => el.getAttribute('aria-expanded')
-        );
-        expect(expanded).toBe('true');
-        const visibleAfter = await page.$('#side-panel-list .side-panel-group-items:not([hidden])');
-        expect(visibleAfter).not.toBeNull();
+        // Clic sur l'en-tete ouverte -> elle se replie ; second clic -> se deplie
+        const header = page.locator('#side-panel-list .side-panel-group-header').nth(firstNonEmpty);
+        await header.click();
+        await expect(header).toHaveAttribute('aria-expanded', 'false');
+        expect(await page.$('#side-panel-list .side-panel-group-items:not([hidden])')).toBeNull();
+        await header.click();
+        await expect(header).toHaveAttribute('aria-expanded', 'true');
     });
 
     test('en-tete affiche le libelle + la plage + le mode de transport', async ({ page }) => {
@@ -1638,5 +1643,31 @@ test.describe('19. Toasts visibles', () => {
         await page.waitForTimeout(400);   // fin de l'animation toastIn (translateY 20px -> 0)
         const g = await toastGeometry(page);
         if (g.navVisible) expect(g.bottom).toBeLessThanOrEqual(g.navTop);
+    });
+});
+
+// ============================================
+// 20. LISTE VIA LE HAMBURGER (mobile) - audit UX-03
+// ============================================
+// Le panneau « Tous les distributeurs » s'ouvrait vide tant qu'aucun chip
+// n'avait ete tape ; le premier groupe de distance est desormais deplie.
+
+test.describe('20. Liste via le hamburger', () => {
+    test('en 390 px, le hamburger ouvre « Tous les distributeurs » deja rempli, premier groupe ouvert ; second tap ferme', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        await page.click('#sidebar-toggle');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        await expect(page.locator('#side-panel-title')).toHaveText('Tous les distributeurs');
+        await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
+        const groups = await page.$$eval('#side-panel-list .side-panel-group-header', hs => hs.map(h => h.getAttribute('aria-expanded')));
+        expect(groups.filter(g => g === 'true')).toHaveLength(1);
+        await page.click('#sidebar-toggle');
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+    });
+
+    test('un chip ouvre le panneau avec le premier groupe non vide deja deplie', async ({ page }) => {
+        await page.click('.filter-chip[data-type="pizza"]');
+        await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
     });
 });

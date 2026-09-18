@@ -145,12 +145,14 @@ export function openSidePanelForFilters(types = []) {
             buckets[idx === -1 ? DISTANCE_GROUPS.length - 1 : idx].push(d);
         });
 
-        // Accordeon : les 3 groupes sont toujours affiches, fermes par defaut.
-        // L'utilisateur clique une en-tete pour deplier sa tranche.
+        // Accordeon : les 3 groupes sont toujours affiches ; le premier groupe non
+        // vide est ouvert d'emblee (audit UX-03/12), les autres fermes.
+        // L'utilisateur clique une en-tete pour deplier ou replier sa tranche.
+        const firstOpen = buckets.findIndex(b => b.length > 0);
         list.innerHTML = DISTANCE_GROUPS.map((group, gi) => {
             const items = buckets[gi];
             const header = `
-                <button type="button" class="side-panel-group-header" aria-expanded="false">
+                <button type="button" class="side-panel-group-header" aria-expanded="${gi === firstOpen}">
                     <span class="spg-chevron" aria-hidden="true">▸</span>
                     <span class="spg-main">
                         <span class="spg-label">${escapeHTML(group.label)}</span>
@@ -163,7 +165,7 @@ export function openSidePanelForFilters(types = []) {
                 : items.map((d, i) =>
                     renderSidePanelItem(d, i === items.length - 1 ? 'side-panel-item--group-end' : '')
                   ).join('');
-            return `<div class="side-panel-group">${header}<div class="side-panel-group-items" hidden>${rows}</div></div>`;
+            return `<div class="side-panel-group">${header}<div class="side-panel-group-items"${gi === firstOpen ? '' : ' hidden'}>${rows}</div></div>`;
         }).join('');
         // Clics items + accordeon : delegation sur le conteneur (initSidePanel).
     }

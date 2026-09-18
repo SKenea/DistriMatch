@@ -15,15 +15,6 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
 
-- [ ] UX-03 Liste « Tous les distributeurs » vide a l'ouverture par le hamburger
-  - Contexte : sur mobile, `#sidebar-toggle` ouvre le panneau « Tous les distributeurs »
-    avec `#side-panel-list` vide (0 element apres 2,5 s, WebKit et Chromium, capture 05).
-    Il faut taper un chip pour peupler. C'est la vue « classes par distance » promise a
-    l'accueil.
-  - Acceptance : a l'ouverture du panneau, la liste est rendue avec le filtre courant
-    (« Tous » par defaut), premier groupe non vide ouvert. Test e2e : tap
-    `#sidebar-toggle` -> au moins un `.side-panel-item` visible sans autre action.
-
 - [ ] UX-07/08 Contraste et tailles : rouge texte, vert fraicheur, nav et indices lisibles
   - Contexte : mesures de l'audit (styles calcules) : `--primary` #E63946 sur blanc =
     4,17:1 (< 4,5 AA) en texte 12-14 px sur les 5 boutons d'action de la fiche, les
@@ -311,3 +302,4 @@
 - [x] 2026-09-16 Strategie chantier 6 (front) : rythme infere "Habituellement plein le matin, souvent vide ..." sous la fraicheur de la fiche (describeRhythm dans utils.js, vue product_rhythm chargee avec les signaux, #dist-modal-rhythm), +5 unit +2 e2e, overlays.css v28, import map v36 (PR #105, commit 3b86f47)
 - [x] 2026-09-16 Tableau de bord du pilote (front) : vue #stats-view depuis la page Compte (rangee "Tableau de bord du pilote"), KPI directeur % machines avec signal < 24 h + seuil 30 % a 7 j, contribution (signaux via QR / scans, seuil 5 %), QR vs organique, signaux 7 jours, top 5 fiches ; etat vide explicite ; js/stats.js, panels.css v30, import map v37, +6 dom +2 e2e (PR #106, commit 248470c)
 - [x] 2026-09-18 UX-01 Toasts visibles partout : --z-toast 12000 (au-dessus des modales), conteneur au-dessus de la bottom nav (--bottom-nav-h + safe-area, pilule desktop), erreur d'envoi en ligne dans la modale de signal (#availability-error), +3 e2e (PR #109, commit 6a53a77)
+- [x] 2026-09-18 UX-03 Liste via le hamburger : le panneau s'ouvre avec la liste du filtre courant, premier groupe de distance deplie, second tap ferme ; +2 e2e, test 3ter adapte ; import map v39 (PR #110, commit d981f71)
