@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-16 Accents des libelles UI (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 

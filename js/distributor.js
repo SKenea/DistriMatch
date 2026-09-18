@@ -107,7 +107,7 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     <line x1="3" y1="6" x2="21" y2="6"/>
                     <path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
-                <p>Aucun produit reference pour le moment</p>
+                <p>Aucun produit référencé pour le moment</p>
             </div>`;
         return;
     }
@@ -187,7 +187,7 @@ export async function submitDetailProduct() {
     document.getElementById('bs-detail-product-name').value = '';
     document.getElementById('bs-add-product-form').style.display = 'none';
 
-    showToast(`${escapeHTML(name)} ajoute !`, 'success');
+    showToast(`${escapeHTML(name)} ajouté !`, 'success');
 }
 
 // Edition directe du nom d'un produit (au change/blur). Plus de prix.
@@ -224,7 +224,7 @@ export async function updateProductField(index, field, rawValue) {
     }
 
     product.name = newName;
-    showToast('Produit modifie', 'success');
+    showToast('Produit modifié', 'success');
 }
 
 export async function toggleProductAvailability(index) {
@@ -293,7 +293,7 @@ export async function deleteProduct(index) {
 
     distributor.products.splice(index, 1);
     renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
-    showToast('Produit supprime', 'default');
+    showToast('Produit supprimé', 'default');
 }
 
 // ============================================
@@ -323,7 +323,7 @@ export async function toggleSubscription(id, event) {
         AppState.subscriptions.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
         addActivityItem('subscription', id);
-        showToast(`Tu es maintenant abonne a ${distributor?.name || 'ce distributeur'}`, 'success');
+        showToast(`Tu es maintenant abonné a ${distributor?.name || 'ce distributeur'}`, 'success');
         generateWelcomeMessage(id);
     } else {
         AppState.subscriptions.splice(index, 1);

@@ -32,7 +32,7 @@ function getDistributorBot(distributorId) {
         quickReplies: [
             { text: 'Produits', action: 'products' },
             { text: 'Prix', action: 'prices' },
-            { text: 'Itineraire', action: 'directions' },
+            { text: 'Itinéraire', action: 'directions' },
             { text: 'Infos', action: 'info' }
         ],
         distributor: d,
@@ -181,7 +181,7 @@ function handleDistributorAction(action, bot, displayText) {
                 response = `Voici mes produits :\n${productsList}`;
                 newReplies = [
                     { text: 'Prix', action: 'prices' },
-                    { text: 'Itineraire', action: 'directions' }
+                    { text: 'Itinéraire', action: 'directions' }
                 ];
                 break;
 
@@ -190,13 +190,13 @@ function handleDistributorAction(action, bot, displayText) {
                 response = `Fourchette de prix : ${d.priceRange || '€€'}`;
                 newReplies = [
                     { text: 'Produits', action: 'products' },
-                    { text: 'Itineraire', action: 'directions' }
+                    { text: 'Itinéraire', action: 'directions' }
                 ];
                 break;
 
             case 'directions':
-            case 'Itineraire':
-                response = `Je suis situe : ${d.address}. Je t'ouvre l'itineraire !`;
+            case 'Itinéraire':
+                response = `Je suis situé : ${d.address}. Je t'ouvre l'itinéraire !`;
                 getDirectionsTo(d);
                 newReplies = [
                     { text: 'Produits', action: 'products' },
@@ -214,7 +214,7 @@ function handleDistributorAction(action, bot, displayText) {
                 }
                 newReplies = [
                     { text: 'Produits', action: 'products' },
-                    { text: 'Itineraire', action: 'directions' }
+                    { text: 'Itinéraire', action: 'directions' }
                 ];
                 break;
 
@@ -222,10 +222,10 @@ function handleDistributorAction(action, bot, displayText) {
             case 'Abonnement':
                 toggleSubscription(distributorId);
                 const isSub = AppState.subscriptions.includes(distributorId);
-                response = isSub ? 'Tu es maintenant abonne ! Je t\'enverrai des alertes.' : 'Tu ne recevras plus mes alertes.';
+                response = isSub ? 'Tu es maintenant abonné ! Je t\'enverrai des alertes.' : 'Tu ne recevras plus mes alertes.';
                 newReplies = [
                     { text: 'Produits', action: 'products' },
-                    { text: 'Itineraire', action: 'directions' }
+                    { text: 'Itinéraire', action: 'directions' }
                 ];
                 break;
 
@@ -234,7 +234,7 @@ function handleDistributorAction(action, bot, displayText) {
                 newReplies = [
                     { text: 'Produits', action: 'products' },
                     { text: 'Prix', action: 'prices' },
-                    { text: 'Itineraire', action: 'directions' }
+                    { text: 'Itinéraire', action: 'directions' }
                 ];
         }
 
@@ -270,10 +270,10 @@ function processNaturalMessage(text, distributor) {
     }
 
     if (lower.includes('merci') || lower.includes('super') || lower.includes('cool')) {
-        return "De rien ! A bientot !";
+        return "De rien ! A bientôt !";
     }
 
-    return `Je n'ai pas bien compris. Demande-moi les produits, les prix ou l'itineraire !`;
+    return `Je n'ai pas bien compris. Demande-moi les produits, les prix ou l'itinéraire !`;
 }
 
 export function handleChatInput(text) {
@@ -500,7 +500,7 @@ export function generateWelcomeMessage(distributorId) {
     if (!distributor) return;
 
     const welcomeMessages = [
-        `Super ! Tu es maintenant abonne. Je t'enverrai des alertes sur les nouveautes et les promos !`,
+        `Super ! Tu es maintenant abonné. Je t'enverrai des alertes sur les nouveautes et les promos !`,
         `Bienvenue ! Je te tiendrai au courant des stocks et des bonnes affaires.`,
         `Merci de t'abonner ! Tu seras le premier informe des nouveaux produits.`
     ];

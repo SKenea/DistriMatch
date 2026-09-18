@@ -127,7 +127,7 @@ export function centerMapOnUser() {
         return;
     }
     if (!navigator.geolocation) {
-        showToast('Geolocalisation non supportee par ton navigateur', 'warning');
+        showToast('Géolocalisation non supportée par ton navigateur', 'warning');
         return;
     }
 
@@ -165,8 +165,8 @@ export function centerMapOnUser() {
         },
         (err) => {
             let msg = 'Position indisponible';
-            if (err.code === 1) msg = 'Autorisation geoloc refusee';
-            else if (err.code === 3) msg = 'Geoloc trop lente, reessaie';
+            if (err.code === 1) msg = 'Autorisation géoloc refusée';
+            else if (err.code === 3) msg = 'Géoloc trop lente, réessaie';
             showToast(msg, 'warning');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }

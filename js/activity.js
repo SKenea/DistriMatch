@@ -21,7 +21,7 @@ export function saveActivityFeed() {
     try {
         localStorage.setItem(ACTIVITY_KEY, JSON.stringify(ActivityFeed.items));
     } catch (e) {
-        console.error('Erreur sauvegarde activite:', e);
+        console.error('Erreur sauvegarde activité:', e);
     }
 }
 
@@ -32,7 +32,7 @@ export function loadActivityFeed() {
             ActivityFeed.items = JSON.parse(data) || [];
         }
     } catch (e) {
-        console.error('Erreur chargement activite:', e);
+        console.error('Erreur chargement activité:', e);
         ActivityFeed.items = [];
     }
 }
@@ -76,7 +76,7 @@ function getReportLabel(type) {
     const labels = {
         'out_of_stock': 'Rupture de stock',
         'machine_down': 'Machine en panne',
-        'price_change': 'Prix modifie',
+        'price_change': 'Prix modifié',
         'new_product': 'Nouveau produit',
         'closed': 'Ferme',
         'verified': 'Tout est OK'
@@ -118,7 +118,7 @@ export function displayActivityFeed() {
         } else if (item.type === 'subscription' || item.type === 'favorite') {
             icon = '🔔';
             iconClass = 'subscription';
-            text = `Abonne a <strong>${escapeHTML(item.distributorName)}</strong>`;
+            text = `Abonné à <strong>${escapeHTML(item.distributorName)}</strong>`;
         } else if (item.type === 'unsubscription' || item.type === 'unfavorite') {
             icon = '🔕';
             iconClass = 'subscription';
@@ -126,7 +126,7 @@ export function displayActivityFeed() {
         } else if (item.type === 'new_distributor') {
             icon = '📍';
             iconClass = 'verified';
-            text = `Nouveau distributeur <strong>${escapeHTML(item.details.name || item.distributorName)}</strong> ajoute`;
+            text = `Nouveau distributeur <strong>${escapeHTML(item.details.name || item.distributorName)}</strong> ajouté`;
         }
 
         const pointsHtml = item.details.points ? `<span class="activity-points">+${item.details.points} pts</span>` : '';
@@ -148,7 +148,7 @@ export function displayActivityFeed() {
         } else if (item.type === 'report' && item.resolved) {
             const result = item.confirmations >= item.denials ? 'Confirme' : 'Infirme';
             const resultClass = item.confirmations >= item.denials ? 'confirmed' : 'denied';
-            votesHtml = `<div class="activity-resolved ${resultClass}">${result} par la communaute</div>`;
+            votesHtml = `<div class="activity-resolved ${resultClass}">${result} par la communauté</div>`;
         }
 
         return `
@@ -228,7 +228,7 @@ export async function voteOnReport(activityId, voteType) {
 
     saveActivityFeed();
     displayActivityFeed();
-    showToast(`Vote enregistre ! +2 points`, 'success');
+    showToast(`Vote enregistré ! +2 points`, 'success');
 }
 
 function checkReportResolution(item) {
@@ -236,10 +236,10 @@ function checkReportResolution(item) {
 
     if (item.confirmations >= THRESHOLD) {
         item.resolved = true;
-        showToast(`Signalement confirme par la communaute !`, 'success');
+        showToast(`Signalement confirmé par la communauté !`, 'success');
     } else if (item.denials >= THRESHOLD) {
         item.resolved = true;
-        showToast(`Signalement infirme par la communaute`, 'warning');
+        showToast(`Signalement infirmé par la communauté`, 'warning');
     }
 }
 

@@ -249,7 +249,7 @@ async function clearUserData() {
     updateMapMarkers();
     updateConversationsList();
     closeChatModal();
-    showToast('Donnees effacees', 'success');
+    showToast('Données effacées', 'success');
 }
 
 // ============================================
@@ -408,39 +408,39 @@ function initGeolocationOverlay() {
                     // PERMISSION_DENIED : instructions adaptees mobile/desktop
                     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
                     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                    message = 'Geolocalisation refusee';
+                    message = 'Géolocalisation refusée';
                     if (isIOS) {
                         helpHtml = `
-                            <strong>Comment reactiver sur iPhone :</strong>
+                            <strong>Comment réactiver sur iPhone :</strong>
                             <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
-                                <li>Ouvre <em>Reglages</em> > <em>Safari</em> > <em>Localisation</em></li>
+                                <li>Ouvre <em>Réglages</em> > <em>Safari</em> > <em>Localisation</em></li>
                                 <li>Choisis <em>Demander</em> ou <em>Autoriser</em></li>
-                                <li>Reviens sur cette page et reessaie</li>
+                                <li>Reviens sur cette page et réessaie</li>
                             </ol>
                         `;
                     } else if (isMobile) {
                         helpHtml = `
-                            <strong>Comment reactiver sur Android :</strong>
+                            <strong>Comment réactiver sur Android :</strong>
                             <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
-                                <li>Touche l'icone cadenas a gauche de l'URL</li>
+                                <li>Touche l'icone cadenas à gauche de l'URL</li>
                                 <li>Permissions > Localisation > Autoriser</li>
                                 <li>Recharge la page</li>
                             </ol>
                         `;
                     } else {
                         helpHtml = `
-                            <strong>Comment reactiver :</strong>
+                            <strong>Comment réactiver :</strong>
                             <ol style="margin: 0.5rem 0 0; padding-left: 1.25rem; text-align: left;">
-                                <li>Clique sur l'icone cadenas a gauche de l'URL</li>
-                                <li>Reglages du site > Localisation > Autoriser</li>
+                                <li>Clique sur l'icone cadenas à gauche de l'URL</li>
+                                <li>Réglages du site > Localisation > Autoriser</li>
                                 <li>Recharge la page</li>
                             </ol>
                         `;
                     }
                 } else if (err.code === 2) {
-                    message = 'Position indisponible. Verifie que le GPS de ton appareil est active.';
+                    message = 'Position indisponible. Vérifie que le GPS de ton appareil est activé.';
                 } else if (err.code === 3) {
-                    message = 'Delai depasse. Verifie ta connexion et reessaie.';
+                    message = 'Délai dépassé. Vérifie ta connexion et réessaie.';
                 }
                 errorEl.innerHTML = `<strong>${message}</strong>${helpHtml ? '<br>' + helpHtml : ''}`;
                 errorEl.style.display = 'block';
@@ -449,7 +449,7 @@ function initGeolocationOverlay() {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                     </svg>
-                    Reessayer`;
+                    Réessayer`;
             }
         });
     });
@@ -732,5 +732,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    console.log('DistriMatch V8.0 - Pret !');
+    console.log('DistriMatch V8.0 - Prêt !');
 });

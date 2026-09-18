@@ -75,12 +75,12 @@ export function processQueuedNotifications() {
 
 export function startGeofenceMonitoring() {
     if (!navigator.geolocation) {
-        console.log('Geolocalisation non supportee');
+        console.log('Géolocalisation non supportée');
         return;
     }
 
     if (!NotificationPrefs.enabled || !NotificationPrefs.geofence.enabled) {
-        console.log('Geofencing desactive');
+        console.log('Geofencing désactivé');
         return;
     }
 
@@ -90,7 +90,7 @@ export function startGeofenceMonitoring() {
 
         navigator.geolocation.getCurrentPosition(
             checkNearbySubscriptions,
-            (err) => console.log('Erreur geoloc pour geofence:', err.message),
+            (err) => console.log('Erreur géoloc pour geofence:', err.message),
             { enableHighAccuracy: false, timeout: 10000 }
         );
     }, 30000);
@@ -349,7 +349,7 @@ export function followProduct(productName) {
     if (!NotificationPrefs.followedProducts.includes(normalized)) {
         NotificationPrefs.followedProducts.push(normalized);
         saveNotificationPrefs();
-        showToast(`Tu seras notifie pour "${productName}"`, 'success');
+        showToast(`Tu seras notifié pour "${productName}"`, 'success');
         updateFollowedProductsList();
     }
 }
@@ -412,10 +412,10 @@ export function refreshNotifPermissionLabel() {
     const supported = typeof window !== 'undefined' && 'Notification' in window;
     const perm = supported ? Notification.permission : 'unsupported';
     const map = {
-        granted: 'Notifications navigateur : activees',
-        denied: 'Notifications navigateur : bloquees (a reactiver dans le navigateur). Repli sur le bandeau in-app.',
+        granted: 'Notifications navigateur : activées',
+        denied: 'Notifications navigateur : bloquées (à réactiver dans le navigateur). Repli sur le bandeau in-app.',
         default: 'Notifications navigateur : non autorisees',
-        unsupported: 'Notifications navigateur non supportees ici. Repli sur le bandeau in-app.'
+        unsupported: 'Notifications navigateur non supportées ici. Repli sur le bandeau in-app.'
     };
     label.textContent = map[perm] || map.default;
     if (btn) btn.style.display = (perm === 'default') ? 'inline-flex' : 'none';
@@ -441,7 +441,7 @@ export function saveNotificationSettingsFromUI() {
     NotificationPrefs.geofence.radius = parseInt(document.getElementById('geofence-radius').value);
 
     saveNotificationPrefs();
-    showToast('Parametres sauvegardes', 'success');
+    showToast('Paramètres sauvegardés', 'success');
 }
 
 export function updateRadiusDisplay() {
