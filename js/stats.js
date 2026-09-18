@@ -59,7 +59,8 @@ export function buildStatsModel({ coverage = null, contribution = null, signalsD
         name: row.name || row.id,
         opened: num(row.fiches_ouvertes_30j),
         signals: num(row.signaux_30j),
-        freshness: getFreshness(row.last_verified, now)
+        freshness: getFreshness(row.last_verified, now),
+        isDemo: row.is_demo === true
     }));
 
     return {
@@ -71,6 +72,8 @@ export function buildStatsModel({ coverage = null, contribution = null, signalsD
         qrShare: { pct: percent(con.fiches_via_qr_30j, con.fiches_ouvertes_30j), n: num(con.fiches_via_qr_30j), opened: num(con.fiches_ouvertes_30j) },
         signals30d,
         routes30d: num(con.itineraires_30j),
+        // Fiches fictives (distributors.is_demo, migration 010) ; null si la vue ne l'expose pas encore
+        machinesDemo: cov.machines_demo == null ? null : num(cov.machines_demo),
         daily,
         top
     };
@@ -109,6 +112,12 @@ export function renderStatsView(model, message = null) {
 
     setText('stats-coverage-24h', formatPercent(model.coverage24h.pct));
     setText('stats-coverage-detail', `${model.coverage24h.n} machine${model.coverage24h.n > 1 ? 's' : ''} sur ${model.machines}`);
+    const demoNote = document.getElementById('stats-demo-note');
+    if (demoNote) {
+        const n = model.machinesDemo;
+        demoNote.textContent = n > 0 ? `dont ${n} de démo (données fictives)` : '';
+        demoNote.hidden = !(n > 0);
+    }
     const threshold = document.getElementById('stats-coverage-threshold');
     if (threshold) {
         threshold.textContent = `Seuil du pilote à 3 mois : ${model.coverage7d.threshold} % des machines avec un signal de moins de 7 j · aujourd'hui ${formatPercent(model.coverage7d.pct)}`;
@@ -140,7 +149,7 @@ export function renderStatsView(model, message = null) {
         topEl.innerHTML = model.top.length
             ? model.top.map(t => `
             <li class="stats-row">
-                <span class="stats-row-label">${escapeHTML(t.name)}<span class="stats-row-sub is-${t.freshness.state}">${escapeHTML(t.freshness.label)}</span></span>
+                <span class="stats-row-label"><span class="stats-row-name">${escapeHTML(t.name)}${t.isDemo ? ' <span class="demo-tag">Démo</span>' : ''}</span><span class="stats-row-sub is-${t.freshness.state}">${escapeHTML(t.freshness.label)}</span></span>
                 <span class="stats-row-value">${t.opened}<span class="stats-row-unit"> ${t.opened > 1 ? 'vues' : 'vue'}</span> · ${t.signals}<span class="stats-row-unit"> ${t.signals > 1 ? 'signaux' : 'signal'}</span></span>
             </li>`).join('')
             : '<li class="stats-row stats-row--empty">Aucune fiche ouverte sur 30 jours</li>';

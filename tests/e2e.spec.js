@@ -1572,6 +1572,7 @@ test.describe('18. Tableau de bord du pilote', () => {
         await expect(page.locator('#stats-top .stats-row')).toHaveCount(5);
         await expect(page.locator('#stats-top .stats-row').first()).toContainText('Machine 0');
         await expect(page.locator('#stats-empty')).toBeHidden();
+await expect(page.locator('#stats-demo-note')).toBeHidden();   // sans machines_demo (migration 010 absente) : rien
 
         const overflow = await page.evaluate(() => ({
             doc: document.documentElement.scrollWidth,
@@ -2081,5 +2082,75 @@ test.describe('30. Ecran d\'accueil', () => {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth);
         expect(overflow).toBeLessThanOrEqual(390);
         await context.close();
+    });
+});
+
+// ============================================
+// 31. FICHES DE DEMONSTRATION (distributors.is_demo, migration 010)
+// ============================================
+// Le GET des distributeurs est intercepte par predicat (le glob
+// '**/rest/v1/distributors*' attraperait aussi l'insert et le PATCH, et '?'
+// est un joker Playwright). Une fiche fictive + une reelle, avec produits.
+
+function demoDistributorsFixture() {
+    const now = new Date().toISOString();
+    const row = (id, name, is_demo, lat) => ({
+        id, name, type: 'pizza', emoji: '🍕', address: `${name}, Bayonne`, city: 'Bayonne', lat, lng: -1.4748,
+        rating: 4.2, review_count: 7, status: 'verified', last_verified: now, price_range: '€€',
+        is_user_added: false, is_demo, tz: 'Europe/Paris',
+        products: [{ id: is_demo ? 9001 : 9002, name: 'Margherita', price: 9.5, available: true }]
+    });
+    return [row('demo-e2e', 'Fiche fictive e2e', true, 43.4935), row('real-e2e', 'Vraie machine e2e', false, 43.4940)];
+}
+
+async function routeDistributors(page, rows) {
+    await page.route(url => url.pathname.endsWith('/rest/v1/distributors'), route =>
+        route.request().method() === 'GET'
+            ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) })
+            : route.fallback());
+}
+
+test.describe('31. Fiches de démonstration', () => {
+    test('tag « Démo » dans le panneau, la fiche et « À propos » de la fiche fictive seulement ; lisible en 390 px', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const page = await context.newPage();
+        await routeDistributors(page, demoDistributorsFixture());
+        await setupApp(page, context);
+        expect(await page.evaluate(() => window.AppState.distributors.map(d => [d.id, d.isDemo]))).toEqual([['demo-e2e', true], ['real-e2e', false]]);
+
+        await page.click('.filter-chip[data-type="all"]');
+        await expect(page.locator('#side-panel-list .side-panel-item[data-id="demo-e2e"] .demo-tag')).toHaveText('Démo');
+        expect(await page.locator('#side-panel-list .demo-tag').count()).toBe(1);
+        await page.click('#side-panel-close');
+
+        await page.evaluate(() => window.openDistributorModal('demo-e2e'));
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await expect(page.locator('#dist-modal-demo')).toBeVisible();
+        await expect(page.locator('#dist-modal-name')).toHaveText('Fiche fictive e2e');
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await expect(page.locator('#dist-apropos-demo-row')).toBeVisible();
+        await page.click('.dist-tab[data-tab="produits"]');
+        const issues = await collectTextIssues(page, 'fiche-demo');
+        expect(issues, issues.join('\n')).toEqual([]);
+        await page.click('#dist-modal-close');
+
+        await page.evaluate(() => window.openDistributorModal('real-e2e'));
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await expect(page.locator('#dist-modal-demo')).toBeHidden();
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await expect(page.locator('#dist-apropos-demo-row')).toBeHidden();
+        await context.close();
+    });
+
+    test('tableau de bord : « dont N de démo » et tags sur les fiches fictives du top', async ({ page }) => {
+        const fixture = kpiFixture();
+        fixture.kpi_coverage = [{ ...fixture.kpi_coverage[0], machines_demo: 25 }];
+        fixture.kpi_top_distributors = fixture.kpi_top_distributors.map((r, i) => ({ ...r, is_demo: i % 2 === 0 }));
+        await routeKpi(page, fixture);
+        await page.evaluate(() => window.switchView('stats'));
+        await page.waitForSelector('#stats-view.view-active', { timeout: 3000 });
+        await expect(page.locator('#stats-demo-note')).toHaveText('dont 25 de démo (données fictives)');
+        await expect(page.locator('#stats-coverage-detail')).toHaveText('21 machines sur 30');
+        await expect(page.locator('#stats-top .demo-tag')).toHaveCount(3);
     });
 });

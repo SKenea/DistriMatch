@@ -17,7 +17,8 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveAvailabilityBadge
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveAvailabilityBadge,
+    mapDistributorRow
 } from '../js/utils.js';
 
 import {
@@ -340,6 +341,38 @@ describe('aucun territoire en dur dans index.html et manifest.json', () => {
             const src = readFileSync(new URL(f, root), 'utf8');
             assert.ok(!/C[oô]te Basque/i.test(src), `${f} contient un territoire en dur`);
         }
+    });
+});
+
+// ============================================
+// FICHE FICTIVE (distributors.is_demo, migration 010) : mapDistributorRow
+// ============================================
+// Le front lit is_demo, ne l'ecrit jamais. Absent (migration pas encore
+// passee) = reel : aucun tag ne s'affiche a tort.
+
+describe('mapDistributorRow (ligne Supabase -> distributeur, isDemo)', () => {
+    const row = (extra = {}) => ({
+        id: 'dist-001', name: 'Test', type: 'pizza', emoji: '🍕', address: '1 rue', city: 'Bayonne',
+        lat: 43.49, lng: -1.47, rating: '4.5', review_count: 12, status: 'verified',
+        last_verified: '2026-09-18T10:00:00Z', price_range: '€€', is_user_added: false,
+        products: [{ id: 7, name: 'Margherita', price: '9.5', available: true }], ...extra
+    });
+
+    it('is_demo true -> isDemo true ; false -> false ; absent -> false', () => {
+        assert.equal(mapDistributorRow(row({ is_demo: true })).isDemo, true);
+        assert.equal(mapDistributorRow(row({ is_demo: false })).isDemo, false);
+        assert.equal(mapDistributorRow(row()).isDemo, false);
+        assert.equal(mapDistributorRow(row({ is_demo: 'true' })).isDemo, false);
+    });
+
+    it('le reste du mapping est conserve (camelCase, nombres, produits avec id)', () => {
+        const d = mapDistributorRow(row({ is_demo: true }));
+        assert.equal(d.rating, 4.5);
+        assert.equal(d.reviewCount, 12);
+        assert.equal(d.lastVerified, '2026-09-18T10:00:00Z');
+        assert.equal(d.priceRange, '€€');
+        assert.equal(d.isUserAdded, false);
+        assert.deepEqual(d.products, [{ id: 7, name: 'Margherita', price: 9.5, available: true }]);
     });
 });
 

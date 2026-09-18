@@ -36,11 +36,11 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=31">
+    <link rel="stylesheet" href="css/base.css?v=32">
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=35">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=27">
-    <link rel="stylesheet" href="css/overlays.css?v=33">
+    <link rel="stylesheet" href="css/overlays.css?v=34">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -288,7 +288,11 @@
 
             <!-- Header titre + meta -->
             <div class="dist-modal-header">
-                <h2 id="dist-modal-name">Nom du distributeur</h2>
+                <!-- Tag « Démo » frere du h2 (jamais enfant : textContent = nom l'effacerait) ; distributors.is_demo -->
+                <div class="dist-modal-title">
+                    <h2 id="dist-modal-name">Nom du distributeur</h2>
+                    <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
+                </div>
                 <!-- La fraicheur d'abord (docs/STRATEGIE.md, audit UX-05) : sa propre ligne, avant la note -->
                 <div class="dist-modal-verified" id="dist-modal-verified"></div>
                 <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
@@ -417,6 +421,11 @@
                     <div class="dist-apropos-row" id="dist-apropos-added-row" style="display:none">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>Ajouté par la communauté</span>
+                    </div>
+                    <!-- Fiche fictive (distributors.is_demo) : dit clairement que rien n'est reel ici -->
+                    <div class="dist-apropos-row" id="dist-apropos-demo-row" style="display:none">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                        <span>Fiche de démonstration : machine fictive, données inventées</span>
                     </div>
                 </div>
             </div>
@@ -640,6 +649,7 @@
                         <span class="stats-hero-value" id="stats-coverage-24h">—</span>
                         <span class="stats-hero-label">des machines ont un signal de moins de 24 h</span>
                         <span class="stats-hero-detail" id="stats-coverage-detail"></span>
+                        <span class="stats-hero-detail" id="stats-demo-note" hidden></span>
                     </div>
                     <p class="stats-threshold" id="stats-coverage-threshold"></p>
                 </section>
@@ -971,25 +981,25 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=48",
-            "./js/state.js": "./js/state.js?v=48",
-            "./js/config.js": "./js/config.js?v=48",
-            "./js/utils.js": "./js/utils.js?v=48",
-            "./js/auth.js": "./js/auth.js?v=48",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=48",
-            "./js/map.js": "./js/map.js?v=48",
-            "./js/navigation.js": "./js/navigation.js?v=48",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=48",
-            "./js/distributor.js": "./js/distributor.js?v=48",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=48",
-            "./js/chat.js": "./js/chat.js?v=48",
-            "./js/activity.js": "./js/activity.js?v=48",
-            "./js/notifications.js": "./js/notifications.js?v=48",
-            "./js/availability.js": "./js/availability.js?v=48",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=48",
-            "./js/events.js": "./js/events.js?v=48",
-            "./js/stats.js": "./js/stats.js?v=48",
-            "./js/history.js": "./js/history.js?v=48"
+            "./js/app.js": "./js/app.js?v=49",
+            "./js/state.js": "./js/state.js?v=49",
+            "./js/config.js": "./js/config.js?v=49",
+            "./js/utils.js": "./js/utils.js?v=49",
+            "./js/auth.js": "./js/auth.js?v=49",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=49",
+            "./js/map.js": "./js/map.js?v=49",
+            "./js/navigation.js": "./js/navigation.js?v=49",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=49",
+            "./js/distributor.js": "./js/distributor.js?v=49",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=49",
+            "./js/chat.js": "./js/chat.js?v=49",
+            "./js/activity.js": "./js/activity.js?v=49",
+            "./js/notifications.js": "./js/notifications.js?v=49",
+            "./js/availability.js": "./js/availability.js?v=49",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=49",
+            "./js/events.js": "./js/events.js?v=49",
+            "./js/stats.js": "./js/stats.js?v=49",
+            "./js/history.js": "./js/history.js?v=49"
         }
     }
     </script>

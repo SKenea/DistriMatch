@@ -24,7 +24,7 @@ const html = `<!DOCTYPE html>
                 <div id="dist-modal-photos-gallery"></div>
             </div>
             <div class="dist-modal-header">
-                <h2 id="dist-modal-name"></h2>
+                <div class="dist-modal-title"><h2 id="dist-modal-name"></h2><span class="demo-tag" id="dist-modal-demo" hidden>Démo</span></div>
                 <span id="dist-modal-rating"></span>
                 <span id="dist-modal-reviews"></span>
                 <span id="dist-modal-type"></span>
@@ -49,6 +49,7 @@ const html = `<!DOCTYPE html>
                 <span id="dist-apropos-address"></span>
                 <span id="dist-apropos-distance"></span>
                 <div id="dist-apropos-added-row" style="display:none"></div>
+                <div id="dist-apropos-demo-row" style="display:none"></div>
             </div>
         </div>
     </div>
@@ -86,7 +87,7 @@ const html = `<!DOCTYPE html>
     <div id="stats-view" class="view-page view-hidden">
         <p id="stats-empty" hidden></p>
         <div id="stats-content" hidden>
-            <span id="stats-coverage-24h"></span><span id="stats-coverage-detail"></span><p id="stats-coverage-threshold"></p>
+            <span id="stats-coverage-24h"></span><span id="stats-coverage-detail"></span><span id="stats-demo-note" hidden></span><p id="stats-coverage-threshold"></p>
             <div id="stats-contrib-cell" class="stats-cell"><span id="stats-contrib-rate"></span><span id="stats-contrib-detail"></span></div>
             <span id="stats-qr-share"></span><span id="stats-qr-detail"></span>
             <span id="stats-signals-30j"></span><span id="stats-routes-30j"></span>
@@ -181,7 +182,7 @@ const {
     saveConversations, loadConversations
 } = await import('../js/utils.js');
 const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../js/distributor.js');
-const { openDistributorModal, closeDistModal, buildShareUrl } = await import('../js/gmaps-ui.js');
+const { openDistributorModal, closeDistModal, buildShareUrl, openSidePanelForFilters, closeSidePanel } = await import('../js/gmaps-ui.js');
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
 const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../js/notifications.js');
@@ -1064,5 +1065,71 @@ describe('Tableau de bord du pilote (buildStatsModel / renderStatsView)', () => 
         renderStatsView(buildStatsModel(raw, NOW), 'Service indisponible');
         assert.equal(document.getElementById('stats-empty').textContent, 'Service indisponible');
         assert.equal(document.getElementById('stats-content').hidden, true);
+    });
+});
+
+// ============================================
+// FICHE FICTIVE (distributors.is_demo) : tag « Démo » dans la fiche, le panneau, les stats
+// ============================================
+
+describe('Tag « Démo » (isDemo)', () => {
+    const base = { type: 'pizza', emoji: '🍕', address: '1 Rue Test', rating: 4.5, reviewCount: 3, products: [] };
+
+    beforeEach(() => {
+        AppState.distributors = [
+            { ...base, id: 'demo-1', name: 'Fiche fictive', isDemo: true, isUserAdded: true },
+            { ...base, id: 'real-1', name: 'Vraie machine', isDemo: false, isUserAdded: true }
+        ];
+        AppState.typeConfig = { pizza: { label: 'Pizza' } };
+        AppState.userLocation = null;
+    });
+
+    it('fiche fictive : tag visible, rangee « À propos » visible, nom intact, « communauté » masquee meme si isUserAdded', () => {
+        openDistributorModal('demo-1');
+        assert.equal(document.getElementById('dist-modal-demo').hidden, false);
+        assert.equal(document.getElementById('dist-modal-name').textContent, 'Fiche fictive');
+        assert.equal(document.getElementById('dist-apropos-demo-row').style.display, 'flex');
+        assert.equal(document.getElementById('dist-apropos-added-row').style.display, 'none');
+        closeDistModal();
+    });
+
+    it('fiche reelle : aucun tag, rangee demo masquee, « communauté » visible', () => {
+        openDistributorModal('real-1');
+        assert.equal(document.getElementById('dist-modal-demo').hidden, true);
+        assert.equal(document.getElementById('dist-apropos-demo-row').style.display, 'none');
+        assert.equal(document.getElementById('dist-apropos-added-row').style.display, 'flex');
+        closeDistModal();
+    });
+
+    it('panneau lateral : le tag n\'apparait que sur la fiche fictive', () => {
+        openSidePanelForFilters([]);
+        assert.ok(document.querySelector('#side-panel-list .side-panel-item[data-id="demo-1"] .demo-tag'), 'tag sur la fiche fictive');
+        assert.equal(document.querySelector('#side-panel-list .side-panel-item[data-id="real-1"] .demo-tag'), null, 'pas de tag sur la vraie');
+        closeSidePanel();
+    });
+
+    it('tableau de bord : « dont N de démo » et tags du top, masques sans la colonne ou a 0', () => {
+        const NOW = Date.parse('2026-09-18T14:00:00Z');
+        const top = [
+            { id: 'a', name: 'A', fiches_ouvertes_30j: 5, signaux_30j: 1, last_verified: null, is_demo: true },
+            { id: 'b', name: 'B', fiches_ouvertes_30j: 4, signaux_30j: 1, last_verified: null, is_demo: false }
+        ];
+        const withDemo = buildStatsModel({ coverage: { machines: 30, machines_signal_24h: 21, machines_demo: 29 }, topDistributors: top }, NOW);
+        assert.equal(withDemo.machinesDemo, 29);
+        assert.deepEqual(withDemo.top.map(t => t.isDemo), [true, false]);
+        renderStatsView(withDemo);
+        assert.equal(document.getElementById('stats-demo-note').hidden, false);
+        assert.equal(document.getElementById('stats-demo-note').textContent, 'dont 29 de démo (données fictives)');
+        assert.equal(document.getElementById('stats-coverage-detail').textContent, '21 machines sur 30');
+        assert.equal(document.querySelectorAll('#stats-top .demo-tag').length, 1);
+
+        const without = buildStatsModel({ coverage: { machines: 30, machines_signal_24h: 21 }, topDistributors: top.map(t => ({ ...t, is_demo: undefined })) }, NOW);
+        assert.equal(without.machinesDemo, null);
+        renderStatsView(without);
+        assert.equal(document.getElementById('stats-demo-note').hidden, true);
+        assert.equal(document.querySelectorAll('#stats-top .demo-tag').length, 0);
+
+        renderStatsView(buildStatsModel({ coverage: { machines: 30, machines_signal_24h: 21, machines_demo: 0 } }, NOW));
+        assert.equal(document.getElementById('stats-demo-note').hidden, true);
     });
 });

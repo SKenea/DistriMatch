@@ -376,6 +376,7 @@ async function confirmAddDistributorImpl() {
         priceRange: priceRange,
         products: products,
         isUserAdded: true,
+        isDemo: false,   // une fiche ajoutee depuis l'app est reelle ; is_demo n'est jamais envoye a Supabase
         addedAt: Date.now(),
         addedBy: 'user'
     };

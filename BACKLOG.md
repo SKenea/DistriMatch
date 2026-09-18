@@ -74,6 +74,7 @@
     abandonnee.
   - Constat : le seed du 2026-09-16 vieillit d'un jour par jour ; le 2026-09-18 toutes
     les fiches disent « il y a 2 j » et le KPI 24 h affiche 0 % (audit UX-23).
+  - Note 2026-09-18 : depuis 010, le job ne touche que les fiches is_demo (US-3).
   - Decision Stephane : regeneration nocturne automatique (recommande) ou relance
     manuelle de `select seed_demo_signals();` avant chaque demo ?
   - Acceptance : le lendemain de l'activation, `kpi_coverage.machines_signal_24h >= 20`
@@ -88,28 +89,26 @@
     Les deux fonctions sont SECURITY DEFINER et revoquees pour anon / authenticated : le
     cron tourne avec le role du dashboard, rien n'est expose.
 
-- [ ] US-3 Une carte sans fiches de test
-  - En tant que visiteur, je ne veux pas tomber sur « Boulangerie Test Photo » ou
-    « Tic Tac – Adresse à compléter », afin de ne pas douter de la fiabilite de toute
-    la carte.
-  - Constat (API anonyme, 2026-09-18, 30 distributeurs dont 5 ajoutes a la main en
-    avril-mai) : `user-1776099988510` « Test Supabase Biarritz » et `user-1776101171767`
-    « Boulangerie Test Photo » (tests) ; `user-1777220392357` « Glacon » et
-    `user-1780130564104` « Tic Tac » (adresse « a completer », type approximatif) ;
-    `user-1776102020333` « Gaztainbidea » (terroir, impasse Gaztainbidea : probablement
-    une vraie machine, adresse a completer).
-  - Decision Stephane : supprimer les 4 premieres (recommande) ; Gaztainbidea : garder et
-    completer l'adresse, ou supprimer ?
-  - Acceptance : les ids supprimes n'apparaissent plus dans `distributors` ni sur la
-    carte ; produits, photos, signaux et evenements lies partent par cascade (FK ON DELETE
-    CASCADE, migrations 001 / 003 / 007 / 008) ; les fichiers du bucket photos des fiches
-    supprimees sont retires a la main (Storage) ; sur le telephone de Stephane, « Effacer
-    mes données » vide le cache local `snackmatch_user_distributors` qui pourrait encore
-    les afficher.
-  - TS-3 (SQL Editor) :
-    `delete from distributors where id in ('user-1776099988510', 'user-1776101171767', 'user-1777220392357', 'user-1780130564104');`
-    puis `select count(*) from distributors;` (attendu : 26) ; optionnel :
-    `update distributors set address = '<adresse>', city = '<ville>' where id = 'user-1776102020333';`
+- [ ] US-3 Des fiches fictives identifiees, pas supprimees (decision Stephane 2026-09-18)
+  - En tant que Stephane, je veux garder un jeu de donnees factice tout en sachant, ligne
+    par ligne dans la base, ce qui est vrai et ce qui ne l'est pas, afin de faire des
+    demos sans jamais polluer une vraie machine ni tromper un visiteur.
+  - Decision : on ne supprime rien ; une colonne `distributors.is_demo` marque les fiches
+    fictives (les 25 du seed + `user-1776099988510` « Test Supabase Biarritz »,
+    `user-1776101171767` « Boulangerie Test Photo », `user-1777220392357` « Glacon »,
+    `user-1780130564104` « Tic Tac »). `user-1776102020333` « Gaztainbidea » reste reelle
+    (adresse a completer un jour). Convention : fiche fictive = `is_demo` (enfants par
+    FK) ; signal / evenement fictif = `device_hash LIKE 'demo-%'`, uniquement sur des
+    fiches `is_demo`.
+  - Acceptance : 29 fiches `is_demo`, 1 reelle ; l'API ne peut ni poser ni changer
+    `is_demo` (trigger) ; `seed_demo_signals()` ne touche que les fiches demo et
+    `purge_demo_data()` ne restaure qu'elles ; la pollution deja faite sur Gaztainbidea
+    est reparee ; tag « Démo » dans le panneau, la fiche (a cote du nom) et « À propos »,
+    « dont N de démo » au tableau de bord ; aucun tag sans la colonne (migration pas
+    encore passee) ; sections 14 et 21 des e2e vertes.
+  - TS-3 : front + tests + doc livres (PR is_demo) ; Stephane colle
+    `supabase/010_is_demo.sql` dans le SQL Editor puis `select seed_demo_signals();`
+    (retour attendu : `"fiches_demo": 29`). Purge du jour J documentee en tete de 010.
 
 - [ ] US-4 Chantier 3 : une app qui ne simule rien
   - En tant que visiteur, je ne veux ni chatbot simule ni points / niveaux, afin que
@@ -144,8 +143,9 @@
     (1) zone d'import : Cote Basque seule, departement 64, ou France entiere (~9 000
     machines `vending=pizza|bread|food` ; cout Overpass, taille de table, temps de
     chargement) ;
-    (2) sort du seed : purger les 25 fiches inventees a l'import, ou les garder jusqu'a
-    ce qu'une machine OSM les remplace (dedup a 50 m) ;
+    (2) sort du seed : les fiches fictives sont marquees `is_demo` (US-3), la purge tient
+    en une ligne (`DELETE FROM distributors WHERE is_demo`, cf. 010) : a l'import, ou
+    plus tard, au choix ;
     (3) frequence : import unique par script, ou rafraichissement hebdo (nouvelles
     machines, suppressions) ;
     (4) fiche minimale sans photo ni produit : « Distributeur de pizzas » + rue OSM
