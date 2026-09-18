@@ -31,3 +31,7 @@ playwright-report/
 
 # Claude Code : reglages personnels (mode auto, permissions locales)
 .claude/settings.local.json
+
+# Secrets locaux (jamais versionnes) : token Supabase pour executer les migrations depuis Claude Code
+.env
+.env.*
