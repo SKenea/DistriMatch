@@ -1914,3 +1914,29 @@ test.describe('25. Badge de dispo produit', () => {
         await expect(item).toHaveClass(/is-neutral/);
     });
 });
+
+// ============================================
+// 26. MODALE DE SIGNAL : UNE SEULE CROIX, « PAS REGARDE » NEUTRE (audit UX-09)
+// ============================================
+
+test.describe('26. Modale de signal, croix et etat neutre', () => {
+    test('modale ouverte -> la croix de la fiche est masquee ; « Pas regarde » n\'est pas presente comme un choix', async ({ page }) => {
+        await openDistModal(page);
+        await expect(page.locator('#dist-modal-close')).toBeVisible();
+        await page.click('#dist-action-confirm');
+        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+        await expect(page.locator('#dist-modal-close')).toBeHidden();
+        const unseen = page.locator('#availability-products .availability-seg-btn[data-state="unseen"]');
+        if (await unseen.count()) {
+            await expect(unseen.first()).not.toHaveClass(/is-selected/);
+            await expect(unseen.first()).toHaveAttribute('aria-pressed', 'false');
+            await expect(unseen.first()).toHaveCSS('font-weight', '400');
+            await unseen.first().click();
+            await expect(unseen.first()).toHaveClass(/is-selected/);
+            await expect(unseen.first()).toHaveAttribute('aria-pressed', 'true');
+            await expect(page.locator('#availability-submit')).toBeDisabled();   // "pas regarde" n'est pas un signal
+        }
+        await page.click('#availability-cancel');
+        await expect(page.locator('#dist-modal-close')).toBeVisible();
+    });
+});

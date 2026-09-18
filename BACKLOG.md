@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-09 Modale « Il reste quoi ? » : une seule croix, « Pas regarde » neutre (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
