@@ -13,8 +13,10 @@
 
 <!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 (PR #104, #105, #106).
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
-     Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
-
+     Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/.
+     Les 6 tickets Priorite haute sont LIVRES le 2026-09-18 (PR #109 a #114, session
+     /auto 6). Prochains items : Priorite normale (7 tickets), puis les 4 decisions de
+     « A clarifier » et les chantiers strategie (import OSM). -->
 
 ## Priorite normale
 
