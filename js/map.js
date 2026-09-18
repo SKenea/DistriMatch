@@ -7,7 +7,7 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf } from './utils.js';
 
 // ============================================
 // CARTE LEAFLET
@@ -16,13 +16,23 @@ import { showToast, getFilteredDistributors } from './utils.js';
 export function initMainMap() {
     if (mainMap) return;
 
-    const defaultCenter = AppState.userLocation || { lat: 43.4929, lng: -1.4748 };
-
-    // Zoom 15 par defaut (echelle quartier ~2km, standard Google Maps)
-    // La geoloc etant obligatoire au boot, AppState.userLocation est toujours defini ici
+    // Centre : la position de l'utilisateur ; sinon la fiche ouverte par deep
+    // link (on est devant la machine) ; sinon le centre des distributeurs
+    // charges, dezoome (audit UX-02 : la carte est utilisable sans position,
+    // et aucune coordonnee n'est codee en dur).
+    const current = AppState.currentDistributor;
+    let center = AppState.userLocation;
+    let zoom = 15;
+    if (!center && current && Number.isFinite(current.lat) && Number.isFinite(current.lng)) {
+        center = { lat: current.lat, lng: current.lng };
+    } else if (!center) {
+        center = centroidOf(AppState.distributors);
+        zoom = center ? 12 : 2;
+        center = center || { lat: 0, lng: 0 };
+    }
     const map = L.map('main-map', {
         zoomControl: false
-    }).setView([defaultCenter.lat, defaultCenter.lng], 15);
+    }).setView([center.lat, center.lng], zoom);
 
     setMainMap(map);
     AppState.mapInitialized = true;

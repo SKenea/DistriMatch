@@ -364,11 +364,25 @@ window.signOut = signOut;
 // GEOLOCALISATION OVERLAY
 // ============================================
 
+// Continuer sans position (audit UX-02) : defini par initGeolocationOverlay,
+// appele par le bouton « Voir la carte sans me localiser » et a la fermeture
+// d'une fiche ouverte par deep link (l'utilisateur est devant la machine, on
+// ne lui remet pas le mur d'accueil).
+let skipGeolocOverlay = null;
+
 function initGeolocationOverlay() {
     return new Promise((resolve) => {
         const overlay = document.getElementById('geoloc-overlay');
         const btn = document.getElementById('geoloc-btn');
         const errorEl = document.getElementById('geoloc-error');
+        const skipBtn = document.getElementById('geoloc-skip');
+        skipGeolocOverlay = () => {
+            if (!document.body.contains(overlay) || overlay.classList.contains('hidden')) return;
+            overlay.classList.add('hidden');
+            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+            resolve();
+        };
+        skipBtn?.addEventListener('click', skipGeolocOverlay);
 
         if (!overlay || !btn) {
             getUserLocation().catch(() => {}).finally(resolve);
@@ -476,6 +490,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const deepLinkId = new URLSearchParams(window.location.search).get('id');
     if (deepLinkId) {
         distributorsPromise.then(() => openModalFromUrlParam()).catch(() => {});
+        // Fermer la fiche du deep link ne doit pas reafficher le mur de geoloc
+        document.addEventListener('distmodal:closed', () => skipGeolocOverlay?.(), { once: true });
     }
 
     // Attendre la geolocalisation via l'overlay

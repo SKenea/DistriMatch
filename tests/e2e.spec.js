@@ -1744,3 +1744,52 @@ test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
         expect(issues, issues.join('\n')).toEqual([]);
     });
 });
+
+// ============================================
+// 22. ENTRER SANS GEOLOCALISATION (audit UX-02)
+// ============================================
+// L'overlay d'accueil a une issue secondaire ; apres un deep link (QR), fermer
+// la fiche laisse la carte utilisable au lieu de reafficher le mur.
+
+const overlayGone = (page) => page.evaluate(() => { const o = document.getElementById('geoloc-overlay'); return !o || o.classList.contains('hidden'); });
+
+test.describe('22. Sans geolocalisation', () => {
+    test.beforeEach(async () => { /* override : pas de setupApp */ });
+
+    test('« Voir la carte sans me localiser » : carte et marqueurs visibles, panneau trie par nom avec rappel', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForSelector('#geoloc-skip', { state: 'visible', timeout: 15000 });
+        await page.click('#geoloc-skip');
+        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
+        await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+        await expect.poll(() => page.evaluate(() => document.querySelectorAll('.distributor-marker-container').length)).toBeGreaterThan(0);
+        expect(await overlayGone(page)).toBe(true);
+        expect(await page.evaluate(() => window.AppState.userLocation)).toBeFalsy();
+        await page.click('#sidebar-toggle');
+        await expect(page.locator('#side-panel-list .side-panel-hint')).toContainText('Active la localisation');
+        const names = await page.$$eval('#side-panel-list .side-panel-item', els => els.map(e => (e.querySelector('.side-panel-item-name, h4, strong') || e).textContent.trim()));
+        expect(names.length).toBeGreaterThan(1);
+        expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+        await context.close();
+    });
+
+    test('deep link QR sans geoloc : fermer la fiche laisse la carte, pas le mur', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
+        const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
+        await page.goto(`${BASE_URL}/?id=${firstId}&confirm=1&src=qr`);
+        await page.waitForSelector('#availability-modal.active', { timeout: 50000 });
+        await page.click('#availability-cancel');
+        await page.click('#dist-modal-close');
+        await expect.poll(() => overlayGone(page)).toBe(true);
+        await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+        await expect.poll(() => page.evaluate(() => document.querySelectorAll('.distributor-marker-container').length)).toBeGreaterThan(0);
+        await context.close();
+    });
+});

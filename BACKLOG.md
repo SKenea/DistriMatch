@@ -15,20 +15,6 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
 
-- [ ] UX-02 Entrer sans geolocalisation, et pas de mur apres un scan QR
-  - Contexte : l'overlay d'accueil n'a qu'une issue (« Activer la localisation ») ; apres
-    un refus : « Reessayer » + reglages iPhone, cul-de-sac (capture 02). Apres un scan QR
-    (`?id=&confirm=1&src=qr`) et un signal envoye, fermer la fiche renvoie sur ce mur
-    (capture 12). Les utilisateurs qui refusent la geoloc n'entrent jamais.
-  - Acceptance : lien secondaire « Voir la carte sans me localiser » sous le CTA (et dans
-    l'etat refuse) : carte centree sur le centroide des distributeurs charges (aucune
-    coordonnee en dur), panneau trie par nom (ou fraicheur) avec la mention « Active la
-    localisation pour trier par distance » ; apres un deep link (`?id=`), la fermeture de
-    la fiche n'affiche pas l'overlay, elle laisse la carte utilisable. Tests e2e :
-    (1) contexte sans permission -> tap « sans me localiser » -> `.leaflet-container`
-    visible, marqueurs > 0, `#geoloc-overlay.hidden` ; (2) deep link QR sans geoloc ->
-    fermer la fiche -> overlay hidden, carte visible.
-
 - [ ] UX-04 Bouton retour (Android) : fermer la fiche ou la modale au lieu de quitter l'app
   - Contexte : fiche ouverte, `history.back()` mene a `about:blank` (l'app est quittee),
     constate sur les deux moteurs. Sur Android, c'est LE geste de fermeture.
@@ -290,3 +276,4 @@
 - [x] 2026-09-18 UX-01 Toasts visibles partout : --z-toast 12000 (au-dessus des modales), conteneur au-dessus de la bottom nav (--bottom-nav-h + safe-area, pilule desktop), erreur d'envoi en ligne dans la modale de signal (#availability-error), +3 e2e (PR #109, commit 6a53a77)
 - [x] 2026-09-18 UX-03 Liste via le hamburger : le panneau s'ouvre avec la liste du filtre courant, premier groupe de distance deplie, second tap ferme ; +2 e2e, test 3ter adapte ; import map v39 (PR #110, commit d981f71)
 - [x] 2026-09-18 UX-07/08 Contraste et tailles : tokens --primary-text #D62828 et --success-dark #4E7A33 (>= 4,5:1) pour le texte rouge/vert et les fonds a texte blanc, vert fraicheur #15803d, polices nav 12 px / indices 13 px / panneau 12 px ; +2 unit, +1 e2e (section 21, mesure des styles calcules en 390 px) ; 5 CSS bumpes (PR #111, commit 6b2c69e)
+- [x] 2026-09-18 UX-02 Entrer sans geolocalisation : lien « Voir la carte sans me localiser », carte centree sur la fiche du deep link ou sur le centre des distributeurs (centroidOf, aucune coordonnee en dur), panneau trie par nom avec rappel, fermer une fiche deep link ne reaffiche plus le mur ; +2 unit +2 e2e, overlays v30, import map v40 (PR #112, commit 8066c24)

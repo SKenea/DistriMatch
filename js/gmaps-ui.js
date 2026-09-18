@@ -128,9 +128,12 @@ export function openSidePanelForFilters(types = []) {
     if (matches.length === 0) {
         list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;
     } else if (!AppState.userLocation) {
-        // Sans geoloc : pas de distance -> liste plate, comportement inchange.
-        // (Les clics sont geres par delegation, cf. initSidePanel.)
-        list.innerHTML = matches.map(d => renderSidePanelItem(d)).join('');
+        // Sans position (audit UX-02) : liste plate triee par nom, avec un rappel
+        // discret ; les distances viendront quand l'utilisateur activera la
+        // localisation. (Clics geres par delegation, cf. initSidePanel.)
+        const byName = [...matches].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+        list.innerHTML = '<div class="side-panel-hint">Active la localisation pour trier par distance</div>'
+            + byName.map(d => renderSidePanelItem(d)).join('');
     } else {
         // Avec geoloc : la liste est deja triee par distance croissante.
         // On la decoupe en tranches via DISTANCE_GROUPS.
@@ -465,6 +468,8 @@ export function closeDistModal() {
     const overlay = document.getElementById('dist-modal-overlay');
     overlay?.classList.remove('active');
     if (overlay) deactivateFocusTrap(overlay);
+    // CustomEvent de la fenetre du document (en test jsdom, le global est celui de Node)
+    document.dispatchEvent(new (document.defaultView?.CustomEvent || CustomEvent)('distmodal:closed'));
 }
 
 // Pipeline commun d'upload de photo(s) pour un distributeur : pose le
