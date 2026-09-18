@@ -125,6 +125,11 @@ export function openSidePanelForFilters(types = []) {
     const matches = types.length === 0
         ? AppState.distributors
         : AppState.distributors.filter(d => types.includes(d.type));
+    // Le titre porte le compte (plus de toast de comptage) et le rappel « Tous »
+    // n'apparait que si un filtre est actif (audit UX-11/12).
+    title.textContent += ` · ${matches.length}`;
+    const allBtn = document.getElementById('side-panel-all');
+    if (allBtn) allBtn.hidden = types.length === 0;
 
     if (matches.length === 0) {
         list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;
@@ -155,6 +160,7 @@ export function openSidePanelForFilters(types = []) {
         const firstOpen = buckets.findIndex(b => b.length > 0);
         list.innerHTML = DISTANCE_GROUPS.map((group, gi) => {
             const items = buckets[gi];
+            if (items.length === 0) return '';   // tranche vide : pas de groupe (audit UX-12)
             const header = `
                 <button type="button" class="side-panel-group-header" aria-expanded="${gi === firstOpen}">
                     <span class="spg-chevron" aria-hidden="true">▸</span>

@@ -1199,3 +1199,20 @@
 
 /* Modale « Il reste quoi ? » ouverte : une seule croix a l'ecran (audit UX-09) */
 #dist-modal-overlay.has-panel #dist-modal-close { visibility: hidden; }
+
+/* Rappel « Tous » en tete du panneau quand un filtre est actif (audit UX-11) */
+.side-panel-all {
+    margin-left: auto;
+    margin-right: 0.5rem;
+    min-height: 44px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--dark);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.side-panel-all:hover { background: var(--light); }
+.side-panel-all[hidden] { display: none; }

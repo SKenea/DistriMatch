@@ -37,10 +37,10 @@
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=30">
-    <link rel="stylesheet" href="css/map.css?v=26">
+    <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=34">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=27">
-    <link rel="stylesheet" href="css/overlays.css?v=32">
+    <link rel="stylesheet" href="css/overlays.css?v=33">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -164,6 +164,8 @@
         <aside class="sidebar side-panel" id="sidebar">
             <div class="side-panel-header">
                 <span class="side-panel-title" id="side-panel-title">Tous les distributeurs</span>
+                <!-- Rappel « Tous » quand un filtre est actif : le panneau cache les chips en mobile (audit UX-11) -->
+                <button type="button" class="side-panel-all" id="side-panel-all" hidden>Tous</button>
                 <button class="side-panel-close" id="side-panel-close" aria-label="Fermer">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                         <path d="M18 6L6 18M6 6l12 12"/>
@@ -978,25 +980,25 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=44",
-            "./js/state.js": "./js/state.js?v=44",
-            "./js/config.js": "./js/config.js?v=44",
-            "./js/utils.js": "./js/utils.js?v=44",
-            "./js/auth.js": "./js/auth.js?v=44",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=44",
-            "./js/map.js": "./js/map.js?v=44",
-            "./js/navigation.js": "./js/navigation.js?v=44",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=44",
-            "./js/distributor.js": "./js/distributor.js?v=44",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=44",
-            "./js/chat.js": "./js/chat.js?v=44",
-            "./js/activity.js": "./js/activity.js?v=44",
-            "./js/notifications.js": "./js/notifications.js?v=44",
-            "./js/availability.js": "./js/availability.js?v=44",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=44",
-            "./js/events.js": "./js/events.js?v=44",
-            "./js/stats.js": "./js/stats.js?v=44",
-            "./js/history.js": "./js/history.js?v=44"
+            "./js/app.js": "./js/app.js?v=45",
+            "./js/state.js": "./js/state.js?v=45",
+            "./js/config.js": "./js/config.js?v=45",
+            "./js/utils.js": "./js/utils.js?v=45",
+            "./js/auth.js": "./js/auth.js?v=45",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=45",
+            "./js/map.js": "./js/map.js?v=45",
+            "./js/navigation.js": "./js/navigation.js?v=45",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=45",
+            "./js/distributor.js": "./js/distributor.js?v=45",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=45",
+            "./js/chat.js": "./js/chat.js?v=45",
+            "./js/activity.js": "./js/activity.js?v=45",
+            "./js/notifications.js": "./js/notifications.js?v=45",
+            "./js/availability.js": "./js/availability.js?v=45",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=45",
+            "./js/events.js": "./js/events.js?v=45",
+            "./js/stats.js": "./js/stats.js?v=45",
+            "./js/history.js": "./js/history.js?v=45"
         }
     }
     </script>

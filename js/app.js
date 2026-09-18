@@ -31,7 +31,7 @@ import {
     switchView, switchTab, goBackToMap,
     hideAllViews, registerViewCallback,
     updateBadges, updateConversationsBadge,
-    toggleSidebar, closeSidebar,
+    toggleSidebar, closeSidebar, setFilter,
     openSearch, closeSearch, performSearch,
     initFilterChips, updateProfileStats
 } from './navigation.js';
@@ -578,6 +578,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Hamburger (mobile) : ouvre le panneau AVEC la liste du filtre courant
     // (audit UX-03 : il s'ouvrait vide tant qu'aucun chip n'avait ete tape) ;
     // un second tap le ferme.
+    // Rappel « Tous » en tete du panneau (audit UX-11) : retire les filtres
+    document.getElementById('side-panel-all')?.addEventListener('click', () => setFilter('all'));
     document.getElementById('sidebar-toggle').addEventListener('click', () => {
         if (document.getElementById('sidebar')?.classList.contains('open')) {
             closeSidePanel();

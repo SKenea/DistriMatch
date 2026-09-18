@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-11/12 Filtres et panneau : defilement visible, « Tous » atteignable, groupes utiles (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
