@@ -541,3 +541,33 @@ export function resolveAvailabilityBadge(product, signalRow, now = Date.now()) {
     if (product && product.available === false) return { label: 'Indisponible', tone: 'unavailable' };
     return { label: 'Au catalogue', tone: 'neutral' };
 }
+
+// Ligne Supabase (snake_case, produits imbriques) -> distributeur de l'app
+// (camelCase). isDemo vient de distributors.is_demo (migration 010) : true
+// = fiche du jeu de donnees factice ; absent (migration pas encore passee)
+// = reel. Le front ne l'ecrit jamais.
+export function mapDistributorRow(d) {
+    return {
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        emoji: d.emoji,
+        address: d.address,
+        city: d.city,
+        lat: d.lat,
+        lng: d.lng,
+        rating: parseFloat(d.rating) || 0,
+        reviewCount: d.review_count || 0,
+        status: d.status || 'verified',
+        lastVerified: d.last_verified,
+        priceRange: d.price_range,
+        isUserAdded: d.is_user_added || false,
+        isDemo: d.is_demo === true,
+        products: (d.products || []).map(p => ({
+            id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
+            name: p.name,
+            price: parseFloat(p.price) || 0,
+            available: p.available
+        }))
+    };
+}

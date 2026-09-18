@@ -61,6 +61,7 @@ function renderSidePanelItem(d, extraClass = '') {
                         ? `<span class="side-panel-item-rating">${d.rating?.toFixed(1) || '?'} ★</span>`
                         : `<span class="side-panel-item-new">Nouveau</span>`}
                     ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
+                    ${d.isDemo ? '<span class="demo-tag">Démo</span>' : ''}
                 </div>
                 <div class="side-panel-item-verified is-${fresh.state}">${escapeHTML(fresh.label)}</div>
             </div>
@@ -386,6 +387,9 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
 
     // Header
     document.getElementById('dist-modal-name').textContent = distributor.name;
+    // Fiche fictive (distributors.is_demo, migration 010) : tag « Démo », frere du h2
+    const demoTag = document.getElementById('dist-modal-demo');
+    if (demoTag) demoTag.hidden = !distributor.isDemo;
     // Rating : on n'affiche pas "5.0 ★★★★★ (0)" quand il n'y a aucun
     // avis, c'est trompeur (les user-added partent a 5.0 par defaut). A
     // la place : "Pas encore d'avis" explicite.
@@ -422,8 +426,11 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // A propos
     document.getElementById('dist-apropos-address').textContent = distributor.address || 'Adresse inconnue';
     document.getElementById('dist-apropos-distance').textContent = distance || 'Distance non disponible';
+    // « Ajouté par la communauté » ne s'affiche pas pour une fiche fictive : la demo prime
     const addedRow = document.getElementById('dist-apropos-added-row');
-    if (addedRow) addedRow.style.display = distributor.isUserAdded ? 'flex' : 'none';
+    if (addedRow) addedRow.style.display = (distributor.isUserAdded && !distributor.isDemo) ? 'flex' : 'none';
+    const demoRow = document.getElementById('dist-apropos-demo-row');
+    if (demoRow) demoRow.style.display = distributor.isDemo ? 'flex' : 'none';
 
     // Produits : mode edit (boutons CRUD) ou readonly
     renderProductsList(distributor, 'dist-products-list', { readonly: !editMode });

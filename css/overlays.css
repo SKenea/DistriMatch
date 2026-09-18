@@ -1216,3 +1216,13 @@
 }
 .side-panel-all:hover { background: var(--light); }
 .side-panel-all[hidden] { display: none; }
+
+/* Titre de fiche + tag « Démo » sur la meme ligne (frere du h2) */
+.dist-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0 0 0.5rem;
+}
+.dist-modal-title h2 { margin: 0; }

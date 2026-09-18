@@ -19,7 +19,7 @@ import {
     saveConversations, loadConversations,
     saveNotificationPrefs, loadNotificationPrefs,
     saveNotificationQueue, loadNotificationQueue,
-    loadUserDistributors, saveUserDistributor, getLevelInfo
+    loadUserDistributors, saveUserDistributor, getLevelInfo, mapDistributorRow
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -113,28 +113,7 @@ async function loadDistributorsFromSupabase() {
         if (error) throw error;
         if (!data || data.length === 0) return null;
 
-        return data.map(d => ({
-            id: d.id,
-            name: d.name,
-            type: d.type,
-            emoji: d.emoji,
-            address: d.address,
-            city: d.city,
-            lat: d.lat,
-            lng: d.lng,
-            rating: parseFloat(d.rating) || 0,
-            reviewCount: d.review_count || 0,
-            status: d.status || 'verified',
-            lastVerified: d.last_verified,
-            priceRange: d.price_range,
-            isUserAdded: d.is_user_added || false,
-            products: (d.products || []).map(p => ({
-                id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
-                name: p.name,
-                price: parseFloat(p.price) || 0,
-                available: p.available
-            }))
-        }));
+        return data.map(mapDistributorRow);
     } catch (e) {
         console.warn('[DistriMatch] Erreur chargement Supabase:', e.message);
         return null;
@@ -152,12 +131,13 @@ async function loadDistributors() {
             const response = await fetch('data/distributors.json');
             if (!response.ok) throw new Error('Fetch failed');
             const data = await response.json();
-            AppState.distributors = data.distributors;
+            // Le JSON de repli est la maquette : tout est fictif (cf. 010_is_demo)
+            AppState.distributors = data.distributors.map(d => ({ ...d, isDemo: true }));
             AppState.typeConfig = data.typeConfig;
             console.log('[DistriMatch] Donnees chargees via fetch:', AppState.distributors.length, 'distributeurs');
         } catch (error) {
             console.log('[DistriMatch] Mode fichier local - utilisation des donnees embarquees');
-            AppState.distributors = EMBEDDED_DATA.distributors;
+            AppState.distributors = EMBEDDED_DATA.distributors.map(d => ({ ...d, isDemo: true }));
             AppState.typeConfig = EMBEDDED_DATA.typeConfig;
             console.log('[DistriMatch] Donnees embarquees:', AppState.distributors.length, 'distributeurs');
         }

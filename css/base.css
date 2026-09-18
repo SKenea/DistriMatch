@@ -577,4 +577,21 @@ body {
         scroll-behavior: auto !important;
     }
 }
-
+
+/* Tag « Démo » (distributors.is_demo) : pill discrete, 12 px (plancher de la
+   section 21), couleur texte secondaire sur fond transparent (le contraste se
+   mesure sur le fond parent). Fiche, panneau lateral, tableau de bord. */
+.demo-tag {
+    display: inline-block;
+    padding: 0 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-muted);
+    background: transparent;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.demo-tag[hidden] { display: none; }
