@@ -2057,3 +2057,29 @@ test.describe('29. Vues cachees et police des controles', () => {
         expect(r.search).toBe(true);
     });
 });
+
+// ============================================
+// 30. ECRAN D'ACCUEIL : PROMETTRE CE QUE L'APP FAIT (audit UX-15)
+// ============================================
+
+test.describe('30. Ecran d\'accueil', () => {
+    test.beforeEach(async () => { /* override : pas de setupApp */ });
+
+    test('les benefices parlent de fraicheur, de signal et de rythme ; ni « Alertes stock » ni territoire', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForSelector('#geoloc-btn', { state: 'visible', timeout: 15000 });
+        const text = await page.textContent('#geoloc-overlay');
+        expect(text).toContain('Vérifié il y a');
+        expect(text).toContain('en un tap');
+        expect(text).toContain('Habituellement plein');
+        expect(text).not.toContain('Alertes stock');
+        expect(text).not.toMatch(/C[oô]te Basque/);
+        expect(await page.title()).not.toMatch(/C[oô]te Basque/);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth);
+        expect(overflow).toBeLessThanOrEqual(390);
+        await context.close();
+    });
+});

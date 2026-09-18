@@ -329,6 +329,20 @@ describe('accents des libelles UI (audit UX-16)', () => {
     });
 });
 
+// ============================================
+// AUCUN TERRITOIRE EN DUR (CLAUDE.md, audit UX-15)
+// ============================================
+
+describe('aucun territoire en dur dans index.html et manifest.json', () => {
+    const root = new URL('../', import.meta.url);
+    it('ni « Côte Basque » ni « Cote Basque » dans les textes servis', () => {
+        for (const f of ['index.html', 'manifest.json']) {
+            const src = readFileSync(new URL(f, root), 'utf8');
+            assert.ok(!/C[oô]te Basque/i.test(src), `${f} contient un territoire en dur`);
+        }
+    });
+});
+
 describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
     const cssDir = new URL('../css/', import.meta.url);
     const base = readFileSync(new URL('base.css', cssDir), 'utf8');

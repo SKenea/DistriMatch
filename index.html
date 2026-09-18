@@ -14,23 +14,23 @@
 
     <!-- Open Graph (previews sur WhatsApp, Slack, iMessage, Discord, Facebook, etc.) -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="DistriMatch - Trouve ta street food">
-    <meta property="og:description" content="Le Waze des distributeurs automatiques de la Côte Basque. Trouve une pizza, du fromage, des frites ou des glacons près de toi.">
+    <meta property="og:title" content="DistriMatch - Sache avant d'y aller">
+    <meta property="og:description" content="Le Waze des distributeurs automatiques : l'heure de la dernière vérification sur chaque machine, et un signal en un tap pour les suivants.">
     <meta property="og:url" content="https://skenea.github.io/DistriMatch/">
     <meta property="og:image" content="https://skenea.github.io/DistriMatch/images/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="DistriMatch - Application carte des distributeurs alimentaires de la Côte Basque">
+    <meta property="og:image:alt" content="DistriMatch - Carte des distributeurs automatiques, vérifiés par la communauté">
     <meta property="og:locale" content="fr_FR">
     <meta property="og:site_name" content="DistriMatch">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="DistriMatch - Trouve ta street food">
-    <meta name="twitter:description" content="Le Waze des distributeurs automatiques de la Côte Basque.">
+    <meta name="twitter:title" content="DistriMatch - Sache avant d'y aller">
+    <meta name="twitter:description" content="Le Waze des distributeurs automatiques, vérifiés par la communauté.">
     <meta name="twitter:image" content="https://skenea.github.io/DistriMatch/images/og-image.png">
 
-    <title>DistriMatch - Côte Basque</title>
+    <title>DistriMatch</title>
 
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="favicon.png">
@@ -47,44 +47,36 @@
     <!-- Overlay geolocalisation (pre-permission prompt) -->
     <div id="geoloc-overlay" class="geoloc-overlay">
         <div class="geoloc-content">
-            <h2 id="geoloc-title">Trouve ta street food</h2>
-            <p class="geoloc-subtitle">Les distributeurs et producteurs locaux de la Côte Basque, classés par distance.</p>
+            <h2 id="geoloc-title">Sache avant d'y aller</h2>
+            <p class="geoloc-subtitle">Les distributeurs automatiques autour de toi, avec l'heure de la dernière vérification.</p>
 
-            <!-- 3 benefices avec icones -->
+            <!-- 3 benefices (audit UX-15) : ce que l'app fait vraiment, aucun territoire en dur -->
             <div class="geoloc-benefits">
                 <div class="geoloc-benefit">
                     <div class="geoloc-benefit-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                        </svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                     </div>
                     <div class="geoloc-benefit-text">
-                        <strong>Autour de toi</strong>
-                        <span>Distributeurs classés par distance</span>
+                        <strong>Vérifié il y a 12 min</strong>
+                        <span>L'heure de la dernière vérification, sur chaque machine</span>
                     </div>
                 </div>
                 <div class="geoloc-benefit">
                     <div class="geoloc-benefit-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                        </svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     </div>
                     <div class="geoloc-benefit-text">
-                        <strong>Alertes stock</strong>
-                        <span>Sois prévenu quand tes produits reviennent</span>
+                        <strong>Dis ce que tu vois, en un tap</strong>
+                        <span>Sans compte : la communauté tient l'info à jour</span>
                     </div>
                 </div>
                 <div class="geoloc-benefit">
                     <div class="geoloc-benefit-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                        </svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 4 4 5-6"/></svg>
                     </div>
                     <div class="geoloc-benefit-text">
-                        <strong>Infos en direct</strong>
-                        <span>Avis et disponibilités par la communauté</span>
+                        <strong>Habituellement plein le matin</strong>
+                        <span>Le rythme de chaque machine, appris des signaux</span>
                     </div>
                 </div>
             </div>
