@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-02 Entrer sans geolocalisation, et pas de mur apres un scan QR (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 

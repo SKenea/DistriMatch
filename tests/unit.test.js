@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf
 } from '../js/utils.js';
 
 import {
@@ -248,6 +248,22 @@ describe('describeRhythm (rythme infere depuis product_rhythm)', () => {
         assert.equal(describeRhythm(null), null);
         assert.equal(describeRhythm(undefined), null);
         assert.equal(describeRhythm([row('nuit', 50, 100)]), null);
+    });
+});
+
+// ============================================
+// CENTRE DE CARTE SANS POSITION (audit UX-02) : centroidOf
+// ============================================
+
+describe('centroidOf (centre des distributeurs charges)', () => {
+    it('moyenne des coordonnees valides, ignore les points invalides', () => {
+        const c = centroidOf([{ lat: 43, lng: -1 }, { lat: 45, lng: -3 }, { lat: 'x', lng: 0 }, null, { lat: '44', lng: '-2' }]);
+        assert.deepEqual(c, { lat: 44, lng: -2 });
+    });
+    it('null sans point (aucune coordonnee en dur)', () => {
+        assert.equal(centroidOf([]), null);
+        assert.equal(centroidOf(null), null);
+        assert.equal(centroidOf([{ lat: null, lng: null }]), null);
     });
 });
 

@@ -514,3 +514,16 @@ export function describeRhythm(rows) {
     if (empty.length) parts.push(`${full.length ? 'souvent' : 'Souvent'} vide ${joinSlotLabels(empty)}`);
     return parts.join(', ');
 }
+
+// Centre geometrique d'une liste de points { lat, lng } (coordonnees
+// invalides ignorees), ou null si aucun point. Sert a centrer la carte sans
+// position utilisateur : aucune coordonnee en dur, le centre vient des donnees.
+export function centroidOf(points) {
+    const valid = (Array.isArray(points) ? points : []).filter(p =>
+        p && p.lat !== null && p.lat !== '' && p.lng !== null && p.lng !== ''
+            && Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng))
+    );
+    if (valid.length === 0) return null;
+    const sum = valid.reduce((acc, p) => ({ lat: acc.lat + Number(p.lat), lng: acc.lng + Number(p.lng) }), { lat: 0, lng: 0 });
+    return { lat: sum.lat / valid.length, lng: sum.lng / valid.length };
+}
