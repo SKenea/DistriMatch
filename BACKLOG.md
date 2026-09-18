@@ -15,8 +15,9 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/.
      Les 6 tickets Priorite haute sont LIVRES le 2026-09-18 (PR #109 a #114, session
-     /auto 6). Prochains items : Priorite normale (7 tickets), puis les 4 decisions de
-     « A clarifier » et les chantiers strategie (import OSM). -->
+     /auto 6) et les 7 tickets Priorite normale le meme jour (PR #116 a #122, session
+     /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
+     puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
 ## Priorite normale
 
@@ -26,7 +27,7 @@
      les prochains items viennent de "Chantiers strategie", a cadrer avec
      Stephane (import OSM en premier). -->
 
-<!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
+<!-- Audit UX mobile du 2026-09-18 : les 7 finitions P2 sont livrees (PR #116 a #122). -->
 
 
 ## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
