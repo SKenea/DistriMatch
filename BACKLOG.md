@@ -8,7 +8,6 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- UX-15 Ecran d'accueil : promettre ce que l'app fait (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
@@ -29,17 +28,6 @@
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
 
-- [ ] UX-15 Ecran d'accueil : promettre ce que l'app fait
-  - Contexte : capture 01 : « Alertes stock » (pas encore livre) et « Avis … par la
-    communaute » ; la vraie promesse (fraicheur horodatee, signal en un tap, rythme) est
-    absente ; « Cote Basque » en dur dans la phrase d'accroche.
-  - Proposition (Stephane peut retoucher les textes) : titre « Sache avant d'y aller »,
-    sous-titre « Les distributeurs autour de toi, avec l'heure de la derniere
-    verification. » ; benefices : « Vérifié il y a 12 min » / « Dis ce que tu vois, en un
-    tap, sans compte » / « Habituellement plein le matin ». Le nom de la zone vient des
-    donnees (ville la plus frequente des distributeurs charges) ou disparait.
-  - Acceptance : textes remplaces, aucun nom de territoire en dur dans index.html ; e2e :
-    l'overlay ne contient ni « Alertes stock » ni « Cote Basque ».
 
 ## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
 
@@ -193,3 +181,4 @@
 - [x] 2026-09-18 UX-16 Accents des libelles UI : passe d'accentuation sur index.html (texte, attributs visibles) et les chaines JS hors commentaires ; +2 unit, attentes e2e alignees ; import map v46 (PR #119, commit 5cbc990)
 - [x] 2026-09-18 UX-18/19 Favori et menu avatar : libelle « Favori » constant + aria-pressed, toasts et compteur en « favoris », icones coeur, items du menu avatar >= 44 px ; +2 e2e ; panels v35, import map v47 (PR #120, commit 84ccc61)
 - [x] 2026-09-18 UX-20/21 Vues cachees et chat ferme inertes (attribut inert, JS + HTML), focus-trap avec second essai, controles en police du site (font: inherit) ; +2 e2e ; base v31, import map v48 (PR #121, commit df3ef1c)
+- [x] 2026-09-18 UX-15 Ecran d'accueil : « Sache avant d'y aller », 3 benefices (fraicheur horodatee, signal en un tap, rythme appris), title / meta / manifest sans territoire ; +1 unit +1 e2e (PR #122, commit 9c7dba9)
