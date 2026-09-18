@@ -1559,3 +1559,6 @@
 .product-item-clean.is-available { border-left-color: var(--success); }
 .product-item-clean.is-absent { border-left-color: var(--gray-light); }
 .product-item-clean.is-unavailable { border-left-color: var(--danger); }
+
+/* « Pas regarde » par defaut : neutre, pas un choix fait (audit UX-09) */
+.availability-seg-btn.is-default { color: var(--text-muted); font-weight: 400; }

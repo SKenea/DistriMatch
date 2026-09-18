@@ -140,6 +140,8 @@ export function openAvailabilityPanel() {
     machineState = null;
     setPanelError(null);
     renderPanel(distributor);
+    // Une seule croix a l'ecran (audit UX-09) : celle de la fiche s'efface
+    document.getElementById('dist-modal-overlay')?.classList.add('has-panel');
     modal.classList.add('active');
     pushLayer('signal', closeAvailabilityPanel);   // bouton retour = fermer (audit UX-04)
     activateFocusTrap(modal, closeAvailabilityPanel);
@@ -150,6 +152,7 @@ export function closeAvailabilityPanel() {
     const modal = getModal();
     if (!modal) return;
     modal.classList.remove('active');
+    document.getElementById('dist-modal-overlay')?.classList.remove('has-panel');
     popLayer('signal');
     deactivateFocusTrap(modal);
 }
@@ -171,7 +174,7 @@ function renderPanel(distributor) {
             <div class="availability-row" data-product-id="${escapeHTML(String(p.id))}">
                 <span class="availability-name">${escapeHTML(p.name)}</span>
                 <div class="availability-seg" role="group" aria-label="${escapeHTML(p.name)}">
-                    ${PRODUCT_STATES.map(s => `<button type="button" class="availability-seg-btn${s === 'unseen' ? ' is-selected' : ''}" data-state="${s}" aria-pressed="${s === 'unseen'}">${STATE_LABELS[s]}</button>`).join('')}
+                    ${PRODUCT_STATES.map(s => `<button type="button" class="availability-seg-btn${s === 'unseen' ? ' is-default' : ''}" data-state="${s}" aria-pressed="false">${STATE_LABELS[s]}</button>`).join('')}
                 </div>
             </div>`).join('');
 

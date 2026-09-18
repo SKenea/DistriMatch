@@ -28,14 +28,6 @@
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
 
-- [ ] UX-09 Modale « Il reste quoi ? » : une seule croix, « Pas regarde » neutre
-  - Contexte : capture 09 : deux croix superposees (fiche + modale) ; « Pas regarde »
-    preselectionne en gras ressemble a un choix deja fait.
-  - Acceptance : la croix de la fiche est masquee tant que la modale est active ; « Pas
-    regarde » en style neutre (pas de gras, gris) tant qu'aucun choix ; e2e : modale
-    ouverte -> `#dist-modal-close` non visible ; `.availability-seg-btn[data-state="unseen"]`
-    sans classe de selection par defaut.
-
 - [ ] UX-11/12 Filtres et panneau : defilement visible, « Tous » atteignable, groupes utiles
   - Contexte : capture 04. 3 chips sur 12 visibles sans indice de defilement ; le panneau
     ouvert cache les chips (« Tous » inaccessible sans fermer) ; groupes replies par
@@ -238,3 +230,4 @@
 - [x] 2026-09-18 UX-04 Bouton retour : js/history.js (pushLayer / popstate / popLayer), couches fiche, panneau, modale de signal, chat, confirmation, vues ; +4 e2e ; import map v41 (PR #113, commit 57f3e21)
 - [x] 2026-09-18 UX-05/13 Fiche : fraicheur sous le nom (sa propre ligne, plus de separateur orphelin), rythme, bandeau, puis note / type / prix ; hero sans photo 120 px emoji seul ; « Il reste quoi ? » en CTA primaire pleine largeur au-dessus des actions secondaires ; +1 e2e ; overlays v31, import map v42 (PR #114, commit 5bdd138)
 - [x] 2026-09-18 Fiche : badge produit aligne sur le dernier signal frais (resolveAvailabilityBadge : Vu dispo / Vu absent, sinon Au catalogue ou Indisponible), bordure de l'item alignee ; +3 unit +1 e2e ; panels v33, import map v43 (PR #116, commit 85e0eff)
+- [x] 2026-09-18 UX-09 Modale de signal : croix de la fiche masquee tant que la modale est active, « Pas regardé » neutre par defaut (is-default, aria-pressed=false) ; +1 e2e ; overlays v32, panels v34, import map v44 (PR #117, commit 52a3a68)

@@ -1196,3 +1196,6 @@
 }
 .dist-cta-btn:hover { background: var(--primary-dark); }
 .dist-cta-btn svg { flex: 0 0 auto; }
+
+/* Modale « Il reste quoi ? » ouverte : une seule croix a l'ecran (audit UX-09) */
+#dist-modal-overlay.has-panel #dist-modal-close { visibility: hidden; }
