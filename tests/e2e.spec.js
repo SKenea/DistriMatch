@@ -1876,3 +1876,41 @@ test.describe('24. Hierarchie de la fiche', () => {
         expect(r.typeOccurrences).toBe(1);
     });
 });
+
+// ============================================
+// 25. BADGE DE DISPO PRODUIT (audit UX-06)
+// ============================================
+// Le badge suit le dernier signal frais ("Vu absent") et reste neutre
+// ("Au catalogue") sans signal : plus de "Disponible" a cote de "vu absent".
+
+const AVAIL_ROUTE = '**/rest/v1/product_availability*';
+
+test.describe('25. Badge de dispo produit', () => {
+    test('signal absent recent -> "Vu absent" ; sans signal -> "Au catalogue"', async ({ page }) => {
+        const first = await page.evaluate(() => {
+            const d = window.AppState.distributors.find(x => (x.products || []).some(p => p.id != null));
+            return d ? { id: d.id, productId: d.products.find(p => p.id != null).id } : null;
+        });
+        expect(first).not.toBeNull();
+        await page.route(AVAIL_ROUTE, route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify([{ distributor_id: first.id, product_id: first.productId, state: 'absent', created_at: new Date().toISOString(), source: 'anon', weight: 0.5 }])
+        }));
+        await page.evaluate(id => window.openDistributorModal(id), first.id);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        const item = page.locator(`#dist-products-list .product-item-clean[data-product-id="${first.productId}"]`);
+        await expect(item.locator('.product-availability-clean')).toHaveText('Vu absent');
+        await expect(item).toHaveClass(/is-absent/);
+        await expect(item.locator('.product-seen')).toContainText('vu absent');
+        expect(await page.locator('#dist-products-list .product-availability-clean', { hasText: /^Disponible$/ }).count()).toBe(0);   // "Indisponible" reste legitime
+
+        await page.click('#dist-modal-close');
+        await page.unroute(AVAIL_ROUTE);
+        await page.route(AVAIL_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.evaluate(id => window.openDistributorModal(id), first.id);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await page.waitForTimeout(600);
+        await expect(item.locator('.product-availability-clean')).toHaveText('Au catalogue');
+        await expect(item).toHaveClass(/is-neutral/);
+    });
+});

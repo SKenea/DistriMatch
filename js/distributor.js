@@ -6,7 +6,7 @@ import { AppState, Conversations, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, formatDistance, showToast,
     updateImplicitProfile, saveToLocalStorage
-} from './utils.js';
+, resolveAvailabilityBadge } from './utils.js';
 import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
@@ -114,13 +114,15 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
 
     productsList.innerHTML = distributor.products.map((p, index) => {
         if (readonly) {
+            // Badge neutre tant qu'aucun signal frais (availability.js le met a jour)
+            const badge = resolveAvailabilityBadge(p, null);
             return `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
+        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'} is-${badge.tone}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
             <div class="product-info-clean">
                 <div class="product-name-clean">${escapeHTML(p.name)}</div>
             </div>
             <div class="product-actions-clean">
-                <span class="product-availability-clean">${p.available ? 'Disponible' : 'Indisponible'}</span>
+                <span class="product-availability-clean is-${badge.tone}">${badge.label}</span>
             </div>
         </div>`;
         }

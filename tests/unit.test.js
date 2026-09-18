@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveAvailabilityBadge
 } from '../js/utils.js';
 
 import {
@@ -264,6 +264,34 @@ describe('centroidOf (centre des distributeurs charges)', () => {
         assert.equal(centroidOf([]), null);
         assert.equal(centroidOf(null), null);
         assert.equal(centroidOf([{ lat: null, lng: null }]), null);
+    });
+});
+
+// ============================================
+// BADGE DE DISPO PRODUIT (audit UX-06) : resolveAvailabilityBadge
+// ============================================
+// Le signal frais (< 2 h) prime ; sinon le flag editorial ne dit rien de
+// l'instant : "Au catalogue" (neutre) ou "Indisponible" si retire.
+
+describe('resolveAvailabilityBadge (badge produit de la fiche)', () => {
+    const NOW = Date.parse('2026-09-18T12:00:00Z');
+    const row = (state, minutesAgo) => ({ product_id: 1, state, created_at: new Date(NOW - minutesAgo * 60000).toISOString() });
+
+    it('signal frais : vu dispo (vert) / vu absent (gris), quel que soit le flag', () => {
+        assert.deepEqual(resolveAvailabilityBadge({ available: false }, row('available', 10), NOW), { label: 'Vu dispo', tone: 'available' });
+        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('absent', 119), NOW), { label: 'Vu absent', tone: 'absent' });
+    });
+
+    it('signal perime (>= 2 h) ou etat machine : retour au flag editorial', () => {
+        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('absent', 120), NOW), { label: 'Au catalogue', tone: 'neutral' });
+        assert.deepEqual(resolveAvailabilityBadge({ available: false }, row('available', 300), NOW), { label: 'Indisponible', tone: 'unavailable' });
+        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('empty', 5), NOW), { label: 'Au catalogue', tone: 'neutral' });
+    });
+
+    it('aucun signal : "Au catalogue" si disponible au catalogue, "Indisponible" sinon', () => {
+        assert.deepEqual(resolveAvailabilityBadge({ available: true }, null, NOW), { label: 'Au catalogue', tone: 'neutral' });
+        assert.deepEqual(resolveAvailabilityBadge({ available: false }, undefined, NOW), { label: 'Indisponible', tone: 'unavailable' });
+        assert.deepEqual(resolveAvailabilityBadge(null, { state: 'available', created_at: 'n/a' }, NOW), { label: 'Au catalogue', tone: 'neutral' });
     });
 });
 

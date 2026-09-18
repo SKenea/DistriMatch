@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- Fiche : le badge statique "Disponible" contredit le dernier signal produit (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 

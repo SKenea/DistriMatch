@@ -527,3 +527,17 @@ export function centroidOf(points) {
     const sum = valid.reduce((acc, p) => ({ lat: acc.lat + Number(p.lat), lng: acc.lng + Number(p.lng) }), { lat: 0, lng: 0 });
     return { lat: sum.lat / valid.length, lng: sum.lng / valid.length };
 }
+
+// Badge de dispo d'un produit dans la fiche (audit UX-06) : le dernier signal
+// frais (< FRESH_MAX_AGE_MS) prime ; sans signal frais, le flag editorial ne
+// dit rien de l'instant -> "Au catalogue" (neutre), ou "Indisponible" si le
+// produit est retire du catalogue. Retourne { label, tone }.
+export function resolveAvailabilityBadge(product, signalRow, now = Date.now()) {
+    const ts = signalRow && signalRow.created_at ? new Date(signalRow.created_at).getTime() : NaN;
+    if (!Number.isNaN(ts) && now - ts < FRESH_MAX_AGE_MS) {
+        if (signalRow.state === 'available') return { label: 'Vu dispo', tone: 'available' };
+        if (signalRow.state === 'absent') return { label: 'Vu absent', tone: 'absent' };
+    }
+    if (product && product.available === false) return { label: 'Indisponible', tone: 'unavailable' };
+    return { label: 'Au catalogue', tone: 'neutral' };
+}
