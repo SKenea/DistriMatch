@@ -28,15 +28,6 @@
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
 
-- [ ] UX-18/19 Favori et menu avatar : un seul mot, etat accessible, cibles 44 px
-  - Contexte : le bouton passe de « Favori » a « Retirer » sans `aria-pressed`, toast
-    « Tu es maintenant abonne a … », vue « Mes Favoris / 0 abonnement » avec une cloche en
-    etat vide ; items du menu avatar 176 x 37 px.
-  - Acceptance : libelle « Favori » constant + `aria-pressed` + coeur plein / vide ;
-    vocabulaire « favori » partout (compteur, toast « Ajoute a tes favoris »), icone coeur
-    dans l'etat vide ; `.profile-menu-item` >= 44 px. E2e : `aria-pressed` bascule au tap ;
-    la section 14 (cibles) couvre le menu avatar ouvert.
-
 - [ ] UX-20/21 Vues cachees inertes, controles avec la police du site
   - Contexte : `.view-page.view-hidden` et `#chat-modal` restent `display: block/flex`,
     `visibility: visible`, translates hors ecran : 6 focusables atteignables au clavier et
@@ -210,3 +201,4 @@
 - [x] 2026-09-18 UX-09 Modale de signal : croix de la fiche masquee tant que la modale est active, « Pas regardé » neutre par defaut (is-default, aria-pressed=false) ; +1 e2e ; overlays v32, panels v34, import map v44 (PR #117, commit 52a3a68)
 - [x] 2026-09-18 UX-11/12 Filtres et panneau : fondu de defilement des chips, bouton « Tous » en tete du panneau filtre, compte dans le titre (plus de toast), tranches vides masquees ; +1 e2e, 3ter adapte ; map v27, overlays v33, import map v45 (PR #118, commit b25daa3)
 - [x] 2026-09-18 UX-16 Accents des libelles UI : passe d'accentuation sur index.html (texte, attributs visibles) et les chaines JS hors commentaires ; +2 unit, attentes e2e alignees ; import map v46 (PR #119, commit 5cbc990)
+- [x] 2026-09-18 UX-18/19 Favori et menu avatar : libelle « Favori » constant + aria-pressed, toasts et compteur en « favoris », icones coeur, items du menu avatar >= 44 px ; +2 e2e ; panels v35, import map v47 (PR #120, commit 84ccc61)
