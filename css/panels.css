@@ -68,12 +68,12 @@
 }
 
 .chat-subscribe:hover {
-    color: var(--primary);
+    color: var(--primary-text);
     background: rgba(var(--primary-rgb), 0.1);
 }
 
 .chat-subscribe.is-subscribed {
-    color: var(--primary);
+    color: var(--primary-text);
 }
 
 .chat-subscribe.is-subscribed svg {
@@ -128,7 +128,7 @@
 
 .chat-status {
     font-size: 0.75rem;
-    color: var(--success);
+    color: var(--success-dark);
 }
 
 /* Chat messages */
@@ -196,7 +196,7 @@
 }
 
 .chat-message.user .message-content {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
     border-bottom-right-radius: var(--radius-xs);
 }
@@ -219,7 +219,7 @@
     padding: 0.5rem 0.875rem;
     background: var(--white);
     border: 1.5px solid var(--primary);
-    color: var(--primary);
+    color: var(--primary-text);
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -229,7 +229,7 @@
 }
 
 .quick-reply-btn:hover {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -254,7 +254,7 @@
 }
 
 .chat-input-area input:focus {
-    border-color: var(--primary);
+    border-color: var(--primary-text);
     background: var(--white);
 }
 
@@ -262,7 +262,7 @@
     width: 44px;
     height: 44px;
     border: none;
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
     border-radius: 50%;
     cursor: pointer;
@@ -330,7 +330,7 @@
 }
 
 .back-btn:hover {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -432,7 +432,7 @@
 }
 
 .subscription-distance {
-    color: var(--primary);
+    color: var(--primary-text);
     font-weight: 600;
 }
 
@@ -459,11 +459,11 @@
     transition: all 0.2s;
     flex-shrink: 0;
     align-self: center;
-    color: var(--primary);
+    color: var(--primary-text);
 }
 
 .btn-unsubscribe:hover {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -564,7 +564,7 @@
 .points-value {
     font-size: 2.25rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-text);
     line-height: 1;
 }
 
@@ -602,7 +602,7 @@
 .stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-text);
     margin-bottom: 0.125rem;
 }
 
@@ -640,7 +640,7 @@
 }
 
 .preference-tag.strong {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -686,7 +686,7 @@
 
 .profile-menu-auth {
     font-weight: 600;
-    color: var(--primary);
+    color: var(--primary-text);
 }
 
 /* ===== Barre de progression niveau (Local Guides) ===== */
@@ -743,7 +743,7 @@
 .contrib-value {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-text);
 }
 
 /* ===== Vue Compte (page de reglages standard : cartes nettes a bordure
@@ -775,7 +775,7 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: var(--primary);
+    background: var(--primary-text);
     color: #fff;
     display: flex;
     align-items: center;
@@ -840,7 +840,7 @@
     padding: 0.7rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--primary);
-    background: var(--primary);
+    background: var(--primary-text);
     color: #fff;
     font-size: 0.9rem;
     font-weight: 600;
@@ -867,7 +867,7 @@
 /* --- Labels de section --- */
 .account-section-label {
     margin: 1.5rem 0.25rem 0.5rem;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1051,8 +1051,8 @@
 .availability-seg-btn:last-child { border-right: none; }
 .availability-seg-btn:hover { background: var(--light); }
 .availability-seg-btn.is-selected { background: var(--light); color: var(--dark); font-weight: 600; }
-.availability-seg-btn.is-selected[data-state="available"] { background: rgba(22, 163, 74, 0.12); color: #15803d; }
-.availability-seg-btn.is-selected[data-state="absent"] { background: rgba(214, 40, 40, 0.10); color: var(--danger); }
+.availability-seg-btn.is-selected[data-state="available"] { background: rgba(22, 163, 74, 0.12); color: #166534; }
+.availability-seg-btn.is-selected[data-state="absent"] { background: rgba(214, 40, 40, 0.10); color: #991B1B; }
 
 .availability-empty {
     margin: 0;
@@ -1095,7 +1095,7 @@
 .availability-machine-btn.is-selected {
     background: rgba(214, 40, 40, 0.10);
     border-color: var(--danger);
-    color: var(--danger);
+    color: #991B1B;
 }
 
 .btn-primary-clean[disabled] {
@@ -1206,7 +1206,7 @@
 }
 
 .product-price-clean {
-    color: var(--primary);
+    color: var(--primary-text);
     font-weight: 700;
     font-size: 0.9rem;
 }
@@ -1239,7 +1239,7 @@
 }
 
 .btn-primary-clean {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -1296,7 +1296,7 @@
 
 .modal-input-clean:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--primary-text);
 }
 
 .modal-actions-clean {
@@ -1351,11 +1351,11 @@
 }
 
 .report-type-btn:hover {
-    border-color: var(--primary);
+    border-color: var(--primary-text);
 }
 
 .report-type-btn.selected {
-    border-color: var(--primary);
+    border-color: var(--primary-text);
     background: rgba(var(--primary-rgb), 0.1);
 }
 
@@ -1378,8 +1378,8 @@
 }
 
 .report-points {
-    font-size: 0.65rem;
-    color: var(--success);
+    font-size: 0.75rem;
+    color: var(--success-dark);
     font-weight: 600;
 }
 
@@ -1522,7 +1522,7 @@
     white-space: nowrap;
 }
 .stats-row-sub { font-size: 0.75rem; color: var(--text-muted); }
-.stats-row-sub.is-fresh { color: #16a34a; }
+.stats-row-sub.is-fresh { color: #15803d; }
 .stats-row-value {
     flex: 0 0 auto;
     font-weight: 600;
