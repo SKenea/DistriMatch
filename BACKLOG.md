@@ -89,7 +89,10 @@
     Les deux fonctions sont SECURITY DEFINER et revoquees pour anon / authenticated : le
     cron tourne avec le role du dashboard, rien n'est expose.
 
-- [ ] US-3 Des fiches fictives identifiees, pas supprimees (decision Stephane 2026-09-18)
+- [x] US-3 Des fiches fictives identifiees, pas supprimees (decision Stephane 2026-09-18) :
+  LIVREE le 2026-09-18 (PR #125 front + tests, migration 010 executee par Claude via
+  `scripts/supabase-sql.mjs`, demo regeneree : 29 fiches demo / 1 reelle, garde verifiee
+  en UPDATE et en INSERT, tags visibles en prod mobile).
   - En tant que Stephane, je veux garder un jeu de donnees factice tout en sachant, ligne
     par ligne dans la base, ce qui est vrai et ce qui ne l'est pas, afin de faire des
     demos sans jamais polluer une vraie machine ni tromper un visiteur.

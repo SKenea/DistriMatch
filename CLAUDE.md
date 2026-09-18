@@ -33,6 +33,11 @@ node --test --test-name-pattern="escapeHTML" tests/unit.test.js   # un seul test
 npx playwright test tests/e2e.spec.js --workers=1
 npx playwright test -g "nom du test"                              # un seul test
 PWDEBUG_HEADED=1 npx playwright test -g "..."                     # headed + slowMo (debug visuel)
+
+# SQL Supabase (migrations, seed, verifications) via l'API de gestion, en tant que postgres.
+# Jeton d'acces dans .env.local (ignore par git), portee Database read-write sur le projet.
+node scripts/supabase-sql.mjs supabase/010_is_demo.sql
+node scripts/supabase-sql.mjs -e "select count(*) from distributors;"
 ```
 
 Les tests e2e injectent une geoloc Bayonne et pilotent l'app via les globals `window.AppState` / `window.openDistributorModal`. Verification visuelle possible via le MCP Playwright (`.mcp.json`).
@@ -83,7 +88,7 @@ Pas de build : les assets sont versionnes a la main via `?v=N` dans `index.html`
 
 ### Supabase (`supabase/`)
 
-Migrations SQL numerotees, a executer manuellement dans le SQL Editor du dashboard (pas de CLI) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `005_open_writes_for_authenticated` (tout user authentifie peut editer `products` et le `price_range` d'un distributeur, modele collaboratif ; pas de DELETE sur `distributors`/`distributor_photos`), `006_audit_trail` (`updated_at`/`modified_by` par trigger), `007_availability_signals` (table `availability_signals` + vues `product_availability`/`distributor_status` + RPC `confirm_availability` ouverte a l'anonyme avec rate limit, rafraichit `last_verified` ; cf. UC11), `008_events_kpi_rhythm` (table `events` + RPC `log_event` anonyme anti-spam, vues KPI `kpi_*` en agregats, vue `product_rhythm` par tranche horaire locale, colonne `distributors.tz`), `009_demo_data` (fonctions `seed_demo_signals()` / `purge_demo_data()` reservees au SQL Editor : jeu de signaux et d'evenements fictifs marques `demo-`, regenerable, a purger avant le vrai pilote), `010_is_demo` (colonne `distributors.is_demo` + trigger `guard_is_demo` qui empeche l'API de la poser ou de la changer, `seed_demo_signals()` / `purge_demo_data()` limitees aux fiches demo, `kpi_coverage.machines_demo`, `kpi_top_distributors.is_demo`). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
+Migrations SQL numerotees, a executer par `node scripts/supabase-sql.mjs supabase/<fichier>.sql` (API de gestion, jeton dans `.env.local`) ou en les collant dans le SQL Editor du dashboard (pas de CLI Supabase) : `001_schema`, `002_seed`, `003_photos`, `004_rls_hardening` (RPC `submit_report`/`cast_vote` refusent l'anonyme), `005_open_writes_for_authenticated` (tout user authentifie peut editer `products` et le `price_range` d'un distributeur, modele collaboratif ; pas de DELETE sur `distributors`/`distributor_photos`), `006_audit_trail` (`updated_at`/`modified_by` par trigger), `007_availability_signals` (table `availability_signals` + vues `product_availability`/`distributor_status` + RPC `confirm_availability` ouverte a l'anonyme avec rate limit, rafraichit `last_verified` ; cf. UC11), `008_events_kpi_rhythm` (table `events` + RPC `log_event` anonyme anti-spam, vues KPI `kpi_*` en agregats, vue `product_rhythm` par tranche horaire locale, colonne `distributors.tz`), `009_demo_data` (fonctions `seed_demo_signals()` / `purge_demo_data()` reservees au SQL Editor : jeu de signaux et d'evenements fictifs marques `demo-`, regenerable, a purger avant le vrai pilote), `010_is_demo` (colonne `distributors.is_demo` + trigger `guard_is_demo` qui empeche l'API de la poser ou de la changer, `seed_demo_signals()` / `purge_demo_data()` limitees aux fiches demo, `kpi_coverage.machines_demo`, `kpi_top_distributors.is_demo`). Tables utilisees par le front : `distributors`, `products`, `distributor_photos`, `reports`, `votes`.
 
 Projet free-tier : s'il est en pause, les appels echouent en `ERR_NAME_NOT_RESOLVED` et l'app retombe sur le JSON/EMBEDDED_DATA - verifier le dashboard avant de chercher un bug.
 
