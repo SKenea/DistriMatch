@@ -28,18 +28,6 @@
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
 
-- [ ] UX-11/12 Filtres et panneau : defilement visible, « Tous » atteignable, groupes utiles
-  - Contexte : capture 04. 3 chips sur 12 visibles sans indice de defilement ; le panneau
-    ouvert cache les chips (« Tous » inaccessible sans fermer) ; groupes replies par
-    defaut (+1 tap), groupe « A proximite 0 » affiche, toast redondant « Boulangerie &
-    Taloa : 3 distributeur(s) ».
-  - Acceptance : degrade de bord droit sur `#filter-bar` tant que
-    `scrollLeft < scrollWidth - clientWidth` ; le filtre reste changeable panneau ouvert
-    (chips au-dessus du panneau, ou rappel « Tous » en tete de panneau) ; premier groupe
-    non vide ouvert, groupes vides masques ; toast de comptage supprime (le titre du
-    panneau porte le compte). E2e : tap chip -> un `.side-panel-item` visible sans tap
-    supplementaire ; aucun `.toast` apres tap chip.
-
 - [ ] UX-16 Accents des libelles UI
   - Contexte : melange dans l'UI : « Itineraire », « Activite », « Reessayer »,
     « Geolocalisation refusee », « Vérifié a l'instant », « Lien copie », « abonne a »,
@@ -231,3 +219,4 @@
 - [x] 2026-09-18 UX-05/13 Fiche : fraicheur sous le nom (sa propre ligne, plus de separateur orphelin), rythme, bandeau, puis note / type / prix ; hero sans photo 120 px emoji seul ; « Il reste quoi ? » en CTA primaire pleine largeur au-dessus des actions secondaires ; +1 e2e ; overlays v31, import map v42 (PR #114, commit 5bdd138)
 - [x] 2026-09-18 Fiche : badge produit aligne sur le dernier signal frais (resolveAvailabilityBadge : Vu dispo / Vu absent, sinon Au catalogue ou Indisponible), bordure de l'item alignee ; +3 unit +1 e2e ; panels v33, import map v43 (PR #116, commit 85e0eff)
 - [x] 2026-09-18 UX-09 Modale de signal : croix de la fiche masquee tant que la modale est active, « Pas regardé » neutre par defaut (is-default, aria-pressed=false) ; +1 e2e ; overlays v32, panels v34, import map v44 (PR #117, commit 52a3a68)
+- [x] 2026-09-18 UX-11/12 Filtres et panneau : fondu de defilement des chips, bouton « Tous » en tete du panneau filtre, compte dans le titre (plus de toast), tranches vides masquees ; +1 e2e, 3ter adapte ; map v27, overlays v33, import map v45 (PR #118, commit b25daa3)

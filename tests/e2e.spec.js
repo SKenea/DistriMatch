@@ -320,7 +320,10 @@ test.describe('3ter. Groupes par distance (accordeon)', () => {
         await page.waitForSelector('#side-panel-list .side-panel-group-header');
 
         const headers = await page.$$('#side-panel-list .side-panel-group-header');
-        expect(headers.length).toBe(3);
+        // Audit UX-12 : les tranches vides ne sont plus affichees
+        const nonEmpty = await page.$$eval('#side-panel-list .spg-count', els => els.filter(e => parseInt(e.textContent, 10) > 0).length);
+        expect(headers.length).toBeLessThanOrEqual(3);
+        expect(headers.length).toBe(nonEmpty);
 
         const counts = await page.$$eval(
             '#side-panel-list .spg-count',
@@ -1658,7 +1661,7 @@ test.describe('20. Liste via le hamburger', () => {
         await page.waitForTimeout(300);
         await page.click('#sidebar-toggle');
         await expect(page.locator('#sidebar')).toHaveClass(/open/);
-        await expect(page.locator('#side-panel-title')).toHaveText('Tous les distributeurs');
+        await expect(page.locator('#side-panel-title')).toHaveText(/^Tous les distributeurs/);
         await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
         const groups = await page.$$eval('#side-panel-list .side-panel-group-header', hs => hs.map(h => h.getAttribute('aria-expanded')));
         expect(groups.filter(g => g === 'true')).toHaveLength(1);
@@ -1938,5 +1941,38 @@ test.describe('26. Modale de signal, croix et etat neutre', () => {
         }
         await page.click('#availability-cancel');
         await expect(page.locator('#dist-modal-close')).toBeVisible();
+    });
+});
+
+// ============================================
+// 27. FILTRES ET PANNEAU (audit UX-11/12)
+// ============================================
+// Fondu a droite des chips tant qu'il en reste hors ecran, rappel « Tous »
+// dans le panneau filtre, plus de toast de comptage, tranches vides masquees.
+
+test.describe('27. Filtres et panneau', () => {
+    test('390 px : fondu des chips tant qu\'on n\'est pas au bout ; chip -> panneau avec « Tous » et compte, sans toast, sans tranche vide', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(400);
+        const bar = page.locator('#filter-bar');
+        await expect(bar).toHaveClass(/is-scrollable-end/);
+        await page.evaluate(() => { const b = document.getElementById('filter-bar'); b.scrollLeft = b.scrollWidth; });
+        await expect(bar).not.toHaveClass(/is-scrollable-end/);
+        await page.evaluate(() => { document.getElementById('filter-bar').scrollLeft = 0; });
+
+        await page.click('.filter-chip[data-type="pizza"]');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        await expect(page.locator('#side-panel-title')).toHaveText(/Pizza.*· \d+$/);
+        await expect(page.locator('#side-panel-all')).toBeVisible();
+        expect(await page.$('#toast-container .toast')).toBeNull();
+        const counts = await page.$$eval('#side-panel-list .spg-count', els => els.map(e => parseInt(e.textContent, 10)));
+        expect(counts.length).toBeGreaterThan(0);
+        expect(counts.every(n => n > 0)).toBe(true);
+        await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
+
+        await page.click('#side-panel-all');
+        await expect(page.locator('#side-panel-title')).toHaveText(/^Tous les distributeurs · \d+$/);
+        await expect(page.locator('#side-panel-all')).toBeHidden();
+        await expect(page.locator('.filter-chip[data-type="pizza"]')).not.toHaveClass(/active/);
     });
 });

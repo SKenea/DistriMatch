@@ -240,15 +240,6 @@ export function setFilter(type) {
 
     updateMapMarkers(false);
 
-    const count = getFilteredDistributors().length;
-    if (AppState.activeFilters.length === 0) {
-        showToast(`Tous : ${count} distributeur(s)`, 'default');
-    } else if (AppState.activeFilters.length === 1) {
-        const label = AppState.typeConfig[AppState.activeFilters[0]]?.label || AppState.activeFilters[0];
-        showToast(`${label} : ${count} distributeur(s)`, 'default');
-    } else {
-        showToast(`${AppState.activeFilters.length} filtres : ${count} distributeur(s)`, 'default');
-    }
 
     // Panneau lateral : toggle propre
     import('./gmaps-ui.js').then(m => {
@@ -275,6 +266,16 @@ export function initFilterChips() {
             setFilter(chip.dataset.type);
         });
     });
+
+    // Indice de defilement des chips (audit UX-11) : fondu a droite tant qu'il
+    // reste des chips hors ecran.
+    const bar = document.getElementById('filter-bar');
+    if (bar) {
+        const updateFade = () => bar.classList.toggle('is-scrollable-end', bar.scrollLeft < bar.scrollWidth - bar.clientWidth - 2);
+        bar.addEventListener('scroll', updateFade, { passive: true });
+        window.addEventListener('resize', updateFade);
+        updateFade();
+    }
 }
 
 // ============================================
