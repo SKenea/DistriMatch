@@ -41,23 +41,136 @@
   inserted/skipped, insert direct 42501, gardes 22023/P0002, vues, `last_verified`).
   UC11 dans `CLAUDE.md` (PR #90). La partie front est en Priorite haute.
 
-- [ ] Chantier 3 : masquer le chatbot par distributeur et la gamification (points, niveaux)
-  - A cadrer : masquer derriere un flag ou retirer le code et ses tests.
+<!-- Ecrit le 2026-09-18 a partir des decisions de l'audit UX et du chantier 4 : user
+     stories (valeur utilisateur + acceptance) doublees de technical stories (SQL, flag,
+     import) quand il en faut. Chaque story porte une ligne « Decision Stephane » : une
+     fois tranchee, elle monte en Priorite haute telle quelle, ses criteres sont deja
+     ecrits pour /auto. -->
 
-- [ ] Chantier 4 : couche 0 - import OpenStreetMap + rythme de remplissage
-  - Overpass `amenity=vending_machine` + `vending=*` (32 machines sur la zone pilote
-    au 2026-09-14), mapping `vending` -> type, dedup par signature nom+coords
-    (existante), attribution ODbL visible dans l'app.
-  - Champs de rythme sur `distributors` (horaire de remplissage, creneaux vides) -
-    MIGRATION requise ; saisis a l'inventaire, affiches en fiche.
-  - Decision a prendre A CE MOMENT, avec Stephane (2026-09-15 : le seed est une
-    maquette, ses notes et compteurs d'avis sont inventes au meme titre que ses
-    distributeurs) : que deviennent notes, compteurs d'avis et onglet "Avis" quand
-    les vraies donnees remplacent la maquette ? Soit un parcours "Laisser un avis"
-    (contribution publique -> auth requise) et l'onglet vit avec de vrais chiffres,
-    soit masquer l'affichage (champs `rating` / `reviewCount` conserves, mentions
-    "Pas encore d'avis" / "Nouveau" de PR #68 retirees, tests e2e "3 onglets" et
-    "clic onglet Avis" adaptes). Pas un ticket /auto tant que ce n'est pas tranche.
+- [ ] US-1 Une fiche qui ne dit que du vrai (notes et avis)
+  - En tant que visiteur devant une fiche, je veux ne voir que des informations
+    verifiables (fraicheur, signaux, rythme), afin de ne pas douter de l'app a cause
+    d'une note inventee ou d'un onglet « Avis » vide.
+  - Constat : « 4.8 ★★★★½ (89) » et « Aucun avis » cohabitent (audit UX-14) ; les notes
+    du seed sont une maquette ; l'import OSM (US-5) n'apporte aucune note.
+  - Options : (A, recommandee) masquer note, compteur d'avis et onglet Avis derriere un
+    flag, jusqu'a ce qu'un vrai parcours d'avis existe ; (B) garder la note reculee
+    derriere la fraicheur (etat actuel) ; (C) remplacer la note par « N signaux cette
+    semaine » calcule depuis product_rhythm.
+  - Decision Stephane : ___
+  - Acceptance (A) : `FEATURES.reviews = false` dans js/config.js ; `#dist-modal-rating`,
+    `#dist-modal-reviews`, l'onglet « Avis » et `.side-panel-item-rating` non rendus quand
+    le flag est faux ; la ligne meta de la fiche = type · prix ; champs `rating` /
+    `reviewCount` conserves en base et dans le mapping ; tests e2e « rating + reviews +
+    type visibles », « 3 onglets » et « clic onglet Avis » conditionnes au flag ; section
+    21 (lisibilite) sans exclusion pour la note. Import map bumpee.
+  - TS-1 : objet `FEATURES` dans js/config.js (cles publiques), lu par gmaps-ui.js et
+    distributor.js ; aucune migration.
+
+- [ ] US-2 Une demo toujours vivante
+  - En tant que Stephane qui montre l'app (elus, producteurs, testeurs), je veux que la
+    demo ait toujours des signaux des dernieres heures, afin que badges verts, rythmes,
+    bandeaux « Signalée vide » et KPI ressemblent a un pilote actif et non a une app
+    abandonnee.
+  - Constat : le seed du 2026-09-16 vieillit d'un jour par jour ; le 2026-09-18 toutes
+    les fiches disent « il y a 2 j » et le KPI 24 h affiche 0 % (audit UX-23).
+  - Decision Stephane : regeneration nocturne automatique (recommande) ou relance
+    manuelle de `select seed_demo_signals();` avant chaque demo ?
+  - Acceptance : le lendemain de l'activation, `kpi_coverage.machines_signal_24h >= 20`
+    et la fiche dist-002 affiche « Vérifié il y a X min/h » ; le job apparait dans
+    `cron.job` ; il est desactive et les lignes `demo-` purgees avant l'ouverture du
+    vrai pilote.
+  - TS-2 (SQL Editor, par Stephane, aucun code) :
+    1. Dashboard > Database > Extensions > activer `pg_cron`.
+    2. `select cron.schedule('demo-reseed', '15 3 * * *', $$select purge_demo_data(); select seed_demo_signals();$$);`
+    3. Verifier : `select jobid, schedule, command from cron.job;`
+    4. Le jour J du pilote : `select cron.unschedule('demo-reseed'); select purge_demo_data();`
+    Les deux fonctions sont SECURITY DEFINER et revoquees pour anon / authenticated : le
+    cron tourne avec le role du dashboard, rien n'est expose.
+
+- [ ] US-3 Une carte sans fiches de test
+  - En tant que visiteur, je ne veux pas tomber sur « Boulangerie Test Photo » ou
+    « Tic Tac – Adresse à compléter », afin de ne pas douter de la fiabilite de toute
+    la carte.
+  - Constat (API anonyme, 2026-09-18, 30 distributeurs dont 5 ajoutes a la main en
+    avril-mai) : `user-1776099988510` « Test Supabase Biarritz » et `user-1776101171767`
+    « Boulangerie Test Photo » (tests) ; `user-1777220392357` « Glacon » et
+    `user-1780130564104` « Tic Tac » (adresse « a completer », type approximatif) ;
+    `user-1776102020333` « Gaztainbidea » (terroir, impasse Gaztainbidea : probablement
+    une vraie machine, adresse a completer).
+  - Decision Stephane : supprimer les 4 premieres (recommande) ; Gaztainbidea : garder et
+    completer l'adresse, ou supprimer ?
+  - Acceptance : les ids supprimes n'apparaissent plus dans `distributors` ni sur la
+    carte ; produits, photos, signaux et evenements lies partent par cascade (FK ON DELETE
+    CASCADE, migrations 001 / 003 / 007 / 008) ; les fichiers du bucket photos des fiches
+    supprimees sont retires a la main (Storage) ; sur le telephone de Stephane, « Effacer
+    mes données » vide le cache local `snackmatch_user_distributors` qui pourrait encore
+    les afficher.
+  - TS-3 (SQL Editor) :
+    `delete from distributors where id in ('user-1776099988510', 'user-1776101171767', 'user-1777220392357', 'user-1780130564104');`
+    puis `select count(*) from distributors;` (attendu : 26) ; optionnel :
+    `update distributors set address = '<adresse>', city = '<ville>' where id = 'user-1776102020333';`
+
+- [ ] US-4 Chantier 3 : une app qui ne simule rien
+  - En tant que visiteur, je ne veux ni chatbot simule ni points / niveaux, afin que
+    chaque element de l'ecran serve a trouver une machine pleine et a le dire aux
+    suivants.
+  - Constat (audit UX-17) : « Discuter avec le bot » est masque mais le chat vit encore
+    (un favori cree une conversation et un badge Activite « 1 », messages proactifs) ;
+    Profil « Explorateur / 0 points », Activite « +10 pts » et enum brut
+    « Signalement empty ».
+  - Decision Stephane : masquer derriere des flags (recommande : reversible, code et
+    tests conserves) ou supprimer le code ? Et l'onglet Activite : le garder comme journal
+    des signaux (vides / pannes / rapports) sans points, ou le retirer de la bottom nav ?
+  - Acceptance (flags) : `FEATURES.chat = false` -> aucune conversation creee (favori,
+    bienvenue, proactif), sidebar sans « Mes conversations », badge conversations a 0,
+    `#chat-modal` jamais ouvert ; `FEATURES.gamification = false` -> Profil sans points /
+    niveau / progression (restent : favoris, contributions), Activite sans « +N pts »,
+    vue Compte inchangee ; libelles de signalement traduits (`empty` -> « Vide », `broken`
+    -> « En panne », `out_of_stock` -> « Rupture de stock »). Tests e2e des sections 6
+    (chat) et 7 (profil) conditionnes aux flags ; CLAUDE.md (modules chat / activity) mis
+    a jour.
+  - TS-4 : meme objet `FEATURES` que TS-1 ; `updateImplicitProfile` et `addActivityItem`
+    restent (donnees locales), seul l'affichage change.
+
+- [ ] US-5 (epic) Chantier 4 : toutes les machines connues, partout
+  - En tant que visiteur hors Cote Basque, je veux voir des la premiere ouverture les
+    distributeurs automatiques connus d'OpenStreetMap autour de moi, afin que l'app serve
+    ailleurs sans attendre une saisie manuelle.
+  - En tant que Stephane, je veux que le pilote demarre avec les 32 machines OSM de la
+    zone plutot que 25 fiches inventees, afin que les stickers QR pointent vers de
+    vraies machines.
+  - Cadrage a trancher avec Stephane AVANT tout ticket :
+    (1) zone d'import : Cote Basque seule, departement 64, ou France entiere (~9 000
+    machines `vending=pizza|bread|food` ; cout Overpass, taille de table, temps de
+    chargement) ;
+    (2) sort du seed : purger les 25 fiches inventees a l'import, ou les garder jusqu'a
+    ce qu'une machine OSM les remplace (dedup a 50 m) ;
+    (3) frequence : import unique par script, ou rafraichissement hebdo (nouvelles
+    machines, suppressions) ;
+    (4) fiche minimale sans photo ni produit : « Distributeur de pizzas » + rue OSM
+    (`addr:*`) sinon « près de <ville> », et une invitation au premier signal.
+  - Acceptance de l'epic : chaque machine OSM a une fiche (`id = osm-<node|way>-<id>`,
+    `source = 'osm'`, `lat` / `lng`, `type` mappe, `tz` calcule, `last_verified = null`
+    -> « Pas encore vérifié ») ; attribution « © OpenStreetMap contributors » (ODbL)
+    visible dans « À propos » et sur la carte ; aucune coordonnee ni nom de zone en dur
+    dans le code ; tri, panneau et KPI fonctionnent avec N machines ; import rejouable
+    sans doublon.
+  - TS-5a Import Overpass -> SQL : script Node `scripts/import-osm.mjs` (execute par
+    Claude, pas de terminal pour Stephane) qui interroge Overpass
+    (`amenity=vending_machine` + `vending~"pizza|bread|food|milk|cheese|eggs|vegetables|
+    meat|ice|farm_products"`) sur une zone donnee, mappe `vending` -> `type` (pizza ->
+    pizza, bread -> bakery, food -> meals, milk -> dairy, cheese -> cheese, eggs /
+    vegetables / farm_products -> agricultural, meat -> meat, ice -> ice, autres ->
+    general), calcule `tz` (lib tz-lookup), dedoublonne a 50 m avec les fiches
+    existantes, et ecrit `supabase/010_osm_import_<date>.sql` (upsert idempotent) que
+    Stephane colle dans le SQL Editor. Tests unit sur le mapping et la dedup.
+  - TS-5b Migration `010` : colonnes `source TEXT` (seed | osm | user) et `osm_id BIGINT`
+    sur `distributors`, index sur `osm_id` ; vues KPI inchangees.
+  - TS-5c Front : mention ODbL (« À propos » + attribution Leaflet), fiche minimale
+    (point (4)), chips inchangees (`agricultural` existe deja).
+  - TS-5d Stickers QR (suite logique) : generation d'une planche PDF par machine
+    (`?id=osm-…&confirm=1&src=qr`), a cadrer apres l'import.
 
 - [ ] Chantier 5 : alertes reelles "previens-moi quand c'est plein" (Supabase Realtime +
   Web Push), branchees sur les signaux ; fermeture de boucle apres l'alerte ("Tu y es
@@ -90,21 +203,6 @@
 
 ## A clarifier (auto-ajoutes par /auto)
 <!-- Le skill /auto place ici les items ambigus qu'il n'a pas pu traiter -->
-
-- [ ] Audit UX 2026-09-18, decisions produit (docs/AUDIT_UX_2026-09-18.md, section
-  « Decisions a prendre ») :
-  - (a) UX-14 onglet « Avis » et note « 4.8 (89) » : l'en-tete annonce 89 avis, l'onglet
-    dit « Aucun avis » sans action possible -> masquer l'onglet et la note jusqu'a la
-    decision OSM (chantier 4), ou seulement reculer la note (choix par defaut de UX-05) ?
-  - (b) UX-23 jeu de demo qui vieillit (signaux « il y a 1 j », KPI 24 h a 0 %) ->
-    regeneration nocturne par pg_cron tant que le pilote reel n'a pas demarre (extension
-    a activer, puis SQL Editor : `select cron.schedule('demo-reseed', '15 3 * * *',
-    $$select purge_demo_data(); select seed_demo_signals();$$);`).
-  - (c) UX-24 donnees de test en prod (« Boulangerie Test Photo », « Tic Tac – Adresse a
-    completer », `user-1776102020333`) a purger dans le SQL Editor.
-  - (d) UX-17 chantier 3 : l'activite affiche « Signalement empty » (enum brut), « +10
-    pts », un favori cree une conversation bot et un badge Activite « 1 » : tout part avec
-    le masquage du chat et de la gamification.
 
 - [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
   - Note /auto 2026-05-04 : le tri actuel est synchrone (<1ms) car les distances
