@@ -1543,3 +1543,19 @@
     border-radius: 3px;
     background: var(--primary);
 }
+
+/* ===== Badge de dispo produit (audit UX-06) : le signal frais prime sur le
+   flag editorial ; sans signal frais, "Au catalogue" neutre ===== */
+.product-availability-clean {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.product-availability-clean.is-available { color: #15803d; }
+.product-availability-clean.is-absent { color: var(--text-muted); }
+.product-availability-clean.is-unavailable { color: var(--danger); }
+.product-item-clean.is-neutral { border-left-color: var(--light-gray); }
+.product-item-clean.is-available { border-left-color: var(--success); }
+.product-item-clean.is-absent { border-left-color: var(--gray-light); }
+.product-item-clean.is-unavailable { border-left-color: var(--danger); }

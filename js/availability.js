@@ -10,7 +10,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm } from './utils.js';
+import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, resolveAvailabilityBadge } from './utils.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
 import { logEvent } from './events.js';
@@ -64,6 +64,16 @@ function signalTs(row) {
 export function renderAvailabilityHints() {
     document.querySelectorAll('#dist-products-list .product-item-clean[data-product-id]').forEach(item => {
         const row = loaded.products[item.dataset.productId];
+        // Badge de dispo : le signal frais prime sur le flag editorial (audit UX-06)
+        const product = (AppState.currentDistributor?.products || []).find(p => String(p.id) === item.dataset.productId);
+        const badge = resolveAvailabilityBadge(product, row);
+        const badgeEl = item.querySelector('.product-availability-clean');
+        if (badgeEl) {
+            badgeEl.textContent = badge.label;
+            badgeEl.className = `product-availability-clean is-${badge.tone}`;
+        }
+        item.classList.remove('is-neutral', 'is-available', 'is-absent', 'is-unavailable');
+        item.classList.add(`is-${badge.tone}`);
         let hint = item.querySelector('.product-seen');
         const ts = signalTs(row);
         if (!row || Number.isNaN(ts)) {
