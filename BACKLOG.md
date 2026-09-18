@@ -15,17 +15,6 @@
      Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
      Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
 
-- [ ] UX-04 Bouton retour (Android) : fermer la fiche ou la modale au lieu de quitter l'app
-  - Contexte : fiche ouverte, `history.back()` mene a `about:blank` (l'app est quittee),
-    constate sur les deux moteurs. Sur Android, c'est LE geste de fermeture.
-  - Acceptance : a l'ouverture d'une fiche, d'une modale (signal, chat, confirm) ou d'une
-    vue (Compte, Favoris, Activite, notifications, stats), `history.pushState({ layer })` ;
-    `popstate` ferme la couche la plus haute ; fermer par la croix ou le bouton retour
-    appelle `history.back()` sans boucle ; le nettoyage du deep link (replaceState) est
-    conserve. Tests e2e : ouvrir la fiche -> `page.goBack()` -> fiche fermee, URL
-    inchangee, `window.AppState` toujours present ; modale signal ouverte -> goBack ->
-    modale fermee, fiche encore ouverte ; vue Compte -> goBack -> carte.
-
 - [ ] UX-05/13 Fiche : la fraicheur d'abord, « Il reste quoi ? » en action primaire
   - Contexte : capture 06. La note inventee « 4.8 ★★★★½ (89) » vient avant « Vérifié il y
     a 1 j » (gris, petit) ; hero de 220 px (emoji + type, type repete dans la ligne meta) ;
@@ -277,3 +266,4 @@
 - [x] 2026-09-18 UX-03 Liste via le hamburger : le panneau s'ouvre avec la liste du filtre courant, premier groupe de distance deplie, second tap ferme ; +2 e2e, test 3ter adapte ; import map v39 (PR #110, commit d981f71)
 - [x] 2026-09-18 UX-07/08 Contraste et tailles : tokens --primary-text #D62828 et --success-dark #4E7A33 (>= 4,5:1) pour le texte rouge/vert et les fonds a texte blanc, vert fraicheur #15803d, polices nav 12 px / indices 13 px / panneau 12 px ; +2 unit, +1 e2e (section 21, mesure des styles calcules en 390 px) ; 5 CSS bumpes (PR #111, commit 6b2c69e)
 - [x] 2026-09-18 UX-02 Entrer sans geolocalisation : lien « Voir la carte sans me localiser », carte centree sur la fiche du deep link ou sur le centre des distributeurs (centroidOf, aucune coordonnee en dur), panneau trie par nom avec rappel, fermer une fiche deep link ne reaffiche plus le mur ; +2 unit +2 e2e, overlays v30, import map v40 (PR #112, commit 8066c24)
+- [x] 2026-09-18 UX-04 Bouton retour : js/history.js (pushLayer / popstate / popLayer), couches fiche, panneau, modale de signal, chat, confirmation, vues ; +4 e2e ; import map v41 (PR #113, commit 57f3e21)

@@ -9,6 +9,7 @@ import {
     getLevelInfo
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
+import { pushLayer, popLayer } from './history.js';
 
 // ============================================
 // NAVIGATION PAR VUES
@@ -37,6 +38,9 @@ export function hideAllViews() {
 }
 
 export function switchView(viewName) {
+    // Couche d'historique (audit UX-04) : depuis la carte, une vue = une entree ;
+    // passer d'une vue a l'autre n'en ajoute pas, "retour" revient a la carte.
+    const wasOnMap = !document.querySelector('.view-page.view-active');
     hideAllViews();
     const config = VIEW_CONFIG[viewName];
     if (!config) return;
@@ -44,6 +48,7 @@ export function switchView(viewName) {
     el.classList.remove('view-hidden');
     el.classList.add('view-active');
     if (config.onShow) config.onShow();
+    if (wasOnMap) pushLayer('view', goBackToMap);
 }
 
 export function switchTab(tabName) {
@@ -53,6 +58,7 @@ export function switchTab(tabName) {
 
     if (tabName === 'explore') {
         hideAllViews();
+        popLayer('view');
         if (mainMap) setTimeout(() => mainMap.invalidateSize(), 100);
     } else {
         switchView(tabName);

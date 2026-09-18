@@ -11,6 +11,7 @@
  */
 
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { pushLayer, popLayer } from './history.js';
 
 let pending = null; // resolve() de la demande en cours
 
@@ -38,6 +39,7 @@ export function confirmDialog({
 
     wireOnce(modal);
     modal.classList.add('active');
+    pushLayer('confirm', () => settle(false));   // bouton retour = annuler (audit UX-04)
     activateFocusTrap(modal, () => settle(false));
     cancelBtn.focus();
 
@@ -48,6 +50,7 @@ function settle(value) {
     const modal = document.getElementById('confirm-modal');
     if (modal) {
         modal.classList.remove('active');
+        popLayer('confirm');
         deactivateFocusTrap(modal);
     }
     const resolve = pending;
