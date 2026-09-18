@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-07/08 Contraste et tailles : rouge texte, vert fraicheur, nav et indices lisibles (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 

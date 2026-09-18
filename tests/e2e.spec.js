@@ -1671,3 +1671,76 @@ test.describe('20. Liste via le hamburger', () => {
         await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
     });
 });
+
+// ============================================
+// 21. LISIBILITE MOBILE : polices >= 12 px, contrastes >= 4,5:1 (audit UX-07/08)
+// ============================================
+// Mesure sur les styles calcules, en 390 px, des ecrans de la boucle coeur.
+// Exclus : attribution Leaflet (tiers), note inventee (#dist-modal-rating,
+// decision differee, cf. audit UX-14), compteurs en pastille (.nav-tab-badge).
+
+async function collectTextIssues(page, screen) {
+    await page.waitForTimeout(350);
+    return page.evaluate((screen) => {
+        const SKIP = ['.leaflet-control-attribution', '#dist-modal-rating', '.side-panel-item-rating', '.nav-tab-badge', '.nav-badge'];
+        const key = el => (el.id ? '#' + el.id : el.tagName.toLowerCase()) + '.' + String(el.className || '').trim().split(/\s+/).slice(0, 2).join('.');
+        const vis = el => {
+            const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
+            if (r.width === 0 || r.height === 0 || cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') return false;
+            if (r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) return false;
+            let e = el.parentElement;
+            while (e) { const c = getComputedStyle(e); if (c.opacity === '0' || c.visibility === 'hidden' || c.display === 'none') return false; e = e.parentElement; }
+            return true;
+        };
+        const parse = c => { const m = (c || '').match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(',').map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
+        const lum = ({ r, g, b }) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        const blend = (fg, bg) => ({ r: fg.r * fg.a + bg.r * (1 - fg.a), g: fg.g * fg.a + bg.g * (1 - fg.a), b: fg.b * fg.a + bg.b * (1 - fg.a), a: 1 });
+        const bgOf = el => {
+            let e = el;
+            while (e) {
+                const cs = getComputedStyle(e);
+                if (cs.backgroundImage && cs.backgroundImage !== 'none') return null;   // degrade : non juge
+                const c = parse(cs.backgroundColor);
+                if (c && c.a > 0) { if (c.a < 1) { const under = e.parentElement ? bgOf(e.parentElement) : null; return under ? blend(c, under) : null; } return c; }
+                e = e.parentElement;
+            }
+            return { r: 255, g: 255, b: 255, a: 1 };
+        };
+        const issues = []; const seen = new Set();
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            const t = node.textContent.trim(); if (!t) continue;
+            const el = node.parentElement; if (!el || seen.has(el) || !vis(el)) continue;
+            if (SKIP.some(s => el.matches(s) || el.closest(s))) continue;
+            seen.add(el);
+            const cs = getComputedStyle(el); const fs = parseFloat(cs.fontSize);
+            if (fs < 12) issues.push(`${screen} ${key(el)} police ${fs.toFixed(1)}px "${t.slice(0, 20)}"`);
+            const fg = parse(cs.color); const bg = bgOf(el); if (!fg || !bg) continue;
+            const fgb = fg.a < 1 ? blend(fg, bg) : fg;
+            const L1 = lum(fgb), L2 = lum(bg); const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+            const large = fs >= 24 || (fs >= 18.66 && parseInt(cs.fontWeight) >= 700);
+            if (ratio < (large ? 3 : 4.5)) issues.push(`${screen} ${key(el)} contraste ${ratio.toFixed(2)}:1 "${t.slice(0, 20)}"`);
+        }
+        return issues;
+    }, screen);
+}
+
+test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
+    test('carte, panneau, fiche et modale de signal : aucun texte < 12 px ni sous 4,5:1 en 390 px', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        const issues = [];
+        issues.push(...await collectTextIssues(page, 'carte'));
+        await page.click('.filter-chip[data-type="all"]');
+        issues.push(...await collectTextIssues(page, 'panneau'));
+        await page.click('#side-panel-close');
+        await openDistModal(page);
+        await page.waitForTimeout(800);
+        issues.push(...await collectTextIssues(page, 'fiche'));
+        await page.click('#dist-action-confirm');
+        await pickSomething(page);
+        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
+        issues.push(...await collectTextIssues(page, 'modale-signal'));
+        expect(issues, issues.join('\n')).toEqual([]);
+    });
+});

@@ -31,6 +31,8 @@
     --primary-light: #F17B82;  /* Versions claires */
     --success: #6A994E;        /* Vert olive - local / frais */
     --danger: #D62828;         /* Rouge intense - alertes */
+    --primary-text: #D62828;   /* Texte rouge et fonds de bouton a texte blanc : 5,0:1 sur blanc (le rouge de marque --primary fait 4,17:1) */
+    --success-dark: #4E7A33;   /* Texte vert et fonds a texte blanc : 5,1:1 (l'olive --success fait 3,35:1) */
     --warning: #F4A261;        /* Orange terracota - artisanal */
     --dark: #2B2B2B;           /* Noir chaleureux (sans teinte bleue) */
     --gray: #6B5E54;           /* Gris brun chaud */
@@ -191,7 +193,7 @@ body {
 .logo {
     font-size: 1.25rem;
     font-weight: 800;
-    color: var(--primary);
+    color: var(--primary-text);
     cursor: pointer;
     letter-spacing: -0.5px;
 }
@@ -219,7 +221,7 @@ body {
 
 .icon-btn:hover {
     background: var(--light);
-    color: var(--primary);
+    color: var(--primary-text);
 }
 
 .icon-btn svg {
@@ -227,7 +229,7 @@ body {
 }
 
 .nav-icon-btn.active {
-    background: var(--primary);
+    background: var(--primary-text);
     color: white;
 }
 
@@ -237,7 +239,7 @@ body {
     right: 2px;
     background: var(--danger);
     color: white;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 700;
     width: 16px;
     height: 16px;
@@ -287,7 +289,7 @@ body {
 }
 
 .search-container-clean input:focus {
-    border-color: var(--primary);
+    border-color: var(--primary-text);
     background: var(--white);
 }
 
@@ -327,7 +329,7 @@ body {
 }
 
 .search-item-clean:hover {
-    border-color: var(--primary);
+    border-color: var(--primary-text);
     background: var(--lighter);
 }
 

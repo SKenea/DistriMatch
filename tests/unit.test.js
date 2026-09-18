@@ -272,6 +272,33 @@ describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
         }
     });
 
+    it('--primary-text et --success-dark (texte rouge / vert, fonds a texte blanc) tiennent >= 4.5:1', () => {
+        for (const fg of ['--primary-text', '--success-dark']) {
+            assert.ok(cssVar(fg), `${fg} manquante dans :root`);
+            for (const bg of BACKGROUNDS) {
+                const ratio = contrastRatio(cssVar(fg), cssVar(bg));
+                assert.ok(ratio >= 4.5, `${fg} ${cssVar(fg)} sur ${bg} ${cssVar(bg)} : ${ratio.toFixed(2)}:1 < 4.5`);
+            }
+            assert.ok(contrastRatio('#ffffff', cssVar(fg)) >= 4.5, `blanc sur ${fg} < 4.5`);
+        }
+    });
+
+    it('aucune regle CSS n\'utilise --primary (4,17:1) ni --success (3,35:1) comme couleur de texte', () => {
+        const offenders = [];
+        for (const file of readdirSync(cssDir).filter(f => f.endsWith('.css'))) {
+            const css = readFileSync(new URL(file, cssDir), 'utf8');
+            for (const block of css.split('}')) {
+                const open = block.indexOf('{');
+                if (open === -1) continue;
+                const body = block.slice(open + 1);
+                if (/(^|[\s;{])color:\s*var\(--(primary|success)\)/.test(body)) {
+                    offenders.push(`${file} : ${block.slice(0, open).trim().split('\n').pop().trim()}`);
+                }
+            }
+        }
+        assert.deepEqual(offenders, [], `texte en --primary / --success :\n${offenders.join('\n')}`);
+    });
+
     it('aucune regle CSS n\'utilise --gray-light comme couleur de texte (color:)', () => {
         const offenders = [];
         for (const file of readdirSync(cssDir).filter(f => f.endsWith('.css'))) {
