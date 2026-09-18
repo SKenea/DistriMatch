@@ -69,7 +69,14 @@ export function activateFocusTrap(modal, onEscape) {
     // modale auth), sinon le 1er focusable, sinon la modale (tabindex="-1").
     const items = getFocusable(modal);
     const preferred = modal.querySelector('[autofocus]');
-    (preferred || items[0] || modal).focus();
+    const target = preferred || items[0] || modal;
+    target.focus();
+    // Une modale qui passe de visibility:hidden a visible dans la meme frame
+    // (audit UX-20) peut refuser le focus immediat : on reessaie au prochain
+    // rendu, tant que la modale est toujours ouverte.
+    if (document.activeElement !== target && typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => { if (modal.__focusTrap && !modal.contains(document.activeElement)) target.focus(); });
+    }
 }
 
 export function deactivateFocusTrap(modal) {

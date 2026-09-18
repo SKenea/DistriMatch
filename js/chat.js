@@ -100,6 +100,7 @@ function displayChatModal(bot) {
     });
 
     modal.classList.add('active');
+    modal.removeAttribute('inert');
     pushLayer('chat', closeChatModal);   // bouton retour = fermer (audit UX-04)
     activateFocusTrap(modal, closeChatModal);
 
@@ -113,6 +114,7 @@ function displayChatModal(bot) {
 export function closeChatModal() {
     const modal = document.getElementById('chat-modal');
     modal.classList.remove('active');
+    modal.setAttribute('inert', '');   // ferme = hors clavier et lecteur d'ecran (audit UX-20)
     popLayer('chat');
     deactivateFocusTrap(modal);
     Conversations.active = null;

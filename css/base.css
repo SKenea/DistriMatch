@@ -88,6 +88,11 @@
     border-radius: var(--radius-xs);
 }
 
+/* Les controles heritent de la police du site (audit UX-21) : sans cela, les
+   boutons et champs tombent sur la police systeme du navigateur (Arial sur
+   Android, serif sur certains WebKit). */
+button, input, select, textarea { font: inherit; }
+
 input[type="range"]:focus-visible {
     outline: 3px solid var(--primary);
     outline-offset: 2px;
