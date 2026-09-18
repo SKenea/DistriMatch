@@ -72,7 +72,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -557,7 +557,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('logo-home').addEventListener('click', goBackToMap);
 
     // Sidebar toggle (mobile)
-    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+    // Hamburger (mobile) : ouvre le panneau AVEC la liste du filtre courant
+    // (audit UX-03 : il s'ouvrait vide tant qu'aucun chip n'avait ete tape) ;
+    // un second tap le ferme.
+    document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        if (document.getElementById('sidebar')?.classList.contains('open')) {
+            closeSidePanel();
+        } else {
+            openSidePanelForFilters(AppState.activeFilters);
+        }
+    });
     document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
 
     // Boutons retour

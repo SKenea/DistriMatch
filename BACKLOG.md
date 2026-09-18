@@ -8,6 +8,7 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
+- UX-03 Liste « Tous les distributeurs » vide a l'ouverture par le hamburger (session /auto 6 du 2026-09-18)
 
 ## Priorite haute
 
