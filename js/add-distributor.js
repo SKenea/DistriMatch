@@ -268,7 +268,7 @@ export function cancelAddDistributor() {
 async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
     return new Promise((resolve) => {
         if (!navigator.geolocation) {
-            showToast('Geolocalisation indispensable pour ajouter une photo', 'error');
+            showToast('Géolocalisation indispensable pour ajouter une photo', 'error');
             resolve(false);
             return;
         }
@@ -280,14 +280,14 @@ async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
                 );
                 const distanceM = Math.round(distanceKm * 1000);
                 if (distanceM > maxDistanceMeters) {
-                    showToast(`Tu dois etre a moins de ${maxDistanceMeters}m du distributeur (tu es a ${distanceM}m)`, 'error');
+                    showToast(`Tu dois être a moins de ${maxDistanceMeters}m du distributeur (tu es a ${distanceM}m)`, 'error');
                     resolve(false);
                 } else {
                     resolve(true);
                 }
             },
             () => {
-                showToast('Impossible de verifier ta position. Autorise la geolocalisation.', 'error');
+                showToast('Impossible de vérifier ta position. Autorise la géolocalisation.', 'error');
                 resolve(false);
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -350,7 +350,7 @@ async function confirmAddDistributorImpl() {
         return distKm * 1000 < DUPLICATE_RADIUS_M;
     });
     if (nearbyExisting) {
-        showToast(`Un distributeur existe deja ici : "${nearbyExisting.name}". Tu ne peux pas en ajouter un nouveau a moins de ${DUPLICATE_RADIUS_M}m.`, 'error');
+        showToast(`Un distributeur existe déjà ici : "${nearbyExisting.name}". Tu ne peux pas en ajouter un nouveau a moins de ${DUPLICATE_RADIUS_M}m.`, 'error');
         return;
     }
 
@@ -369,8 +369,8 @@ async function confirmAddDistributorImpl() {
         emoji: typeInfo?.emoji || '🏪',
         lat: AddMode.lat,
         lng: AddMode.lng,
-        address: address || 'Adresse a completer',
-        city: 'A verifier',
+        address: address || 'Adresse a compléter',
+        city: 'A vérifier',
         rating: 5.0,
         reviewCount: 0,
         priceRange: priceRange,
@@ -391,8 +391,8 @@ async function confirmAddDistributorImpl() {
                 emoji: typeInfo?.emoji || '🏪',
                 lat: AddMode.lat,
                 lng: AddMode.lng,
-                address: address || 'Adresse a completer',
-                city: 'A verifier',
+                address: address || 'Adresse a compléter',
+                city: 'A vérifier',
                 rating: 5.0,
                 review_count: 0,
                 status: 'verified',
@@ -458,7 +458,7 @@ async function confirmAddDistributorImpl() {
     document.getElementById('main-map').style.cursor = '';
     mainMap.off('click', onMapClickForPlacement);
 
-    showToast(`${escapeHTML(newDistributor.name)} ajoute !`, 'success');
+    showToast(`${escapeHTML(newDistributor.name)} ajouté !`, 'success');
 
     AppState.points += 20;
 

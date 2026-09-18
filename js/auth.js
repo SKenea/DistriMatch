@@ -202,7 +202,7 @@ function openEmailModal(onClose) {
                         submit.disabled = true;
                         status.style.display = 'block';
                         status.className = 'auth-modal-status error';
-                        status.textContent = 'Erreur captcha, reessaie.';
+                        status.textContent = 'Erreur captcha, réessaie.';
                     }
                 });
                 captchaEl.dataset.rendered = 'true';
@@ -265,7 +265,7 @@ function openEmailModal(onClose) {
             await sendMagicLink(email, captchaToken);
             status.style.display = 'block';
             status.className = 'auth-modal-status success';
-            status.innerHTML = `Lien envoye a <strong>${escapeHTML(email)}</strong>.<br>Consulte ta boite mail et clique sur le lien pour te connecter.`;
+            status.innerHTML = `Lien envoyé a <strong>${escapeHTML(email)}</strong>.<br>Consulte ta boite mail et clique sur le lien pour te connecter.`;
             submit.style.display = 'none';
             input.disabled = true;
         } catch (err) {

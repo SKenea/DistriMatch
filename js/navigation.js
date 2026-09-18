@@ -177,7 +177,7 @@ export function performSearch(query) {
     if (matches.length === 0) {
         results.innerHTML = `
             <div class="empty-state">
-                <p>Aucun resultat pour "${escapeHTML(query)}"</p>
+                <p>Aucun résultat pour "${escapeHTML(query)}"</p>
             </div>
         `;
         return;

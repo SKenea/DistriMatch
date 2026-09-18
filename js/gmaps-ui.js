@@ -119,7 +119,7 @@ export function openSidePanelForFilters(types = []) {
         title.textContent = `${tc.emoji || '📍'} ${tc.label || types[0]}`;
     } else {
         const labels = types.map(t => AppState.typeConfig[t]?.label || t);
-        title.textContent = `${labels.length} categories : ${labels.join(', ')}`;
+        title.textContent = `${labels.length} catégories : ${labels.join(', ')}`;
     }
 
     const matches = types.length === 0
@@ -132,7 +132,7 @@ export function openSidePanelForFilters(types = []) {
     if (allBtn) allBtn.hidden = types.length === 0;
 
     if (matches.length === 0) {
-        list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette categorie</div>`;
+        list.innerHTML = `<div class="side-panel-empty">Aucun distributeur dans cette catégorie</div>`;
     } else if (!AppState.userLocation) {
         // Sans position (audit UX-02) : liste plate triee par nom, avec un rappel
         // discret ; les distances viendront quand l'utilisateur activera la
@@ -284,14 +284,14 @@ export function initDistModal() {
             try {
                 userLoc = await getUserLocation();
             } catch (e) {
-                showToast('Active la geolocalisation pour ajouter une photo', 'warning');
+                showToast('Active la géolocalisation pour ajouter une photo', 'warning');
                 return;
             }
         }
         const distKm = calculateDistance(userLoc.lat, userLoc.lng, d.lat, d.lng);
         if (distKm > MAX_DIST_KM) {
             showToast(
-                `Tu dois etre pres de ${d.name} pour ajouter une photo (tu es a ${formatDistance(distKm)})`,
+                `Tu dois être près de ${d.name} pour ajouter une photo (tu es a ${formatDistance(distKm)})`,
                 'warning'
             );
             return;
@@ -324,7 +324,7 @@ export function initDistModal() {
         const url = buildShareUrl(dist.id);
         try {
             await navigator.clipboard.writeText(url);
-            showToast('Lien copie dans le presse-papier', 'success');
+            showToast('Lien copié dans le presse-papier', 'success');
         } catch (e) {
             // Fallback : prompt
             window.prompt('Copie ce lien :', url);
@@ -507,7 +507,7 @@ async function processPhotoUpload(distributor, files) {
             return;
         }
         showToast(
-            `${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} ajoutee${uploaded.length > 1 ? 's' : ''}`,
+            `${uploaded.length} photo${uploaded.length > 1 ? 's' : ''} ajoutée${uploaded.length > 1 ? 's' : ''}`,
             'success'
         );
 
@@ -564,7 +564,7 @@ async function openWebcamCapture(distributor) {
                 <button class="webcam-cancel-btn" type="button">Annuler</button>
                 <button class="webcam-capture-btn" type="button">Capturer</button>
             </div>
-            <button class="webcam-fallback-link" type="button">Choisir un fichier a la place</button>
+            <button class="webcam-fallback-link" type="button">Choisir un fichier à la place</button>
         </div>`;
     document.body.appendChild(overlay);
 
@@ -742,7 +742,7 @@ export async function submitDistAddProduct() {
     document.getElementById('dist-add-product-name').value = '';
     document.getElementById('dist-add-product-form').style.display = 'none';
 
-    showToast(`${escapeHTML(name)} ajoute !`, 'success');
+    showToast(`${escapeHTML(name)} ajouté !`, 'success');
 }
 
 // Maj du niveau de prix du distributeur (select en mode edition).
@@ -767,5 +767,5 @@ export async function updateDistributorPriceRange(value) {
 
     const prEl = document.getElementById('dist-modal-pricerange');
     if (prEl) prEl.textContent = value;
-    showToast('Niveau de prix mis a jour', 'success');
+    showToast('Niveau de prix mis à jour', 'success');
 }

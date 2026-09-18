@@ -91,7 +91,7 @@ describe('getFreshness / timeAgo (fraicheur distributeur)', () => {
     });
 
     it('timeAgo : moins d\'une minute -> "a l\'instant"', () => {
-        assert.equal(timeAgo(now - 30000, now), "a l'instant");
+        assert.equal(timeAgo(now - 30000, now), "à l'instant");
     });
 });
 
@@ -292,6 +292,40 @@ describe('resolveAvailabilityBadge (badge produit de la fiche)', () => {
         assert.deepEqual(resolveAvailabilityBadge({ available: true }, null, NOW), { label: 'Au catalogue', tone: 'neutral' });
         assert.deepEqual(resolveAvailabilityBadge({ available: false }, undefined, NOW), { label: 'Indisponible', tone: 'unavailable' });
         assert.deepEqual(resolveAvailabilityBadge(null, { state: 'available', created_at: 'n/a' }, NOW), { label: 'Au catalogue', tone: 'neutral' });
+    });
+});
+
+// ============================================
+// ACCENTS DES LIBELLES UI (audit UX-16)
+// ============================================
+// Les chaines visibles (index.html, litteraux JS) sont accentuees ; les
+// commentaires et identifiants restent sans accents. Verrou sur les libelles
+// releves par l'audit : aucun ne doit reapparaitre sans accent.
+
+describe('accents des libelles UI (audit UX-16)', () => {
+    const root = new URL('../', import.meta.url);
+    const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+    const sources = [['index.html', readFileSync(new URL('index.html', root), 'utf8')]];
+    for (const f of readdirSync(new URL('js/', root)).filter(f => f.endsWith('.js'))) {
+        sources.push([`js/${f}`, stripComments(readFileSync(new URL(`js/${f}`, root), 'utf8'))]);
+    }
+    const FORBIDDEN = ['Itineraire', '>Activite<', 'Reessayer', "Vérifié a l'instant", 'Lien copie', 'abonne a ', 'Geolocalisation refusee', 'Aucun resultat', 'Notifications activees', 'Reglages des', "'a l'instant'"];
+
+    it('aucun libelle releve par l\'audit ne subsiste sans accent', () => {
+        const offenders = [];
+        for (const [name, src] of sources) {
+            for (const s of FORBIDDEN) {
+                if (src.includes(s)) offenders.push(`${name} : "${s}"`);
+            }
+        }
+        assert.deepEqual(offenders, [], `libelles sans accent :\n${offenders.join('\n')}`);
+    });
+
+    it('les libelles de la fiche et de la nav portent leurs accents', () => {
+        const html = sources[0][1];
+        for (const s of ['Itinéraire', 'Activité', 'Réglages des notifications', 'Signaler un problème', 'État de la machine']) {
+            assert.ok(html.includes(s), `"${s}" attendu dans index.html`);
+        }
     });
 });
 

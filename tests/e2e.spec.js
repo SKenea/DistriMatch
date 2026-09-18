@@ -133,11 +133,11 @@ test.describe('1bis. Deep link sans consentement geoloc', () => {
 // ============================================
 
 test.describe('2. Navigation', () => {
-    test('bottom nav : Explorer / Favoris / Activite', async ({ page }) => {
+    test('bottom nav : Explorer / Favoris / Activité', async ({ page }) => {
         const tabs = await page.$$eval('.bottom-nav .nav-tab span:first-of-type', els =>
             els.map(el => el.textContent.trim())
         );
-        expect(tabs).toEqual(expect.arrayContaining(['Explorer', 'Favoris', 'Activite']));
+        expect(tabs).toEqual(expect.arrayContaining(['Explorer', 'Favoris', 'Activité']));
     });
 
     test('clic sur Activite ouvre la vue activite', async ({ page }) => {
@@ -474,7 +474,7 @@ test.describe('4. Modal distributeur', () => {
             const el = document.getElementById('dist-modal-verified');
             return { text: el?.textContent.trim(), cls: el?.className };
         });
-        expect(r.text).toMatch(/^(Vérifié (il y a \d+ (min|h|j)|a l'instant)|Pas encore vérifié)$/);
+        expect(r.text).toMatch(/^(Vérifié (il y a \d+ (min|h|j)|à l'instant)|Pas encore vérifié)$/);
         expect(r.cls).toMatch(/\bis-(fresh|stale|unknown)\b/);
     });
 
@@ -1868,7 +1868,12 @@ test.describe('24. Hierarchie de la fiche', () => {
                 heroHeight: rect('dist-modal-photo').height,
                 heroIsFallback: document.getElementById('dist-modal-photo').classList.contains('is-fallback'),
                 lastMetaIsSeparator: !!last && last.classList.contains('meta-separator'),
-                typeOccurrences: (document.getElementById('dist-modal').textContent.match(new RegExp(document.getElementById('dist-modal-type').textContent.trim().replace(/[^\w\s]/g, '').trim(), 'g')) || []).length
+                typeOccurrences: (() => {
+                    // Libelle du type sans l'emoji, accents conserves, echappe pour la RegExp
+                    const label = document.getElementById('dist-modal-type').textContent.replace(/^[^A-Za-zÀ-ÿ]+/, '').trim();
+                    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    return (document.getElementById('dist-modal').textContent.match(new RegExp(escaped, 'g')) || []).length;
+                })()
             };
         });
         expect(r.verifiedBottom).toBeLessThanOrEqual(r.ratingTop + 1);

@@ -100,7 +100,7 @@ export function formatTime(timestamp) {
 export function timeAgo(ts, now = Date.now()) {
     const diff = now - (ts || 0);
     const m = Math.floor(diff / 60000);
-    if (m < 1) return "a l'instant";
+    if (m < 1) return "à l'instant";
     if (m < 60) return `il y a ${m} min`;
     const h = Math.floor(m / 60);
     if (h < 24) return `il y a ${h} h`;
@@ -390,7 +390,7 @@ export function getLevelInfo(points) {
 export function getUserLocation() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-            reject(new Error('Geolocalisation non supportee'));
+            reject(new Error('Géolocalisation non supportée'));
             return;
         }
 
