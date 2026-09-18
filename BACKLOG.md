@@ -8,7 +8,6 @@
 
 ## En cours
 <!-- Le skill /auto y place l'item actuellement traite -->
-- Fiche : le badge statique "Disponible" contredit le dernier signal produit (session /auto 7 du 2026-09-18)
 
 ## Priorite haute
 
@@ -26,24 +25,6 @@
      (PR #96), modale de confirmation maison (PR #97). Backlog /auto vide :
      les prochains items viennent de "Chantiers strategie", a cadrer avec
      Stephane (import OSM en premier). -->
-
-- [ ] Fiche : le badge statique "Disponible" contredit le dernier signal produit
-  - Contexte : vu en prod le 2026-09-16 grace au jeu de demo (dist-007 "Legumes Bio
-    Cambo") : "Panier legumes saison / vu absent il y a 44 min / Disponible". Le badge
-    vient du flag editorial `products.available` (seed = maquette, rendu dans
-    `js/distributor.js` `renderProducts`, `.product-availability-clean`), l'indice vient
-    de la vue `product_availability` (availability.js). Deux verites cote a cote =
-    confiance perdue, alors que la fraicheur horodatee est LE produit (STRATEGIE).
-  - Option retenue par defaut (Stephane peut trancher autrement) : le badge suit le
-    signal quand il existe et est frais (< `FRESH_MAX_AGE_MS`) : "Vu dispo" (vert) /
-    "Vu absent" (gris) ; sans signal frais, badge neutre "Au catalogue" a la place de
-    "Disponible" (le flag editorial ne dit rien de l'instant). L'indice "vu ... il y a X"
-    reste sous le nom. Le chip cliquable du mode edition (toggle du flag) ne change pas.
-  - Acceptance : fonction pure `resolveAvailabilityBadge(product, signalRow, now)` dans
-    utils.js -> `{ label, tone }` (tests unit : signal frais dispo / absent, signal perime,
-    aucun signal) ; rendu dans la fiche (lecture seule) ; e2e avec
-    `page.route('**/rest/v1/product_availability*')` : une ligne absent recente ->
-    badge "Vu absent", aucune ligne -> "Au catalogue". Import map bumpee, CSS bumpe.
 
 <!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
 
@@ -256,3 +237,4 @@
 - [x] 2026-09-18 UX-02 Entrer sans geolocalisation : lien « Voir la carte sans me localiser », carte centree sur la fiche du deep link ou sur le centre des distributeurs (centroidOf, aucune coordonnee en dur), panneau trie par nom avec rappel, fermer une fiche deep link ne reaffiche plus le mur ; +2 unit +2 e2e, overlays v30, import map v40 (PR #112, commit 8066c24)
 - [x] 2026-09-18 UX-04 Bouton retour : js/history.js (pushLayer / popstate / popLayer), couches fiche, panneau, modale de signal, chat, confirmation, vues ; +4 e2e ; import map v41 (PR #113, commit 57f3e21)
 - [x] 2026-09-18 UX-05/13 Fiche : fraicheur sous le nom (sa propre ligne, plus de separateur orphelin), rythme, bandeau, puis note / type / prix ; hero sans photo 120 px emoji seul ; « Il reste quoi ? » en CTA primaire pleine largeur au-dessus des actions secondaires ; +1 e2e ; overlays v31, import map v42 (PR #114, commit 5bdd138)
+- [x] 2026-09-18 Fiche : badge produit aligne sur le dernier signal frais (resolveAvailabilityBadge : Vu dispo / Vu absent, sinon Au catalogue ou Indisponible), bordure de l'item alignee ; +3 unit +1 e2e ; panels v33, import map v43 (PR #116, commit 85e0eff)
