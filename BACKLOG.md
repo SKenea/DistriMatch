@@ -11,10 +11,87 @@
 
 ## Priorite haute
 
-<!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 : evenements (PR #104),
-     rythme infere (PR #105), tableau de bord du pilote (PR #106). Migrations 008 et
-     009 executees, seed de demo lance. Prochains items : Priorite normale, puis
-     "Chantiers strategie" a cadrer avec Stephane (import OSM en premier). -->
+<!-- Lot 4 (mesure + demo) ENTIEREMENT LIVRE le 2026-09-16 (PR #104, #105, #106).
+     Lot 5 (2026-09-18) : audit UX mobile en prod, `docs/AUDIT_UX_2026-09-18.md`.
+     Les IDs UX-xx renvoient au rapport ; captures dans docs/audit/2026-09-18/. -->
+
+- [ ] UX-01 Toasts visibles partout : au-dessus des modales et de la bottom nav
+  - Contexte : `#toast-container` est en z-index 300, la fiche `#dist-modal-overlay` en
+    10500 (confirm 11500) : apres « Envoyer » (Merci !), apres « Partager » (lien copie)
+    et en erreur 503, le toast est rendu SOUS la fiche, l'utilisateur ne voit rien
+    (capture 10). Sur la carte, le toast (top 551) recouvre la bottom nav (top 604)
+    (capture 11). UX-01 / UX-10 / UX-25 du rapport.
+  - Acceptance : z-index du conteneur superieur a toutes les modales ; position au-dessus
+    de la bottom nav quand elle est visible (variable CSS de hauteur de nav + safe-area) ;
+    en erreur 503, un message inline dans la modale de signal en plus du toast ; aucune
+    regression desktop. Tests e2e : (1) apres envoi d'un signal (RPC interceptee),
+    `document.elementFromPoint` au centre du toast est le toast ; (2) sur la carte,
+    `toast.bottom <= bottomNav.top` ; (3) 503 -> `#availability-modal` contient le
+    message d'erreur. CSS bumpe.
+
+- [ ] UX-03 Liste « Tous les distributeurs » vide a l'ouverture par le hamburger
+  - Contexte : sur mobile, `#sidebar-toggle` ouvre le panneau « Tous les distributeurs »
+    avec `#side-panel-list` vide (0 element apres 2,5 s, WebKit et Chromium, capture 05).
+    Il faut taper un chip pour peupler. C'est la vue « classes par distance » promise a
+    l'accueil.
+  - Acceptance : a l'ouverture du panneau, la liste est rendue avec le filtre courant
+    (« Tous » par defaut), premier groupe non vide ouvert. Test e2e : tap
+    `#sidebar-toggle` -> au moins un `.side-panel-item` visible sans autre action.
+
+- [ ] UX-07/08 Contraste et tailles : rouge texte, vert fraicheur, nav et indices lisibles
+  - Contexte : mesures de l'audit (styles calcules) : `--primary` #E63946 sur blanc =
+    4,17:1 (< 4,5 AA) en texte 12-14 px sur les 5 boutons d'action de la fiche, les
+    onglets, la bottom nav et les boutons pleins (Envoyer, Se connecter, Recevoir le
+    lien) ; vert fraicheur #16a34a = 3,30:1 (« Vérifié a l'instant »,
+    `.product-seen.is-fresh`) ; « +10 pts » 3,34:1. Polices : bottom nav 10,4 px, indices
+    « vu absent il y a… » 11,5 px (l'information cle), groupes du panneau 10,9-11,5 px.
+  - Acceptance : token `--primary-text` #D62828 (5,0:1) pour tout texte rouge et tout
+    fond de bouton portant du texte blanc, `--primary` reste pour les aplats sans texte ;
+    vert fraicheur #15803d (5,0:1) partout (badge, indices, tableau de bord) ; bottom nav
+    >= 12 px, indices produits >= 13 px, groupes du panneau >= 12 px. Test unit : etendre
+    le test de ratio existant (« a11y : contraste ») aux nouveaux tokens ; test e2e : aucune
+    police calculee < 12 px sur carte, panneau, fiche et modale de signal en 390 px.
+
+- [ ] UX-02 Entrer sans geolocalisation, et pas de mur apres un scan QR
+  - Contexte : l'overlay d'accueil n'a qu'une issue (« Activer la localisation ») ; apres
+    un refus : « Reessayer » + reglages iPhone, cul-de-sac (capture 02). Apres un scan QR
+    (`?id=&confirm=1&src=qr`) et un signal envoye, fermer la fiche renvoie sur ce mur
+    (capture 12). Les utilisateurs qui refusent la geoloc n'entrent jamais.
+  - Acceptance : lien secondaire « Voir la carte sans me localiser » sous le CTA (et dans
+    l'etat refuse) : carte centree sur le centroide des distributeurs charges (aucune
+    coordonnee en dur), panneau trie par nom (ou fraicheur) avec la mention « Active la
+    localisation pour trier par distance » ; apres un deep link (`?id=`), la fermeture de
+    la fiche n'affiche pas l'overlay, elle laisse la carte utilisable. Tests e2e :
+    (1) contexte sans permission -> tap « sans me localiser » -> `.leaflet-container`
+    visible, marqueurs > 0, `#geoloc-overlay.hidden` ; (2) deep link QR sans geoloc ->
+    fermer la fiche -> overlay hidden, carte visible.
+
+- [ ] UX-04 Bouton retour (Android) : fermer la fiche ou la modale au lieu de quitter l'app
+  - Contexte : fiche ouverte, `history.back()` mene a `about:blank` (l'app est quittee),
+    constate sur les deux moteurs. Sur Android, c'est LE geste de fermeture.
+  - Acceptance : a l'ouverture d'une fiche, d'une modale (signal, chat, confirm) ou d'une
+    vue (Compte, Favoris, Activite, notifications, stats), `history.pushState({ layer })` ;
+    `popstate` ferme la couche la plus haute ; fermer par la croix ou le bouton retour
+    appelle `history.back()` sans boucle ; le nettoyage du deep link (replaceState) est
+    conserve. Tests e2e : ouvrir la fiche -> `page.goBack()` -> fiche fermee, URL
+    inchangee, `window.AppState` toujours present ; modale signal ouverte -> goBack ->
+    modale fermee, fiche encore ouverte ; vue Compte -> goBack -> carte.
+
+- [ ] UX-05/13 Fiche : la fraicheur d'abord, « Il reste quoi ? » en action primaire
+  - Contexte : capture 06. La note inventee « 4.8 ★★★★½ (89) » vient avant « Vérifié il y
+    a 1 j » (gris, petit) ; hero de 220 px (emoji + type, type repete dans la ligne meta) ;
+    « Il reste quoi ? » est le 4e de 5 boutons identiques, seul « Itineraire » est en
+    primaire ; separateur « · » orphelin en fin de ligne meta quand « Vérifié » passe a la
+    ligne. A livrer avec le ticket « badge Disponible » (Priorite normale) qui traite la
+    meme zone.
+  - Acceptance : ordre du header = nom, badge fraicheur (couleur, 14 px, sur sa propre
+    ligne, plus de separateur orphelin), rythme, puis note / type / prix ; hero <= 120 px
+    sans photo (avec photo : inchange) ; « Il reste quoi ? » bouton primaire pleine largeur
+    au-dessus de la rangee Itineraire / Favori / Photo / Partager (secondaires) ; le type
+    n'apparait qu'une fois. Tests e2e : `#dist-modal-verified` au-dessus de
+    `#dist-modal-rating` (getBoundingClientRect) ; largeur de `#dist-action-confirm`
+    > 60 % de la fiche ; aucun `.meta-separator` en dernier enfant visible de
+    `.dist-modal-meta` ; section 14 (cibles 44 px) toujours verte. CSS et import map bumpes.
 
 ## Priorite normale
 
@@ -41,6 +118,71 @@
     aucun signal) ; rendu dans la fiche (lecture seule) ; e2e avec
     `page.route('**/rest/v1/product_availability*')` : une ligne absent recente ->
     badge "Vu absent", aucune ligne -> "Au catalogue". Import map bumpee, CSS bumpe.
+
+<!-- Audit UX mobile du 2026-09-18 (docs/AUDIT_UX_2026-09-18.md), finitions P2. -->
+
+- [ ] UX-09 Modale « Il reste quoi ? » : une seule croix, « Pas regarde » neutre
+  - Contexte : capture 09 : deux croix superposees (fiche + modale) ; « Pas regarde »
+    preselectionne en gras ressemble a un choix deja fait.
+  - Acceptance : la croix de la fiche est masquee tant que la modale est active ; « Pas
+    regarde » en style neutre (pas de gras, gris) tant qu'aucun choix ; e2e : modale
+    ouverte -> `#dist-modal-close` non visible ; `.availability-seg-btn[data-state="unseen"]`
+    sans classe de selection par defaut.
+
+- [ ] UX-11/12 Filtres et panneau : defilement visible, « Tous » atteignable, groupes utiles
+  - Contexte : capture 04. 3 chips sur 12 visibles sans indice de defilement ; le panneau
+    ouvert cache les chips (« Tous » inaccessible sans fermer) ; groupes replies par
+    defaut (+1 tap), groupe « A proximite 0 » affiche, toast redondant « Boulangerie &
+    Taloa : 3 distributeur(s) ».
+  - Acceptance : degrade de bord droit sur `#filter-bar` tant que
+    `scrollLeft < scrollWidth - clientWidth` ; le filtre reste changeable panneau ouvert
+    (chips au-dessus du panneau, ou rappel « Tous » en tete de panneau) ; premier groupe
+    non vide ouvert, groupes vides masques ; toast de comptage supprime (le titre du
+    panneau porte le compte). E2e : tap chip -> un `.side-panel-item` visible sans tap
+    supplementaire ; aucun `.toast` apres tap chip.
+
+- [ ] UX-16 Accents des libelles UI
+  - Contexte : melange dans l'UI : « Itineraire », « Activite », « Reessayer »,
+    « Geolocalisation refusee », « Vérifié a l'instant », « Lien copie », « abonne a »,
+    « Reglages », « General », « Notifications activees », « apparaitront »… a cote de
+    libelles accentues. Impression de brouillon sur mobile (captures 06, 14).
+  - Acceptance : toutes les chaines visibles (index.html, templates JS, toasts)
+    accentuees ; commentaires et identifiants restent sans accents. Test unit : une liste
+    de chaines connues (« Itineraire », « Activite », « Reessayer », « a l'instant »,
+    « Lien copie », « abonne a ») est introuvable dans index.html et js/*.js hors
+    commentaires.
+
+- [ ] UX-18/19 Favori et menu avatar : un seul mot, etat accessible, cibles 44 px
+  - Contexte : le bouton passe de « Favori » a « Retirer » sans `aria-pressed`, toast
+    « Tu es maintenant abonne a … », vue « Mes Favoris / 0 abonnement » avec une cloche en
+    etat vide ; items du menu avatar 176 x 37 px.
+  - Acceptance : libelle « Favori » constant + `aria-pressed` + coeur plein / vide ;
+    vocabulaire « favori » partout (compteur, toast « Ajoute a tes favoris »), icone coeur
+    dans l'etat vide ; `.profile-menu-item` >= 44 px. E2e : `aria-pressed` bascule au tap ;
+    la section 14 (cibles) couvre le menu avatar ouvert.
+
+- [ ] UX-20/21 Vues cachees inertes, controles avec la police du site
+  - Contexte : `.view-page.view-hidden` et `#chat-modal` restent `display: block/flex`,
+    `visibility: visible`, translates hors ecran : 6 focusables atteignables au clavier et
+    au lecteur d'ecran. `button/input/select` n'heritent pas de la police (Arial sur
+    Chromium Android, serif sur WebKit Windows) alors que le corps est en `-apple-system`.
+  - Acceptance : `visibility: hidden` (avec `transition: visibility 0s .3s`) ou `inert` sur
+    les vues cachees et le chat ferme ; `button, input, select, textarea { font: inherit }`.
+    E2e : un bouton d'une vue cachee ne prend pas le focus (`el.focus();
+    document.activeElement !== el`) ; `getComputedStyle(bouton).fontFamily ===
+    getComputedStyle(body).fontFamily`.
+
+- [ ] UX-15 Ecran d'accueil : promettre ce que l'app fait
+  - Contexte : capture 01 : « Alertes stock » (pas encore livre) et « Avis … par la
+    communaute » ; la vraie promesse (fraicheur horodatee, signal en un tap, rythme) est
+    absente ; « Cote Basque » en dur dans la phrase d'accroche.
+  - Proposition (Stephane peut retoucher les textes) : titre « Sache avant d'y aller »,
+    sous-titre « Les distributeurs autour de toi, avec l'heure de la derniere
+    verification. » ; benefices : « Vérifié il y a 12 min » / « Dis ce que tu vois, en un
+    tap, sans compte » / « Habituellement plein le matin ». Le nom de la zone vient des
+    donnees (ville la plus frequente des distributeurs charges) ou disparait.
+  - Acceptance : textes remplaces, aucun nom de territoire en dur dans index.html ; e2e :
+    l'overlay ne contient ni « Alertes stock » ni « Cote Basque ».
 
 ## Chantiers strategie (a cadrer avec Stephane avant passage en priorite)
 
@@ -102,6 +244,21 @@
 
 ## A clarifier (auto-ajoutes par /auto)
 <!-- Le skill /auto place ici les items ambigus qu'il n'a pas pu traiter -->
+
+- [ ] Audit UX 2026-09-18, decisions produit (docs/AUDIT_UX_2026-09-18.md, section
+  « Decisions a prendre ») :
+  - (a) UX-14 onglet « Avis » et note « 4.8 (89) » : l'en-tete annonce 89 avis, l'onglet
+    dit « Aucun avis » sans action possible -> masquer l'onglet et la note jusqu'a la
+    decision OSM (chantier 4), ou seulement reculer la note (choix par defaut de UX-05) ?
+  - (b) UX-23 jeu de demo qui vieillit (signaux « il y a 1 j », KPI 24 h a 0 %) ->
+    regeneration nocturne par pg_cron tant que le pilote reel n'a pas demarre (extension
+    a activer, puis SQL Editor : `select cron.schedule('demo-reseed', '15 3 * * *',
+    $$select purge_demo_data(); select seed_demo_signals();$$);`).
+  - (c) UX-24 donnees de test en prod (« Boulangerie Test Photo », « Tic Tac – Adresse a
+    completer », `user-1776102020333`) a purger dans le SQL Editor.
+  - (d) UX-17 chantier 3 : l'activite affiche « Signalement empty » (enum brut), « +10
+    pts », un favori cree une conversation bot et un badge Activite « 1 » : tout part avec
+    le masquage du chat et de la gamification.
 
 - [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
   - Note /auto 2026-05-04 : le tri actuel est synchrone (<1ms) car les distances
