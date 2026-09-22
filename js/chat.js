@@ -13,6 +13,7 @@ import { closeSidebar, updateConversationsBadge } from './navigation.js';
 import { toggleSubscription, getDirectionsTo } from './distributor.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
+import { FEATURES } from './config.js';
 
 // ============================================
 // BOT DISTRIBUTEUR
@@ -45,6 +46,9 @@ function getDistributorBot(distributorId) {
 // ============================================
 
 export function openConversation(distributorId) {
+    // Chat inactif (FEATURES.chat) : filet de securite, aucun point d'entree ne
+    // devrait plus arriver ici.
+    if (!FEATURES.chat) return;
     const bot = getDistributorBot(distributorId);
     if (!bot) return;
 

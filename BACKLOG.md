@@ -131,27 +131,39 @@
     `supabase/010_is_demo.sql` dans le SQL Editor puis `select seed_demo_signals();`
     (retour attendu : `"fiches_demo": 29`). Purge du jour J documentee en tete de 010.
 
-- [ ] US-4 Chantier 3 : une app qui ne simule rien
-  - En tant que visiteur, je ne veux ni chatbot simule ni points / niveaux, afin que
-    chaque element de l'ecran serve a trouver une machine pleine et a le dire aux
-    suivants.
-  - Constat (audit UX-17) : « Discuter avec le bot » est masque mais le chat vit encore
-    (un favori cree une conversation et un badge Activite « 1 », messages proactifs) ;
-    Profil « Explorateur / 0 points », Activite « +10 pts » et enum brut
-    « Signalement empty ».
-  - Decision Stephane : masquer derriere des flags (recommande : reversible, code et
-    tests conserves) ou supprimer le code ? Et l'onglet Activite : le garder comme journal
-    des signaux (vides / pannes / rapports) sans points, ou le retirer de la bottom nav ?
-  - Acceptance (flags) : `FEATURES.chat = false` -> aucune conversation creee (favori,
-    bienvenue, proactif), sidebar sans « Mes conversations », badge conversations a 0,
-    `#chat-modal` jamais ouvert ; `FEATURES.gamification = false` -> Profil sans points /
-    niveau / progression (restent : favoris, contributions), Activite sans « +N pts »,
-    vue Compte inchangee ; libelles de signalement traduits (`empty` -> « Vide », `broken`
-    -> « En panne », `out_of_stock` -> « Rupture de stock »). Tests e2e des sections 6
-    (chat) et 7 (profil) conditionnes aux flags ; CLAUDE.md (modules chat / activity) mis
-    a jour.
-  - TS-4 : meme objet `FEATURES` que TS-1 ; `updateImplicitProfile` et `addActivityItem`
-    restent (donnees locales), seul l'affichage change.
+- [x] US-4a Chat inactif, favoris qui notifient (decision Stephane 2026-09-20, livre
+  2026-09-21)
+  - En tant qu'habitue, je mets une machine en favori et je suis prevenu dans mon centre
+    de notifications quand elle change (vide, en panne, de nouveau pleine, produit suivi
+    vu dispo), afin de ne pas me deplacer pour rien. Le chatbot n'apporte rien
+    aujourd'hui : il reste inactif.
+  - Livre : `FEATURES.chat = false` (js/config.js, code conserve, reversible) ; plus
+    aucune conversation creee (favori, bienvenue, proactif), « Discuter » absent de la
+    fiche, recherche / notification / bandeau ouvrent la fiche ; `js/favorites-watch.js`
+    (ouverture, retour d'onglet, toutes les 5 min) lit `distributor_status` et
+    `product_availability` pour les favoris et notifie les changements
+    (`diffFavoriteSignals`, premier passage muet, cooldown 1 h sans perte, heures
+    calmes) ; centre de notifications : ligne cliquable -> fiche, icone par type,
+    horodatage = celui du signal ; `followedProducts` enfin branche.
+  - Hors perimetre, a garder pour le chantier 5 : notification app fermee (Web Push +
+    Realtime), reglage par type d'evenement, par machine.
+
+- [ ] US-4b Chantier 3 (suite) : ni points ni niveaux
+  - En tant que visiteur, je ne veux ni points ni niveaux, afin que chaque element de
+    l'ecran serve a trouver une machine pleine et a le dire aux suivants.
+  - Constat (audit UX-17) : Profil « Explorateur / 0 points », Activite « +10 pts » et
+    enum brut « Signalement empty ».
+  - Decision Stephane : masquer derriere `FEATURES.gamification` (recommande : meme
+    mecanique que le chat, reversible) ou supprimer ? Et l'onglet Activite : le garder
+    comme journal des signaux (vides / pannes / rapports) sans points, ou le retirer de
+    la bottom nav ?
+  - Acceptance (flag) : `FEATURES.gamification = false` -> Profil sans points / niveau /
+    progression (restent : favoris, contributions), Activite sans « +N pts », vue Compte
+    inchangee ; libelles de signalement traduits (`empty` -> « Vide », `broken` -> « En
+    panne », `out_of_stock` -> « Rupture de stock »). Tests e2e de la section 7 (profil)
+    conditionnes au flag ; CLAUDE.md (module activity) mis a jour.
+  - TS-4 : meme objet `FEATURES` que le chat ; `updateImplicitProfile` et
+    `addActivityItem` restent (donnees locales), seul l'affichage change.
 
 - [ ] US-5 (epic) Chantier 4 : toutes les machines connues, partout
   - En tant que visiteur hors Cote Basque, je veux voir des la premiere ouverture les

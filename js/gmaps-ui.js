@@ -8,6 +8,7 @@ import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
+import { FEATURES } from './config.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
@@ -442,7 +443,7 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const addSection = document.getElementById('dist-products-add-section');
     if (addSection) addSection.style.display = editMode ? 'block' : 'none';
     const chatSection = document.getElementById('dist-chat-section');
-    if (chatSection) chatSection.style.display = editMode ? 'block' : 'none';
+    if (chatSection) chatSection.style.display = (FEATURES.chat && editMode) ? 'block' : 'none';
 
     // Photos : bandeau toujours visible. Par defaut un fallback degrade +
     // emoji + label type (la fiche n'est jamais "vide" en haut), remplace

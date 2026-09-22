@@ -77,6 +77,8 @@ import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSide
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { FEATURES } from './config.js';
+import { startFavoritesWatch } from './favorites-watch.js';
 
 // ============================================
 // SUPABASE
@@ -214,7 +216,8 @@ async function clearUserData() {
         geofence: { enabled: true, radius: 1000 },
         perDistributor: {},
         followedProducts: [],
-        lastNotifications: {}
+        lastNotifications: {},
+        lastSeenSignals: {}
     });
     NotificationQueue.pending = [];
     NotificationQueue.history = [];
@@ -519,18 +522,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialiser les filtres
     initFilterChips();
 
-    // Mettre a jour les compteurs de messages non lus
-    updateUnreadCounts();
-
-    // Mettre a jour la liste des conversations
-    updateConversationsList();
-
-    // Generer les messages proactifs pour les abonnements
-    if (AppState.subscriptions.length > 0) {
-        setTimeout(() => {
-            generateProactiveMessages();
-        }, 2000);
+    // Chat par distributeur : inactif (FEATURES.chat). Pas de compteurs de
+    // non lus, pas de liste de conversations, pas de messages proactifs simules.
+    if (FEATURES.chat) {
+        updateUnreadCounts();
+        updateConversationsList();
+        if (AppState.subscriptions.length > 0) {
+            setTimeout(() => {
+                generateProactiveMessages();
+            }, 2000);
+        }
     }
+
+    // Favoris : ce qui a change sur les machines suivies depuis le dernier
+    // passage alimente le centre de notifications (fire-and-forget).
+    startFavoritesWatch();
 
     // Demarrer la surveillance geofence
     startGeofenceMonitoring();

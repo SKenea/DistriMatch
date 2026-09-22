@@ -57,7 +57,10 @@ export const NotificationPrefs = {
     geofence: { enabled: true, radius: 1000 },
     perDistributor: {},
     followedProducts: [],
-    lastNotifications: {}
+    lastNotifications: {},
+    // Dernier etat vu des machines en favori (js/favorites-watch.js) :
+    // { [distributorId]: { machineState, machineAt, products: { [productId]: { state, at } } } }
+    lastSeenSignals: {}
 };
 
 export const NotificationQueue = {
@@ -130,7 +133,11 @@ export function setSupabaseClient(client) { supabaseClient = client; }
 export const NOTIFICATION_TYPES = {
     proximity: { icon: '📍', title: 'Tu es proche !', template: '{name} est a {distance}m de toi' },
     stock: { icon: '📦', title: 'Produit disponible !', template: '{product} est dispo chez {name}' },
-    promo: { icon: '🎉', title: 'Promo !', template: 'Offre speciale chez {name}' }
+    promo: { icon: '🎉', title: 'Promo !', template: 'Offre speciale chez {name}' },
+    // Changements sur une machine en favori (js/favorites-watch.js)
+    empty: { icon: '🚫', title: 'Machine signalée vide' },
+    broken: { icon: '⚠️', title: 'Machine signalée en panne' },
+    restock: { icon: '✅', title: 'De nouveau disponible' }
 };
 
 export const GREETING_MESSAGES = {

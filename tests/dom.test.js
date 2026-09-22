@@ -5,7 +5,7 @@
  */
 
 import { JSDOM } from 'jsdom';
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ============================================
@@ -186,7 +186,8 @@ const { openDistributorModal, closeDistModal, buildShareUrl, openSidePanelForFil
 const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
 const { updateUnreadCounts } = await import('../js/chat.js');
 const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../js/notifications.js');
-const { NotificationQueue } = await import('../js/state.js');
+const { NotificationQueue, setSupabaseClient } = await import('../js/state.js');
+const { checkFavoriteUpdates } = await import('../js/favorites-watch.js');
 const { activateFocusTrap, deactivateFocusTrap } = await import('../js/focus-trap.js');
 const { buildStatsModel, renderStatsView, percent, formatPercent } = await import('../js/stats.js');
 
@@ -486,6 +487,120 @@ describe('toggleSubscription (favori local, sans auth)', () => {
         await toggleSubscription('dist-sub');
         await toggleSubscription('dist-sub');
         assert.ok(!AppState.subscriptions.includes('dist-sub'));
+    });
+
+    // Chat inactif (FEATURES.chat = false) : un favori ne cree plus de conversation
+    it('ne cree aucune conversation avec le bot', async () => {
+        Conversations.list = [];
+        Conversations.history = {};
+        await toggleSubscription('dist-sub');
+        assert.deepEqual(Conversations.list, []);
+        assert.deepEqual(Conversations.history, {});
+    });
+
+    it('la carte Favoris n\'affiche plus « N nouveau(x) » (messages du bot)', async () => {
+        AppState.subscriptions = ['dist-sub'];
+        Conversations.unreadCounts = { 'dist-sub': 3 };
+        displaySubscriptions();
+        assert.equal(document.querySelectorAll('#subscriptions-list .unread-indicator').length, 0);
+        Conversations.unreadCounts = {};
+    });
+});
+
+// ============================================
+// VEILLE DES FAVORIS (js/favorites-watch.js)
+// ============================================
+
+describe('checkFavoriteUpdates (un favori notifie quand sa machine change)', () => {
+    let tables;
+    const fakeClient = {
+        from(table) {
+            return { select() { return { in() { return Promise.resolve({ data: tables[table] || [], error: null }); } }; } };
+        }
+    };
+    const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+
+    // Les suites suivantes tournent hors ligne (pas de client Supabase)
+    after(() => { setSupabaseClient(null); AppState.subscriptions = []; });
+
+    beforeEach(() => {
+        tables = { distributor_status: [], product_availability: [] };
+        setSupabaseClient(fakeClient);
+        AppState.subscriptions = ['dist-fav'];
+        AppState.distributors = [
+            { id: 'dist-fav', name: 'Pain du Coin', type: 'bakery', emoji: '🥖', address: 'Addr', products: [{ id: 7, name: 'Baguette', price: 1, available: true }] }
+        ];
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.quietHours.enabled = false;
+        NotificationPrefs.followedProducts = [];
+        NotificationPrefs.lastNotifications = {};
+        NotificationPrefs.lastSeenSignals = {};
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+    });
+
+    it('premier passage : memorise sans notifier', async () => {
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: minutesAgo(40) }];
+        const sent = await checkFavoriteUpdates();
+        assert.deepEqual(sent, []);
+        assert.equal(NotificationQueue.history.length, 0);
+        assert.equal(NotificationPrefs.lastSeenSignals['dist-fav'].machineState, 'empty');
+    });
+
+    it('nouveau signal « vide » : une notification non lue, datee du signal, badge a 1', async () => {
+        await checkFavoriteUpdates();
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: minutesAgo(40) }];
+        const sent = await checkFavoriteUpdates();
+        assert.equal(sent.length, 1);
+        const notif = NotificationQueue.history[0];
+        assert.equal(notif.type, 'empty');
+        assert.equal(notif.distributorId, 'dist-fav');
+        assert.match(notif.message, /Pain du Coin a été signalée vide/);
+        assert.equal(notif.read, false);
+        assert.ok(Date.now() - notif.timestamp >= 39 * 60000, 'horodatage = celui du signal');
+        assert.equal(document.getElementById('notifications-badge').textContent, '1');
+    });
+
+    it('meme etat au passage suivant : rien de plus', async () => {
+        await checkFavoriteUpdates();
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'broken', created_at: minutesAgo(5) }];
+        await checkFavoriteUpdates();
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    it('cooldown d\'1 h : l\'evenement n\'est pas perdu, il part au passage suivant', async () => {
+        await checkFavoriteUpdates();
+        NotificationPrefs.lastNotifications['dist-fav'] = Date.now();
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: minutesAgo(2) }];
+        assert.deepEqual(await checkFavoriteUpdates(), []);
+        NotificationPrefs.lastNotifications = {};
+        assert.equal((await checkFavoriteUpdates()).length, 1);
+    });
+
+    it('produit suivi vu dispo : notification « stock »', async () => {
+        NotificationPrefs.followedProducts = ['baguette'];
+        await checkFavoriteUpdates();
+        tables.product_availability = [{ distributor_id: 'dist-fav', product_id: 7, state: 'available', created_at: minutesAgo(3) }];
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.history[0].type, 'stock');
+        assert.match(NotificationQueue.history[0].message, /Baguette vu dispo chez Pain du Coin/);
+    });
+
+    it('sans favori ou sans Supabase : aucun appel, aucune erreur', async () => {
+        AppState.subscriptions = [];
+        assert.deepEqual(await checkFavoriteUpdates(), []);
+        AppState.subscriptions = ['dist-fav'];
+        setSupabaseClient(null);
+        assert.deepEqual(await checkFavoriteUpdates(), []);
+    });
+
+    it('un favori retire ne garde pas d\'etat', async () => {
+        AppState.subscriptions = ['dist-fav', 'dist-other'];
+        NotificationPrefs.lastSeenSignals = { 'dist-gone': { machineState: null, machineAt: 0, products: {} } };
+        await checkFavoriteUpdates();
+        assert.equal(NotificationPrefs.lastSeenSignals['dist-gone'], undefined);
+        assert.ok(NotificationPrefs.lastSeenSignals['dist-fav']);
     });
 });
 
@@ -843,6 +958,25 @@ describe('Centre de notifications', () => {
         await done;
         assert.ok(!document.getElementById('confirm-modal').classList.contains('active'));
         assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    it('une ligne ouvre la fiche de la machine (plus le chat) et porte l\'icone de son type', () => {
+        NotificationQueue.history = [
+            { type: 'empty', distributorId: 'dist-x', message: 'X a été signalée vide', read: false, timestamp: Date.now() }
+        ];
+        openNotificationsView();
+        const row = document.querySelector('#notifications-list .notif-item-open');
+        assert.ok(row, 'ligne cliquable');
+        assert.equal(row.tagName, 'BUTTON');
+        assert.match(row.querySelector('.notif-item-icon').textContent, /🚫/);
+        assert.match(row.textContent, /Machine signalée vide/);
+
+        const opened = [];
+        const previous = window.openDistributorModal;
+        window.openDistributorModal = (id) => opened.push(id);
+        row.click();
+        window.openDistributorModal = previous;
+        assert.deepEqual(opened, ['dist-x']);
     });
 
     it('bouton Tout effacer visible si liste non vide', () => {

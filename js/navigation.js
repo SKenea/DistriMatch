@@ -188,7 +188,7 @@ export function performSearch(query) {
     results.innerHTML = matches.map(d => {
         const distance = d.distance ? formatDistance(d.distance) : '';
         return `
-            <div class="search-item-clean" onclick="openConversation('${d.id}'); closeSearch();">
+            <div class="search-item-clean" onclick="closeSearch(); openDistributorModal('${d.id}');">
                 <div class="search-item-name">
                     <span>${d.emoji} ${escapeHTML(d.name)}</span>
                 </div>

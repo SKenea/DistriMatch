@@ -11,6 +11,8 @@ import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
 import { generateWelcomeMessage } from './chat.js';
+import { FEATURES } from './config.js';
+import { checkFavoriteUpdates } from './favorites-watch.js';
 import { requireAuth } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
 
@@ -323,8 +325,11 @@ export async function toggleSubscription(id, event) {
         AppState.subscriptions.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
         addActivityItem('subscription', id);
-        showToast(`Ajouté à tes favoris : ${distributor?.name || 'ce distributeur'}`, 'success');
-        generateWelcomeMessage(id);
+        showToast('Ajouté à tes favoris : tu seras prévenu si ça change', 'success');
+        if (FEATURES.chat) generateWelcomeMessage(id);
+        // Memorise l'etat actuel de la machine : les notifications ne partent
+        // que sur un changement ulterieur (pas de rafale a l'abonnement).
+        checkFavoriteUpdates();
     } else {
         AppState.subscriptions.splice(index, 1);
         addActivityItem('unsubscription', id);
@@ -363,7 +368,8 @@ export function displaySubscriptions() {
 
         const distance = d.distance ? formatDistance(d.distance) : '';
         const typeConfig = AppState.typeConfig[d.type] || {};
-        const unreadCount = Conversations.unreadCounts[id] || 0;
+        // Messages du bot non lus : sans objet tant que le chat est inactif
+        const unreadCount = FEATURES.chat ? (Conversations.unreadCounts[id] || 0) : 0;
 
         return `
             <div class="subscription-card" onclick="openDistributorModal('${d.id}', false, true)">
