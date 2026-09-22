@@ -32,6 +32,15 @@ export const HCAPTCHA_PROD_SITEKEY = 'ad886e32-4268-4bf4-b3fe-2b36fc528552';
 export const PROD_HOSTNAMES = ['skenea.github.io', 'distrimatch.pages.dev'];
 
 // ============================================
+// FONCTIONNALITES (interrupteurs produit)
+// ============================================
+
+// chat : chatbot par distributeur. Inactif depuis 2026-09-20 (decision produit :
+// un favori notifie via le centre de notifications, cf. js/favorites-watch.js).
+// Le code de js/chat.js est conserve : repasser a true suffit a le reactiver.
+export const FEATURES = { chat: false };
+
+// ============================================
 // HELPERS
 // ============================================
 

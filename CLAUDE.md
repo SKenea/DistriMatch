@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **DistriMatch** - PWA "Waze des distributeurs automatiques" pour la Cote Basque.
 
 **Nom officiel : DistriMatch.** "SnackMatch" est l'ancien nom : ne plus l'employer (code, UI, doc, commits). Il subsiste volontairement dans les cles localStorage `snackmatch_*` (les renommer sans migration effacerait les donnees des utilisateurs) et dans le remote GitLab.
-Carte Leaflet + fiche distributeur style Google Maps + chatbot par distributeur + contributions communautaires (ajout, produits, photos, signalements) via Supabase.
+Carte Leaflet + fiche distributeur style Google Maps + favoris qui notifient (centre de notifications) + contributions communautaires (ajout, produits, photos, signalements) via Supabase. Le chatbot par distributeur est **inactif** (`FEATURES.chat = false` dans `js/config.js`, code conserve).
 
 ## Stack
 
@@ -59,16 +59,17 @@ Les tests e2e injectent une geoloc Bayonne et pilotent l'app via les globals `wi
 ```
 app.js             - Point d'entree, init, chargement donnees, listeners, window globals, UI auth (refreshAuthUI)
 state.js           - Etat global mutable (AppState, Conversations, UserProfile, NotificationPrefs, AddMode...), constantes, EMBEDDED_DATA
-config.js          - Cles PUBLIQUES uniquement (Supabase anon key, sitekeys hCaptcha), isLocalhost()
+config.js          - Cles PUBLIQUES uniquement (Supabase anon key, sitekeys hCaptcha), isLocalhost(), FEATURES (interrupteurs produit : `chat`)
 auth.js            - Magic link Supabase + hCaptcha, requireAuth()/isAuthenticated()/onAuthChange()
 gmaps-ui.js        - UI principale style Google Maps : side panel liste filtree (groupes par distance) + modal fiche distributeur a onglets, deep link, partage, auth gate edition
 map.js             - Carte Leaflet, marqueurs (marker.distributorId), popups
 navigation.js      - switchView/switchTab (VIEW_CONFIG + registerViewCallback), sidebar, recherche, filtres
 distributor.js     - CRUD produits, photos, abonnements (favoris)
 add-distributor.js - Mode ajout distributeur (placement carte, formulaire, upload photos)
-chat.js            - Chatbot par distributeur, messages proactifs, non lus
+chat.js            - Chatbot par distributeur : INACTIF (`FEATURES.chat = false`). Aucun point d'entree n'y mene (recherche, notifications et bandeau ouvrent la fiche). Code conserve, reactivable par le flag
 activity.js        - Feed activite, signalements + votes (RPC Supabase)
-notifications.js   - Geofencing, heures calmes, cooldown, produits suivis, centre de notifications
+notifications.js   - Geofencing, heures calmes, cooldown, produits suivis, centre de notifications (une ligne ouvre la fiche), notifyFavoriteEvent
+favorites-watch.js - Veille des favoris : a l'ouverture, au retour d'onglet et toutes les 5 min, compare les vues `distributor_status` / `product_availability` au dernier etat vu (`NotificationPrefs.lastSeenSignals`) via `diffFavoriteSignals` (utils.js, pure) -> notification vide / en panne / produit suivi vu dispo / de nouveau dispo. Premier passage muet. Pas de push ni de Realtime
 focus-trap.js      - Piege a focus + Echap pour toutes les vraies modales (a reutiliser pour toute nouvelle modale)
 utils.js           - escapeHTML, distances, showToast, persistance localStorage, profil implicite, geoloc
 ```
@@ -113,8 +114,8 @@ Format distributeur : `id`, `name`, `type`, `emoji`, `address`, `city`, `lat`, `
 | UC3 | Contribution publique | Upload photo sur distributeur existant | OUI | Supabase storage + `distributor_photos` |
 | UC4 | Contribution publique | Signalement / vote pour un signalement | OUI | Supabase RPC + ActivityFeed local |
 | UC5 | Sociale locale | Mettre / retirer favori (coeur) | non | localStorage `snackmatch_user` |
-| UC6 | Sociale locale | Suivre un produit (alertes dispo) | non | localStorage `snackmatch_notification_prefs` |
-| UC7 | Sociale locale | Discuter avec le bot d'un distributeur | non | localStorage `snackmatch_conversations` |
+| UC6 | Sociale locale | Suivre un produit (alertes dispo) ; un favori notifie quand sa machine change (lectures anonymes, etat vu stocke localement) | non | localStorage `snackmatch_notification_prefs` |
+| UC7 | Sociale locale | Discuter avec le bot d'un distributeur (**inactif**, `FEATURES.chat`) | non | localStorage `snackmatch_conversations` |
 | UC8 | Preference perso | Prefs notifs (heures calmes, geofence) | non | localStorage |
 | UC9 | Preference perso | Marquer notif lue / supprimer notif | non | localStorage |
 | UC10 | Preference perso | Reinitialiser ses donnees (clear data) | non | localStorage (confirm() suffit) |

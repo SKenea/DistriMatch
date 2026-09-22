@@ -518,9 +518,12 @@
     font-size: 0.85rem;
     color: var(--gray);
     margin: 0.25rem 0 0 0;
-    white-space: nowrap;
+    /* Deux lignes : le nom de la machine ET ce qui lui arrive restent lisibles en 390 px */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .notification-banner .notif-action {
@@ -592,10 +595,34 @@
     color: var(--dark);
 }
 
-.notif-item-body p {
+.notif-item-text {
+    display: block;
     margin: 0.15rem 0;
     font-size: 0.85rem;
     color: var(--gray);
+}
+
+/* La ligne entiere ouvre la fiche de la machine (cible >= 44 px) */
+.notif-item-open {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.notif-item-open:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .notif-item-time {

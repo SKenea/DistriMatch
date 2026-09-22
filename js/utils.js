@@ -571,3 +571,75 @@ export function mapDistributorRow(d) {
         }))
     };
 }
+
+// ============================================
+// FAVORIS : CE QUI A CHANGE SUR UNE MACHINE SUIVIE
+// ============================================
+
+const FAVORITE_SIGNAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function signalTime(row) {
+    const ts = row && row.created_at ? new Date(row.created_at).getTime() : NaN;
+    return Number.isNaN(ts) ? 0 : ts;
+}
+
+// Compare le dernier etat VU d'une machine en favori (previous, stocke sur
+// l'appareil) a son etat ACTUEL (current : lignes des vues distributor_status
+// et product_availability de la migration 007). Fonction pure.
+//   previous : { machineState, machineAt, products: { [productId]: { state, at } } } | undefined
+//   current  : { machine: row | null, products: [row] }
+//   options  : { now, followedProducts: ['pain', ...] (minuscules), productNames: { [productId]: nom } }
+// Retour : { event, snapshot }. event = null ou { type, at, product? }, un seul par
+// passage, le plus important d'abord : broken > empty > stock (produit suivi vu
+// dispo) > restock (de nouveau dispo apres un vide, une panne ou un "vu absent").
+// Premier passage (previous absent) : on memorise sans rien notifier. Un signal
+// de plus de 24 h ne notifie pas.
+export function diffFavoriteSignals(previous, current, options = {}) {
+    const now = options.now ?? Date.now();
+    const followed = (options.followedProducts || []).map(p => String(p).toLowerCase().trim()).filter(Boolean);
+    const productNames = options.productNames || {};
+    const machine = current?.machine || null;
+    const rows = current?.products || [];
+
+    const snapshot = {
+        machineState: machine ? machine.state : null,
+        machineAt: signalTime(machine),
+        products: {}
+    };
+    for (const row of rows) {
+        snapshot.products[row.product_id] = { state: row.state, at: signalTime(row) };
+    }
+    if (!previous) return { event: null, snapshot };
+
+    const isFresh = (ts) => ts > 0 && now - ts < FAVORITE_SIGNAL_MAX_AGE_MS;
+    const candidates = [];
+    // "De nouveau dispo" apres un vide / une panne : seulement pour le PREMIER
+    // "vu dispo" qui suit, sinon chaque signal suivant re-notifierait.
+    const alreadyBack = Object.values(previous.products || {})
+        .some(p => p.state === 'available' && p.at > (previous.machineAt || 0));
+    const machineWasDown = (previous.machineState === 'empty' || previous.machineState === 'broken') && !alreadyBack;
+
+    if (machine && snapshot.machineAt > (previous.machineAt || 0) && isFresh(snapshot.machineAt)) {
+        candidates.push({ rank: machine.state === 'broken' ? 0 : 1, type: machine.state === 'broken' ? 'broken' : 'empty', at: snapshot.machineAt });
+    }
+
+    for (const row of rows) {
+        const at = signalTime(row);
+        const seen = (previous.products || {})[row.product_id];
+        if (row.state !== 'available' || at <= (seen?.at || 0) || !isFresh(at)) continue;
+        // Un "vu dispo" plus ancien que le dernier "vide / en panne" ne dit rien
+        if (at <= snapshot.machineAt) continue;
+        const name = productNames[row.product_id] || '';
+        const lower = name.toLowerCase();
+        if (name && followed.some(f => lower.includes(f))) {
+            candidates.push({ rank: 2, type: 'stock', at, product: name });
+        } else if (seen?.state === 'absent' || machineWasDown) {
+            candidates.push({ rank: 3, type: 'restock', at, product: name });
+        }
+    }
+
+    if (candidates.length === 0) return { event: null, snapshot };
+    candidates.sort((a, b) => a.rank - b.rank || b.at - a.at);
+    const { rank, ...event } = candidates[0];
+    return { event, snapshot };
+}

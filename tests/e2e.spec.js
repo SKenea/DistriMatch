@@ -584,7 +584,7 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.stillReadonly).toBe(true);
     });
 
-    test('mode edition affiche produits CRUD + ajout + chat, stylo masque', async ({ page }) => {
+    test('mode edition affiche produits CRUD + ajout, stylo masque, chat inactif', async ({ page }) => {
         await openFirstFavoriteCard(page);
         // Auth contournee pour isoler le rendu edition
         await page.evaluate(() => {
@@ -599,7 +599,7 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         }));
         expect(r.edit).toBe(true);
         expect(r.addVisible).toBe(true);
-        expect(r.chatVisible).toBe(true);
+        expect(r.chatVisible).toBe(false);   // chat inactif (FEATURES.chat)
         expect(r.styloHidden).toBe(true);
     });
 
@@ -679,33 +679,108 @@ test.describe('5ter. Centre de notifications', () => {
 });
 
 // ============================================
-// 6. CHAT BOT (sans auth)
+// 6. CHAT INACTIF, FAVORIS QUI NOTIFIENT
 // ============================================
 
-test.describe('6. Chat bot', () => {
-    test('chat ouvrable sans auth', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
+test.describe('6. Chat inactif, favoris qui notifient', () => {
+    // Decision produit 2026-09-20 : le chatbot par distributeur est inactif
+    // (FEATURES.chat = false, code conserve). Tout ce qui menait au chat mene a la fiche.
+    test('openConversation n\'ouvre rien, et un favori ne cree aucune conversation', async ({ page }) => {
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        await page.evaluate((distId) => window.openConversation(distId), id);
+        await page.evaluate((distId) => window.toggleSubscription(distId), id);
+        await page.waitForTimeout(300);
 
-        const active = await page.evaluate(() =>
-            document.getElementById('chat-modal').classList.contains('active')
-        );
-        expect(active).toBe(true);
+        const r = await page.evaluate(() => ({
+            chatActive: document.getElementById('chat-modal').classList.contains('active'),
+            chatInert: document.getElementById('chat-modal').hasAttribute('inert'),
+            conversations: JSON.parse(localStorage.getItem('snackmatch_conversations') || '{}')
+        }));
+        expect(r.chatActive).toBe(false);
+        expect(r.chatInert).toBe(true);
+        expect(r.conversations.list || []).toEqual([]);
+        expect(Object.keys(r.conversations.history || {})).toEqual([]);
     });
 
-    test('quick replies en francais', async ({ page }) => {
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('.quick-reply-btn');
+    test('la fiche en mode edition ne propose plus « Discuter »', async ({ page }) => {
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id, true, true));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-chat-section')).toBeHidden();
+    });
 
-        const firstReply = await page.$('.quick-reply-btn');
-        const replyLabel = (await firstReply.textContent()).trim();
-        await firstReply.click();
-        await page.waitForTimeout(800);
+    test('un resultat de recherche ouvre la fiche, pas le chat', async ({ page }) => {
+        const name = await page.evaluate(() => window.AppState.distributors[0].name);
+        await page.click('#search-toggle');
+        await page.fill('#quick-search', name);
+        await page.locator('#search-results .search-item-clean').first().click();
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await expect(page.locator('#dist-modal-name')).toHaveText(name);
+        await expect(page.locator('#chat-modal')).not.toHaveClass(/active/);
+    });
 
-        const userMessages = await page.$$eval('#chat-messages .chat-message.user .message-content',
-            els => els.map(el => el.textContent.trim())
-        );
-        expect(userMessages[userMessages.length - 1]).toBe(replyLabel);
+    // Un favori notifie quand sa machine change : vues distributor_status /
+    // product_availability (migration 007) interceptees, aucun appel reel.
+    test('machine en favori signalee vide : cloche a 1, ligne dans le centre, clic = fiche', async ({ page, context }) => {
+        const signals = { status: [], products: [] };
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(signals.status) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(signals.products) }));
+
+        // Heures calmes coupees : le test doit passer aussi la nuit
+        await page.evaluate(() => localStorage.setItem('snackmatch_notification_prefs', JSON.stringify({
+            enabled: true, quietHours: { enabled: false, start: 22, end: 8 }
+        })));
+        await setupApp(page, context);
+
+        const dist = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            return { id: d.id, name: d.name };
+        });
+
+        // 1er passage, a l'abonnement : on memorise, on ne notifie pas
+        await page.evaluate((id) => window.toggleSubscription(id), dist.id);
+        await expect.poll(() => page.evaluate((id) => {
+            const prefs = JSON.parse(localStorage.getItem('snackmatch_notification_prefs') || '{}');
+            return !!(prefs.lastSeenSignals && prefs.lastSeenSignals[id]);
+        }, dist.id)).toBe(true);
+        await expect(page.locator('#notifications-badge')).toBeHidden();
+
+        // Quelqu'un signale la machine vide ; l'app le voit au retour sur l'onglet
+        signals.status = [{
+            distributor_id: dist.id, state: 'empty', source: 'anon', weight: 0.5,
+            created_at: new Date(Date.now() - 40 * 60000).toISOString(), age_seconds: 2400
+        }];
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await expect(page.locator('#notifications-badge')).toHaveText('1');
+
+        // Le bandeau in-app mene a la fiche
+        const banner = page.locator('.notification-banner');
+        await expect(banner).toContainText(`${dist.name} a été signalée vide`);
+        await banner.locator('.notif-action').click();
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-modal-name')).toHaveText(dist.name);
+        await page.click('#dist-modal-close');
+
+        // Le centre de notifications garde la trace, datee du signal
+        await page.click('.nav-icon-btn[data-view="notifications"]');
+        await page.waitForSelector('#notifications-view.view-active');
+        const row = page.locator('#notifications-list .notif-item-open');
+        await expect(row).toHaveCount(1);
+        await expect(row).toContainText('Machine signalée vide');
+        await expect(row).toContainText(`${dist.name} a été signalée vide`);
+        await expect(row).toContainText('il y a 40 min');
+
+        await row.click();
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-modal-name')).toHaveText(dist.name);
+
+        // Rien de plus au passage suivant (meme signal)
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await page.waitForTimeout(500);
+        const count = await page.evaluate(() =>
+            JSON.parse(localStorage.getItem('snackmatch_notification_queue')).history.length);
+        expect(count).toBe(1);
     });
 });
 
@@ -1108,25 +1183,6 @@ test.describe('11. Accessibilite modales (focus-trap)', () => {
         const backId = await page.evaluate(() => document.activeElement?.id);
         expect(backId).toBe('search-toggle');
     });
-
-    test('chat-modal : focus piege dans la modale + Echap ferme', async ({ page }) => {
-        await page.evaluate(() => {
-            const d = window.AppState.distributors[0];
-            window.openConversation(d.id);
-        });
-        await page.waitForSelector('#chat-modal.active', { timeout: 5000 });
-
-        const dialog = page.locator('#chat-modal');
-        await expect(dialog).toHaveAttribute('role', 'dialog');
-        await expect(dialog).toHaveAttribute('aria-modal', 'true');
-
-        await expect.poll(() => page.evaluate(() =>
-            document.getElementById('chat-modal').contains(document.activeElement))).toBe(true);
-
-
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#chat-modal')).not.toHaveClass(/active/);
-    });
 });
 
 // ============================================
@@ -1341,10 +1397,6 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
         await page.click('#availability-cancel');
         await page.click('#dist-modal-close');
 
-        await page.evaluate(() => window.openConversation(window.AppState.distributors[0].id));
-        await page.waitForSelector('#chat-modal.active');
-        violations.push(...await collectSmallTargets(page, 'chat'));
-        await page.keyboard.press('Escape');
 
         for (const view of ['account', 'notifications', 'profile']) {
             await page.evaluate((v) => window.switchView(v), view);

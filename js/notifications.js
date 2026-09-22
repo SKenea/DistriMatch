@@ -159,6 +159,45 @@ export function triggerProductNotification(distributor, product) {
     sendNotification(notification);
 }
 
+// Changement sur une machine en favori (js/favorites-watch.js).
+// event : { type: 'empty' | 'broken' | 'stock' | 'restock', at, product? }
+// L'horodatage est celui du SIGNAL : le centre affiche "il y a 40 min" par
+// rapport au moment ou quelqu'un l'a vu, pas au moment ou l'app l'a appris.
+export function buildFavoriteMessage(distributorName, event) {
+    const product = event.product || 'Un produit';
+    switch (event.type) {
+        case 'broken': return `${distributorName} a été signalée en panne`;
+        case 'empty': return `${distributorName} a été signalée vide`;
+        case 'stock': return `${product} vu dispo chez ${distributorName}`;
+        default: return `${product} de nouveau vu dispo chez ${distributorName}`;
+    }
+}
+
+export function notifyFavoriteEvent(distributor, event) {
+    const notification = {
+        type: event.type,
+        distributorId: distributor.id,
+        distributorName: distributor.name,
+        message: buildFavoriteMessage(distributor.name, event),
+        timestamp: event.at || Date.now()
+    };
+    if (event.product) notification.product = event.product;
+
+    if (isQuietHours()) {
+        queueNotification(notification);
+        return;
+    }
+
+    sendNotification(notification);
+}
+
+// Une notification mene a la fiche de la machine (le chat est inactif).
+function openNotificationTarget(distributorId) {
+    if (typeof window !== 'undefined' && typeof window.openDistributorModal === 'function') {
+        window.openDistributorModal(distributorId);
+    }
+}
+
 // ============================================
 // ENVOI
 // ============================================
@@ -192,9 +231,7 @@ function sendNotification(notif) {
             });
             n.onclick = () => {
                 window.focus();
-                if (typeof window.openConversation === 'function') {
-                    window.openConversation(notif.distributorId);
-                }
+                openNotificationTarget(notif.distributorId);
                 n.close();
             };
         } catch (e) {
@@ -254,6 +291,14 @@ function renderNotificationsList() {
     const empty = document.getElementById('notifications-empty');
     const clearBtn = document.getElementById('clear-notifications');
     if (!list) return;
+    // Delegation posee une seule fois : une ligne ouvre la fiche de la machine
+    if (!list.dataset.wired) {
+        list.dataset.wired = '1';
+        list.addEventListener('click', (e) => {
+            const row = e.target.closest('.notif-item-open');
+            if (row && row.dataset.distributorId) openNotificationTarget(row.dataset.distributorId);
+        });
+    }
     const items = NotificationQueue.history;
     if (clearBtn) clearBtn.style.display = items.length ? 'inline-flex' : 'none';
     if (!items.length) {
@@ -266,12 +311,14 @@ function renderNotificationsList() {
         const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
         return `
             <div class="notif-item ${n.read ? '' : 'unread'}">
-                <span class="notif-item-icon">${typeInfo.icon}</span>
-                <div class="notif-item-body">
-                    <strong>${escapeHTML(typeInfo.title)}</strong>
-                    <p>${escapeHTML(n.message || '')}</p>
-                    <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
-                </div>
+                <button type="button" class="notif-item-open" data-distributor-id="${escapeHTML(String(n.distributorId ?? ''))}" aria-label="${escapeHTML(`${typeInfo.title} : ${n.message || ''}. Ouvrir la fiche`)}">
+                    <span class="notif-item-icon" aria-hidden="true">${typeInfo.icon}</span>
+                    <span class="notif-item-body">
+                        <strong>${escapeHTML(typeInfo.title)}</strong>
+                        <span class="notif-item-text">${escapeHTML(n.message || '')}</span>
+                        <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
+                    </span>
+                </button>
                 <button class="notif-item-delete" aria-label="Supprimer cette notification" title="Supprimer" onclick="deleteNotification(${index})">${TRASH_SVG}</button>
             </div>`;
     }).join('');
@@ -320,7 +367,7 @@ function showNotificationBanner(notif) {
             <strong>${typeInfo.title}</strong>
             <p>${escapeHTML(notif.message)}</p>
         </div>
-        <button class="notif-action" onclick="openConversation('${notif.distributorId}'); this.closest('.notification-banner').remove();">
+        <button class="notif-action" onclick="openDistributorModal('${escapeHTML(String(notif.distributorId))}'); this.closest('.notification-banner').remove();">
             Voir
         </button>
         <button class="notif-close" aria-label="Fermer la notification" onclick="this.closest('.notification-banner').remove();">&times;</button>

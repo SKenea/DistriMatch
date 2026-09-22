@@ -18,7 +18,7 @@ import {
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveAvailabilityBadge,
-    mapDistributorRow
+    mapDistributorRow, diffFavoriteSignals
 } from '../js/utils.js';
 
 import {
@@ -293,6 +293,88 @@ describe('resolveAvailabilityBadge (badge produit de la fiche)', () => {
         assert.deepEqual(resolveAvailabilityBadge({ available: true }, null, NOW), { label: 'Au catalogue', tone: 'neutral' });
         assert.deepEqual(resolveAvailabilityBadge({ available: false }, undefined, NOW), { label: 'Indisponible', tone: 'unavailable' });
         assert.deepEqual(resolveAvailabilityBadge(null, { state: 'available', created_at: 'n/a' }, NOW), { label: 'Au catalogue', tone: 'neutral' });
+    });
+});
+
+// ============================================
+// FAVORIS : diffFavoriteSignals (ce qui a change sur une machine suivie)
+// ============================================
+
+describe('diffFavoriteSignals (veille des favoris)', () => {
+    const NOW = Date.parse('2026-09-21T12:00:00Z');
+    const at = (minutesAgo) => new Date(NOW - minutesAgo * 60000).toISOString();
+    const ts = (minutesAgo) => NOW - minutesAgo * 60000;
+    const machine = (state, minutesAgo) => ({ state, created_at: at(minutesAgo) });
+    const product = (id, state, minutesAgo) => ({ product_id: id, state, created_at: at(minutesAgo) });
+    const EMPTY = { machineState: null, machineAt: 0, products: {} };
+    const names = { 1: 'Baguette tradition', 2: 'Croissant' };
+
+    it('premier passage : aucun evenement, l\'etat est memorise', () => {
+        const { event, snapshot } = diffFavoriteSignals(undefined, { machine: machine('empty', 10), products: [product(1, 'absent', 20)] }, { now: NOW });
+        assert.equal(event, null);
+        assert.deepEqual(snapshot, { machineState: 'empty', machineAt: ts(10), products: { 1: { state: 'absent', at: ts(20) } } });
+    });
+
+    it('nouveau signal machine : vide, ou en panne', () => {
+        assert.deepEqual(diffFavoriteSignals(EMPTY, { machine: machine('empty', 40), products: [] }, { now: NOW }).event, { type: 'empty', at: ts(40) });
+        assert.deepEqual(diffFavoriteSignals(EMPTY, { machine: machine('broken', 5), products: [] }, { now: NOW }).event, { type: 'broken', at: ts(5) });
+    });
+
+    it('rien si rien n\'a change, rien si le signal a plus de 24 h', () => {
+        const seen = { machineState: 'empty', machineAt: ts(40), products: {} };
+        assert.equal(diffFavoriteSignals(seen, { machine: machine('empty', 40), products: [] }, { now: NOW }).event, null);
+        assert.equal(diffFavoriteSignals(EMPTY, { machine: machine('empty', 25 * 60), products: [] }, { now: NOW }).event, null);
+        assert.equal(diffFavoriteSignals(EMPTY, { machine: null, products: [] }, { now: NOW }).event, null);
+    });
+
+    it('de nouveau dispo : apres un « vu absent », ou apres une machine vide', () => {
+        const afterAbsent = { machineState: null, machineAt: 0, products: { 2: { state: 'absent', at: ts(90) } } };
+        assert.deepEqual(
+            diffFavoriteSignals(afterAbsent, { machine: null, products: [product(2, 'available', 10)] }, { now: NOW, productNames: names }).event,
+            { type: 'restock', at: ts(10), product: 'Croissant' });
+
+        const afterEmpty = { machineState: 'empty', machineAt: ts(120), products: {} };
+        assert.deepEqual(
+            diffFavoriteSignals(afterEmpty, { machine: machine('empty', 120), products: [product(1, 'available', 15)] }, { now: NOW, productNames: names }).event,
+            { type: 'restock', at: ts(15), product: 'Baguette tradition' });
+    });
+
+    it('apres un vide, seul le PREMIER « vu dispo » notifie', () => {
+        const alreadyBack = { machineState: 'empty', machineAt: ts(120), products: { 1: { state: 'available', at: ts(60) } } };
+        const current = { machine: machine('empty', 120), products: [product(1, 'available', 60), product(2, 'available', 5)] };
+        assert.equal(diffFavoriteSignals(alreadyBack, current, { now: NOW, productNames: names }).event, null);
+    });
+
+    it('un « vu dispo » simple (sans absence avant) ne notifie pas', () => {
+        const current = { machine: null, products: [product(1, 'available', 5)] };
+        assert.equal(diffFavoriteSignals(EMPTY, current, { now: NOW, productNames: names }).event, null);
+    });
+
+    it('un « vu dispo » plus ancien que le dernier « vide » ne dit rien', () => {
+        const seen = { machineState: null, machineAt: 0, products: { 1: { state: 'absent', at: ts(300) } } };
+        const current = { machine: machine('empty', 10), products: [product(1, 'available', 30)] };
+        assert.deepEqual(diffFavoriteSignals(seen, current, { now: NOW, productNames: names }).event, { type: 'empty', at: ts(10) });
+    });
+
+    it('produit suivi vu dispo : « stock », nom insensible a la casse et partiel', () => {
+        const current = { machine: null, products: [product(1, 'available', 5)] };
+        assert.deepEqual(
+            diffFavoriteSignals(EMPTY, current, { now: NOW, productNames: names, followedProducts: [' BAGUETTE '] }).event,
+            { type: 'stock', at: ts(5), product: 'Baguette tradition' });
+    });
+
+    it('un seul evenement par passage, le plus important : panne > vide > suivi > retour', () => {
+        const seen = { machineState: null, machineAt: 0, products: { 2: { state: 'absent', at: ts(200) } } };
+        const products = [product(1, 'available', 2), product(2, 'available', 3)];
+        const options = { now: NOW, productNames: names, followedProducts: ['baguette'] };
+        assert.equal(diffFavoriteSignals(seen, { machine: machine('broken', 20), products }, options).event.type, 'broken');
+        assert.equal(diffFavoriteSignals(seen, { machine: null, products }, options).event.type, 'stock');
+        assert.equal(diffFavoriteSignals(seen, { machine: null, products: [products[1]] }, options).event.type, 'restock');
+    });
+
+    it('robuste aux entrees vides ou aux dates invalides', () => {
+        assert.deepEqual(diffFavoriteSignals(EMPTY, null, { now: NOW }), { event: null, snapshot: EMPTY });
+        assert.equal(diffFavoriteSignals(EMPTY, { machine: { state: 'empty', created_at: 'n/a' }, products: [] }, { now: NOW }).event, null);
     });
 });
 
