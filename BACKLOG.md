@@ -19,6 +19,36 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T4 Fiche inspiree de l'app EuroMillions, en clair (Stephane, 2026-09-25)
+Objectif : une fiche qui se lit comme l'ecran de jeu FDJ (capture fournie) : un
+bandeau colore avec l'info cle en tres grand, des pastilles, des tuiles franches,
+une consigne aux mots-cles colores, de grosses cibles contrastees. Theme clair
+retenu par Stephane (lisible au soleil, coherent avec la carte). Hors perimetre :
+carte, panneau lateral, autres pages. Reformulation validee le 2026-09-25.
+
+- [ ] T4-US1 Bandeau d'etat en tete de fiche
+  - En tant que client, je veux voir en haut de la fiche, en tres grand, si ca vaut
+    le deplacement, afin de decider en une seconde.
+  - Acceptance : le bandeau prend la couleur de l'etat de la machine (vert
+    Fonctionne, orange Vide, rouge En panne, ardoise Pas d'info) ; il contient le
+    nom (+ tag Demo), la puce d'etat touchable a droite, l'info cle en tres grand
+    (« 3 sur 5 dispo », ou l'etat de la machine si elle n'a pas de produit, ou
+    « Pas d'info ») et la ligne de provenance ; texte blanc >= 4,5:1 sur chaque
+    couleur ; s'il y a une photo, elle passe en fond assombri du bandeau et la
+    galerie complete va dans l'onglet « À propos » ; plus de bandeau emoji.
+  - TS : `describeFicheHero(machine, productStatuses)` pure (utils.js).
+
+- [ ] T4-US2 Onglets en pastilles, tuiles d'action franches
+  - Acceptance : Produits / Avis / À propos en pastilles, l'active remplie ; les
+    tuiles Itinéraire, Favori, Modifier, Photo, Partager : icone plus grande, coins
+    plus ronds, contour plus marque ; cibles >= 44 px ; rien ne deborde en 390 px.
+
+- [ ] T4-US3 Consigne coloree, lignes produit contrastees
+  - Acceptance : « Touche un produit : Il y en a ou Plus rien », « Il y en a » en
+    vert et « Plus rien » en rouge ; lignes produit sur fond blanc bordees, statut en
+    grosse pastille en majuscules (« DISPO », « PAS DISPO », « PAS D'INFO ») ;
+    contrastes >= 4,5:1 (section 21 des e2e) ; captures iPhone avant / apres.
+
 ### EPIC-T3 Un signal part toujours, meme connecte (Stephane, 2026-09-25)
 Constat terrain : « Fonctionne » sur Gaztainbidea -> « Signal non envoyé ». En
 navigation privee (sans compte) les memes signaux passent. La base accepte le signal
