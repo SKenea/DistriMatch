@@ -19,6 +19,37 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T6 Des signaux proteges contre l'abus (Stephane, 2026-09-25)
+Crainte de Stephane : « des personnes mettent des signaux juste pour s'amuser ».
+Trou constate : l'app reserve les boutons aux connectes (EPIC-T5) mais la base
+accepte encore les signaux anonymes, et la limite par telephone se contourne (le
+telephone fabrique lui-meme son identifiant). La barriere doit etre dans la base.
+Les 4 points recommandes ont ete valides par Stephane le 2026-09-25.
+
+- [ ] T6-US1 La base exige un compte pour signaler
+  - Acceptance : migration `014_signals_require_account.sql` : `confirm_availability`
+    refuse un appel sans compte (code 28000, « Connexion requise ») ; source toujours
+    `user`, poids 0.8 ; verifie en role simule (anon refuse, connecte accepte).
+    Les donnees de demo (inserees directement) ne sont pas concernees.
+
+- [ ] T6-US2 Limite par compte, plus par telephone
+  - Acceptance : 20 signaux par heure et par compte (au-dela, P0001 « Trop de
+    signaux ») ; anti-doublon (meme etat, meme produit ou machine, dans l'heure) par
+    compte ; message « Trop de signaux depuis ce compte, réessaie dans une heure ».
+
+- [ ] T6-US3 Pouvoir effacer un tricheur
+  - Acceptance : table `signal_bans` (compte bloque, raison, date) ; un compte bloque
+    est refuse (42501, « Ce compte ne peut plus envoyer de signaux ») ; fonction
+    `purge_user_signals(user_id, bloquer)` reservee a l'admin (SQL, jamais l'API) :
+    supprime tous les signaux du compte et le bloque ; requete documentee pour
+    reperer les comptes les plus actifs ; teste en transaction annulee.
+
+- [ ] T6-US4 Plus de renvoi sans compte : renouveler la session
+  - Acceptance : le renvoi anonyme d'EPIC-T3 est retire ; si un envoi echoue hors
+    refus metier, l'app renouvelle la session et renvoie une fois ; si ca echoue
+    encore, « Ta session a expiré : reconnecte-toi » et la connexion s'ouvre ;
+    e2e (echec puis succes apres renouvellement ; echec persistant -> message).
+
 ### EPIC-T5 Fiche claire : lire pour tous, informer quand on est connecte (Stephane, 2026-09-25)
 Objectif (Stephane) : « une interface claire, simple, facile a apprehender, ou un
 utilisateur sait ce qu'il y a, si la machine marche, et la possibilite
