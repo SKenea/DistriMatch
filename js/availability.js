@@ -14,7 +14,6 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
@@ -22,7 +21,7 @@ import {
 } from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
-import { isAuthenticated } from './auth.js';
+import { isAuthenticated, promptReconnect } from './auth.js';
 
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
 let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
@@ -226,20 +225,6 @@ export function focusSignalFromQr() {
     pulse(document.getElementById('dist-products-hint'));
 }
 
-// Client anonyme, sans session, cree a la demande : renvoi d'un signal que la
-// session du telephone a fait echouer (EPIC-T3, constat terrain Android). Le
-// signal n'exige pas de compte (UC11), il ne doit jamais etre bloque par elle.
-let anonClient = null;
-
-function getAnonClient() {
-    if (anonClient) return anonClient;
-    if (typeof window === 'undefined' || !window.supabase?.createClient) return null;
-    anonClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'distrimatch-anon-signal' }
-    });
-    return anonClient;
-}
-
 async function callConfirm(client, payload) {
     try {
         return await client.rpc('confirm_availability', payload);
@@ -248,14 +233,17 @@ async function callConfirm(client, payload) {
     }
 }
 
-// Envoi normal ; en cas d'echec non metier, un renvoi anonyme.
-async function confirmWithFallback(payload) {
+// Envoi normal ; en cas d'echec non metier (session expiree, reseau...), on
+// renouvelle la session puis on renvoie une fois (EPIC-T6). Plus de renvoi
+// anonyme : la base exige un compte (migration 014, anti-abus).
+async function confirmWithRefresh(payload) {
     const first = await callConfirm(supabaseClient, payload);
     if (!first.error || isBusinessSignalError(first.error)) return first;
-    const anon = getAnonClient();
-    if (!anon) return first;
-    console.warn('[DistriMatch] Signal refuse (session ?), renvoi anonyme :', first.status, first.error?.code, first.error?.message);
-    return callConfirm(anon, payload);
+    console.warn('[DistriMatch] Signal refuse, renouvellement de session :', first.status, first.error?.code, first.error?.message);
+    try {
+        await supabaseClient.auth.refreshSession();
+    } catch (e) { /* pas de session a renouveler : le renvoi dira pourquoi */ }
+    return callConfirm(supabaseClient, payload);
 }
 
 // Un tap = un signal : { productId, state } pour un aliment, { machine } pour
@@ -277,10 +265,12 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
     isSending = true;
     setBusy(true);
     try {
-        const { data, error, status } = await confirmWithFallback(payload);
+        const { data, error, status } = await confirmWithRefresh(payload);
         if (error) {
             console.warn('[DistriMatch] Signal de dispo refuse :', status, error?.code, error?.message || error);
             showToast(describeSignalError(error, status, navigator.onLine), 'error');
+            // Session morte : on propose de se reconnecter tout de suite
+            if (error?.code === '28000' || status === 401) promptReconnect();
             return;
         }
 

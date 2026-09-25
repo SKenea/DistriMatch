@@ -1438,9 +1438,9 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-modal-verified')).toHaveText('Signalée en panne il y a 10 min');
     });
 
-    // EPIC-T3 (constat terrain Android) : un envoi qui echoue hors refus metier
-    // est renvoye une fois, sans session ; un refus metier ne l'est pas.
-    test('envoi en echec (401) -> renvoi anonyme automatique -> « Merci »', async ({ page }) => {
+    // EPIC-T6 : un envoi qui echoue hors refus metier est renvoye une fois apres
+    // renouvellement de la session (plus de renvoi anonyme) ; un refus metier ne l'est pas.
+    test('envoi en echec (401) -> session renouvelee, renvoi -> « Merci »', async ({ page }) => {
         const calls = [];
         await page.route(RPC_ROUTE, route => {
             calls.push(route.request().postDataJSON());
@@ -1470,8 +1470,24 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await loginForTest(page);
         await openDistModal(page);
         await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
-        await expect(page.locator('#toast-container .toast.error')).toHaveText('Trop de signaux depuis ce téléphone, réessaie dans une heure');
+        await expect(page.locator('#toast-container .toast.error')).toHaveText('Trop de signaux depuis ce compte, réessaie dans une heure');
         expect(calls).toHaveLength(1);
+    });
+
+    test('session morte (28000 deux fois) -> « Ta session a expiré : reconnecte-toi » et la connexion s\u2019ouvre', async ({ page }) => {
+        const calls = [];
+        await page.route(RPC_ROUTE, route => {
+            calls.push(1);
+            route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: '28000', message: 'Connexion requise pour signaler' }) });
+        });
+        await routeSignals(page);
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));   // modale email comme en prod
+        await loginForTest(page);
+        await openDistModal(page);
+        await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
+        await expect(page.locator('#toast-container .toast.error')).toHaveText('Ta session a expiré : reconnecte-toi');
+        expect(calls).toHaveLength(2);
+        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
     });
 
     test('plus de gros bouton rouge ni de fenetre « Il reste quoi ? »', async ({ page }) => {
