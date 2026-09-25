@@ -339,8 +339,8 @@ describe('resolveProductStatus (dispo ou pas, par aliment)', () => {
         assert.equal(resolveProductStatus(onSale, row('available', 5), empty, NOW).label, 'Dispo');
     });
 
-    it('produit « Plus vendu » au catalogue : Pas dispo, sans age', () => {
-        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'Plus vendu ici' });
+    it('produit marque « Non disponible » en edition : Pas dispo, sans age', () => {
+        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: '' });
     });
 });
 

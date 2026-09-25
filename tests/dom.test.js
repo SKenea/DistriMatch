@@ -419,8 +419,8 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.products-empty-state'));
     });
 
-    // EPIC-T2 : en lecture, trois mots seulement ; « Plus vendu » -> Pas dispo
-    it('lecture : « Pas d\'info » sans signal, « Pas dispo » si plus vendu, jamais « catalogue »', () => {
+    // EPIC-T2 : en lecture, trois mots seulement ; marque « Non disponible » -> Pas dispo
+    it('lecture : « Pas d\'info » sans signal, « Pas dispo » si marque non disponible, jamais « catalogue »', () => {
         const dist = {
             products: [
                 { id: 1, name: 'Baguette', price: 5, available: true },
@@ -432,7 +432,7 @@ describe('renderProductsList', () => {
         assert.equal(rows[0].querySelector('.product-pill').textContent, "Pas d'info");
         assert.ok(rows[0].classList.contains('is-unknown'));
         assert.equal(rows[1].querySelector('.product-pill').textContent, 'Pas dispo');
-        assert.equal(rows[1].querySelector('.product-seen').textContent, 'Plus vendu ici');
+        assert.equal(rows[1].querySelector('.product-seen').textContent, '');
         assert.ok(!/catalogue/i.test(document.getElementById('dist-products-list').textContent));
     });
 
@@ -476,16 +476,16 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.product-btn-delete svg'), 'corbeille (svg) supprimer');
         const chip = list.querySelector('.product-availability-chip');
         assert.ok(chip, 'pastille etat presente');
-        assert.ok(chip.classList.contains('is-available'), 'etat vendu');
+        assert.ok(chip.classList.contains('is-available'), 'etat disponible');
         // EPIC-T2 : le catalogue dit son nom, sans confusion avec la dispo du moment
-        assert.equal(chip.textContent.trim(), 'Vendu ici');
+        assert.equal(chip.textContent.trim(), 'Disponible');
     });
 
-    it('edition : « Plus vendu » si available=false', () => {
+    it('edition : « Non disponible » si available=false', () => {
         renderProductsList({ products: [{ name: 'X', available: false }] }, 'dist-products-list', { readonly: false });
         const chip = document.getElementById('dist-products-list').querySelector('.product-availability-chip');
         assert.ok(chip.classList.contains('is-unavailable'));
-        assert.equal(chip.textContent.trim(), 'Plus vendu');
+        assert.equal(chip.textContent.trim(), 'Non disponible');
     });
 
     it('utilise le target par defaut (products-list)', () => {

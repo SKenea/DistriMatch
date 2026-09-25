@@ -593,14 +593,14 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
 }
 
 // Statut d'un produit de la fiche.
-//   product   : { available } (available === false : « Plus vendu » au catalogue)
+//   product   : { available } (available === false : marque « Non disponible » en edition)
 //   signalRow : son dernier signal (product_availability) ou null
 //   machine   : resultat de resolveMachineStatus (ou null)
 // Une machine vide / en panne plus recente que le signal du produit l'emporte :
 // on ne peut rien acheter dans une machine vide. Retour : { label, tone, fresh, detail }.
 export function resolveProductStatus(product, signalRow, machine = null, now = Date.now()) {
     if (product && product.available === false) {
-        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'Plus vendu ici' };
+        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: '' };
     }
     const ts = rowTime(signalRow);
     const hasSignal = signalRow && (signalRow.state === 'available' || signalRow.state === 'absent') && isRecent(ts, now);
