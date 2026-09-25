@@ -38,6 +38,20 @@ function notifyAuthChange() {
     });
 }
 
+// Tests e2e UNIQUEMENT (localhost) : simuler un compte connecte, le magic link
+// ne pouvant pas aboutir en local. Aucun effet en prod (isLocalhost). Les
+// appels Supabase restent anonymes : seule l'interface change.
+if (typeof window !== 'undefined' && isLocalhost()) {
+    window.__testLogin = () => {
+        currentUser = { id: '00000000-0000-0000-0000-00000000e2e0', email: 'e2e@localhost', is_anonymous: false };
+        notifyAuthChange();
+    };
+    window.__testLogout = () => {
+        currentUser = null;
+        notifyAuthChange();
+    };
+}
+
 // ============================================
 // INIT - ECOUTE LES CHANGEMENTS DE SESSION
 // ============================================

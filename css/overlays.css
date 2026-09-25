@@ -757,9 +757,6 @@
     color: #FDE68A;              /* le « 130 MILLIONS » jaune de la reference */
 }
 #dist-hero .dist-modal-verified { margin: 0; color: #fff; font-weight: 600; font-style: normal; }
-/* Puce d'etat sur le bandeau : pastille blanche, texte de la couleur de l'etat */
-#dist-hero .machine-chip { background: #fff; border-color: rgba(255, 255, 255, 0.9); }
-#dist-hero .machine-chip.is-unknown { color: #334155; border-style: solid; }
 
 /* Galerie photos dans « À propos » */
 .dist-apropos-photos { padding-top: 0.75rem; }
@@ -1180,61 +1177,62 @@
 }
 .dist-modal-title h2 { margin: 0; overflow-wrap: anywhere; }
 
-/* ===== Etat de la machine (EPIC-T2) : Fonctionne / Vide / En panne / Pas d'info.
-   Le mot repond, la couleur dit la confiance : vive < 2 h, adoucie jusqu'a 24 h. */
-.machine-chip {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: 44px;
-    padding: 0 0.75rem 0 0.7rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 999px;
-    background: var(--white);
-    color: var(--gray);
-    font: inherit;
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-}
-.machine-chip-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
-.machine-chip-caret { opacity: 0.75; transition: transform 0.15s; }
-.machine-chip[aria-expanded="true"] .machine-chip-caret { transform: rotate(180deg); }
-.machine-chip.is-unknown { border-style: dashed; }
-.machine-chip.is-unknown .machine-chip-dot { background: transparent; border: 2px solid currentColor; width: 7px; height: 7px; }
-.machine-chip.is-working { border-color: rgba(22, 101, 52, 0.35); background: rgba(22, 163, 74, 0.10); color: #166534; }
-.machine-chip.is-empty { border-color: rgba(154, 52, 18, 0.35); background: rgba(244, 162, 97, 0.18); color: #9a3412; }
-.machine-chip.is-broken { border-color: rgba(153, 27, 27, 0.35); background: rgba(214, 40, 40, 0.10); color: #991B1B; }
-.machine-chip:not(.is-fresh):not(.is-unknown) { background: var(--white); }
-.machine-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-
-.machine-choices {
-    margin: 0.25rem 0 0.6rem;
-    padding: 0.75rem;
-    border-radius: var(--radius-sm);
-    background: var(--lighter);
-}
+/* ===== Boutons d'etat de la machine (EPIC-T5, comptes connectes) =====
+   Trois tuiles toujours visibles, l'etat actuel en aplat de sa couleur. */
+.machine-choices { margin: 0.25rem 0 0.75rem; }
 .machine-choices[hidden] { display: none; }
-.machine-choices-title { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--dark); }
+.machine-choices.is-highlighted,
+.dist-login-invite.is-highlighted { animation: hintPulse 2.4s ease; }
+.machine-choices-title { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--dark); }
 .machine-choices-row { display: flex; gap: 0.5rem; }
 .machine-choice {
     flex: 1;
-    min-height: 44px;
-    padding: 0.5rem;
-    border: 1px solid var(--light-gray);
-    border-radius: var(--radius-sm);
+    min-height: 56px;
+    padding: 0.5rem 0.25rem;
+    border: 1.5px solid var(--light-gray);
+    border-radius: 16px;
     background: var(--white);
     font: inherit;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
 }
 .machine-choice.is-working { color: #166534; }
 .machine-choice.is-empty { color: #9a3412; }
 .machine-choice.is-broken { color: #991B1B; }
+.machine-choice.is-current { color: #fff; border-color: transparent; }
+.machine-choice.is-working.is-current { background: #15803d; }
+.machine-choice.is-empty.is-current { background: #c2410c; }
+.machine-choice.is-broken.is-current { background: #b91c1c; }
 .machine-choice:disabled { opacity: 0.5; cursor: wait; }
+.machine-choice:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Visiteur : informer demande un compte (EPIC-T5) */
+.dist-login-invite {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.25rem 0 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 16px;
+    background: var(--lighter);
+    border: 1.5px solid var(--light-gray);
+}
+.dist-login-invite[hidden] { display: none; }
+.dist-login-invite p { margin: 0; flex: 1; font-size: 0.9rem; color: var(--dark); }
+.dist-login-invite-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--primary-text);
+    color: #fff;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
 
 /* Ligne de provenance sous le nom : couleur de l'etat, vive si < 2 h */
 .dist-modal-verified.is-working.is-fresh { color: #166534; font-weight: 600; }
@@ -1245,6 +1243,7 @@
 .products-section-head { margin: 0 0 0.6rem; }
 .products-section-head[hidden] { display: none; }
 .products-section-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--dark); }
+.products-count { font-size: 1rem; font-weight: 700; color: var(--text-muted); }
 .products-hint { margin: 0.2rem 0 0; font-size: 1rem; color: var(--dark); border-radius: 6px; }
 .products-hint .hint-yes { color: #166534; }
 .products-hint .hint-no { color: #991B1B; }

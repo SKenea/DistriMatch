@@ -27,15 +27,15 @@ Constat : la puce d'etat repete le bandeau (« Pas d'info » deux fois).
 Decision Stephane 2026-09-25 : informer (etat machine, dispo produit) devient un
 privilege de compte, comme modifier. Cela leve l'exception UC11 cote interface ;
 la RPC reste ouverte a l'anonyme (renvoi EPIC-T3, reversible en une ligne).
-Reformulation validee le 2026-09-25.
+Reformulation validee le 2026-09-25, livre le meme jour (migration 013 executee).
 
-- [ ] T5-US1 Le bandeau dit si la machine marche, la liste dit ce qu'il y a
+- [x] T5-US1 Le bandeau dit si la machine marche, la liste dit ce qu'il y a
   - Acceptance : plus de puce d'etat ; le bandeau affiche en grand l'etat de la
     machine (« Fonctionne », « Vide », « En panne », « Pas d'info ») et sa
     provenance ; le compte « N sur M dispo » passe dans le titre « Il reste quoi ? » ;
     aucune information affichee deux fois.
 
-- [ ] T5-US2 Informer et modifier : privileges de compte
+- [x] T5-US2 Informer et modifier : privileges de compte
   - En tant que connecte, je vois les trois boutons d'etat de la machine
     (« Fonctionne / Vide / En panne », toujours visibles, l'etat actuel colore, un tap
     envoie), les lignes produit touchables (« Il y en a / Plus rien »), Photo et
@@ -45,7 +45,7 @@ Reformulation validee le 2026-09-25.
     `&confirm=1` : connecte -> liste mise en avant, visiteur -> encadre de connexion
     mis en avant ; e2e visiteur et connecte ; CLAUDE.md (UC11) mis a jour.
 
-- [ ] T5-US3 Un connecte ne deplace ni ne renomme une fiche par l'API
+- [x] T5-US3 Un connecte ne deplace ni ne renomme une fiche par l'API
   - Constat : la regle RLS laisse tout compte connecte modifier toutes les colonnes
     d'une fiche (nom, adresse, position) ; l'app n'edite que le niveau de prix.
   - Acceptance : migration `013_distributor_update_columns.sql` : UPDATE sur

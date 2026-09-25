@@ -12,7 +12,7 @@ import { FEATURES } from './config.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
-import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr } from './availability.js';
+import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 
 // ============================================
@@ -217,9 +217,11 @@ export function initDistModal() {
         tab.addEventListener('click', () => switchDistTab(tab.dataset.tab));
     });
 
-    // « Il reste quoi ? » se dit sur les aliments et la puce machine (EPIC-T2,
-    // UC11 sans auth) : delegation posee une fois
+    // « Il reste quoi ? » se dit sur les aliments et les boutons d'etat de la
+    // machine (EPIC-T2), reserves aux comptes connectes (EPIC-T5)
     initFicheSignals();
+    // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
+    document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
 
     // Boutons d'action
     document.getElementById('dist-action-directions')?.addEventListener('click', () => {
@@ -435,7 +437,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     if (demoRow) demoRow.style.display = distributor.isDemo ? 'flex' : 'none';
 
     // Produits : mode edit (boutons CRUD) ou readonly
-    renderProductsList(distributor, 'dist-products-list', { readonly: !editMode });
+    renderProductsList(distributor, 'dist-products-list', { readonly: !editMode, canInform: isAuthenticated() });
+    applyFicheAuthState();
     // Signaux de dispo (UC11) : "vu dispo il y a X" par produit + bandeau
     // machine. Fire-and-forget, jamais await : Supabase absent = rien.
     loadAvailabilityForDistributor(distributor.id);
@@ -456,11 +459,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Boutons
     updateFavoriteButton();
 
-    // Stylo "Modifier" : visible sur toute fiche en lecture, d'ou qu'elle soit
-    // ouverte (retour terrain 2026-09-25 : une fiche sans produit doit pouvoir
-    // etre completee sur place). L'identite est verifiee au clic (modale gate).
-    const editBtn = document.getElementById('dist-action-edit');
-    if (editBtn) editBtn.style.display = editMode ? 'none' : '';
+    // Stylo « Modifier » et « Photo » : privileges de compte (EPIC-T5), poses
+    // par applyFicheAuthState() ci-dessus.
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');
@@ -665,6 +665,34 @@ function showEditAuthGate() {
         // l'utilisateur reprend son action.
         requireAuth();
     });
+}
+
+// EPIC-T5 : lire pour tous, informer / modifier quand on est connecte.
+// Connecte : boutons d'etat de la machine, Photo, Modifier. Visiteur : l'encadre
+// « Connecte-toi pour informer » a la place.
+function applyFicheAuthState() {
+    const authed = isAuthenticated();
+    const machineChoices = document.getElementById('dist-machine-choices');
+    if (machineChoices) machineChoices.hidden = !authed;
+    const invite = document.getElementById('dist-login-invite');
+    if (invite) invite.hidden = authed;
+    const photoBtn = document.getElementById('dist-action-add-photo');
+    if (photoBtn) photoBtn.style.display = authed ? '' : 'none';
+    const editBtn = document.getElementById('dist-action-edit');
+    if (editBtn) editBtn.style.display = (authed && !AppState.modalEditMode) ? '' : 'none';
+}
+
+// Connexion / deconnexion pendant qu'une fiche est ouverte : la fiche bascule
+// sans rechargement (controles d'information, lignes touchables).
+export function refreshFicheForAuth() {
+    const overlay = document.getElementById('dist-modal-overlay');
+    const d = AppState.currentDistributor;
+    if (!d || !overlay?.classList.contains('active')) return;
+    if (!AppState.modalEditMode) {
+        renderProductsList(d, 'dist-products-list', { readonly: true, canInform: isAuthenticated() });
+    }
+    applyFicheAuthState();
+    renderFicheStatus();
 }
 
 // Photos de la fiche : fond du bandeau d'etat (1re photo) + galerie « À propos ».

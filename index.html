@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=37">
+    <link rel="stylesheet" href="css/overlays.css?v=38">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -291,22 +291,17 @@
                         <h2 id="dist-modal-name">Nom du distributeur</h2>
                         <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
                     </div>
-                    <!-- Etat de la machine a droite du nom (EPIC-T2) : Fonctionne / Vide / En panne / Pas d'info.
-                         Touchable : deplie les choix ci-dessous. Rempli par js/availability.js -->
-                    <button type="button" class="machine-chip is-unknown" id="dist-machine-chip" aria-expanded="false" aria-controls="dist-machine-choices" aria-label="État de la machine : Pas d'info. Toucher pour le signaler">
-                        <span class="machine-chip-dot" aria-hidden="true"></span>
-                        <span id="dist-machine-chip-label">Pas d'info</span>
-                        <svg class="machine-chip-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
                 </div>
-                <!-- L'info cle, en tres grand : « 3 sur 5 dispo », ou l'etat de la machine -->
-                <p class="dist-hero-kpi" id="dist-hero-kpi">Pas d'info</p>
+                <!-- EPIC-T5 : le bandeau ne dit qu'une chose, en tres grand : la machine marche-t-elle ? -->
+                <p class="dist-hero-kpi" id="dist-hero-kpi" aria-label="État de la machine">Pas d'info</p>
                 <!-- UNE ligne : d'ou vient l'etat (« Signalée vide il y a 34 min », sinon « Vérifié il y a X ») -->
                 <div class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></div>
                 </div>
             </div>
 
             <div class="dist-modal-header">
+                <!-- EPIC-T5 : informer est un privilege de compte. Connecte : les trois etats en
+                     tuiles, l'etat actuel colore, un tap envoie. Visiteur : l'encadre de connexion. -->
                 <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
                     <p class="machine-choices-title" id="dist-machine-choices-title">La machine, là maintenant :</p>
                     <div class="machine-choices-row">
@@ -314,6 +309,10 @@
                         <button type="button" class="machine-choice is-empty" data-machine="empty">Vide</button>
                         <button type="button" class="machine-choice is-broken" data-machine="broken">En panne</button>
                     </div>
+                </div>
+                <div class="dist-login-invite" id="dist-login-invite" hidden>
+                    <p><strong>Tu es devant la machine ?</strong> Connecte-toi pour dire si elle marche et ce qu'il reste.</p>
+                    <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
                 </div>
                 <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
                 <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
@@ -381,7 +380,7 @@
                 <div class="dist-tab-pane active" data-tab-pane="produits">
                     <!-- EPIC-T2 : le signal se fait sur l'aliment (toucher une ligne) -->
                     <div class="products-section-head" id="dist-products-head">
-                        <h3 class="products-section-title" id="dist-products-title">Il reste quoi ?</h3>
+                        <h3 class="products-section-title" id="dist-products-title">Il reste quoi ? <span class="products-count" id="dist-products-count"></span></h3>
                         <p class="products-hint" id="dist-products-hint">Touche un produit : <strong class="hint-yes">Il y en a</strong> ou <strong class="hint-no">Plus rien</strong></p>
                     </div>
                     <div id="dist-products-list"></div>
@@ -972,26 +971,26 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=55",
-            "./js/state.js": "./js/state.js?v=55",
-            "./js/config.js": "./js/config.js?v=55",
-            "./js/utils.js": "./js/utils.js?v=55",
-            "./js/auth.js": "./js/auth.js?v=55",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=55",
-            "./js/map.js": "./js/map.js?v=55",
-            "./js/navigation.js": "./js/navigation.js?v=55",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=55",
-            "./js/distributor.js": "./js/distributor.js?v=55",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=55",
-            "./js/chat.js": "./js/chat.js?v=55",
-            "./js/activity.js": "./js/activity.js?v=55",
-            "./js/notifications.js": "./js/notifications.js?v=55",
-            "./js/availability.js": "./js/availability.js?v=55",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=55",
-            "./js/events.js": "./js/events.js?v=55",
-            "./js/stats.js": "./js/stats.js?v=55",
-            "./js/history.js": "./js/history.js?v=55",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=55"
+            "./js/app.js": "./js/app.js?v=56",
+            "./js/state.js": "./js/state.js?v=56",
+            "./js/config.js": "./js/config.js?v=56",
+            "./js/utils.js": "./js/utils.js?v=56",
+            "./js/auth.js": "./js/auth.js?v=56",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=56",
+            "./js/map.js": "./js/map.js?v=56",
+            "./js/navigation.js": "./js/navigation.js?v=56",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=56",
+            "./js/distributor.js": "./js/distributor.js?v=56",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=56",
+            "./js/chat.js": "./js/chat.js?v=56",
+            "./js/activity.js": "./js/activity.js?v=56",
+            "./js/notifications.js": "./js/notifications.js?v=56",
+            "./js/availability.js": "./js/availability.js?v=56",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=56",
+            "./js/events.js": "./js/events.js?v=56",
+            "./js/stats.js": "./js/stats.js?v=56",
+            "./js/history.js": "./js/history.js?v=56",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=56"
         }
     }
     </script>

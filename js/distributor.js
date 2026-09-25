@@ -95,6 +95,9 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
     const readonly = options.readonly !== undefined
         ? options.readonly
         : (targetId === 'dist-products-list');
+    // EPIC-T5 : informer (toucher un aliment, ajouter des produits) est un
+    // privilege de compte ; l'appelant dit si l'utilisateur est connecte.
+    const canInform = options.canInform === true;
     if (!distributor || !productsList) return;
 
     // Memorise le conteneur courant pour que les CRUD (toggle/delete/edit)
@@ -112,13 +115,13 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     <path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
                 <p>Aucun produit référencé pour le moment</p>
-                ${readonly ? '<button type="button" class="btn-secondary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
+                ${readonly && canInform ? '<button type="button" class="btn-secondary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
             </div>`;
         return;
     }
 
     productsList.innerHTML = distributor.products.map((p, index) => {
-        if (readonly) return renderProductRow(p, index);
+        if (readonly) return renderProductRow(p, index, canInform);
         // Mode edition : nom editable + dispo + supprimer (pas de prix).
         return `
         <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
@@ -147,16 +150,17 @@ export function isSignalableProduct(p) {
 }
 
 // Ligne produit de la fiche en lecture (EPIC-T2) : nom + « vu il y a X » a
-// gauche, statut « Dispo / Pas dispo / Pas d'info » a droite. Toucher la ligne
-// deplie « Il y en a / Plus rien » (js/availability.js envoie le signal).
+// gauche, statut « Dispo / Pas dispo / Pas d'info » a droite. Connecte
+// (EPIC-T5) : toucher la ligne deplie « Il y en a / Plus rien »
+// (js/availability.js envoie le signal). Visiteur : lecture seule.
 // Statut initial sans signal ; availability.js le met a jour au chargement.
-export function renderProductRow(p, index) {
+export function renderProductRow(p, index, canInform = false) {
     const status = resolveProductStatus(p, null);
     const id = escapeHTML(String(p.id ?? ''));
     const name = escapeHTML(p.name);
     const pill = `<span class="product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}">${escapeHTML(status.label)}</span>`;
     const text = `<span class="product-row-text"><span class="product-name-clean">${name}</span><span class="product-seen">${escapeHTML(status.detail)}</span></span>`;
-    if (!isSignalableProduct(p)) {
+    if (!canInform || !isSignalableProduct(p)) {
         return `
         <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
             <div class="product-row-main">${text}${pill}</div>

@@ -22,6 +22,7 @@ import {
 } from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
+import { isAuthenticated } from './auth.js';
 
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
 let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
@@ -81,13 +82,12 @@ export function renderFicheStatus() {
     if (!distributor) return;
     const machine = resolveMachineStatus(loaded.status, Object.values(loaded.products), distributor.lastVerified);
 
-    const chip = document.getElementById('dist-machine-chip');
-    if (chip) {
-        chip.className = `machine-chip is-${machine.tone}${machine.fresh ? ' is-fresh' : ''}`;
-        chip.setAttribute('aria-label', `État de la machine : ${machine.label}. Toucher pour le signaler`);
-        const label = document.getElementById('dist-machine-chip-label');
-        if (label) label.textContent = machine.label;
-    }
+    // Boutons d'etat (connecte) : l'etat actuel est colore
+    document.querySelectorAll('#dist-machine-choices .machine-choice').forEach(btn => {
+        const current = btn.dataset.machine === machine.state;
+        btn.classList.toggle('is-current', current);
+        btn.setAttribute('aria-pressed', String(current));
+    });
     const detail = document.getElementById('dist-modal-verified');
     if (detail) {
         detail.textContent = machine.detail;
@@ -109,6 +109,8 @@ export function renderFicheStatus() {
     }
     const kpi = document.getElementById('dist-hero-kpi');
     if (kpi) kpi.textContent = hero.kpi;
+    const count = document.getElementById('dist-products-count');
+    if (count) count.textContent = hero.count ? `· ${hero.count}` : '';
 
     document.querySelectorAll('#dist-products-list .product-row[data-product-id]').forEach(row => {
         const product = (distributor.products || []).find(p => String(p.id) === row.dataset.productId);
@@ -151,15 +153,6 @@ function collapseAll(except = null) {
         const choices = btn.parentElement?.querySelector('.product-choices');
         if (choices) choices.hidden = true;
     });
-    if (except !== 'machine') setMachineChoicesOpen(false);
-}
-
-function setMachineChoicesOpen(open) {
-    const chip = document.getElementById('dist-machine-chip');
-    const choices = document.getElementById('dist-machine-choices');
-    if (!chip || !choices) return;
-    chip.setAttribute('aria-expanded', String(open));
-    choices.hidden = !open;
 }
 
 function toggleProductRow(btn) {
@@ -195,39 +188,42 @@ export function initFicheSignals() {
         });
     }
 
-    const chip = document.getElementById('dist-machine-chip');
-    if (chip && !chip.dataset.signalsWired) {
-        chip.dataset.signalsWired = '1';
-        chip.addEventListener('click', () => {
-            const open = chip.getAttribute('aria-expanded') !== 'true';
-            collapseAll('machine');
-            setMachineChoicesOpen(open);
-            if (open) document.querySelector('#dist-machine-choices .machine-choice')?.focus();
-        });
-        document.getElementById('dist-machine-choices')?.addEventListener('click', (e) => {
+    const machineChoices = document.getElementById('dist-machine-choices');
+    if (machineChoices && !machineChoices.dataset.signalsWired) {
+        machineChoices.dataset.signalsWired = '1';
+        machineChoices.addEventListener('click', (e) => {
             const choice = e.target.closest('.machine-choice');
             if (choice) sendSignal({ machine: choice.dataset.machine });
         });
     }
 }
 
-// QR colle sur la machine (&confirm=1) : on arrive sur la liste « Il reste
-// quoi ? », consigne mise en avant ; sans produit a signaler, on ouvre
-// directement les choix de l'etat de la machine.
+function pulse(el) {
+    if (!el) return;
+    el.classList.remove('is-highlighted');
+    void el.offsetWidth;   // relancer l'animation
+    el.classList.add('is-highlighted');
+}
+
+// QR colle sur la machine (&confirm=1). Visiteur : l'encadre de connexion mis
+// en avant (informer est un privilege de compte, EPIC-T5). Connecte : la liste
+// « Il reste quoi ? », ou les boutons d'etat si la machine n'a pas de produit.
 export function focusSignalFromQr() {
-    const signalable = document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
-    if (!signalable) {
-        setMachineChoicesOpen(true);
-        document.getElementById('dist-machine-choices')?.scrollIntoView({ block: 'center' });
+    if (!isAuthenticated()) {
+        const invite = document.getElementById('dist-login-invite');
+        invite?.scrollIntoView({ block: 'center' });
+        pulse(invite);
         return;
     }
-    const hint = document.getElementById('dist-products-hint');
-    document.getElementById('dist-products-head')?.scrollIntoView({ block: 'start' });
-    if (hint) {
-        hint.classList.remove('is-highlighted');
-        void hint.offsetWidth;   // relancer l'animation
-        hint.classList.add('is-highlighted');
+    const signalable = document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
+    if (!signalable) {
+        const machineChoices = document.getElementById('dist-machine-choices');
+        machineChoices?.scrollIntoView({ block: 'center' });
+        pulse(machineChoices);
+        return;
     }
+    document.getElementById('dist-products-head')?.scrollIntoView({ block: 'start' });
+    pulse(document.getElementById('dist-products-hint'));
 }
 
 // Client anonyme, sans session, cree a la demande : renvoi d'un signal que la
@@ -267,6 +263,9 @@ async function confirmWithFallback(payload) {
 async function sendSignal({ productId = null, state = null, machine = null }) {
     const distributor = AppState.currentDistributor;
     if (!distributor || isSending) return;
+    // Informer est un privilege de compte (EPIC-T5) : l'interface ne le propose
+    // qu'aux connectes ; garde-fou si un controle restait affiche.
+    if (!isAuthenticated()) return;
     if (!supabaseClient) {
         showToast('Signal non envoyé : service indisponible, réessaie plus tard', 'error');
         return;
