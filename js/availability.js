@@ -1,44 +1,47 @@
 /**
- * DistriMatch - Signaux de disponibilite en un tap (UC11)
+ * DistriMatch - Signaux de disponibilite, sur la fiche (UC11, EPIC-T2)
  *
  * Chantier 2 de docs/STRATEGIE.md : devant la machine, un client dit ce qu'il
- * reste ("Il reste quoi ?", produit par produit) ou que la machine est vide /
- * en panne. Contribution ANONYME (exception assumee, cf. CLAUDE.md UC11) : un
- * horodatage a poids reduit, limite par appareil et par heure cote serveur
- * (migration 007, RPC confirm_availability). Ce module ne bloque jamais l'init :
- * lecture en fire-and-forget, envoi uniquement sur clic.
+ * reste, produit par produit, ou si la machine fonctionne, est vide ou en panne.
+ * Depuis EPIC-T2 (2026-09-25) plus de fenetre a part : on touche l'aliment dans
+ * la liste « Il reste quoi ? » (« Il y en a » / « Plus rien »), ou la puce a
+ * droite du nom pour l'etat de la machine. Un tap = un signal.
+ *
+ * Contribution ANONYME (exception assumee, cf. CLAUDE.md UC11) : un horodatage
+ * a poids reduit, limite par appareil et par heure cote serveur (migrations 007,
+ * 011, 012 : RPC confirm_availability, correction possible dans l'heure). Ce
+ * module ne bloque jamais l'init : lecture en fire-and-forget, envoi sur clic.
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, resolveAvailabilityBadge } from './utils.js';
-import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
-import { pushLayer, popLayer } from './history.js';
+import {
+    showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
+    resolveMachineStatus, resolveProductStatus
+} from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
 
-// Meme regle que la fraicheur : vert < 2 h. Bandeau machine : signal < 24 h.
-const SEEN_FRESH_MS = 2 * 60 * 60 * 1000;
-const STATUS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-const PRODUCT_STATES = ['available', 'absent', 'unseen'];
-const STATE_LABELS = { available: 'Vu dispo', absent: 'Vu absent', unseen: 'Pas regardé' };
-
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
 let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
-// Choix en cours dans le panneau : { [productId]: 'available' | 'absent' | 'unseen' }
-let choices = {};
-let machineState = null;   // 'empty' | 'broken' | 'working' | null
 let isSending = false;
+// Mesure (008) : un « signal_envoye » par ouverture de fiche, meme si l'on
+// signale plusieurs produits (le KPI reste comparable a l'ancienne fenetre).
+let signalLoggedFor = null;
 
 // ============================================
-// LECTURE : "vu dispo il y a X" + bandeau machine
+// LECTURE : statut machine + statut de chaque produit
 // ============================================
 
 // Fire-and-forget : l'appelant ne l'await jamais. Un Supabase absent ou
 // injoignable ne produit ni erreur ni indication : la fiche reste utilisable.
-export function loadAvailabilityForDistributor(distributorId) {
-    loaded = { distributorId, products: {}, status: null, rhythm: [] };
-    renderAvailabilityHints();
+// options.keep : rafraichir sans effacer l'affichage (apres un envoi).
+export function loadAvailabilityForDistributor(distributorId, options = {}) {
+    if (!options.keep || loaded.distributorId !== distributorId) {
+        loaded = { distributorId, products: {}, status: null, rhythm: [] };
+        signalLoggedFor = null;
+        collapseAll();
+        renderFicheStatus();
+    }
     if (!supabaseClient || !distributorId) return;
 
     Promise.all([
@@ -50,247 +53,222 @@ export function loadAvailabilityForDistributor(distributorId) {
         if (AppState.currentDistributor?.id !== distributorId) return;
         const products = {};
         for (const row of productsRes.data || []) products[row.product_id] = row;
-        loaded = { distributorId, products, status: (statusRes.data || [])[0] || null, rhythm: rhythmRes.data || [] };
-        renderAvailabilityHints();
+        let status = (statusRes.data || [])[0] || null;
+        // Apres un envoi : un signal local plus recent que la version serveur
+        // (vue en retard, requete partie avant l'ecriture) reste affiche.
+        if (options.keep && loaded.distributorId === distributorId) {
+            for (const [id, row] of Object.entries(loaded.products)) {
+                if (!products[id] || isNewer(row, products[id])) products[id] = row;
+            }
+            if (loaded.status && (!status || isNewer(loaded.status, status))) status = loaded.status;
+        }
+        loaded = { distributorId, products, status, rhythm: rhythmRes.data || [] };
+        renderFicheStatus();
     }).catch(() => { /* hors ligne : pas d'indication, pas d'erreur */ });
 }
 
-function signalTs(row) {
-    return row && row.created_at ? new Date(row.created_at).getTime() : NaN;
+function isNewer(a, b) {
+    return new Date(a.created_at).getTime() > new Date(b.created_at).getTime();
 }
 
-// Ecrit "vu dispo il y a 12 min" a cote de chaque produit de la fiche et le
-// bandeau "Signalée vide il y a 40 min" en tete. Idempotent : un re-rendu de
-// la liste des produits peut le rappeler sans doublon.
-export function renderAvailabilityHints() {
-    document.querySelectorAll('#dist-products-list .product-item-clean[data-product-id]').forEach(item => {
-        const row = loaded.products[item.dataset.productId];
-        // Badge de dispo : le signal frais prime sur le flag editorial (audit UX-06)
-        const product = (AppState.currentDistributor?.products || []).find(p => String(p.id) === item.dataset.productId);
-        const badge = resolveAvailabilityBadge(product, row);
-        const badgeEl = item.querySelector('.product-availability-clean');
-        if (badgeEl) {
-            badgeEl.textContent = badge.label;
-            badgeEl.className = `product-availability-clean is-${badge.tone}`;
+// Met a jour la puce machine, la ligne de provenance sous le nom, le rythme
+// et le statut de chaque produit. Idempotent : un re-rendu de la liste des
+// produits peut le rappeler sans doublon.
+export function renderFicheStatus() {
+    const distributor = AppState.currentDistributor;
+    if (!distributor) return;
+    const machine = resolveMachineStatus(loaded.status, Object.values(loaded.products), distributor.lastVerified);
+
+    const chip = document.getElementById('dist-machine-chip');
+    if (chip) {
+        chip.className = `machine-chip is-${machine.tone}${machine.fresh ? ' is-fresh' : ''}`;
+        chip.setAttribute('aria-label', `État de la machine : ${machine.label}. Toucher pour le signaler`);
+        const label = document.getElementById('dist-machine-chip-label');
+        if (label) label.textContent = machine.label;
+    }
+    const detail = document.getElementById('dist-modal-verified');
+    if (detail) {
+        detail.textContent = machine.detail;
+        // Sans etat machine : la ligne « Vérifié il y a X » garde sa regle
+        // (vert < 2 h, italique si jamais verifie).
+        const tone = machine.state === 'unknown'
+            ? getFreshness(distributor.lastVerified).state
+            : `${machine.tone}${machine.fresh ? ' is-fresh' : ''}`;
+        detail.className = `dist-modal-verified is-${tone}`;
+    }
+
+    document.querySelectorAll('#dist-products-list .product-row[data-product-id]').forEach(row => {
+        const product = (distributor.products || []).find(p => String(p.id) === row.dataset.productId);
+        const status = resolveProductStatus(product, loaded.products[row.dataset.productId], machine);
+        row.classList.remove('is-available', 'is-absent', 'is-unknown');
+        row.classList.add(`is-${status.tone}`);
+        const pill = row.querySelector('.product-pill');
+        if (pill) {
+            pill.textContent = status.label;
+            pill.className = `product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}`;
         }
-        item.classList.remove('is-neutral', 'is-available', 'is-absent', 'is-unavailable');
-        item.classList.add(`is-${badge.tone}`);
-        let hint = item.querySelector('.product-seen');
-        const ts = signalTs(row);
-        if (!row || Number.isNaN(ts)) {
-            if (hint) hint.remove();
-            return;
-        }
-        if (!hint) {
-            // Sous le nom du produit (colonne de gauche), pas colle a "Disponible"
-            hint = document.createElement('span');
-            (item.querySelector('.product-info-clean') || item).appendChild(hint);
-        }
-        const fresh = Date.now() - ts < SEEN_FRESH_MS;
-        hint.textContent = `${row.state === 'available' ? 'vu dispo' : 'vu absent'} ${timeAgo(ts)}`;
-        hint.className = `product-seen is-${row.state} ${fresh ? 'is-fresh' : 'is-stale'}`;
+        const seen = row.querySelector('.product-seen');
+        if (seen) seen.textContent = status.detail;
     });
 
-    // Rythme infere (couche 2) sous la fraicheur : une phrase seulement quand
-    // les signaux la justifient, sinon rien.
+    // En-tete « Il reste quoi ? » : seulement en lecture ; la consigne seulement
+    // s'il y a au moins un produit qu'on peut signaler.
+    const head = document.getElementById('dist-products-head');
+    if (head) head.hidden = !!AppState.modalEditMode;
+    const hint = document.getElementById('dist-products-hint');
+    if (hint) hint.hidden = !document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
+
+    // Rythme infere (couche 2) : une phrase seulement quand les signaux la justifient.
     const rhythmEl = document.getElementById('dist-modal-rhythm');
     if (rhythmEl) {
         const phrase = describeRhythm(loaded.rhythm);
         rhythmEl.textContent = phrase || '';
         rhythmEl.className = `dist-modal-rhythm${phrase ? ' is-visible' : ''}`;
     }
+}
 
-    const banner = document.getElementById('dist-status-banner');
-    if (!banner) return;
-    const status = loaded.status;
-    const ts = signalTs(status);
-    // « Ça fonctionne » (011) est le dernier etat : pas de bandeau d'alerte
-    if (!status || status.state === 'working' || Number.isNaN(ts) || Date.now() - ts >= STATUS_MAX_AGE_MS) {
-        banner.textContent = '';
-        banner.className = 'dist-status-banner';
+// ============================================
+// SIGNALER : toucher un aliment, ou la puce machine
+// ============================================
+
+function collapseAll(except = null) {
+    document.querySelectorAll('#dist-products-list .product-row-main[aria-expanded="true"]').forEach(btn => {
+        if (btn === except) return;
+        btn.setAttribute('aria-expanded', 'false');
+        const choices = btn.parentElement?.querySelector('.product-choices');
+        if (choices) choices.hidden = true;
+    });
+    if (except !== 'machine') setMachineChoicesOpen(false);
+}
+
+function setMachineChoicesOpen(open) {
+    const chip = document.getElementById('dist-machine-chip');
+    const choices = document.getElementById('dist-machine-choices');
+    if (!chip || !choices) return;
+    chip.setAttribute('aria-expanded', String(open));
+    choices.hidden = !open;
+}
+
+function toggleProductRow(btn) {
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    collapseAll(btn);
+    btn.setAttribute('aria-expanded', String(open));
+    const choices = btn.parentElement?.querySelector('.product-choices');
+    if (choices) choices.hidden = !open;
+    if (open) choices?.querySelector('.product-choice')?.focus();
+}
+
+// Listeners poses une seule fois : la liste est re-rendue a chaque ouverture
+// de fiche -> delegation sur les conteneurs persistants.
+export function initFicheSignals() {
+    const list = document.getElementById('dist-products-list');
+    if (list && !list.dataset.signalsWired) {
+        list.dataset.signalsWired = '1';
+        list.addEventListener('click', (e) => {
+            // Machine sans produit : on passe par le stylo « Modifier » de la
+            // fiche, qui garde la verification de connexion (UC2).
+            if (e.target.closest('#dist-products-add-first')) {
+                document.getElementById('dist-action-edit')?.click();
+                return;
+            }
+            const choice = e.target.closest('.product-choice');
+            if (choice) {
+                const row = choice.closest('.product-row');
+                sendSignal({ productId: row?.dataset.productId, state: choice.dataset.state });
+                return;
+            }
+            const main = e.target.closest('button.product-row-main');
+            if (main) toggleProductRow(main);
+        });
+    }
+
+    const chip = document.getElementById('dist-machine-chip');
+    if (chip && !chip.dataset.signalsWired) {
+        chip.dataset.signalsWired = '1';
+        chip.addEventListener('click', () => {
+            const open = chip.getAttribute('aria-expanded') !== 'true';
+            collapseAll('machine');
+            setMachineChoicesOpen(open);
+            if (open) document.querySelector('#dist-machine-choices .machine-choice')?.focus();
+        });
+        document.getElementById('dist-machine-choices')?.addEventListener('click', (e) => {
+            const choice = e.target.closest('.machine-choice');
+            if (choice) sendSignal({ machine: choice.dataset.machine });
+        });
+    }
+}
+
+// QR colle sur la machine (&confirm=1) : on arrive sur la liste « Il reste
+// quoi ? », consigne mise en avant ; sans produit a signaler, on ouvre
+// directement les choix de l'etat de la machine.
+export function focusSignalFromQr() {
+    const signalable = document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
+    if (!signalable) {
+        setMachineChoicesOpen(true);
+        document.getElementById('dist-machine-choices')?.scrollIntoView({ block: 'center' });
         return;
     }
-    const when = timeAgo(ts);
-    banner.textContent = status.state === 'broken' ? `En panne signalée ${when}` : `Signalée vide ${when}`;
-    banner.className = `dist-status-banner is-visible is-${status.state}`;
+    const hint = document.getElementById('dist-products-hint');
+    document.getElementById('dist-products-head')?.scrollIntoView({ block: 'start' });
+    if (hint) {
+        hint.classList.remove('is-highlighted');
+        void hint.offsetWidth;   // relancer l'animation
+        hint.classList.add('is-highlighted');
+    }
 }
 
-// ============================================
-// PANNEAU "IL RESTE QUOI ?"
-// ============================================
-
-function getModal() {
-    return document.getElementById('availability-modal');
-}
-
-// Message d'erreur dans la modale elle-meme (retourne true si affiche) : sur
-// mobile, un toast passerait sous la fiche ou recouvrirait les boutons de la modale.
-function setPanelError(message) {
-    const el = document.getElementById('availability-error');
-    if (!el) return false;
-    el.textContent = message || '';
-    el.hidden = !message;
-    return !!message;
-}
-
-export function openAvailabilityPanel() {
+// Un tap = un signal : { productId, state } pour un aliment, { machine } pour
+// l'etat de la machine. Mise a jour immediate de l'affichage, puis resynchro.
+async function sendSignal({ productId = null, state = null, machine = null }) {
     const distributor = AppState.currentDistributor;
-    const modal = getModal();
-    if (!distributor || !modal) return;
-
-    choices = {};
-    machineState = null;
-    setPanelError(null);
-    renderPanel(distributor);
-    // Une seule croix a l'ecran (audit UX-09) : celle de la fiche s'efface
-    document.getElementById('dist-modal-overlay')?.classList.add('has-panel');
-    modal.classList.add('active');
-    pushLayer('signal', closeAvailabilityPanel);   // bouton retour = fermer (audit UX-04)
-    activateFocusTrap(modal, closeAvailabilityPanel);
-    wirePanelOnce(modal);
-}
-
-export function closeAvailabilityPanel() {
-    const modal = getModal();
-    if (!modal) return;
-    modal.classList.remove('active');
-    document.getElementById('dist-modal-overlay')?.classList.remove('has-panel');
-    popLayer('signal');
-    deactivateFocusTrap(modal);
-}
-
-// Produits de la fiche ayant un id Supabase : les produits purement locaux
-// (ajoutes hors ligne) ne peuvent pas recevoir de signal.
-function signalableProducts(distributor) {
-    return (distributor.products || []).filter(p =>
-        p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id))
-    );
-}
-
-function renderPanel(distributor) {
-    const list = document.getElementById('availability-products');
-    const products = signalableProducts(distributor);
-    list.innerHTML = products.length === 0
-        ? `<div class="availability-empty">
-                <p>Aucun produit référencé ici : tu peux quand même dire si la machine fonctionne, est vide ou en panne.</p>
-                <button type="button" class="btn-secondary-clean availability-add-products" id="availability-add-products">Ajouter les produits</button>
-            </div>`
-        : products.map(p => `
-            <div class="availability-row" data-product-id="${escapeHTML(String(p.id))}">
-                <span class="availability-name">${escapeHTML(p.name)}</span>
-                <div class="availability-seg" role="group" aria-label="${escapeHTML(p.name)}">
-                    ${PRODUCT_STATES.map(s => `<button type="button" class="availability-seg-btn${s === 'unseen' ? ' is-default' : ''}" data-state="${s}" aria-pressed="false">${STATE_LABELS[s]}</button>`).join('')}
-                </div>
-            </div>`).join('');
-
-    document.querySelectorAll('#availability-modal .availability-machine-btn').forEach(b => {
-        b.classList.remove('is-selected');
-        b.setAttribute('aria-pressed', 'false');
-    });
-    updateSubmitState();
-}
-
-function hasSomethingToSend() {
-    return machineState !== null || Object.values(choices).some(s => s === 'available' || s === 'absent');
-}
-
-function updateSubmitState() {
-    const btn = document.getElementById('availability-submit');
-    if (btn) btn.disabled = !hasSomethingToSend() || isSending;
-}
-
-// Listeners poses une seule fois : la modale est statique, la liste des
-// produits est re-rendue a chaque ouverture -> delegation sur le conteneur.
-function wirePanelOnce(modal) {
-    if (modal.dataset.wired) return;
-    modal.dataset.wired = '1';
-
-    document.getElementById('availability-products').addEventListener('click', (e) => {
-        // Fiche sans produit : on passe par le stylo "Modifier" de la fiche,
-        // qui garde la verification de connexion (UC2, modale gate sinon).
-        if (e.target.closest('#availability-add-products')) {
-            closeAvailabilityPanel();
-            document.getElementById('dist-action-edit')?.click();
-            return;
-        }
-        const btn = e.target.closest('.availability-seg-btn');
-        if (!btn) return;
-        const row = btn.closest('.availability-row');
-        choices[row.dataset.productId] = btn.dataset.state;
-        row.querySelectorAll('.availability-seg-btn').forEach(b => {
-            const on = b === btn;
-            b.classList.toggle('is-selected', on);
-            b.setAttribute('aria-pressed', String(on));
-        });
-        updateSubmitState();
-    });
-
-    modal.querySelectorAll('.availability-machine-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Exclusifs, et un second clic desactive
-            machineState = machineState === btn.dataset.machine ? null : btn.dataset.machine;
-            modal.querySelectorAll('.availability-machine-btn').forEach(b => {
-                const on = b.dataset.machine === machineState;
-                b.classList.toggle('is-selected', on);
-                b.setAttribute('aria-pressed', String(on));
-            });
-            updateSubmitState();
-        });
-    });
-
-    document.getElementById('availability-submit').addEventListener('click', submitAvailability);
-    document.getElementById('availability-cancel').addEventListener('click', closeAvailabilityPanel);
-    document.getElementById('availability-close').addEventListener('click', closeAvailabilityPanel);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeAvailabilityPanel(); });
-}
-
-// ============================================
-// ENVOI (RPC confirm_availability, sans auth : UC11)
-// ============================================
-
-async function submitAvailability() {
-    const distributor = AppState.currentDistributor;
-    if (!distributor || isSending || !hasSomethingToSend()) return;
+    if (!distributor || isSending) return;
     if (!supabaseClient) {
-        if (!setPanelError('Service indisponible, réessaie plus tard')) {
-            showToast('Signal non envoyé : service indisponible, réessaie plus tard', 'error');
-        }
+        showToast('Signal non envoyé : service indisponible, réessaie plus tard', 'error');
         return;
     }
+    const choices = productId !== null ? { [productId]: state } : {};
+    const payload = buildAvailabilityPayload(distributor.id, getDeviceId(), choices, machine);
+    if (payload.p_product_signals.length === 0 && !payload.p_machine_state) return;
 
     isSending = true;
-    setPanelError(null);
-    updateSubmitState();
+    setBusy(true);
     try {
-        const payload = buildAvailabilityPayload(distributor.id, getDeviceId(), choices, machineState);
         const { data, error } = await supabaseClient.rpc('confirm_availability', payload);
         if (error) throw error;
 
         if (data && data.inserted > 0) {
-            // La RPC a rafraichi last_verified cote serveur : on aligne la memoire
-            // pour que le badge "Vérifié il y a" passe au vert tout de suite.
-            distributor.lastVerified = new Date().toISOString();
-            const verifiedEl = document.getElementById('dist-modal-verified');
-            if (verifiedEl) {
-                const fresh = getFreshness(distributor.lastVerified);
-                verifiedEl.textContent = fresh.label;
-                verifiedEl.className = `dist-modal-verified is-${fresh.state}`;
+            const now = new Date().toISOString();
+            if (productId !== null) {
+                loaded.products[productId] = { distributor_id: distributor.id, product_id: Number(productId), state, created_at: now };
             }
+            if (payload.p_machine_state) {
+                loaded.status = { distributor_id: distributor.id, state: payload.p_machine_state, created_at: now };
+            }
+            // La RPC a rafraichi last_verified cote serveur : on aligne la memoire
+            distributor.lastVerified = now;
             showToast('Merci ! Ton signal aide les suivants', 'success');
-            logEvent('signal_envoye', { distributorId: distributor.id });   // mesure (008)
+            if (signalLoggedFor !== distributor.id) {
+                signalLoggedFor = distributor.id;
+                logEvent('signal_envoye', { distributorId: distributor.id });   // mesure (008)
+            }
         } else {
             showToast('Déjà signalé il y a moins d\'une heure, merci quand même', 'default');
         }
-        closeAvailabilityPanel();
-        loadAvailabilityForDistributor(distributor.id);
+        collapseAll();
+        renderFicheStatus();
+        loadAvailabilityForDistributor(distributor.id, { keep: true });
         rememberOwnSignal(distributor.id);   // pas de notification de son propre signal
     } catch (e) {
         console.warn('[DistriMatch] Signal de dispo refuse :', e?.message || e);
-        if (!setPanelError('Signal non envoyé, réessaie plus tard')) {
-            showToast('Signal non envoyé, réessaie plus tard', 'error');
-        }
+        showToast('Signal non envoyé, réessaie plus tard', 'error');
     } finally {
         isSending = false;
-        updateSubmitState();
+        setBusy(false);
     }
+}
+
+function setBusy(busy) {
+    document.querySelectorAll('#dist-products-list .product-choice, #dist-machine-choices .machine-choice').forEach(b => {
+        b.disabled = busy;
+    });
 }

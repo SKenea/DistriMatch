@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveAvailabilityBadge,
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus,
     mapDistributorRow, diffFavoriteSignals
 } from '../js/utils.js';
 
@@ -270,30 +270,77 @@ describe('centroidOf (centre des distributeurs charges)', () => {
 });
 
 // ============================================
-// BADGE DE DISPO PRODUIT (audit UX-06) : resolveAvailabilityBadge
+// FICHE : DISPO OU PAS (EPIC-T2) : resolveProductStatus / resolveMachineStatus
 // ============================================
-// Le signal frais (< 2 h) prime ; sinon le flag editorial ne dit rien de
-// l'instant : "Au catalogue" (neutre) ou "Indisponible" si retire.
+// Un seul vocabulaire (retour de Stephane 2026-09-25). Le mot repond, la couleur
+// (fresh) dit la confiance : < 2 h vive, jusqu'a 24 h adoucie, au-dela « Pas d'info ».
 
-describe('resolveAvailabilityBadge (badge produit de la fiche)', () => {
-    const NOW = Date.parse('2026-09-18T12:00:00Z');
-    const row = (state, minutesAgo) => ({ product_id: 1, state, created_at: new Date(NOW - minutesAgo * 60000).toISOString() });
+describe('resolveMachineStatus (etat a droite du nom)', () => {
+    const NOW = Date.parse('2026-09-25T12:00:00Z');
+    const at = (m) => new Date(NOW - m * 60000).toISOString();
+    const machine = (state, m) => ({ state, created_at: at(m) });
+    const product = (state, m) => ({ product_id: 1, state, created_at: at(m) });
 
-    it('signal frais : vu dispo (vert) / vu absent (gris), quel que soit le flag', () => {
-        assert.deepEqual(resolveAvailabilityBadge({ available: false }, row('available', 10), NOW), { label: 'Vu dispo', tone: 'available' });
-        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('absent', 119), NOW), { label: 'Vu absent', tone: 'absent' });
+    it('trois etats signales, avec la ligne de provenance', () => {
+        assert.deepEqual(resolveMachineStatus(machine('empty', 34), [], null, NOW),
+            { state: 'empty', label: 'Vide', tone: 'empty', fresh: true, at: NOW - 34 * 60000, detail: 'Signalée vide il y a 34 min' });
+        assert.equal(resolveMachineStatus(machine('broken', 180), [], null, NOW).detail, 'Signalée en panne il y a 3 h');
+        assert.equal(resolveMachineStatus(machine('broken', 180), [], null, NOW).fresh, false);
+        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).label, 'Fonctionne');
+        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).detail, 'Vue en marche il y a 5 min');
     });
 
-    it('signal perime (>= 2 h) ou etat machine : retour au flag editorial', () => {
-        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('absent', 120), NOW), { label: 'Au catalogue', tone: 'neutral' });
-        assert.deepEqual(resolveAvailabilityBadge({ available: false }, row('available', 300), NOW), { label: 'Indisponible', tone: 'unavailable' });
-        assert.deepEqual(resolveAvailabilityBadge({ available: true }, row('empty', 5), NOW), { label: 'Au catalogue', tone: 'neutral' });
+    it('« Fonctionne » deduit d\'un produit vu dispo plus recent que tout signal machine', () => {
+        assert.equal(resolveMachineStatus(null, [product('available', 12)], null, NOW).state, 'working');
+        assert.equal(resolveMachineStatus(machine('empty', 60), [product('available', 12)], null, NOW).state, 'working');
+        // Plus ancien que le « vide » : la machine reste vide
+        assert.equal(resolveMachineStatus(machine('empty', 10), [product('available', 30)], null, NOW).state, 'empty');
+        // Un « vu absent » ne dit rien de la machine
+        assert.equal(resolveMachineStatus(null, [product('absent', 5)], null, NOW).state, 'unknown');
     });
 
-    it('aucun signal : "Au catalogue" si disponible au catalogue, "Indisponible" sinon', () => {
-        assert.deepEqual(resolveAvailabilityBadge({ available: true }, null, NOW), { label: 'Au catalogue', tone: 'neutral' });
-        assert.deepEqual(resolveAvailabilityBadge({ available: false }, undefined, NOW), { label: 'Indisponible', tone: 'unavailable' });
-        assert.deepEqual(resolveAvailabilityBadge(null, { state: 'available', created_at: 'n/a' }, NOW), { label: 'Au catalogue', tone: 'neutral' });
+    it('rien de moins de 24 h : « Pas d\'info », provenance = derniere verification', () => {
+        const s = resolveMachineStatus(machine('empty', 25 * 60), [], at(10), NOW);
+        assert.equal(s.label, "Pas d'info");
+        assert.equal(s.tone, 'unknown');
+        assert.equal(s.detail, 'Vérifié il y a 10 min');
+        assert.equal(resolveMachineStatus(null, [], null, NOW).detail, 'Pas encore vérifié');
+        assert.equal(resolveMachineStatus({ state: 'empty', created_at: 'n/a' }, [], null, NOW).state, 'unknown');
+    });
+});
+
+describe('resolveProductStatus (dispo ou pas, par aliment)', () => {
+    const NOW = Date.parse('2026-09-25T12:00:00Z');
+    const at = (m) => new Date(NOW - m * 60000).toISOString();
+    const row = (state, m) => ({ product_id: 1, state, created_at: at(m) });
+    const onSale = { available: true };
+
+    it('signal de moins de 2 h : Dispo / Pas dispo, vifs, avec l\'age', () => {
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 12), null, NOW), { label: 'Dispo', tone: 'available', fresh: true, detail: 'vu il y a 12 min' });
+        assert.deepEqual(resolveProductStatus(onSale, row('absent', 40), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: true, detail: 'vu il y a 40 min' });
+    });
+
+    it('de 2 h a 24 h : meme mot, adouci ; au-dela ou sans signal : « Pas d\'info »', () => {
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 180), null, NOW), { label: 'Dispo', tone: 'available', fresh: false, detail: 'vu il y a 3 h' });
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 25 * 60), null, NOW), { label: "Pas d'info", tone: 'unknown', fresh: false, detail: '' });
+        assert.equal(resolveProductStatus(onSale, null, null, NOW).label, "Pas d'info");
+        assert.equal(resolveProductStatus(null, { state: 'available', created_at: 'n/a' }, null, NOW).label, "Pas d'info");
+        // Le mot « catalogue » a disparu de la lecture
+        assert.ok(!/catalogue/i.test(JSON.stringify(resolveProductStatus(onSale, null, null, NOW))));
+    });
+
+    it('machine vide / en panne plus recente que le produit : Pas dispo, et pourquoi', () => {
+        const empty = resolveMachineStatus({ state: 'empty', created_at: at(20) }, [], null, NOW);
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 90), empty, NOW), { label: 'Pas dispo', tone: 'absent', fresh: true, detail: 'Machine vide' });
+        assert.equal(resolveProductStatus(onSale, null, empty, NOW).detail, 'Machine vide');
+        const broken = resolveMachineStatus({ state: 'broken', created_at: at(20) }, [], null, NOW);
+        assert.equal(resolveProductStatus(onSale, null, broken, NOW).detail, 'Machine en panne');
+        // Vu dispo APRES le « vide » : la machine a ete remplie
+        assert.equal(resolveProductStatus(onSale, row('available', 5), empty, NOW).label, 'Dispo');
+    });
+
+    it('produit « Plus vendu » au catalogue : Pas dispo, sans age', () => {
+        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'Plus vendu ici' });
     });
 });
 

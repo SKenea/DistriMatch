@@ -812,32 +812,6 @@
 .dist-modal-rhythm { display: none; margin: 0 0 0.35rem; font-size: 0.85rem; color: var(--text-muted); }
 .dist-modal-rhythm.is-visible { display: block; }
 
-/* Bandeau machine (signal "vide" / "en panne" de moins de 24 h, UC11) :
-   cache par defaut, visible seulement avec un signal recent. */
-.dist-status-banner {
-    display: none;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-.dist-status-banner.is-visible { display: block; }
-.dist-status-banner.is-empty { background: rgba(244, 162, 97, 0.18); color: #9a3412; }
-.dist-status-banner.is-broken { background: rgba(214, 40, 40, 0.10); color: var(--danger); }
-
-/* "vu dispo il y a 12 min" a cote de chaque produit : meme regle que la
-   fraicheur, vert seulement si < 2 h. */
-.product-seen {
-    display: block;
-    margin-top: 0.125rem;
-    font-size: 0.8125rem;
-    font-weight: 400;
-    color: var(--gray);
-}
-.product-seen.is-fresh.is-available { color: #15803d; font-weight: 600; }
-.product-seen.is-fresh.is-absent { color: var(--danger); font-weight: 600; }
-
 .dist-modal-actions {
     display: flex;
     gap: 0.5rem;
@@ -1156,33 +1130,6 @@
 .dist-modal-photo.is-fallback { height: 120px; }
 .dist-modal-photo.is-fallback .dist-photo-fallback-emoji { font-size: 44px; }
 
-/* Action primaire : « Il reste quoi ? » pleine largeur au-dessus des secondaires */
-.dist-modal-cta {
-    padding: 0.75rem 1.25rem 0;
-}
-.dist-cta-btn {
-    width: 100%;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1rem;
-    background: var(--primary-text);
-    color: #fff;
-    border: 1px solid var(--primary-text);
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.dist-cta-btn:hover { background: var(--primary-dark); }
-.dist-cta-btn svg { flex: 0 0 auto; }
-
-/* Modale « Il reste quoi ? » ouverte : une seule croix a l'ecran (audit UX-09) */
-#dist-modal-overlay.has-panel #dist-modal-close { visibility: hidden; }
-
 /* Rappel « Tous » en tete du panneau quand un filtre est actif (audit UX-11) */
 .side-panel-all {
     margin-left: auto;
@@ -1200,12 +1147,157 @@
 .side-panel-all:hover { background: var(--light); }
 .side-panel-all[hidden] { display: none; }
 
-/* Titre de fiche + tag « Démo » sur la meme ligne (frere du h2) */
+/* Titre de fiche : nom (+ tag « Démo ») a gauche, etat de la machine a droite
+   (EPIC-T2). Un nom long passe a la ligne, la puce reste en haut a droite. */
 .dist-modal-title {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin: 0 0 0.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0 0 0.35rem;
 }
-.dist-modal-title h2 { margin: 0; }
+.dist-modal-name-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+}
+.dist-modal-title h2 { margin: 0; overflow-wrap: anywhere; }
+
+/* ===== Etat de la machine (EPIC-T2) : Fonctionne / Vide / En panne / Pas d'info.
+   Le mot repond, la couleur dit la confiance : vive < 2 h, adoucie jusqu'a 24 h. */
+.machine-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0 0.75rem 0 0.7rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--gray);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.machine-chip-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.machine-chip-caret { opacity: 0.75; transition: transform 0.15s; }
+.machine-chip[aria-expanded="true"] .machine-chip-caret { transform: rotate(180deg); }
+.machine-chip.is-unknown { border-style: dashed; }
+.machine-chip.is-unknown .machine-chip-dot { background: transparent; border: 2px solid currentColor; width: 7px; height: 7px; }
+.machine-chip.is-working { border-color: rgba(22, 101, 52, 0.35); background: rgba(22, 163, 74, 0.10); color: #166534; }
+.machine-chip.is-empty { border-color: rgba(154, 52, 18, 0.35); background: rgba(244, 162, 97, 0.18); color: #9a3412; }
+.machine-chip.is-broken { border-color: rgba(153, 27, 27, 0.35); background: rgba(214, 40, 40, 0.10); color: #991B1B; }
+.machine-chip:not(.is-fresh):not(.is-unknown) { background: var(--white); }
+.machine-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.machine-choices {
+    margin: 0.25rem 0 0.6rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--lighter);
+}
+.machine-choices[hidden] { display: none; }
+.machine-choices-title { margin: 0 0 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--dark); }
+.machine-choices-row { display: flex; gap: 0.5rem; }
+.machine-choice {
+    flex: 1;
+    min-height: 44px;
+    padding: 0.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.machine-choice.is-working { color: #166534; }
+.machine-choice.is-empty { color: #9a3412; }
+.machine-choice.is-broken { color: #991B1B; }
+.machine-choice:disabled { opacity: 0.5; cursor: wait; }
+
+/* Ligne de provenance sous le nom : couleur de l'etat, vive si < 2 h */
+.dist-modal-verified.is-working.is-fresh { color: #166534; font-weight: 600; }
+.dist-modal-verified.is-empty.is-fresh { color: #9a3412; font-weight: 600; }
+.dist-modal-verified.is-broken.is-fresh { color: #991B1B; font-weight: 600; }
+
+/* ===== « Il reste quoi ? » : statut et signal sur chaque aliment (EPIC-T2) ===== */
+.products-section-head { margin: 0 0 0.6rem; }
+.products-section-head[hidden] { display: none; }
+.products-section-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--dark); }
+.products-hint { margin: 0.15rem 0 0; font-size: 0.875rem; color: var(--text-muted); border-radius: 6px; }
+.products-hint[hidden] { display: none; }
+.products-hint.is-highlighted { animation: hintPulse 2.4s ease; }
+@keyframes hintPulse {
+    0%, 60% { background: rgba(244, 162, 97, 0.25); color: var(--dark); }
+    100% { background: transparent; }
+}
+
+.product-item-clean.product-row {
+    display: block;
+    padding: 0;
+    border-left: 3px solid var(--light-gray);
+}
+.product-row.is-available { border-left-color: var(--success); }
+.product-row.is-absent { border-left-color: #991B1B; }
+.product-row-main {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.875rem;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+button.product-row-main { cursor: pointer; border-radius: var(--radius-sm); }
+button.product-row-main:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.product-row-text { display: flex; flex-direction: column; min-width: 0; }
+.product-seen { font-size: 0.8125rem; color: var(--gray); }
+.product-seen:empty { display: none; }
+
+.product-pill {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--gray);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.product-pill.is-unknown { border-style: dashed; color: var(--text-muted); font-weight: 600; }
+.product-pill.is-available { border-color: rgba(22, 101, 52, 0.35); color: #166534; }
+.product-pill.is-absent { border-color: rgba(153, 27, 27, 0.3); color: #991B1B; }
+.product-pill.is-available.is-fresh { background: rgba(22, 163, 74, 0.12); border-color: transparent; }
+.product-pill.is-absent.is-fresh { background: rgba(214, 40, 40, 0.10); border-color: transparent; }
+
+.product-choices { display: flex; gap: 0.5rem; padding: 0 0.875rem 0.75rem; }
+.product-choices[hidden] { display: none; }
+.product-choice {
+    flex: 1;
+    min-height: 44px;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.product-choice.is-yes { color: #166534; border-color: rgba(22, 101, 52, 0.4); }
+.product-choice.is-no { color: #991B1B; border-color: rgba(153, 27, 27, 0.35); }
+.product-choice:disabled { opacity: 0.5; cursor: wait; }
+
+.products-add-first { margin-top: 0.75rem; min-height: 44px; }

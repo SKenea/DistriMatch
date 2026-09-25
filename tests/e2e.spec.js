@@ -638,7 +638,7 @@ test.describe('5bis. Modification via stylo', () => {
         expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
     });
 
-    test('machine sans produit : « Il reste quoi ? » propose « Ajouter les produits » (passe par la connexion)', async ({ page }) => {
+    test("machine sans produit : la liste propose « Ajouter les produits » (passe par la connexion)", async ({ page }) => {
         const id = await page.evaluate(() => {
             const d = window.AppState.distributors[0];
             d.products = [];
@@ -646,12 +646,8 @@ test.describe('5bis. Modification via stylo', () => {
         });
         await page.evaluate((distId) => window.openDistributorModal(distId), id);
         await page.waitForSelector('#dist-modal-overlay.active');
-        await page.click('#dist-action-confirm');
-        await page.waitForSelector('#availability-modal.active');
-        await expect(page.locator('#availability-products')).toContainText('fonctionne, est vide ou en panne');
-
-        await page.click('#availability-add-products');
-        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+        await expect(page.locator('#dist-products-list')).toContainText('Aucun produit référencé');
+        await page.click('#dist-products-add-first');
         await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
     });
 });
@@ -838,10 +834,9 @@ test.describe('6bis. Centre de notifications fiable', () => {
             !!JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).lastSeenSignals?.[distId], id)).toBe(true);
 
         await page.evaluate((distId) => window.openDistributorModal(distId), id);
-        await page.click('#dist-action-confirm');
-        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
-        await page.click('#availability-submit');
-        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+        await page.click('#dist-machine-chip');
+        await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
+        await expect(page.locator('#dist-machine-chip')).toContainText('Vide');
 
         await page.waitForTimeout(500);
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -1336,126 +1331,171 @@ test.describe('12. Suivre un produit (modale)', () => {
 
 const RPC_ROUTE = '**/rest/v1/rpc/confirm_availability';
 
-// Choisit "vu dispo" sur le 1er produit s'il y en a, sinon "Machine vide" :
-// la fiche de test peut venir du fallback JSON (produits sans id Supabase).
-async function pickSomething(page) {
-    const row = page.locator('#availability-products .availability-row').first();
-    if (await row.count() > 0) {
-        await row.locator('.availability-seg-btn[data-state="available"]').click();
-    } else {
-        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
-    }
+// Fiche ouverte sur une machine qui a au moins un produit signalable (id
+// Supabase). Retourne { id, productId }.
+async function openSignalableFiche(page) {
+    const first = await page.evaluate(() => {
+        const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+        const d = window.AppState.distributors.find(x => (x.products || []).some(ok));
+        return d ? { id: d.id, productId: String(d.products.find(ok).id) } : null;
+    });
+    expect(first).not.toBeNull();
+    await page.evaluate(id => window.openDistributorModal(id), first.id);
+    await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+    return first;
 }
 
-test.describe('13. Signal de dispo en un tap', () => {
-    test('"Il reste quoi ?" ouvre la modale sans auth ; un choix active Envoyer ; succes -> toast + badge vert', async ({ page }) => {
-        await page.route(RPC_ROUTE, route => route.fulfill({
-            status: 200, contentType: 'application/json',
-            body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
-        }));
-        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
+// Signale le premier aliment depuis sa ligne : toucher la ligne, puis le choix.
+async function signalFirstProduct(page, state = 'available') {
+    await page.locator('#dist-products-list button.product-row-main').first().click();
+    await page.locator(`#dist-products-list .product-choices:not([hidden]) .product-choice[data-state="${state}"]`).click();
+}
 
-        const modal = page.locator('#availability-modal');
-        await expect(modal).toHaveClass(/active/);
-        await expect(modal).toHaveAttribute('role', 'dialog');
-        expect(await page.$('.auth-modal-overlay')).toBeNull();          // UC11 : pas de mur d'auth
-        await expect(page.locator('#availability-submit')).toBeDisabled();
+// Vues de lecture des signaux (007) interceptees : l'etat de depart est maitrise.
+async function routeSignals(page, { status = [], products = [] } = {}) {
+    await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(status) }));
+    await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(products) }));
+}
 
-        await pickSomething(page);
-        await expect(page.locator('#availability-submit')).toBeEnabled();
-        await page.click('#availability-submit');
+const minutesAgoIso = (m) => new Date(Date.now() - m * 60000).toISOString();
 
-        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
-        await expect(modal).not.toHaveClass(/active/);
-        await expect(page.locator('#dist-modal-verified')).toHaveClass(/is-fresh/);
-        // La fiche distributeur est restee ouverte derriere
-        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
-    });
-
-    test('"Vide" et "En panne" sont exclusifs, un second clic desactive', async ({ page }) => {
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        const empty = page.locator('#availability-modal .availability-machine-btn[data-machine="empty"]');
-        const broken = page.locator('#availability-modal .availability-machine-btn[data-machine="broken"]');
-        await empty.click();
-        await expect(empty).toHaveAttribute('aria-pressed', 'true');
-        await broken.click();
-        await expect(broken).toHaveAttribute('aria-pressed', 'true');
-        await expect(empty).toHaveAttribute('aria-pressed', 'false');
-        await broken.click();
-        await expect(broken).toHaveAttribute('aria-pressed', 'false');
-        await expect(page.locator('#availability-submit')).toBeDisabled();
-    });
-
-    // Retour terrain 2026-09-25 (T1-US2) : dire que la machine fonctionne
-    test('« Ça fonctionne » : exclusif avec vide / panne, envoye tel quel a la RPC', async ({ page }) => {
+// EPIC-T2 (2026-09-25) : plus de fenetre « Il reste quoi ? » ni de gros bouton
+// rouge ; on signale sur l'aliment (toucher la ligne) et sur la puce machine.
+test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
+    test("toucher un aliment deplie « Il y en a / Plus rien » ; un tap envoie sans auth ; la ligne passe en « Dispo, vu à l'instant »", async ({ page }) => {
         const payloads = [];
         await page.route(RPC_ROUTE, route => {
             payloads.push(route.request().postDataJSON());
             route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
         });
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        const empty = page.locator('#availability-modal .availability-machine-btn[data-machine="empty"]');
-        const working = page.locator('#availability-modal .availability-machine-btn[data-machine="working"]');
-        await expect(working).toHaveText('Ça fonctionne');
-        await empty.click();
-        await working.click();
-        await expect(working).toHaveAttribute('aria-pressed', 'true');
-        await expect(empty).toHaveAttribute('aria-pressed', 'false');
-        await page.click('#availability-submit');
-        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
-        expect(payloads[0].p_machine_state).toBe('working');
+        await routeSignals(page);
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        const f = await openSignalableFiche(page);
+        await expect(page.locator('#dist-products-title')).toHaveText('Il reste quoi ?');
+
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
+        const main = row.locator('button.product-row-main');
+        await expect(main).toHaveAttribute('aria-expanded', 'false');
+        await main.click();
+        await expect(main).toHaveAttribute('aria-expanded', 'true');
+        await row.locator('.product-choice[data-state="available"]').click();
+
+        expect(await page.$('.auth-modal-overlay')).toBeNull();          // UC11 : pas de mur d'auth
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
+        expect(payloads[0].p_product_signals).toEqual([{ product_id: Number(f.productId), state: 'available' }]);
+        expect(payloads[0].p_machine_state).toBeNull();
+        await expect(main).toHaveAttribute('aria-expanded', 'false');
+        await expect(row.locator('.product-pill')).toHaveText('Dispo');
+        await expect(row.locator('.product-pill')).toHaveClass(/is-fresh/);
+        await expect(row.locator('.product-seen')).toHaveText("vu à l'instant");
+        // La fiche reste ouverte, la puce deduit que la machine marche
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
     });
 
-    test('dernier etat machine « fonctionne » : aucun bandeau vide / panne sur la fiche', async ({ page }) => {
-        const status = { state: 'empty' };
+    test('on peut se corriger : « Plus rien » juste apres « Il y en a »', async ({ page }) => {
+        const payloads = [];
+        await page.route(RPC_ROUTE, route => {
+            payloads.push(route.request().postDataJSON());
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+        });
+        await routeSignals(page);
+        const f = await openSignalableFiche(page);
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
+        await signalFirstProduct(page, 'available');
+        await expect(row.locator('.product-pill')).toHaveText('Dispo');
+        await signalFirstProduct(page, 'absent');
+        await expect(row.locator('.product-pill')).toHaveText('Pas dispo');
+        expect(payloads.map(pl => pl.p_product_signals[0].state)).toEqual(['available', 'absent']);
+    });
+
+    test('puce machine : « Vide » -> puce, ligne sous le nom, aliments « Pas dispo, Machine vide »', async ({ page }) => {
+        const payloads = [];
+        await page.route(RPC_ROUTE, route => {
+            payloads.push(route.request().postDataJSON());
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+        });
+        await routeSignals(page);
+        const f = await openSignalableFiche(page);
+        const chip = page.locator('#dist-machine-chip');
+        await expect(chip).toContainText("Pas d'info");
+        await chip.click();
+        await expect(chip).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#dist-machine-choices .machine-choice')).toHaveText(['Fonctionne', 'Vide', 'En panne']);
+        await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
+
+        expect(payloads[0].p_machine_state).toBe('empty');
+        expect(payloads[0].p_product_signals).toEqual([]);
+        await expect(chip).toContainText('Vide');
+        await expect(chip).toHaveAttribute('aria-expanded', 'false');
+        await expect(page.locator('#dist-modal-verified')).toHaveText("Signalée vide à l'instant");
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
+        await expect(row.locator('.product-pill')).toHaveText('Pas dispo');
+        await expect(row.locator('.product-seen')).toHaveText('Machine vide');
+    });
+
+    test('etat lu en base : « Fonctionne » / « En panne » a droite du nom, avec sa provenance', async ({ page }) => {
+        const status = { state: 'working' };
         await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route => route.fulfill({
             status: 200, contentType: 'application/json',
-            body: JSON.stringify([{ distributor_id: 'x', state: status.state, source: 'anon', weight: 0.5, created_at: new Date(Date.now() - 10 * 60000).toISOString(), age_seconds: 600 }])
+            body: JSON.stringify([{ distributor_id: 'x', state: status.state, source: 'anon', weight: 0.5, created_at: minutesAgoIso(10), age_seconds: 600 }])
         }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
         await openDistModal(page);
-        await expect(page.locator('#dist-status-banner')).toHaveText(/Signalée vide/);
+        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
+        await expect(page.locator('#dist-machine-chip')).toHaveClass(/is-working/);
+        await expect(page.locator('#dist-modal-verified')).toHaveText('Vue en marche il y a 10 min');
         await page.click('#dist-modal-close');
-        status.state = 'working';
+        status.state = 'broken';
         await openDistModal(page);
-        await expect(page.locator('#dist-status-banner')).not.toHaveClass(/is-visible/);
-        await expect(page.locator('#dist-status-banner')).toHaveText('');
+        await expect(page.locator('#dist-machine-chip')).toContainText('En panne');
+        await expect(page.locator('#dist-modal-verified')).toHaveText('Signalée en panne il y a 10 min');
     });
 
-    test('erreur serveur (503) -> toast d\'erreur, la modale reste ouverte', async ({ page }) => {
+    test('plus de gros bouton rouge ni de fenetre « Il reste quoi ? »', async ({ page }) => {
+        await openDistModal(page);
+        await expect(page.locator('#dist-action-confirm')).toHaveCount(0);
+        await expect(page.locator('#availability-modal')).toHaveCount(0);
+        await expect(page.locator('#dist-status-banner')).toHaveCount(0);
+    });
+
+    test('erreur serveur (503) -> toast d\u2019erreur, la ligne reste ouverte et inchangee', async ({ page }) => {
         await page.route(RPC_ROUTE, route => route.fulfill({
             status: 503, contentType: 'application/json',
             body: JSON.stringify({ message: 'indisponible' })
         }));
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        await pickSomething(page);
-        await page.click('#availability-submit');
-        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
-        // Audit UX-01 : l'erreur est aussi ecrite dans la modale (le toast peut passer inapercu)
-        await expect(page.locator('#availability-error')).toBeVisible();
-        await expect(page.locator('#availability-error')).toContainText('réessaie');
+        await routeSignals(page);
+        const f = await openSignalableFiche(page);
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
+        await signalFirstProduct(page, 'available');
+        await expect(page.locator('#toast-container .toast.error')).toContainText('réessaie');
+        await expect(row.locator('button.product-row-main')).toHaveAttribute('aria-expanded', 'true');
+        await expect(row.locator('.product-pill')).toHaveText("Pas d'info");
     });
 });
 
 test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
-    test('ouvre la fiche puis directement la modale, memorise la source, nettoie l\'URL', async ({ browser }) => {
+    test("ouvre la fiche sur « Il reste quoi ? » (consigne mise en avant), memorise la source, nettoie l'URL", async ({ browser }) => {
         const context = await browser.newContext();
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
         const events = await captureEvents(page);
         await page.goto(BASE_URL);
         await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
-        const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
+        const firstId = await page.evaluate(() => {
+            const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+            return window.AppState.distributors.find(x => (x.products || []).some(ok)).id;
+        });
 
         await page.goto(`${BASE_URL}/?id=${firstId}&confirm=1&src=qr`);
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
-        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
+        await expect(page.locator('#dist-products-hint')).toHaveClass(/is-highlighted/);
+        await expect(page.locator('#dist-products-title')).toBeInViewport();
 
         const src = await page.evaluate(() => sessionStorage.getItem('distrimatch_src'));
         expect(src).toBe('qr');
@@ -1463,6 +1503,21 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         // Mesure : l'arrivee par QR compte app_ouverte + qr_scan + fiche_ouverte, source 'qr'
         await expect.poll(() => events.filter(e => e.source === 'qr').map(e => e.type).sort()).toEqual(['app_ouverte', 'fiche_ouverte', 'qr_scan']);
         expect(events.find(e => e.type === 'qr_scan').distributorId).toBe(firstId);
+        await context.close();
+    });
+
+    test('QR sur une machine sans produit : les choix de l\u2019etat de la machine sont ouverts', async ({ browser }) => {
+        const context = await browser.newContext();
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
+        const emptyId = await page.evaluate(() => (window.AppState.distributors.find(x => !(x.products || []).length) || {}).id);
+        test.skip(!emptyId, 'aucune machine sans produit dans les donnees');
+        await page.goto(`${BASE_URL}/?id=${emptyId}&confirm=1&src=qr`);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        await expect(page.locator('#dist-machine-choices')).toBeVisible();
+        await expect(page.locator('#dist-machine-chip')).toHaveAttribute('aria-expanded', 'true');
         await context.close();
     });
 });
@@ -1526,12 +1581,12 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
         for (const h of await page.$$('#side-panel-list .side-panel-group-header')) await h.click();
         violations.push(...await collectSmallTargets(page, 'side-panel'));
 
-        await openDistModal(page);
+        await openSignalableFiche(page);
         violations.push(...await collectSmallTargets(page, 'fiche'));
-        await page.click('#dist-action-confirm');
-        await page.waitForSelector('#availability-modal.active');
+        await page.locator('#dist-products-list button.product-row-main').first().click();
         violations.push(...await collectSmallTargets(page, 'il-reste-quoi'));
-        await page.click('#availability-cancel');
+        await page.click('#dist-machine-chip');
+        violations.push(...await collectSmallTargets(page, 'etat-machine'));
         await page.click('#dist-modal-close');
 
 
@@ -1651,17 +1706,20 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         expect(events.filter(e => e.type === 'fiche_ouverte')).toHaveLength(1);
     });
 
-    test('signal retenu (inserted > 0) -> signal_envoye ; RPC de mesure en erreur -> aucun toast', async ({ page }) => {
+    test('signal retenu (inserted > 0) -> un seul signal_envoye par fiche ; RPC de mesure en erreur -> aucun toast', async ({ page }) => {
         const events = await captureEvents(page, 503);
         await page.route(RPC_ROUTE, route => route.fulfill({
             status: 200, contentType: 'application/json',
             body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
         }));
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        await pickSomething(page);
-        await page.click('#availability-submit');
+        await routeSignals(page);
+        await openSignalableFiche(page);
+        await signalFirstProduct(page, 'available');
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
+        // Un 2e signal sur la meme fiche (la machine) : le KPI compte une contribution
+        await page.click('#dist-machine-chip');
+        await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
+        await page.waitForTimeout(400);
         await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'signal_envoye']);
         expect(await page.$('#toast-container .toast.error')).toBeNull();
     });
@@ -1807,14 +1865,12 @@ test.describe('19. Toasts visibles', () => {
             status: 200, contentType: 'application/json',
             body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' })
         }));
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        await pickSomething(page);
-        await page.click('#availability-submit');
+        await routeSignals(page);
+        await openSignalableFiche(page);
+        await signalFirstProduct(page, 'available');
         await expect(page.locator('#toast-container .toast.success')).toBeVisible();
         const g = await toastGeometry(page);
         expect(g.onTop).toBe(true);
-        expect(await page.locator('#availability-error').isVisible()).toBe(false);
     });
 
     test('sur la carte en 390 px, le toast reste au-dessus de la bottom nav et dans l\'ecran', async ({ page }) => {
@@ -1937,20 +1993,23 @@ async function collectTextIssues(page, screen) {
 }
 
 test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
-    test('carte, panneau, fiche et modale de signal : aucun texte < 12 px ni sous 4,5:1 en 390 px', async ({ page }) => {
+    test('carte, panneau, fiche et signal sur l\u2019aliment / la machine : aucun texte < 12 px ni sous 4,5:1 en 390 px', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
+        await routeSignals(page, {
+            status: [{ distributor_id: 'x', state: 'empty', source: 'anon', weight: 0.5, created_at: minutesAgoIso(20), age_seconds: 1200 }]
+        });
         const issues = [];
         issues.push(...await collectTextIssues(page, 'carte'));
         await page.click('.filter-chip[data-type="all"]');
         issues.push(...await collectTextIssues(page, 'panneau'));
         await page.click('#side-panel-close');
-        await openDistModal(page);
+        await openSignalableFiche(page);
         await page.waitForTimeout(800);
         issues.push(...await collectTextIssues(page, 'fiche'));
-        await page.click('#dist-action-confirm');
-        await pickSomething(page);
-        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
-        issues.push(...await collectTextIssues(page, 'modale-signal'));
+        await page.locator('#dist-products-list button.product-row-main').first().click();
+        issues.push(...await collectTextIssues(page, 'signal-aliment'));
+        await page.click('#dist-machine-chip');
+        issues.push(...await collectTextIssues(page, 'signal-machine'));
         expect(issues, issues.join('\n')).toEqual([]);
     });
 });
@@ -1997,8 +2056,7 @@ test.describe('22. Geolocalisation obligatoire', () => {
         await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
         const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
         await page.goto(`${BASE_URL}/?id=${firstId}&confirm=1&src=qr`);
-        await page.waitForSelector('#availability-modal.active', { timeout: 50000 });
-        await page.click('#availability-cancel');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
         await page.click('#dist-modal-close');
         await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
         await page.waitForTimeout(500);
@@ -2024,13 +2082,9 @@ test.describe('23. Bouton retour', () => {
         expect(await page.evaluate(() => !!window.AppState?.distributors?.length)).toBe(true);
     });
 
-    test('modale de signal ouverte -> retour ferme la modale, la fiche reste ; second retour ferme la fiche', async ({ page }) => {
-        await openDistModal(page);
-        await page.click('#dist-action-confirm');
-        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
-        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
-        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
-        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+    test('aliment deplie dans la fiche -> retour ferme la fiche, l\u2019app reste', async ({ page }) => {
+        await openSignalableFiche(page);
+        await page.locator('#dist-products-list button.product-row-main').first().click();
         await page.goBack({ waitUntil: 'commit' }).catch(() => {});
         await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
         expect(await page.evaluate(() => !!window.AppState)).toBe(true);
@@ -2057,11 +2111,12 @@ test.describe('23. Bouton retour', () => {
 // ============================================
 // 24. HIERARCHIE DE LA FICHE (audit UX-05/13)
 // ============================================
-// La fraicheur avant la note, « Il reste quoi ? » en action primaire pleine
-// largeur, hero reduit sans photo, pas de separateur orphelin.
+// EPIC-T2 : l'etat de la machine a droite du nom, sa provenance avant la note,
+// plus de gros bouton rouge (on signale sur l'aliment), hero reduit sans photo,
+// pas de separateur orphelin.
 
 test.describe('24. Hierarchie de la fiche', () => {
-    test('fraicheur au-dessus de la note, CTA large, hero reduit, meta sans separateur final', async ({ page }) => {
+    test('etat machine a droite du nom, provenance au-dessus de la note, pas de CTA rouge, hero reduit, meta sans separateur final', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await openDistModal(page);
         await page.waitForTimeout(500);
@@ -2073,9 +2128,15 @@ test.describe('24. Hierarchie de la fiche', () => {
             return {
                 verifiedBottom: rect('dist-modal-verified').bottom,
                 ratingTop: rect('dist-modal-rating').top,
-                ctaWidth: rect('dist-action-confirm').width,
-                ficheWidth: document.getElementById('dist-modal').getBoundingClientRect().width,
-                ctaAboveActions: rect('dist-action-confirm').bottom <= rect('dist-action-directions').top,
+                chipLeft: rect('dist-machine-chip').left,
+                chipTop: rect('dist-machine-chip').top,
+                chipRight: rect('dist-machine-chip').right,
+                nameLeft: rect('dist-modal-name').left,
+                nameRight: rect('dist-modal-name').right,
+                nameTop: rect('dist-modal-name').top,
+                ficheRight: document.getElementById('dist-modal').getBoundingClientRect().right,
+                hasCta: !!document.getElementById('dist-action-confirm'),
+                overflow: document.documentElement.scrollWidth > innerWidth,
                 heroHeight: rect('dist-modal-photo').height,
                 heroIsFallback: document.getElementById('dist-modal-photo').classList.contains('is-fallback'),
                 lastMetaIsSeparator: !!last && last.classList.contains('meta-separator'),
@@ -2088,8 +2149,11 @@ test.describe('24. Hierarchie de la fiche', () => {
             };
         });
         expect(r.verifiedBottom).toBeLessThanOrEqual(r.ratingTop + 1);
-        expect(r.ctaWidth).toBeGreaterThan(0.6 * r.ficheWidth);
-        expect(r.ctaAboveActions).toBe(true);
+        expect(r.chipLeft).toBeGreaterThanOrEqual(r.nameRight - 1);      // a droite du nom
+        expect(Math.abs(r.chipTop - r.nameTop)).toBeLessThan(16);          // sur la meme ligne
+        expect(r.ficheRight - r.chipRight).toBeLessThan(40);                // cale a droite
+        expect(r.hasCta).toBe(false);
+        expect(r.overflow).toBe(false);
         if (r.heroIsFallback) expect(r.heroHeight).toBeLessThanOrEqual(120);
         expect(r.lastMetaIsSeparator).toBe(false);
         expect(r.typeOccurrences).toBe(1);
@@ -2097,66 +2161,77 @@ test.describe('24. Hierarchie de la fiche', () => {
 });
 
 // ============================================
-// 25. BADGE DE DISPO PRODUIT (audit UX-06)
+// 25. STATUT PRODUIT : DISPO / PAS DISPO / PAS D'INFO (EPIC-T2)
 // ============================================
-// Le badge suit le dernier signal frais ("Vu absent") et reste neutre
-// ("Au catalogue") sans signal : plus de "Disponible" a cote de "vu absent".
+// Trois mots seulement. La couleur (is-fresh) dit la confiance : < 2 h vive,
+// jusqu'a 24 h adoucie ; sans signal, « Pas d'info ». Plus jamais « catalogue ».
 
-const AVAIL_ROUTE = '**/rest/v1/product_availability*';
-
-test.describe('25. Badge de dispo produit', () => {
-    test('signal absent recent -> "Vu absent" ; sans signal -> "Au catalogue"', async ({ page }) => {
+test.describe('25. Statut produit', () => {
+    test("vu dispo 12 min -> « Dispo » vif ; vu absent 3 h -> « Pas dispo » adouci ; sans signal -> « Pas d'info »", async ({ page }) => {
+        const signals = { products: [] };
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(signals.products) }));
         const first = await page.evaluate(() => {
-            const d = window.AppState.distributors.find(x => (x.products || []).some(p => p.id != null));
-            return d ? { id: d.id, productId: d.products.find(p => p.id != null).id } : null;
+            const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+            const d = window.AppState.distributors.find(x => (x.products || []).some(ok));
+            return { id: d.id, productId: String(d.products.find(ok).id) };
         });
-        expect(first).not.toBeNull();
-        await page.route(AVAIL_ROUTE, route => route.fulfill({
-            status: 200, contentType: 'application/json',
-            body: JSON.stringify([{ distributor_id: first.id, product_id: first.productId, state: 'absent', created_at: new Date().toISOString(), source: 'anon', weight: 0.5 }])
-        }));
-        await page.evaluate(id => window.openDistributorModal(id), first.id);
-        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
-        const item = page.locator(`#dist-products-list .product-item-clean[data-product-id="${first.productId}"]`);
-        await expect(item.locator('.product-availability-clean')).toHaveText('Vu absent');
-        await expect(item).toHaveClass(/is-absent/);
-        await expect(item.locator('.product-seen')).toContainText('vu absent');
-        expect(await page.locator('#dist-products-list .product-availability-clean', { hasText: /^Disponible$/ }).count()).toBe(0);   // "Indisponible" reste legitime
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${first.productId}"]`);
+        const open = async () => {
+            await page.evaluate(id => window.openDistributorModal(id), first.id);
+            await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+            await page.waitForTimeout(500);
+        };
 
+        signals.products = [{ distributor_id: first.id, product_id: Number(first.productId), state: 'available', created_at: minutesAgoIso(12), source: 'anon', weight: 0.5 }];
+        await open();
+        await expect(row.locator('.product-pill')).toHaveText('Dispo');
+        await expect(row.locator('.product-pill')).toHaveClass(/is-fresh/);
+        await expect(row.locator('.product-seen')).toHaveText('vu il y a 12 min');
         await page.click('#dist-modal-close');
-        await page.unroute(AVAIL_ROUTE);
-        await page.route(AVAIL_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
-        await page.evaluate(id => window.openDistributorModal(id), first.id);
-        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
-        await page.waitForTimeout(600);
-        await expect(item.locator('.product-availability-clean')).toHaveText('Au catalogue');
-        await expect(item).toHaveClass(/is-neutral/);
+
+        signals.products = [{ distributor_id: first.id, product_id: Number(first.productId), state: 'absent', created_at: minutesAgoIso(180), source: 'anon', weight: 0.5 }];
+        await open();
+        await expect(row.locator('.product-pill')).toHaveText('Pas dispo');
+        await expect(row.locator('.product-pill')).not.toHaveClass(/is-fresh/);
+        await expect(row.locator('.product-seen')).toHaveText('vu il y a 3 h');
+        await page.click('#dist-modal-close');
+
+        signals.products = [];
+        await open();
+        await expect(row.locator('.product-pill')).toHaveText("Pas d'info");
+        await expect(page.locator('#dist-products-list')).not.toContainText(/catalogue/i);
     });
 });
 
 // ============================================
-// 26. MODALE DE SIGNAL : UNE SEULE CROIX, « PAS REGARDE » NEUTRE (audit UX-09)
+// 26. SIGNAL SUR LA FICHE : UNE CHOSE DEPLIEE A LA FOIS (EPIC-T2)
 // ============================================
 
-test.describe('26. Modale de signal, croix et etat neutre', () => {
-    test('modale ouverte -> la croix de la fiche est masquee ; « Pas regarde » n\'est pas presente comme un choix', async ({ page }) => {
-        await openDistModal(page);
+test.describe('26. Une chose depliee a la fois', () => {
+    test('deplier un aliment replie le precedent ; la puce machine replie les aliments ; la croix de la fiche reste visible', async ({ page }) => {
+        const d = await page.evaluate(() => {
+            const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+            return window.AppState.distributors.find(x => (x.products || []).filter(ok).length >= 2)?.id;
+        });
+        test.skip(!d, 'aucune machine avec deux produits signalables');
+        await page.evaluate(id => window.openDistributorModal(id), d);
+        await page.waitForSelector('#dist-modal-overlay.active');
+        const mains = page.locator('#dist-products-list button.product-row-main');
+        await mains.nth(0).click();
+        await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'true');
+        await mains.nth(1).click();
+        await expect(mains.nth(1)).toHaveAttribute('aria-expanded', 'true');
+        await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'false');
+        await page.click('#dist-machine-chip');
+        await expect(page.locator('#dist-machine-choices')).toBeVisible();
+        await expect(mains.nth(1)).toHaveAttribute('aria-expanded', 'false');
         await expect(page.locator('#dist-modal-close')).toBeVisible();
-        await page.click('#dist-action-confirm');
-        await expect(page.locator('#availability-modal')).toHaveClass(/active/);
-        await expect(page.locator('#dist-modal-close')).toBeHidden();
-        const unseen = page.locator('#availability-products .availability-seg-btn[data-state="unseen"]');
-        if (await unseen.count()) {
-            await expect(unseen.first()).not.toHaveClass(/is-selected/);
-            await expect(unseen.first()).toHaveAttribute('aria-pressed', 'false');
-            await expect(unseen.first()).toHaveCSS('font-weight', '400');
-            await unseen.first().click();
-            await expect(unseen.first()).toHaveClass(/is-selected/);
-            await expect(unseen.first()).toHaveAttribute('aria-pressed', 'true');
-            await expect(page.locator('#availability-submit')).toBeDisabled();   // "pas regarde" n'est pas un signal
-        }
-        await page.click('#availability-cancel');
-        await expect(page.locator('#dist-modal-close')).toBeVisible();
+        // Un second tap sur la puce referme
+        await page.click('#dist-machine-chip');
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
     });
 });
 
@@ -2255,13 +2330,14 @@ test.describe('29. Vues cachees et police des controles', () => {
     });
 
     test('boutons et champs utilisent la police du site', async ({ page }) => {
-        await openDistModal(page);
+        await openSignalableFiche(page);
         const r = await page.evaluate(() => {
             const body = getComputedStyle(document.body).fontFamily;
             const same = sel => getComputedStyle(document.querySelector(sel)).fontFamily === body;
-            return { body, cta: same('#dist-action-confirm'), chip: same('.filter-chip'), tab: same('.dist-tab'), navTab: same('.nav-tab'), search: same('#quick-search') };
+            return { body, machineChip: same('#dist-machine-chip'), productRow: same('#dist-products-list .product-row-main'), chip: same('.filter-chip'), tab: same('.dist-tab'), navTab: same('.nav-tab'), search: same('#quick-search') };
         });
-        expect(r.cta).toBe(true);
+        expect(r.machineChip).toBe(true);
+        expect(r.productRow).toBe(true);
         expect(r.chip).toBe(true);
         expect(r.tab).toBe(true);
         expect(r.navTab).toBe(true);

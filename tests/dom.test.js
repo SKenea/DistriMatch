@@ -419,25 +419,52 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.products-empty-state'));
     });
 
-    it('marque les produits disponibles/indisponibles', () => {
+    // EPIC-T2 : en lecture, trois mots seulement ; « Plus vendu » -> Pas dispo
+    it('lecture : « Pas d\'info » sans signal, « Pas dispo » si plus vendu, jamais « catalogue »', () => {
         const dist = {
             products: [
-                { name: 'Dispo', price: 5, available: true },
-                { name: 'Pas dispo', price: 5, available: false }
+                { id: 1, name: 'Baguette', price: 5, available: true },
+                { id: 2, name: 'Croissant', price: 5, available: false }
             ]
         };
         renderProductsList(dist, 'dist-products-list');
-        const items = document.getElementById('dist-products-list').querySelectorAll('.product-item-clean');
-        assert.ok(items[0].classList.contains('available'));
-        assert.ok(items[1].classList.contains('unavailable'));
+        const rows = document.getElementById('dist-products-list').querySelectorAll('.product-row');
+        assert.equal(rows[0].querySelector('.product-pill').textContent, "Pas d'info");
+        assert.ok(rows[0].classList.contains('is-unknown'));
+        assert.equal(rows[1].querySelector('.product-pill').textContent, 'Pas dispo');
+        assert.equal(rows[1].querySelector('.product-seen').textContent, 'Plus vendu ici');
+        assert.ok(!/catalogue/i.test(document.getElementById('dist-products-list').textContent));
     });
 
-    it('lecture : affiche la dispo, AUCUN prix', () => {
-        renderProductsList({ products: [{ name: 'Test', available: true }] }, 'dist-products-list');
+    it('lecture : la ligne est un bouton qui deplie « Il y en a / Plus rien », AUCUN prix', () => {
+        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
-        assert.ok(list.querySelector('.product-availability-clean'), 'dispo affichee');
+        const main = list.querySelector('button.product-row-main');
+        assert.ok(main, 'ligne touchable');
+        assert.equal(main.getAttribute('aria-expanded'), 'false');
+        assert.equal(main.getAttribute('aria-controls'), 'product-choices-7');
+        const choices = list.querySelector('#product-choices-7');
+        assert.ok(choices.hidden, 'choix replies par defaut');
+        assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.dataset.state), ['available', 'absent']);
         assert.ok(list.querySelector('.product-name-clean').textContent.includes('Test'));
+    });
+
+    it('lecture : un produit sans id Supabase (local) n\'est pas touchable', () => {
+        renderProductsList({ products: [{ name: 'Local', available: true }] }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
+        assert.equal(list.querySelector('button.product-row-main'), null);
+        assert.equal(list.querySelector('.product-choices'), null);
+        assert.ok(list.querySelector('.product-pill'));
+    });
+
+    it('lecture, machine sans produit : bouton « Ajouter les produits »', () => {
+        renderProductsList({ products: [] }, 'dist-products-list');
+        const btn = document.getElementById('dist-products-add-first');
+        assert.ok(btn);
+        assert.equal(btn.textContent, 'Ajouter les produits');
+        renderProductsList({ products: [] }, 'dist-products-list', { readonly: false });
+        assert.equal(document.getElementById('dist-products-add-first'), null, 'pas en edition');
     });
 
     it('edition : nom editable, pas de champ prix, pas de crayon', () => {
@@ -449,15 +476,16 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.product-btn-delete svg'), 'corbeille (svg) supprimer');
         const chip = list.querySelector('.product-availability-chip');
         assert.ok(chip, 'pastille etat presente');
-        assert.ok(chip.classList.contains('is-available'), 'etat disponible');
-        assert.ok(chip.textContent.includes('Disponible'), 'libelle Disponible');
+        assert.ok(chip.classList.contains('is-available'), 'etat vendu');
+        // EPIC-T2 : le catalogue dit son nom, sans confusion avec la dispo du moment
+        assert.equal(chip.textContent.trim(), 'Vendu ici');
     });
 
-    it('edition : pastille indisponible si available=false', () => {
+    it('edition : « Plus vendu » si available=false', () => {
         renderProductsList({ products: [{ name: 'X', available: false }] }, 'dist-products-list', { readonly: false });
         const chip = document.getElementById('dist-products-list').querySelector('.product-availability-chip');
         assert.ok(chip.classList.contains('is-unavailable'));
-        assert.ok(chip.textContent.includes('Indisponible'));
+        assert.equal(chip.textContent.trim(), 'Plus vendu');
     });
 
     it('utilise le target par defaut (products-list)', () => {

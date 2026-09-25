@@ -12,7 +12,7 @@ import { FEATURES } from './config.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
-import { openAvailabilityPanel, loadAvailabilityForDistributor } from './availability.js';
+import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 
 // ============================================
@@ -217,8 +217,9 @@ export function initDistModal() {
         tab.addEventListener('click', () => switchDistTab(tab.dataset.tab));
     });
 
-    // "Il reste quoi ?" : signal de dispo en un tap, sans auth (UC11)
-    document.getElementById('dist-action-confirm')?.addEventListener('click', () => openAvailabilityPanel());
+    // « Il reste quoi ? » se dit sur les aliments et la puce machine (EPIC-T2,
+    // UC11 sans auth) : delegation posee une fois
+    initFicheSignals();
 
     // Boutons d'action
     document.getElementById('dist-action-directions')?.addEventListener('click', () => {
@@ -358,9 +359,9 @@ export function openModalFromUrlParam() {
     if (AppState.distributors.find(d => d.id === id)) {
         modalOpenSource = src || 'organic';
         openDistributorModal(id);
-        // &confirm=1 : le QR colle sur la machine ouvre directement
-        // "Il reste quoi ?" (UC11), la fiche reste derriere.
-        if (params.get('confirm') === '1') openAvailabilityPanel();
+        // &confirm=1 : le QR colle sur la machine mene a la liste « Il reste
+        // quoi ? » (ou a l'etat de la machine si elle n'a pas de produit).
+        if (params.get('confirm') === '1') focusSignalFromQr();
     } else {
         showToast('Distributeur introuvable', 'error');
     }
