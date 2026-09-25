@@ -73,7 +73,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -586,6 +586,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // profil/compte (defini au niveau module plus bas).
     refreshAuthUI(getCurrentUser());
     onAuthChange(refreshAuthUI);
+    // Fiche ouverte : bascule lecture / information a la connexion (EPIC-T5)
+    onAuthChange(refreshFicheForAuth);
 
     // Menu deroulant avatar
     const avatarBtn = document.getElementById('profile-avatar-btn');

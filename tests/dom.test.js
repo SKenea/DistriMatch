@@ -336,17 +336,22 @@ describe('openDistributorModal', () => {
         assert.equal(AppState.currentDistributor, before);
     });
 
-    it('canEdit + lecture : stylo "Modifier" visible (gate au clic)', () => {
+    // EPIC-T5 : Modifier est un privilege de compte, d'ou que la fiche soit ouverte
+    it('visiteur : pas de stylo « Modifier » (ni depuis Favoris, ni ailleurs)', () => {
+        window.__testLogout();
         openDistributorModal('dist-test', false, true);
-        assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
+        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
+        openDistributorModal('dist-test', false, false);
+        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
     });
 
-    // Retour terrain 2026-09-25 (T1-US1) : visible d'ou que la fiche soit ouverte
-    it('ouverte hors Favoris : stylo visible en lecture, masque en edition', () => {
+    it('connecte : stylo visible en lecture, masque en edition', () => {
+        window.__testLogin();
         openDistributorModal('dist-test', false, false);
         assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
         openDistributorModal('dist-test', true, false);
         assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
+        window.__testLogout();
     });
 });
 
@@ -441,7 +446,7 @@ describe('renderProductsList', () => {
     });
 
     it('lecture : la ligne est un bouton qui deplie « Il y en a / Plus rien », AUCUN prix', () => {
-        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
+        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
         const main = list.querySelector('button.product-row-main');
@@ -462,8 +467,16 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.product-pill'));
     });
 
-    it('lecture, machine sans produit : bouton « Ajouter les produits »', () => {
+    // EPIC-T5 : informer est un privilege de compte
+    it('visiteur : lignes en lecture seule, pas de « Ajouter les produits »', () => {
+        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
+        assert.equal(document.querySelector('#dist-products-list button.product-row-main'), null);
         renderProductsList({ products: [] }, 'dist-products-list');
+        assert.equal(document.getElementById('dist-products-add-first'), null);
+    });
+
+    it('lecture connecte, machine sans produit : bouton « Ajouter les produits »', () => {
+        renderProductsList({ products: [] }, 'dist-products-list', { canInform: true });
         const btn = document.getElementById('dist-products-add-first');
         assert.ok(btn);
         assert.equal(btn.textContent, 'Ajouter les produits');

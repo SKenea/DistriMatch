@@ -649,18 +649,18 @@ export function resolveProductStatus(product, signalRow, machine = null, now = D
     return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: '' };
 }
 
-// Bandeau d'etat de la fiche (EPIC-T4) : sa couleur (l'etat de la machine) et
-// l'info cle en tres grand. Avec des produits dont on sait quelque chose :
-// « 3 sur 5 dispo » ; sinon l'etat de la machine (« Fonctionne », « Vide »...).
+// Fiche (EPIC-T4 / T5) : chaque information a une seule place.
+//   bandeau : la machine marche-t-elle ? (couleur + etat en tres grand)
+//   titre de la liste : ce qu'il y a (« 3 sur 5 dispo », vide si rien de connu)
 //   machine  : resolveMachineStatus(...)
 //   statuses : resolveProductStatus(...) de chaque produit de la fiche
 export function describeFicheHero(machine, statuses = []) {
     const tone = machine?.tone || 'unknown';
-    const fallback = machine?.label || "Pas d'info";
+    const kpi = machine?.label || "Pas d'info";
     const known = statuses.filter(s => s && s.tone !== 'unknown');
-    if (statuses.length === 0 || known.length === 0) return { tone, kpi: fallback };
+    if (statuses.length === 0 || known.length === 0) return { tone, kpi, count: '' };
     const dispo = statuses.filter(s => s && s.tone === 'available').length;
-    return { tone, kpi: `${dispo} sur ${statuses.length} dispo` };
+    return { tone, kpi, count: `${dispo} sur ${statuses.length} dispo` };
 }
 
 // Ligne Supabase (snake_case, produits imbriques) -> distributeur de l'app

@@ -56,6 +56,13 @@ async function openDistModal(page, index = 0) {
     await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
 }
 
+// EPIC-T5 : informer / modifier sont des privileges de compte. En local, le
+// magic link ne peut pas aboutir : window.__testLogin() (js/auth.js,
+// localhost uniquement) simule un compte connecte.
+async function loginForTest(page) {
+    await page.evaluate(() => window.__testLogin());
+}
+
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
 });
@@ -528,7 +535,8 @@ test.describe('5bis. Modification via stylo', () => {
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
     }
 
-    test('carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
+    test('connecte : carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
+        await loginForTest(page);
         await openFirstFavoriteCard(page);
 
         const state = await page.evaluate(() => ({
@@ -542,46 +550,28 @@ test.describe('5bis. Modification via stylo', () => {
         await expect(page.locator('#dist-action-edit')).toBeVisible();
     });
 
-    test('clic stylo non identifie -> modale "Connexion requise", pas d\'edition', async ({ page }) => {
+    test('visiteur : ni Modifier ni Photo, un encadre invite a se connecter', async ({ page }) => {
         await openFirstFavoriteCard(page);
-        await page.click('#dist-action-edit');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
-
-        const r = await page.evaluate(() => {
-            const gate = document.getElementById('edit-auth-gate');
-            return {
-                gateText: gate.querySelector('h2')?.textContent,
-                hasCta: !!gate.querySelector('#edit-auth-gate-go'),
-                stillReadonly: window.AppState.modalEditMode === false,
-            };
-        });
-        expect(r.gateText).toBe('Connexion requise');
-        expect(r.hasCta).toBe(true);
-        expect(r.stillReadonly).toBe(true);
+        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-action-add-photo')).toBeHidden();
+        await expect(page.locator('#dist-login-invite')).toBeVisible();
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
     });
 
-    test('modale gate : clic "Se connecter" -> modale email directement, fiche toujours ouverte', async ({ page }) => {
+    test('visiteur : « Se connecter » de l\u2019encadre ouvre la modale email, fiche toujours ouverte', async ({ page }) => {
         // Auth comme en prod (sinon requireAuth() est contourne sur localhost)
         await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         await openFirstFavoriteCard(page);
-        await page.click('#dist-action-edit');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
-        await page.click('#edit-auth-gate-go');
-        // 2 etapes : la modale email s'ouvre sans detour par la page Compte
+        await page.click('#dist-login-invite-btn');
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
-
         const r = await page.evaluate(() => ({
-            gateGone: !document.getElementById('edit-auth-gate'),
             emailModal: !!document.querySelector('.auth-modal'),
             modalStillOpen: document.getElementById('dist-modal-overlay').classList.contains('active'),
             accountNotOpened: !document.getElementById('account-view').classList.contains('view-active'),
-            stillReadonly: window.AppState.modalEditMode === false,
         }));
-        expect(r.gateGone).toBe(true);
         expect(r.emailModal).toBe(true);
         expect(r.modalStillOpen).toBe(true);
         expect(r.accountNotOpened).toBe(true);
-        expect(r.stillReadonly).toBe(true);
     });
 
     test('mode edition affiche produits CRUD + ajout, stylo masque, chat inactif', async ({ page }) => {
@@ -624,7 +614,8 @@ test.describe('5bis. Modification via stylo', () => {
     });
 
     // Retour terrain 2026-09-25 (T1-US1) : une fiche se complete d'ou qu'on l'ouvre
-    test('hors Favoris (carte, liste, deep link) -> stylo visible, connexion demandee au clic', async ({ page }) => {
+    test('connecte, hors Favoris (carte, liste, deep link) -> stylo visible, il ouvre l\u2019edition', async ({ page }) => {
+        await loginForTest(page);
         await page.evaluate(() => {
             const id = window.AppState.distributors[0].id;
             window.openDistributorModal(id); // comme side panel / carte / deep link
@@ -632,13 +623,11 @@ test.describe('5bis. Modification via stylo', () => {
         await page.waitForSelector('#dist-modal-overlay.active');
         await expect(page.locator('#dist-action-edit')).toBeVisible();
         expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
-
         await page.click('#dist-action-edit');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
-        expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
+        await expect.poll(() => page.evaluate(() => window.AppState.modalEditMode)).toBe(true);
     });
 
-    test("machine sans produit : la liste propose « Ajouter les produits » (passe par la connexion)", async ({ page }) => {
+    test("machine sans produit : « Ajouter les produits » pour un connecte seulement, il ouvre l'edition", async ({ page }) => {
         const id = await page.evaluate(() => {
             const d = window.AppState.distributors[0];
             d.products = [];
@@ -647,8 +636,10 @@ test.describe('5bis. Modification via stylo', () => {
         await page.evaluate((distId) => window.openDistributorModal(distId), id);
         await page.waitForSelector('#dist-modal-overlay.active');
         await expect(page.locator('#dist-products-list')).toContainText('Aucun produit référencé');
+        await expect(page.locator('#dist-products-add-first')).toHaveCount(0);
+        await loginForTest(page);
         await page.click('#dist-products-add-first');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+        await expect.poll(() => page.evaluate(() => window.AppState.modalEditMode)).toBe(true);
     });
 });
 
@@ -833,10 +824,10 @@ test.describe('6bis. Centre de notifications fiable', () => {
         await expect.poll(() => page.evaluate((distId) =>
             !!JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).lastSeenSignals?.[distId], id)).toBe(true);
 
+        await loginForTest(page);
         await page.evaluate((distId) => window.openDistributorModal(distId), id);
-        await page.click('#dist-machine-chip');
         await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
-        await expect(page.locator('#dist-machine-chip')).toContainText('Vide');
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('Vide');
 
         await page.waitForTimeout(500);
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -1141,42 +1132,18 @@ test.describe('10. Politique d\'authentification', () => {
         expect(modal).not.toBeNull();
     });
 
-    test('UC2 contribution publique : stylo Modifier sans auth -> gate "Connexion requise"', async ({ page }) => {
-        await page.evaluate(() => {
-            const id = window.AppState.distributors[0].id;
-            window.AppState.subscriptions = [id];
-        });
-        await page.click('.bottom-nav [data-tab="favorites"]');
-        await page.waitForSelector('#subscriptions-view.view-active');
-        await page.waitForSelector('#subscriptions-list .subscription-card');
-        await page.click('#subscriptions-list .subscription-card');
-        await page.waitForSelector('#dist-modal-overlay.active');
-
-        await page.click('#dist-action-edit');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
-
-        const gateText = await page.textContent('#edit-auth-gate h2');
-        expect(gateText).toBe('Connexion requise');
-    });
-
-    test('UC3 contribution publique : bouton Photo sans auth -> gate "Connexion requise"', async ({ page }) => {
+    test('UC2 / UC3 : sans compte, ni Modifier ni Photo ; connecte, les deux apparaissent sans recharger', async ({ page }) => {
         await openDistModal(page);
-        // Geofence : on s'assure d'etre tout pres pour ne pas bloquer avant le gate auth
-        await page.evaluate(() => {
-            const d = window.AppState.currentDistributor;
-            window.AppState.userLocation = { lat: d.lat + 0.0001, lng: d.lng + 0.0001 };
-        });
-
-        await page.click('#dist-action-add-photo');
-        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
-
-        const r = await page.evaluate(() => ({
-            gateText: document.getElementById('edit-auth-gate')?.querySelector('h2')?.textContent,
-            webcamModalAppeared: !!document.getElementById('webcam-modal'),
-            filePickerTriggered: document.getElementById('dist-add-photo-input')?.files?.length || 0
-        }));
-        expect(r.gateText).toBe('Connexion requise');
-        expect(r.webcamModalAppeared).toBe(false);
+        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-action-add-photo')).toBeHidden();
+        await loginForTest(page);
+        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        await expect(page.locator('#dist-action-add-photo')).toBeVisible();
+        await expect(page.locator('#dist-login-invite')).toBeHidden();
+        // Deconnexion : retour a la lecture seule
+        await page.evaluate(() => window.__testLogout());
+        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-login-invite')).toBeVisible();
     });
 
     test('UC4 contribution publique : Signaler sans auth -> modale email', async ({ page }) => {
@@ -1333,7 +1300,8 @@ const RPC_ROUTE = '**/rest/v1/rpc/confirm_availability';
 
 // Fiche ouverte sur une machine qui a au moins un produit signalable (id
 // Supabase). Retourne { id, productId }.
-async function openSignalableFiche(page) {
+async function openSignalableFiche(page, { login = true } = {}) {
+    if (login) await loginForTest(page);
     const first = await page.evaluate(() => {
         const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
         const d = window.AppState.distributors.find(x => (x.products || []).some(ok));
@@ -1364,7 +1332,7 @@ const minutesAgoIso = (m) => new Date(Date.now() - m * 60000).toISOString();
 // EPIC-T2 (2026-09-25) : plus de fenetre « Il reste quoi ? » ni de gros bouton
 // rouge ; on signale sur l'aliment (toucher la ligne) et sur la puce machine.
 test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
-    test("toucher un aliment deplie « Il y en a / Plus rien » ; un tap envoie sans auth ; la ligne passe en « Dispo, vu à l'instant »", async ({ page }) => {
+    test("connecte : toucher un aliment deplie « Il y en a / Plus rien » ; un tap envoie ; la ligne passe en « Dispo, vu à l'instant »", async ({ page }) => {
         const payloads = [];
         await page.route(RPC_ROUTE, route => {
             payloads.push(route.request().postDataJSON());
@@ -1373,7 +1341,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await routeSignals(page);
         await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
         const f = await openSignalableFiche(page);
-        await expect(page.locator('#dist-products-title')).toHaveText('Il reste quoi ?');
+        await expect(page.locator('#dist-products-title')).toHaveText(/^Il reste quoi \?/);
 
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
         const main = row.locator('button.product-row-main');
@@ -1390,9 +1358,10 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(row.locator('.product-pill')).toHaveText('Dispo');
         await expect(row.locator('.product-pill')).toHaveClass(/is-fresh/);
         await expect(row.locator('.product-seen')).toHaveText("vu à l'instant");
-        // La fiche reste ouverte, la puce deduit que la machine marche
+        // La fiche reste ouverte, le bandeau deduit que la machine marche
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
-        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('Fonctionne');
+        await expect(page.locator('#dist-products-count')).toHaveText(/^· 1 sur \d+ dispo$/);
     });
 
     test('on peut se corriger : « Plus rien » juste apres « Il y en a »', async ({ page }) => {
@@ -1411,35 +1380,46 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         expect(payloads.map(pl => pl.p_product_signals[0].state)).toEqual(['available', 'absent']);
     });
 
-    test('puce machine : « Vide » -> puce, ligne sous le nom, aliments « Pas dispo, Machine vide »', async ({ page }) => {
+    test('boutons d\u2019etat : « Vide » -> bandeau orange « Vide », bouton colore, aliments « Pas dispo, Machine vide »', async ({ page }) => {
         const payloads = [];
         await page.route(RPC_ROUTE, route => {
             payloads.push(route.request().postDataJSON());
-            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'user' }) });
         });
         await routeSignals(page);
         const f = await openSignalableFiche(page);
-        const chip = page.locator('#dist-machine-chip');
-        await expect(chip).toContainText("Pas d'info");
-        await chip.click();
-        await expect(chip).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#dist-hero-kpi')).toHaveText("Pas d'info");
         await expect(page.locator('#dist-machine-choices .machine-choice')).toHaveText(['Fonctionne', 'Vide', 'En panne']);
+        await expect(page.locator('#dist-machine-choices .machine-choice.is-current')).toHaveCount(0);
         await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
 
         expect(payloads[0].p_machine_state).toBe('empty');
         expect(payloads[0].p_product_signals).toEqual([]);
-        await expect(chip).toContainText('Vide');
-        await expect(chip).toHaveAttribute('aria-expanded', 'false');
-        await expect(page.locator('#dist-modal-verified')).toHaveText("Signalée vide à l'instant");
-        // Bandeau d'etat (EPIC-T4) : orange, aucun produit dispo
         await expect(page.locator('#dist-hero')).toHaveClass(/is-empty/);
-        await expect(page.locator('#dist-hero-kpi')).toHaveText(/^0 sur \d+ dispo$/);
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('Vide');
+        await expect(page.locator('#dist-machine-choices .machine-choice[data-machine="empty"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#dist-modal-verified')).toHaveText("Signalée vide à l'instant");
+        await expect(page.locator('#dist-products-count')).toHaveText(/^· 0 sur \d+ dispo$/);
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
         await expect(row.locator('.product-pill')).toHaveText('Pas dispo');
         await expect(row.locator('.product-seen')).toHaveText('Machine vide');
     });
 
-    test('etat lu en base : « Fonctionne » / « En panne » a droite du nom, avec sa provenance', async ({ page }) => {
+    test('visiteur : lecture seule (ni boutons d\u2019etat ni aliment touchable), encadre de connexion ; connexion -> tout apparait', async ({ page }) => {
+        await routeSignals(page);
+        await openSignalableFiche(page, { login: false });
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
+        await expect(page.locator('#dist-products-list button.product-row-main')).toHaveCount(0);
+        await expect(page.locator('#dist-products-hint')).toBeHidden();
+        await expect(page.locator('#dist-login-invite')).toBeVisible();
+        await loginForTest(page);
+        await expect(page.locator('#dist-machine-choices')).toBeVisible();
+        await expect(page.locator('#dist-products-list button.product-row-main').first()).toBeVisible();
+        await expect(page.locator('#dist-products-hint')).toBeVisible();
+        await expect(page.locator('#dist-login-invite')).toBeHidden();
+    });
+
+    test('etat lu en base : « Fonctionne » / « En panne » en grand dans le bandeau, avec sa provenance', async ({ page }) => {
         const status = { state: 'working' };
         await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route => route.fulfill({
             status: 200, contentType: 'application/json',
@@ -1448,13 +1428,13 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
             route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
         await openDistModal(page);
-        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
-        await expect(page.locator('#dist-machine-chip')).toHaveClass(/is-working/);
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('Fonctionne');
+        await expect(page.locator('#dist-hero')).toHaveClass(/is-working/);
         await expect(page.locator('#dist-modal-verified')).toHaveText('Vue en marche il y a 10 min');
         await page.click('#dist-modal-close');
         status.state = 'broken';
         await openDistModal(page);
-        await expect(page.locator('#dist-machine-chip')).toContainText('En panne');
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('En panne');
         await expect(page.locator('#dist-modal-verified')).toHaveText('Signalée en panne il y a 10 min');
     });
 
@@ -1470,13 +1450,13 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
             return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
         });
         await routeSignals(page);
+        await loginForTest(page);
         await openDistModal(page);
-        await page.click('#dist-machine-chip');
         await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
         expect(calls).toHaveLength(2);
         expect(calls[1]).toEqual(calls[0]);
-        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
+        await expect(page.locator('#dist-hero-kpi')).toHaveText('Fonctionne');
         expect(await page.$('#toast-container .toast.error')).toBeNull();
     });
 
@@ -1487,8 +1467,8 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
             route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'P0001', message: 'Trop de signaux pour cet appareil, reessaie plus tard' }) });
         });
         await routeSignals(page);
+        await loginForTest(page);
         await openDistModal(page);
-        await page.click('#dist-machine-chip');
         await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
         await expect(page.locator('#toast-container .toast.error')).toHaveText('Trop de signaux depuis ce téléphone, réessaie dans une heure');
         expect(calls).toHaveLength(1);
@@ -1519,7 +1499,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
 test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
-    test("ouvre la fiche sur « Il reste quoi ? » (consigne mise en avant), memorise la source, nettoie l'URL", async ({ browser }) => {
+    test("visiteur : ouvre la fiche, l'encadre de connexion mis en avant, memorise la source, nettoie l'URL", async ({ browser }) => {
         const context = await browser.newContext();
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
@@ -1533,8 +1513,8 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
 
         await page.goto(`${BASE_URL}/?id=${firstId}&confirm=1&src=qr`);
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
-        await expect(page.locator('#dist-products-hint')).toHaveClass(/is-highlighted/);
-        await expect(page.locator('#dist-products-title')).toBeInViewport();
+        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
+        await expect(page.locator('#dist-login-invite')).toBeInViewport();
 
         const src = await page.evaluate(() => sessionStorage.getItem('distrimatch_src'));
         expect(src).toBe('qr');
@@ -1545,7 +1525,7 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         await context.close();
     });
 
-    test('QR sur une machine sans produit : les choix de l\u2019etat de la machine sont ouverts', async ({ browser }) => {
+    test('QR en visiteur sur une machine sans produit : encadre de connexion, pas de boutons d\u2019etat', async ({ browser }) => {
         const context = await browser.newContext();
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
@@ -1555,8 +1535,8 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         test.skip(!emptyId, 'aucune machine sans produit dans les donnees');
         await page.goto(`${BASE_URL}/?id=${emptyId}&confirm=1&src=qr`);
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
-        await expect(page.locator('#dist-machine-choices')).toBeVisible();
-        await expect(page.locator('#dist-machine-chip')).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await context.close();
     });
 });
@@ -1624,7 +1604,6 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
         violations.push(...await collectSmallTargets(page, 'fiche'));
         await page.locator('#dist-products-list button.product-row-main').first().click();
         violations.push(...await collectSmallTargets(page, 'il-reste-quoi'));
-        await page.click('#dist-machine-chip');
         violations.push(...await collectSmallTargets(page, 'etat-machine'));
         await page.click('#dist-modal-close');
 
@@ -1756,7 +1735,6 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         await signalFirstProduct(page, 'available');
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
         // Un 2e signal sur la meme fiche (la machine) : le KPI compte une contribution
-        await page.click('#dist-machine-chip');
         await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
         await page.waitForTimeout(400);
         await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'signal_envoye']);
@@ -2047,7 +2025,6 @@ test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
         issues.push(...await collectTextIssues(page, 'fiche'));
         await page.locator('#dist-products-list button.product-row-main').first().click();
         issues.push(...await collectTextIssues(page, 'signal-aliment'));
-        await page.click('#dist-machine-chip');
         issues.push(...await collectTextIssues(page, 'signal-machine'));
         expect(issues, issues.join('\n')).toEqual([]);
     });
@@ -2155,7 +2132,7 @@ test.describe('23. Bouton retour', () => {
 // pas de separateur orphelin.
 
 test.describe('24. Hierarchie de la fiche', () => {
-    test('bandeau d\u2019etat en tete (info cle en grand), etat machine a droite du nom, provenance au-dessus de la note, pas de CTA rouge, onglets en pastilles', async ({ page }) => {
+    test('bandeau d\u2019etat en tete (etat en grand, sans puce), provenance au-dessus de la note, pas de CTA rouge, onglets en pastilles', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await openDistModal(page);
         await page.waitForTimeout(500);
@@ -2167,13 +2144,7 @@ test.describe('24. Hierarchie de la fiche', () => {
             return {
                 verifiedBottom: rect('dist-modal-verified').bottom,
                 ratingTop: rect('dist-modal-rating').top,
-                chipLeft: rect('dist-machine-chip').left,
-                chipTop: rect('dist-machine-chip').top,
-                chipRight: rect('dist-machine-chip').right,
-                nameLeft: rect('dist-modal-name').left,
-                nameRight: rect('dist-modal-name').right,
-                nameTop: rect('dist-modal-name').top,
-                ficheRight: document.getElementById('dist-modal').getBoundingClientRect().right,
+                hasChip: !!document.getElementById('dist-machine-chip'),
                 hasCta: !!document.getElementById('dist-action-confirm'),
                 overflow: document.documentElement.scrollWidth > innerWidth,
                 heroTop: rect('dist-hero').top,
@@ -2192,9 +2163,7 @@ test.describe('24. Hierarchie de la fiche', () => {
             };
         });
         expect(r.verifiedBottom).toBeLessThanOrEqual(r.ratingTop + 1);
-        expect(r.chipLeft).toBeGreaterThanOrEqual(r.nameRight - 1);      // a droite du nom
-        expect(Math.abs(r.chipTop - r.nameTop)).toBeLessThan(16);          // sur la meme ligne
-        expect(r.ficheRight - r.chipRight).toBeLessThan(40);                // cale a droite
+        expect(r.hasChip).toBe(false);                                    // EPIC-T5 : le bandeau seul dit l'etat
         expect(r.hasCta).toBe(false);
         expect(r.overflow).toBe(false);
         // EPIC-T4 : bandeau d'etat en tete, aplat colore, info cle en tres grand, onglet actif rempli
@@ -2255,31 +2224,28 @@ test.describe('25. Statut produit', () => {
 });
 
 // ============================================
-// 26. SIGNAL SUR LA FICHE : UNE CHOSE DEPLIEE A LA FOIS (EPIC-T2)
+// 26. SIGNAL SUR LA FICHE : UNE CHOSE DEPLIEE A LA FOIS (EPIC-T2 / T5)
 // ============================================
 
 test.describe('26. Une chose depliee a la fois', () => {
-    test('deplier un aliment replie le precedent ; la puce machine replie les aliments ; la croix de la fiche reste visible', async ({ page }) => {
+    test('connecte : deplier un aliment replie le precedent ; boutons d\u2019etat toujours visibles ; la croix reste visible', async ({ page }) => {
         const d = await page.evaluate(() => {
             const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
             return window.AppState.distributors.find(x => (x.products || []).filter(ok).length >= 2)?.id;
         });
         test.skip(!d, 'aucune machine avec deux produits signalables');
+        await loginForTest(page);
         await page.evaluate(id => window.openDistributorModal(id), d);
         await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-machine-choices')).toBeVisible();
         const mains = page.locator('#dist-products-list button.product-row-main');
         await mains.nth(0).click();
         await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'true');
         await mains.nth(1).click();
         await expect(mains.nth(1)).toHaveAttribute('aria-expanded', 'true');
         await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'false');
-        await page.click('#dist-machine-chip');
         await expect(page.locator('#dist-machine-choices')).toBeVisible();
-        await expect(mains.nth(1)).toHaveAttribute('aria-expanded', 'false');
         await expect(page.locator('#dist-modal-close')).toBeVisible();
-        // Un second tap sur la puce referme
-        await page.click('#dist-machine-chip');
-        await expect(page.locator('#dist-machine-choices')).toBeHidden();
     });
 });
 
@@ -2382,9 +2348,9 @@ test.describe('29. Vues cachees et police des controles', () => {
         const r = await page.evaluate(() => {
             const body = getComputedStyle(document.body).fontFamily;
             const same = sel => getComputedStyle(document.querySelector(sel)).fontFamily === body;
-            return { body, machineChip: same('#dist-machine-chip'), productRow: same('#dist-products-list .product-row-main'), chip: same('.filter-chip'), tab: same('.dist-tab'), navTab: same('.nav-tab'), search: same('#quick-search') };
+            return { body, machineChoice: same('#dist-machine-choices .machine-choice'), productRow: same('#dist-products-list .product-row-main'), chip: same('.filter-chip'), tab: same('.dist-tab'), navTab: same('.nav-tab'), search: same('#quick-search') };
         });
-        expect(r.machineChip).toBe(true);
+        expect(r.machineChoice).toBe(true);
         expect(r.productRow).toBe(true);
         expect(r.chip).toBe(true);
         expect(r.tab).toBe(true);
