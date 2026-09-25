@@ -6,7 +6,7 @@ import { AppState, Conversations, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, formatDistance, showToast,
     updateImplicitProfile, saveToLocalStorage
-, resolveAvailabilityBadge } from './utils.js';
+, resolveProductStatus } from './utils.js';
 import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
@@ -102,6 +102,8 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
     AppState.productsListTarget = targetId;
 
     if (!distributor.products || distributor.products.length === 0) {
+        // En lecture, une machine sans produit invite a les ajouter (connexion
+        // exigee au clic : on passe par le stylo « Modifier », UC2).
         productsList.innerHTML = `
             <div class="products-empty-state">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
@@ -110,24 +112,13 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     <path d="M16 10a4 4 0 01-8 0"/>
                 </svg>
                 <p>Aucun produit référencé pour le moment</p>
+                ${readonly ? '<button type="button" class="btn-secondary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
             </div>`;
         return;
     }
 
     productsList.innerHTML = distributor.products.map((p, index) => {
-        if (readonly) {
-            // Badge neutre tant qu'aucun signal frais (availability.js le met a jour)
-            const badge = resolveAvailabilityBadge(p, null);
-            return `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'} is-${badge.tone}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
-            <div class="product-info-clean">
-                <div class="product-name-clean">${escapeHTML(p.name)}</div>
-            </div>
-            <div class="product-actions-clean">
-                <span class="product-availability-clean is-${badge.tone}">${badge.label}</span>
-            </div>
-        </div>`;
-        }
+        if (readonly) return renderProductRow(p, index);
         // Mode edition : nom editable + dispo + supprimer (pas de prix).
         return `
         <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
@@ -136,8 +127,8 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">
             </div>
             <div class="product-actions-clean">
-                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Disponible — cliquer pour marquer indisponible' : 'Indisponible — cliquer pour marquer disponible'}" title="${p.available ? 'Cliquer pour marquer indisponible' : 'Cliquer pour marquer disponible'}">
-                    ${p.available ? 'Disponible' : 'Indisponible'}
+                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Vendu ici — toucher pour marquer plus vendu' : 'Plus vendu — toucher pour marquer vendu ici'}" title="${p.available ? 'Toucher pour marquer plus vendu' : 'Toucher pour marquer vendu ici'}">
+                    ${p.available ? 'Vendu ici' : 'Plus vendu'}
                 </button>
                 <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer ce produit">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -147,6 +138,38 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
             </div>
         </div>`;
     }).join('');
+}
+
+// Un produit est signalable s'il a un id Supabase (les produits purement
+// locaux, ajoutes hors ligne, ne peuvent pas recevoir de signal).
+export function isSignalableProduct(p) {
+    return !!p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+}
+
+// Ligne produit de la fiche en lecture (EPIC-T2) : nom + « vu il y a X » a
+// gauche, statut « Dispo / Pas dispo / Pas d'info » a droite. Toucher la ligne
+// deplie « Il y en a / Plus rien » (js/availability.js envoie le signal).
+// Statut initial sans signal ; availability.js le met a jour au chargement.
+export function renderProductRow(p, index) {
+    const status = resolveProductStatus(p, null);
+    const id = escapeHTML(String(p.id ?? ''));
+    const name = escapeHTML(p.name);
+    const pill = `<span class="product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}">${escapeHTML(status.label)}</span>`;
+    const text = `<span class="product-row-text"><span class="product-name-clean">${name}</span><span class="product-seen">${escapeHTML(status.detail)}</span></span>`;
+    if (!isSignalableProduct(p)) {
+        return `
+        <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
+            <div class="product-row-main">${text}${pill}</div>
+        </div>`;
+    }
+    return `
+        <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
+            <button type="button" class="product-row-main" aria-expanded="false" aria-controls="product-choices-${id}">${text}${pill}</button>
+            <div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : il en reste ?" hidden>
+                <button type="button" class="product-choice is-yes" data-state="available">✓ Il y en a</button>
+                <button type="button" class="product-choice is-no" data-state="absent">✗ Plus rien</button>
+            </div>
+        </div>`;
 }
 
 export function toggleAddProductForm() {

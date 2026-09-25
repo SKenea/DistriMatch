@@ -38,9 +38,9 @@
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=32">
     <link rel="stylesheet" href="css/map.css?v=27">
-    <link rel="stylesheet" href="css/panels.css?v=36">
+    <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=35">
+    <link rel="stylesheet" href="css/overlays.css?v=36">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -288,15 +288,30 @@
             <div class="dist-modal-header">
                 <!-- Tag « Démo » frere du h2 (jamais enfant : textContent = nom l'effacerait) ; distributors.is_demo -->
                 <div class="dist-modal-title">
-                    <h2 id="dist-modal-name">Nom du distributeur</h2>
-                    <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
+                    <div class="dist-modal-name-wrap">
+                        <h2 id="dist-modal-name">Nom du distributeur</h2>
+                        <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
+                    </div>
+                    <!-- Etat de la machine a droite du nom (EPIC-T2) : Fonctionne / Vide / En panne / Pas d'info.
+                         Touchable : deplie les choix ci-dessous. Rempli par js/availability.js -->
+                    <button type="button" class="machine-chip is-unknown" id="dist-machine-chip" aria-expanded="false" aria-controls="dist-machine-choices" aria-label="État de la machine : Pas d'info. Toucher pour le signaler">
+                        <span class="machine-chip-dot" aria-hidden="true"></span>
+                        <span id="dist-machine-chip-label">Pas d'info</span>
+                        <svg class="machine-chip-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
                 </div>
-                <!-- La fraicheur d'abord (docs/STRATEGIE.md, audit UX-05) : sa propre ligne, avant la note -->
-                <div class="dist-modal-verified" id="dist-modal-verified"></div>
+                <!-- UNE ligne : d'ou vient l'etat (« Signalée vide il y a 34 min », sinon « Vérifié il y a X ») -->
+                <div class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></div>
+                <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
+                    <p class="machine-choices-title" id="dist-machine-choices-title">La machine, là maintenant :</p>
+                    <div class="machine-choices-row">
+                        <button type="button" class="machine-choice is-working" data-machine="working">Fonctionne</button>
+                        <button type="button" class="machine-choice is-empty" data-machine="empty">Vide</button>
+                        <button type="button" class="machine-choice is-broken" data-machine="broken">En panne</button>
+                    </div>
+                </div>
                 <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
                 <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
-                <!-- Signal machine recent (vide / en panne), rempli par availability.js -->
-                <div class="dist-status-banner" id="dist-status-banner" aria-live="polite"></div>
                 <div class="dist-modal-meta">
                     <span class="dist-modal-rating" id="dist-modal-rating"></span>
                     <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
@@ -307,18 +322,7 @@
                 </div>
             </div>
 
-            <!-- Action primaire de la fiche (audit UX-05) : le signal, pleine largeur -->
-            <div class="dist-modal-cta">
-                <button class="dist-cta-btn" id="dist-action-confirm" aria-label="Dire ce qu'il reste dans ce distributeur">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <span>Il reste quoi ?</span>
-                </button>
-            </div>
-
-            <!-- Actions secondaires -->
+            <!-- Actions de la fiche -->
             <div class="dist-modal-actions">
                 <button class="dist-action-btn" id="dist-action-directions" aria-label="Itinéraire">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -370,6 +374,11 @@
             <div class="dist-modal-content">
                 <!-- Onglet Produits -->
                 <div class="dist-tab-pane active" data-tab-pane="produits">
+                    <!-- EPIC-T2 : le signal se fait sur l'aliment (toucher une ligne) -->
+                    <div class="products-section-head" id="dist-products-head">
+                        <h3 class="products-section-title" id="dist-products-title">Il reste quoi ?</h3>
+                        <p class="products-hint" id="dist-products-hint">Touche un produit pour dire s'il en reste.</p>
+                    </div>
                     <div id="dist-products-list"></div>
                     <!-- Section ajout produit (seulement en mode edit favoris) -->
                     <div id="dist-products-add-section" style="display:none; margin-top: 1rem;">
@@ -840,33 +849,6 @@
     </div>
 
     <!-- ============================================
-         MODALE "IL RESTE QUOI ?" (signal de dispo en un tap, UC11, sans auth)
-         Remplie par js/availability.js, s'ouvre par-dessus la fiche distributeur
-         ============================================ -->
-    <div id="availability-modal" class="modal-clean" role="dialog" aria-modal="true" aria-labelledby="availability-title" tabindex="-1">
-        <div class="modal-content-clean">
-            <button class="close-modal" id="availability-close" aria-label="Fermer">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-            <h2 id="availability-title">Il reste quoi ?</h2>
-            <p class="setting-hint">Dis ce que tu vois devant la machine. Un tap suffit, pas besoin de compte.</p>
-            <div id="availability-products" class="availability-products"></div>
-            <div class="availability-machine" role="group" aria-label="État de la machine">
-                <button type="button" class="availability-machine-btn" data-machine="empty" aria-pressed="false">Machine vide</button>
-                <button type="button" class="availability-machine-btn" data-machine="broken" aria-pressed="false">En panne</button>
-                <button type="button" class="availability-machine-btn" data-machine="working" aria-pressed="false">Ça fonctionne</button>
-            </div>
-            <p class="availability-error" id="availability-error" role="alert" hidden></p>
-            <div class="modal-actions-clean">
-                <button type="button" class="btn-secondary-clean" id="availability-cancel">Annuler</button>
-                <button type="button" class="btn-primary-clean" id="availability-submit" disabled>Envoyer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================
          MODALE DE CONFIRMATION (remplace confirm() natif ; js/confirm-dialog.js)
          Titre, message et libelles remplis a l'appel ; Annuler a le focus initial
          ============================================ -->
@@ -980,26 +962,26 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=51",
-            "./js/state.js": "./js/state.js?v=51",
-            "./js/config.js": "./js/config.js?v=51",
-            "./js/utils.js": "./js/utils.js?v=51",
-            "./js/auth.js": "./js/auth.js?v=51",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=51",
-            "./js/map.js": "./js/map.js?v=51",
-            "./js/navigation.js": "./js/navigation.js?v=51",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=51",
-            "./js/distributor.js": "./js/distributor.js?v=51",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=51",
-            "./js/chat.js": "./js/chat.js?v=51",
-            "./js/activity.js": "./js/activity.js?v=51",
-            "./js/notifications.js": "./js/notifications.js?v=51",
-            "./js/availability.js": "./js/availability.js?v=51",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=51",
-            "./js/events.js": "./js/events.js?v=51",
-            "./js/stats.js": "./js/stats.js?v=51",
-            "./js/history.js": "./js/history.js?v=51",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=51"
+            "./js/app.js": "./js/app.js?v=52",
+            "./js/state.js": "./js/state.js?v=52",
+            "./js/config.js": "./js/config.js?v=52",
+            "./js/utils.js": "./js/utils.js?v=52",
+            "./js/auth.js": "./js/auth.js?v=52",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=52",
+            "./js/map.js": "./js/map.js?v=52",
+            "./js/navigation.js": "./js/navigation.js?v=52",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=52",
+            "./js/distributor.js": "./js/distributor.js?v=52",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=52",
+            "./js/chat.js": "./js/chat.js?v=52",
+            "./js/activity.js": "./js/activity.js?v=52",
+            "./js/notifications.js": "./js/notifications.js?v=52",
+            "./js/availability.js": "./js/availability.js?v=52",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=52",
+            "./js/events.js": "./js/events.js?v=52",
+            "./js/stats.js": "./js/stats.js?v=52",
+            "./js/history.js": "./js/history.js?v=52",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=52"
         }
     }
     </script>

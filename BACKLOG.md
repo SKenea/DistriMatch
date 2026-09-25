@@ -24,9 +24,9 @@ Objectif : sur la fiche, savoir tout de suite si chaque aliment est dispo et si 
 machine marche, et le signaler la ou on regarde. Valeur : plus de vocabulaire a
 decoder (« Au catalogue », « Vu dispo », bandeau, fenetre a part) ; un geste par info.
 Reformulation validee par Stephane le 2026-09-25 (plan « Fiche distributeur : dispo ou
-pas, et on le dit sur le produit »).
+pas, et on le dit sur le produit »). Livre le 2026-09-25 (migration 012 executee).
 
-- [ ] T2-US1 Statut produit : Dispo / Pas dispo / Pas d'info
+- [x] T2-US1 Statut produit : Dispo / Pas dispo / Pas d'info
   - En tant que client, je veux lire en face de chaque aliment s'il est dispo ou pas,
     afin de savoir si le deplacement vaut le coup.
   - Constat : « Au catalogue », « Vu dispo », « Vu absent », « Indisponible » : quatre
@@ -40,7 +40,7 @@ pas, et on le dit sur le produit »).
   - TS : `resolveProductStatus(product, signalRow, machineStatus, now)` pure (utils.js)
     remplace `resolveAvailabilityBadge`.
 
-- [ ] T2-US2 Signaler sur l'aliment
+- [x] T2-US2 Signaler sur l'aliment
   - En tant que client devant la machine, je veux toucher un aliment pour dire s'il en
     reste, afin de ne pas chercher une fenetre a part.
   - Acceptance : toucher un produit deplie « ✓ Il y en a » / « ✗ Plus rien » (cibles
@@ -53,7 +53,7 @@ pas, et on le dit sur le produit »).
   - TS : migration `012_product_dedup_by_state.sql` (anti-doublon produit par etat,
     comme 011 pour la machine), executee par Claude.
 
-- [ ] T2-US3 Etat du distributeur a droite du nom
+- [x] T2-US3 Etat du distributeur a droite du nom
   - En tant que client, je veux voir d'un coup d'oeil si la machine fonctionne, est
     vide ou en panne, et pouvoir le dire, afin de ne pas me deplacer pour rien.
   - Acceptance : puce a droite du nom « Fonctionne » / « Vide » / « En panne » / « Pas
@@ -65,7 +65,7 @@ pas, et on le dit sur le produit »).
     reste a droite, rien ne deborde en 390 px.
   - TS : `resolveMachineStatus(statusRow, productRows, lastVerified, now)` pure.
 
-- [ ] T2-US4 Mode Modifier : le catalogue dit son nom
+- [x] T2-US4 Mode Modifier : le catalogue dit son nom
   - En tant que contributeur, je veux que le bouton d'un produit en edition dise s'il
     est vendu ici, afin de ne pas le confondre avec la dispo du moment.
   - Acceptance : « Vendu ici » / « Plus vendu » a la place de « Disponible /

@@ -533,18 +533,95 @@ export function centroidOf(points) {
     return { lat: sum.lat / valid.length, lng: sum.lng / valid.length };
 }
 
-// Badge de dispo d'un produit dans la fiche (audit UX-06) : le dernier signal
-// frais (< FRESH_MAX_AGE_MS) prime ; sans signal frais, le flag editorial ne
-// dit rien de l'instant -> "Au catalogue" (neutre), ou "Indisponible" si le
-// produit est retire du catalogue. Retourne { label, tone }.
-export function resolveAvailabilityBadge(product, signalRow, now = Date.now()) {
-    const ts = signalRow && signalRow.created_at ? new Date(signalRow.created_at).getTime() : NaN;
-    if (!Number.isNaN(ts) && now - ts < FRESH_MAX_AGE_MS) {
-        if (signalRow.state === 'available') return { label: 'Vu dispo', tone: 'available' };
-        if (signalRow.state === 'absent') return { label: 'Vu absent', tone: 'absent' };
+// ============================================
+// FICHE : DISPO OU PAS, EN UN COUP D'OEIL (EPIC-T2)
+// ============================================
+// Un seul vocabulaire (retour de Stephane, 2026-09-25) :
+//   produit : « Dispo » / « Pas dispo » / « Pas d'info »
+//   machine : « Fonctionne » / « Vide » / « En panne » / « Pas d'info »
+// Le mot repond a la question, la couleur dit la confiance : vive si le signal a
+// moins de 2 h (fresh), grisee jusqu'a 24 h, « Pas d'info » au-dela
+// (docs/STRATEGIE.md : jamais un vert perime).
+export const SIGNAL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function rowTime(row) {
+    const ts = row && row.created_at ? new Date(row.created_at).getTime() : NaN;
+    return Number.isNaN(ts) ? NaN : ts;
+}
+
+function isRecent(ts, now) {
+    return !Number.isNaN(ts) && ts <= now + 60000 && now - ts < SIGNAL_MAX_AGE_MS;
+}
+
+const MACHINE_LABELS = {
+    working: { label: 'Fonctionne', detail: 'Vue en marche' },
+    empty: { label: 'Vide', detail: 'Signalée vide' },
+    broken: { label: 'En panne', detail: 'Signalée en panne' }
+};
+
+// Etat de la machine a droite du nom + la ligne qui dit d'ou il vient.
+//   statusRow   : derniere ligne de distributor_status (ou null)
+//   productRows : lignes de product_availability de la machine
+//   lastVerified: distributors.last_verified (repli de la ligne de provenance)
+// Un « vu dispo » plus recent que tout signal machine prouve qu'elle marche :
+// « Fonctionne » deduit. Retour : { state, label, tone, fresh, at, detail }.
+export function resolveMachineStatus(statusRow, productRows = [], lastVerified = null, now = Date.now()) {
+    let best = null;
+    const machineTs = rowTime(statusRow);
+    if (statusRow && MACHINE_LABELS[statusRow.state] && isRecent(machineTs, now)) {
+        best = { state: statusRow.state, at: machineTs };
     }
-    if (product && product.available === false) return { label: 'Indisponible', tone: 'unavailable' };
-    return { label: 'Au catalogue', tone: 'neutral' };
+    for (const row of productRows || []) {
+        const ts = rowTime(row);
+        if (row.state === 'available' && isRecent(ts, now) && (!best || ts > best.at)) {
+            best = { state: 'working', at: ts };
+        }
+    }
+    if (!best) {
+        const fresh = getFreshness(lastVerified, now);
+        return { state: 'unknown', label: "Pas d'info", tone: 'unknown', fresh: false, at: null, detail: fresh.label };
+    }
+    const info = MACHINE_LABELS[best.state];
+    return {
+        state: best.state,
+        label: info.label,
+        tone: best.state,
+        fresh: now - best.at < FRESH_MAX_AGE_MS,
+        at: best.at,
+        detail: `${info.detail} ${timeAgo(best.at, now)}`
+    };
+}
+
+// Statut d'un produit de la fiche.
+//   product   : { available } (available === false : « Plus vendu » au catalogue)
+//   signalRow : son dernier signal (product_availability) ou null
+//   machine   : resultat de resolveMachineStatus (ou null)
+// Une machine vide / en panne plus recente que le signal du produit l'emporte :
+// on ne peut rien acheter dans une machine vide. Retour : { label, tone, fresh, detail }.
+export function resolveProductStatus(product, signalRow, machine = null, now = Date.now()) {
+    if (product && product.available === false) {
+        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'Plus vendu ici' };
+    }
+    const ts = rowTime(signalRow);
+    const hasSignal = signalRow && (signalRow.state === 'available' || signalRow.state === 'absent') && isRecent(ts, now);
+    const machineDown = machine && (machine.state === 'empty' || machine.state === 'broken') && machine.at !== null;
+    if (machineDown && (!hasSignal || machine.at > ts)) {
+        return {
+            label: 'Pas dispo',
+            tone: 'absent',
+            fresh: machine.fresh,
+            detail: machine.state === 'empty' ? 'Machine vide' : 'Machine en panne'
+        };
+    }
+    if (hasSignal) {
+        return {
+            label: signalRow.state === 'available' ? 'Dispo' : 'Pas dispo',
+            tone: signalRow.state === 'available' ? 'available' : 'absent',
+            fresh: now - ts < FRESH_MAX_AGE_MS,
+            detail: `vu ${timeAgo(ts, now)}`
+        };
+    }
+    return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: '' };
 }
 
 // Ligne Supabase (snake_case, produits imbriques) -> distributeur de l'app
