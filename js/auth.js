@@ -155,6 +155,18 @@ export async function requireAuth() {
 
 let modalOpen = false;
 
+// Session morte cote serveur (signal refuse en 28000 / 401) alors que l'app
+// croit encore l'utilisateur connecte : on rouvre la connexion par e-mail sans
+// passer par isAuthenticated() (EPIC-T6). Meme exception localhost que requireAuth.
+export function promptReconnect() {
+    try {
+        if (isLocalhost() && localStorage.getItem('distrimatch_force_auth') !== '1') return;
+    } catch (e) {
+        if (isLocalhost()) return;
+    }
+    openEmailModal(() => {});
+}
+
 function openEmailModal(onClose) {
     if (modalOpen) return;
     modalOpen = true;

@@ -152,11 +152,12 @@ export function getDeviceId() {
 // "Il reste quoi ?". choices : { [productId]: 'available' | 'absent' | 'unseen' }.
 // Les produits "pas regarde" et les ids non numeriques sont exclus ; l'etat
 // machine est borne a 'empty' / 'broken' / 'working' (migration 011), sinon null.
-// Refus « metier » de la RPC confirm_availability (007) : les renvoyer ne sert a
-// rien. P0001 = trop de signaux pour cet appareil, P0002 = machine ou produit
-// inconnu, 22023 = donnees invalides. Tout le reste (session, reseau, 401...)
-// merite un renvoi anonyme (EPIC-T3).
-const BUSINESS_SIGNAL_CODES = ['P0001', 'P0002', '22023'];
+// Refus « metier » de la RPC confirm_availability (007, 014) : les renvoyer ne
+// sert a rien. P0001 = trop de signaux pour ce compte, P0002 = machine ou
+// produit inconnu, 22023 = donnees invalides, 42501 = compte bloque. Le reste
+// (session expiree 28000 / 401, reseau...) merite un renouvellement de session
+// puis un renvoi (EPIC-T6).
+const BUSINESS_SIGNAL_CODES = ['P0001', 'P0002', '22023', '42501'];
 
 export function isBusinessSignalError(error) {
     return !!error && BUSINESS_SIGNAL_CODES.includes(error.code);
@@ -171,8 +172,10 @@ export function describeSignalError(error, status = 0, online = true) {
     if (online === false || /failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
         return 'Pas de réseau : signal non envoyé';
     }
-    if (error?.code === 'P0001') return 'Trop de signaux depuis ce téléphone, réessaie dans une heure';
+    if (error?.code === 'P0001') return 'Trop de signaux depuis ce compte, réessaie dans une heure';
     if (error?.code === 'P0002') return 'Machine inconnue du serveur : signal non envoyé';
+    if (error?.code === '42501') return 'Ce compte ne peut plus envoyer de signaux';
+    if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';
     const code = error?.code || status || '?';
     return `Signal non envoyé, réessaie plus tard (code ${code})`;
 }
