@@ -14,9 +14,10 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
-    resolveMachineStatus, resolveProductStatus
+    resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError
 } from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
@@ -217,6 +218,38 @@ export function focusSignalFromQr() {
     }
 }
 
+// Client anonyme, sans session, cree a la demande : renvoi d'un signal que la
+// session du telephone a fait echouer (EPIC-T3, constat terrain Android). Le
+// signal n'exige pas de compte (UC11), il ne doit jamais etre bloque par elle.
+let anonClient = null;
+
+function getAnonClient() {
+    if (anonClient) return anonClient;
+    if (typeof window === 'undefined' || !window.supabase?.createClient) return null;
+    anonClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'distrimatch-anon-signal' }
+    });
+    return anonClient;
+}
+
+async function callConfirm(client, payload) {
+    try {
+        return await client.rpc('confirm_availability', payload);
+    } catch (e) {
+        return { data: null, error: e, status: 0 };
+    }
+}
+
+// Envoi normal ; en cas d'echec non metier, un renvoi anonyme.
+async function confirmWithFallback(payload) {
+    const first = await callConfirm(supabaseClient, payload);
+    if (!first.error || isBusinessSignalError(first.error)) return first;
+    const anon = getAnonClient();
+    if (!anon) return first;
+    console.warn('[DistriMatch] Signal refuse (session ?), renvoi anonyme :', first.status, first.error?.code, first.error?.message);
+    return callConfirm(anon, payload);
+}
+
 // Un tap = un signal : { productId, state } pour un aliment, { machine } pour
 // l'etat de la machine. Mise a jour immediate de l'affichage, puis resynchro.
 async function sendSignal({ productId = null, state = null, machine = null }) {
@@ -233,8 +266,12 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
     isSending = true;
     setBusy(true);
     try {
-        const { data, error } = await supabaseClient.rpc('confirm_availability', payload);
-        if (error) throw error;
+        const { data, error, status } = await confirmWithFallback(payload);
+        if (error) {
+            console.warn('[DistriMatch] Signal de dispo refuse :', status, error?.code, error?.message || error);
+            showToast(describeSignalError(error, status, navigator.onLine), 'error');
+            return;
+        }
 
         if (data && data.inserted > 0) {
             const now = new Date().toISOString();
@@ -259,8 +296,8 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
         loadAvailabilityForDistributor(distributor.id, { keep: true });
         rememberOwnSignal(distributor.id);   // pas de notification de son propre signal
     } catch (e) {
-        console.warn('[DistriMatch] Signal de dispo refuse :', e?.message || e);
-        showToast('Signal non envoyé, réessaie plus tard', 'error');
+        // Erreur d'affichage apres un envoi reussi : le signal est parti
+        console.warn('[DistriMatch] Mise a jour de la fiche apres signal :', e?.message || e);
     } finally {
         isSending = false;
         setBusy(false);

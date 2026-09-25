@@ -1455,6 +1455,42 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-modal-verified')).toHaveText('Signalée en panne il y a 10 min');
     });
 
+    // EPIC-T3 (constat terrain Android) : un envoi qui echoue hors refus metier
+    // est renvoye une fois, sans session ; un refus metier ne l'est pas.
+    test('envoi en echec (401) -> renvoi anonyme automatique -> « Merci »', async ({ page }) => {
+        const calls = [];
+        await page.route(RPC_ROUTE, route => {
+            calls.push(route.request().postDataJSON());
+            if (calls.length === 1) {
+                return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ code: 'PGRST301', message: 'JWT expired' }) });
+            }
+            return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+        });
+        await routeSignals(page);
+        await openDistModal(page);
+        await page.click('#dist-machine-chip');
+        await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
+        expect(calls).toHaveLength(2);
+        expect(calls[1]).toEqual(calls[0]);
+        await expect(page.locator('#dist-machine-chip')).toContainText('Fonctionne');
+        expect(await page.$('#toast-container .toast.error')).toBeNull();
+    });
+
+    test('refus « trop de signaux » : pas de renvoi, la raison est affichee', async ({ page }) => {
+        const calls = [];
+        await page.route(RPC_ROUTE, route => {
+            calls.push(1);
+            route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'P0001', message: 'Trop de signaux pour cet appareil, reessaie plus tard' }) });
+        });
+        await routeSignals(page);
+        await openDistModal(page);
+        await page.click('#dist-machine-chip');
+        await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
+        await expect(page.locator('#toast-container .toast.error')).toHaveText('Trop de signaux depuis ce téléphone, réessaie dans une heure');
+        expect(calls).toHaveLength(1);
+    });
+
     test('plus de gros bouton rouge ni de fenetre « Il reste quoi ? »', async ({ page }) => {
         await openDistModal(page);
         await expect(page.locator('#dist-action-confirm')).toHaveCount(0);
@@ -1471,7 +1507,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         const f = await openSignalableFiche(page);
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
         await signalFirstProduct(page, 'available');
-        await expect(page.locator('#toast-container .toast.error')).toContainText('réessaie');
+        await expect(page.locator('#toast-container .toast.error')).toContainText('réessaie plus tard (code 503)');
         await expect(row.locator('button.product-row-main')).toHaveAttribute('aria-expanded', 'true');
         await expect(row.locator('.product-pill')).toHaveText("Pas d'info");
     });

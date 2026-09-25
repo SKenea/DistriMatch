@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus,
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError,
     mapDistributorRow, diffFavoriteSignals
 } from '../js/utils.js';
 
@@ -274,6 +274,30 @@ describe('centroidOf (centre des distributeurs charges)', () => {
 // ============================================
 // Un seul vocabulaire (retour de Stephane 2026-09-25). Le mot repond, la couleur
 // (fresh) dit la confiance : < 2 h vive, jusqu'a 24 h adoucie, au-dela « Pas d'info ».
+
+// EPIC-T3 : un signal non envoye dit pourquoi ; seuls les refus metier ne
+// sont pas renvoyes en anonyme.
+describe('describeSignalError / isBusinessSignalError (signal non envoye)', () => {
+    it('refus metier : pas de renvoi (trop de signaux, inconnu, invalide)', () => {
+        for (const code of ['P0001', 'P0002', '22023']) assert.equal(isBusinessSignalError({ code }), true, code);
+        for (const e of [{ code: 'PGRST301' }, { code: '401' }, new TypeError('Failed to fetch'), null]) {
+            assert.equal(isBusinessSignalError(e), false);
+        }
+    });
+
+    it('la raison est ecrite', () => {
+        assert.equal(describeSignalError({ code: 'P0001', message: 'Trop de signaux' }, 400), 'Trop de signaux depuis ce téléphone, réessaie dans une heure');
+        assert.equal(describeSignalError({ code: 'P0002' }, 404), 'Machine inconnue du serveur : signal non envoyé');
+        assert.equal(describeSignalError(new TypeError('Failed to fetch'), 0), 'Pas de réseau : signal non envoyé');
+        assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401, false), 'Pas de réseau : signal non envoyé');
+    });
+
+    it('sinon, le code pour pouvoir le signaler', () => {
+        assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401), 'Signal non envoyé, réessaie plus tard (code PGRST301)');
+        assert.equal(describeSignalError({ message: 'boom' }, 503), 'Signal non envoyé, réessaie plus tard (code 503)');
+        assert.equal(describeSignalError(undefined), 'Signal non envoyé, réessaie plus tard (code ?)');
+    });
+});
 
 describe('resolveMachineStatus (etat a droite du nom)', () => {
     const NOW = Date.parse('2026-09-25T12:00:00Z');

@@ -24,9 +24,9 @@ Constat terrain : « Fonctionne » sur Gaztainbidea -> « Signal non envoyé ».
 navigation privee (sans compte) les memes signaux passent. La base accepte le signal
 en anonyme comme connecte (verifie) : c'est l'envoi avec la session du telephone
 Android qui echoue, pour une raison que le message generique ne dit pas.
-Correctif valide par Stephane le 2026-09-25.
+Correctif valide par Stephane le 2026-09-25, livre le meme jour.
 
-- [ ] T3-US1 Renvoi anonyme si l'envoi echoue
+- [x] T3-US1 Renvoi anonyme si l'envoi echoue
   - En tant que client connecte devant une machine, je veux que mon signal parte
     meme si ma session pose probleme, afin de ne jamais etre bloque (UC11 n'exige
     pas de compte).
@@ -36,7 +36,7 @@ Correctif valide par Stephane le 2026-09-25.
     qu'un envoi normal (toast « Merci », ligne / puce mises a jour) ; e2e : 1er appel
     en 401, 2e en 200 -> « Merci » ; refus « trop de signaux » -> pas de renvoi.
 
-- [ ] T3-US2 Un message d'erreur qui dit la raison
+- [x] T3-US2 Un message d'erreur qui dit la raison
   - En tant que testeur, je veux lire pourquoi un signal n'est pas parti, afin de
     pouvoir le signaler precisement.
   - Acceptance : « Trop de signaux depuis ce téléphone, réessaie dans une heure »

@@ -152,6 +152,31 @@ export function getDeviceId() {
 // "Il reste quoi ?". choices : { [productId]: 'available' | 'absent' | 'unseen' }.
 // Les produits "pas regarde" et les ids non numeriques sont exclus ; l'etat
 // machine est borne a 'empty' / 'broken' / 'working' (migration 011), sinon null.
+// Refus « metier » de la RPC confirm_availability (007) : les renvoyer ne sert a
+// rien. P0001 = trop de signaux pour cet appareil, P0002 = machine ou produit
+// inconnu, 22023 = donnees invalides. Tout le reste (session, reseau, 401...)
+// merite un renvoi anonyme (EPIC-T3).
+const BUSINESS_SIGNAL_CODES = ['P0001', 'P0002', '22023'];
+
+export function isBusinessSignalError(error) {
+    return !!error && BUSINESS_SIGNAL_CODES.includes(error.code);
+}
+
+// Message d'erreur d'un signal non envoye, qui dit la raison (EPIC-T3).
+//   error  : erreur Supabase ({ code, message }) ou exception reseau
+//   status : code HTTP de la reponse (0 si pas de reponse)
+//   online : navigator.onLine
+export function describeSignalError(error, status = 0, online = true) {
+    const message = String(error?.message || error || '');
+    if (online === false || /failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
+        return 'Pas de réseau : signal non envoyé';
+    }
+    if (error?.code === 'P0001') return 'Trop de signaux depuis ce téléphone, réessaie dans une heure';
+    if (error?.code === 'P0002') return 'Machine inconnue du serveur : signal non envoyé';
+    const code = error?.code || status || '?';
+    return `Signal non envoyé, réessaie plus tard (code ${code})`;
+}
+
 // Etats machine acceptes par la RPC confirm_availability (007 + 011)
 const MACHINE_STATES = ['empty', 'broken', 'working'];
 
