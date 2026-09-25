@@ -19,6 +19,59 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T2 La fiche repond en un coup d'oeil : dispo ou pas (Stephane, 2026-09-25)
+Objectif : sur la fiche, savoir tout de suite si chaque aliment est dispo et si la
+machine marche, et le signaler la ou on regarde. Valeur : plus de vocabulaire a
+decoder (« Au catalogue », « Vu dispo », bandeau, fenetre a part) ; un geste par info.
+Reformulation validee par Stephane le 2026-09-25 (plan « Fiche distributeur : dispo ou
+pas, et on le dit sur le produit »).
+
+- [ ] T2-US1 Statut produit : Dispo / Pas dispo / Pas d'info
+  - En tant que client, je veux lire en face de chaque aliment s'il est dispo ou pas,
+    afin de savoir si le deplacement vaut le coup.
+  - Constat : « Au catalogue », « Vu dispo », « Vu absent », « Indisponible » : quatre
+    mots, aucun ne repond a la question.
+  - Acceptance : trois libelles seulement (« Dispo », « Pas dispo », « Pas d'info ») ;
+    couleur vive si le signal a moins de 2 h, grisee de 2 h a 24 h (meme mot), « Pas
+    d'info » au-dela ou sans signal ; l'age est ecrit sous le nom (« vu il y a 12 min ») ;
+    machine signalee vide / en panne plus recemment que le dernier « vu dispo » ->
+    « Pas dispo » avec « machine vide » / « machine en panne » ; produit « Plus vendu »
+    -> « Pas dispo » sans age. Le mot « catalogue » n'apparait plus en lecture.
+  - TS : `resolveProductStatus(product, signalRow, machineStatus, now)` pure (utils.js)
+    remplace `resolveAvailabilityBadge`.
+
+- [ ] T2-US2 Signaler sur l'aliment
+  - En tant que client devant la machine, je veux toucher un aliment pour dire s'il en
+    reste, afin de ne pas chercher une fenetre a part.
+  - Acceptance : toucher un produit deplie « ✓ Il y en a » / « ✗ Plus rien » (cibles
+    >= 44 px) ; un tap envoie (anonyme, UC11), la ligne se replie et passe en « Dispo,
+    a l'instant » ; on peut se corriger juste apres ; la section s'appelle « Il reste
+    quoi ? » avec la consigne « Touche un produit pour dire s'il en reste » ; le gros
+    bouton rouge et la fenetre « Il reste quoi ? » disparaissent ; QR `&confirm=1` :
+    fiche ouverte sur la liste, consigne mise en avant ; son propre signal ne notifie
+    pas ; `signal_envoye` logge une fois par ouverture de fiche.
+  - TS : migration `012_product_dedup_by_state.sql` (anti-doublon produit par etat,
+    comme 011 pour la machine), executee par Claude.
+
+- [ ] T2-US3 Etat du distributeur a droite du nom
+  - En tant que client, je veux voir d'un coup d'oeil si la machine fonctionne, est
+    vide ou en panne, et pouvoir le dire, afin de ne pas me deplacer pour rien.
+  - Acceptance : puce a droite du nom « Fonctionne » / « Vide » / « En panne » / « Pas
+    d'info », avec ▾, touchable : elle deplie « Fonctionne / Vide / En panne », un tap
+    envoie ; une seule ligne sous le nom dit d'ou vient le statut (« Signalée vide il y
+    a 34 min », « Vue en marche il y a 12 min », sinon « Vérifié il y a X » ou « Pas
+    encore vérifié ») et remplace l'ancien bandeau ; « Fonctionne » est deduit d'un
+    produit vu dispo recemment sans signal vide / panne plus recent. Nom long : la puce
+    reste a droite, rien ne deborde en 390 px.
+  - TS : `resolveMachineStatus(statusRow, productRows, lastVerified, now)` pure.
+
+- [ ] T2-US4 Mode Modifier : le catalogue dit son nom
+  - En tant que contributeur, je veux que le bouton d'un produit en edition dise s'il
+    est vendu ici, afin de ne pas le confondre avec la dispo du moment.
+  - Acceptance : « Vendu ici » / « Plus vendu » a la place de « Disponible /
+    Indisponible » ; liste vide en lecture : « Aucun produit référencé » + bouton
+    « Ajouter les produits » (connexion exigee, UC2).
+
 ### EPIC-T1 Retour terrain Gaztainbidea (test de Stephane, 2026-09-25)
 Objectif : que le parcours reel devant une machine marche sans accroc, du scan a la
 notification. Valeur : un testeur terrain peut completer une fiche vide, dire que la
