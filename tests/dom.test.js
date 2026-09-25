@@ -337,8 +337,11 @@ describe('openDistributorModal', () => {
         assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
     });
 
-    it('sans canEdit : stylo masque', () => {
+    // Retour terrain 2026-09-25 (T1-US1) : visible d'ou que la fiche soit ouverte
+    it('ouverte hors Favoris : stylo visible en lecture, masque en edition', () => {
         openDistributorModal('dist-test', false, false);
+        assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
+        openDistributorModal('dist-test', true, false);
         assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
     });
 });
@@ -908,25 +911,40 @@ describe('Centre de notifications', () => {
         assert.notEqual(document.getElementById('notifications-empty').style.display, 'none');
     });
 
-    it('deleteNotification retire un item et recalcule le badge', () => {
+    it('deleteNotification retire l\'item par son identifiant et recalcule le badge', () => {
         NotificationQueue.history = [
-            { type: 'proximity', message: 'A', read: false, timestamp: Date.now() },
-            { type: 'stock', message: 'B', read: false, timestamp: Date.now() }
+            { id: 'n-a', type: 'proximity', message: 'A', read: false, timestamp: Date.now() },
+            { id: 'n-b', type: 'stock', message: 'B', read: false, timestamp: Date.now() }
         ];
         openNotificationsView();           // rend + marque lu
         NotificationQueue.history[0].read = false; // simuler 1 non-lue
-        deleteNotification(0);
+        deleteNotification('n-a');
         assert.equal(NotificationQueue.history.length, 1);
         assert.equal(NotificationQueue.history[0].message, 'B');
         assert.equal(document.querySelectorAll('#notifications-list .notif-item').length, 1);
         assert.equal(getUnreadCount(), 0);
     });
 
-    it('deleteNotification ignore un index hors borne', () => {
-        NotificationQueue.history = [{ type: 'proximity', message: 'X', read: true }];
-        deleteNotification(5);
-        deleteNotification(-1);
+    it('deleteNotification ignore un identifiant inconnu', () => {
+        NotificationQueue.history = [{ id: 'n-x', type: 'proximity', message: 'X', read: true }];
+        deleteNotification('n-inconnu');
+        deleteNotification(undefined);
         assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    // Retour terrain 2026-09-25 (T1-US4) : la liste a pu bouger entre
+    // l'affichage et le clic ; la corbeille retire toujours SA ligne.
+    it('la corbeille d\'une ligne retire cette ligne, meme si une notification est arrivee avant', () => {
+        NotificationQueue.history = [
+            { type: 'empty', message: 'A vide', read: true, timestamp: Date.now() - 60000 },
+            { type: 'broken', message: 'B panne', read: true, timestamp: Date.now() - 120000 }
+        ];
+        openNotificationsView();
+        const trashOfB = document.querySelectorAll('#notifications-list .notif-item-delete')[1];
+        // Une nouvelle notification arrive en tete sans re-rendu
+        NotificationQueue.history.unshift({ id: 'n-new', type: 'empty', message: 'C vide', read: false, timestamp: Date.now() });
+        trashOfB.click();
+        assert.deepEqual(NotificationQueue.history.map(n => n.message), ['C vide', 'A vide']);
     });
 
     // Plus de confirm() natif : la modale maison (#confirm-modal, js/confirm-dialog.js)

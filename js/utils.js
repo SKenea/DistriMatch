@@ -151,7 +151,10 @@ export function getDeviceId() {
 // Payload de la RPC confirm_availability a partir des choix du panneau
 // "Il reste quoi ?". choices : { [productId]: 'available' | 'absent' | 'unseen' }.
 // Les produits "pas regarde" et les ids non numeriques sont exclus ; l'etat
-// machine est borne a 'empty' / 'broken', sinon null.
+// machine est borne a 'empty' / 'broken' / 'working' (migration 011), sinon null.
+// Etats machine acceptes par la RPC confirm_availability (007 + 011)
+const MACHINE_STATES = ['empty', 'broken', 'working'];
+
 export function buildAvailabilityPayload(distributorId, deviceId, choices = {}, machineState = null) {
     const productSignals = Object.entries(choices)
         .filter(([id, state]) => Number.isInteger(Number(id)) && (state === 'available' || state === 'absent'))
@@ -160,7 +163,7 @@ export function buildAvailabilityPayload(distributorId, deviceId, choices = {}, 
         p_distributor_id: distributorId,
         p_device_hash: deviceId,
         p_product_signals: productSignals,
-        p_machine_state: (machineState === 'empty' || machineState === 'broken') ? machineState : null
+        p_machine_state: MACHINE_STATES.includes(machineState) ? machineState : null
     };
 }
 
@@ -258,9 +261,11 @@ export function loadNotificationQueue() {
         NotificationQueue.pending = parsed.pending || [];
         // Migration douce : les items d'historique sans flag `read` sont
         // consideres lus (pas de gros badge au 1er chargement apres MAJ).
-        NotificationQueue.history = (parsed.history || []).map(n => ({
+        NotificationQueue.history = (parsed.history || []).map((n, i) => ({
             ...n,
-            read: n.read === undefined ? true : n.read
+            read: n.read === undefined ? true : n.read,
+            // Identifiant stable pour la suppression (anciennes entrees sans id)
+            id: n.id || `n-${n.timestamp || 0}-legacy${i}`
         }));
     }
 }
@@ -620,7 +625,12 @@ export function diffFavoriteSignals(previous, current, options = {}) {
     const machineWasDown = (previous.machineState === 'empty' || previous.machineState === 'broken') && !alreadyBack;
 
     if (machine && snapshot.machineAt > (previous.machineAt || 0) && isFresh(snapshot.machineAt)) {
-        candidates.push({ rank: machine.state === 'broken' ? 0 : 1, type: machine.state === 'broken' ? 'broken' : 'empty', at: snapshot.machineAt });
+        if (machine.state === 'broken' || machine.state === 'empty') {
+            candidates.push({ rank: machine.state === 'broken' ? 0 : 1, type: machine.state, at: snapshot.machineAt });
+        } else if (machine.state === 'working' && machineWasDown) {
+            // « Ça fonctionne » apres un vide / une panne : de nouveau en service
+            candidates.push({ rank: 3, type: 'working', at: snapshot.machineAt });
+        }
     }
 
     for (const row of rows) {

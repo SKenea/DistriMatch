@@ -515,7 +515,7 @@ test.describe('5. Auth wall', () => {
 // 5bis. MODIFICATION DEPUIS FAVORIS (stylo)
 // ============================================
 
-test.describe('5bis. Modification via stylo (Favoris)', () => {
+test.describe('5bis. Modification via stylo', () => {
     async function openFirstFavoriteCard(page) {
         await page.evaluate(() => {
             const id = window.AppState.distributors[0].id;
@@ -623,18 +623,36 @@ test.describe('5bis. Modification via stylo (Favoris)', () => {
         expect(r.addPriceInput).toBeNull();
     });
 
-    test('hors Favoris (canEdit absent) -> pas de stylo, lecture seule', async ({ page }) => {
+    // Retour terrain 2026-09-25 (T1-US1) : une fiche se complete d'ou qu'on l'ouvre
+    test('hors Favoris (carte, liste, deep link) -> stylo visible, connexion demandee au clic', async ({ page }) => {
         await page.evaluate(() => {
             const id = window.AppState.distributors[0].id;
             window.openDistributorModal(id); // comme side panel / carte / deep link
         });
         await page.waitForSelector('#dist-modal-overlay.active');
-        const r = await page.evaluate(() => ({
-            edit: window.AppState.modalEditMode,
-            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
-        }));
-        expect(r.edit).toBe(false);
-        expect(r.styloHidden).toBe(true);
+        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
+
+        await page.click('#dist-action-edit');
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
+        expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
+    });
+
+    test('machine sans produit : « Il reste quoi ? » propose « Ajouter les produits » (passe par la connexion)', async ({ page }) => {
+        const id = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            d.products = [];
+            return d.id;
+        });
+        await page.evaluate((distId) => window.openDistributorModal(distId), id);
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.click('#dist-action-confirm');
+        await page.waitForSelector('#availability-modal.active');
+        await expect(page.locator('#availability-products')).toContainText('fonctionne, est vide ou en panne');
+
+        await page.click('#availability-add-products');
+        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+        await page.waitForSelector('#edit-auth-gate', { timeout: 3000 });
     });
 });
 
@@ -781,6 +799,89 @@ test.describe('6. Chat inactif, favoris qui notifient', () => {
         const count = await page.evaluate(() =>
             JSON.parse(localStorage.getItem('snackmatch_notification_queue')).history.length);
         expect(count).toBe(1);
+    });
+});
+
+// Retour terrain 2026-09-25 (T1-US4) : une notification, une seule fois, et la
+// suppression retire la ligne choisie. Vues interceptees, aucun appel reel.
+test.describe('6bis. Centre de notifications fiable', () => {
+    async function setupSignals(page, context) {
+        const signals = { status: [] };
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(signals.status) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.evaluate(() => localStorage.setItem('snackmatch_notification_prefs', JSON.stringify({
+            enabled: true, quietHours: { enabled: false, start: 22, end: 8 }
+        })));
+        await setupApp(page, context);
+        return signals;
+    }
+    const historyLength = (page) => page.evaluate(() =>
+        (JSON.parse(localStorage.getItem('snackmatch_notification_queue') || '{"history":[]}').history || []).length);
+    const statusRow = (id, state, minutesAgo) => ({
+        distributor_id: id, state, source: 'anon', weight: 0.5,
+        created_at: new Date(Date.now() - minutesAgo * 60000).toISOString(), age_seconds: minutesAgo * 60
+    });
+
+    test('mon propre signal sur un favori ne me notifie pas', async ({ page, context }) => {
+        const signals = await setupSignals(page, context);
+        // La RPC "enregistre" le signal : la vue renvoie desormais ce signal
+        await page.route(RPC_ROUTE, route => {
+            const body = route.request().postDataJSON();
+            signals.status = [statusRow(body.p_distributor_id, body.p_machine_state, 0)];
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+        });
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        await page.evaluate((distId) => window.toggleSubscription(distId), id);
+        await expect.poll(() => page.evaluate((distId) =>
+            !!JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).lastSeenSignals?.[distId], id)).toBe(true);
+
+        await page.evaluate((distId) => window.openDistributorModal(distId), id);
+        await page.click('#dist-action-confirm');
+        await page.click('#availability-modal .availability-machine-btn[data-machine="empty"]');
+        await page.click('#availability-submit');
+        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+
+        await page.waitForTimeout(500);
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await page.waitForTimeout(800);
+        expect(await historyLength(page)).toBe(0);
+        await expect(page.locator('#notifications-badge')).toBeHidden();
+    });
+
+    test('page Notifications ouverte : la liste suit les arrivees et la suppression retire la bonne ligne', async ({ page, context }) => {
+        const signals = await setupSignals(page, context);
+        const [a, b] = await page.evaluate(() => window.AppState.distributors.slice(0, 2).map(d => ({ id: d.id, name: d.name })));
+        await page.evaluate(([x, y]) => { window.toggleSubscription(x); window.toggleSubscription(y); }, [a.id, b.id]);
+        await expect.poll(() => page.evaluate((ids) => {
+            const seen = JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).lastSeenSignals || {};
+            return ids.every(i => !!seen[i]);
+        }, [a.id, b.id])).toBe(true);
+
+        await page.click('.nav-icon-btn[data-view="notifications"]');
+        await page.waitForSelector('#notifications-view.view-active');
+
+        // Machine A signalee vide pendant que la page est ouverte
+        signals.status = [statusRow(a.id, 'empty', 20)];
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        const rows = page.locator('#notifications-list .notif-item');
+        await expect(rows).toHaveCount(1);
+        await expect(rows.first()).toContainText(a.name);
+
+        // Puis machine B en panne : elle arrive en tete, sans recharger la page
+        signals.status = [statusRow(a.id, 'empty', 20), statusRow(b.id, 'broken', 2)];
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await expect(rows).toHaveCount(2);
+        await expect(rows.first()).toContainText(b.name);
+
+        // Supprimer la ligne de A (la 2e affichee) retire bien A, pas B
+        await rows.nth(1).locator('.notif-item-delete').click();
+        await expect(rows).toHaveCount(1);
+        await expect(rows.first()).toContainText(b.name);
+        const kept = await page.evaluate(() =>
+            JSON.parse(localStorage.getItem('snackmatch_notification_queue')).history.map(n => n.distributorId));
+        expect(kept).toEqual([b.id]);
     });
 });
 
@@ -1288,6 +1389,42 @@ test.describe('13. Signal de dispo en un tap', () => {
         await expect(page.locator('#availability-submit')).toBeDisabled();
     });
 
+    // Retour terrain 2026-09-25 (T1-US2) : dire que la machine fonctionne
+    test('« Ça fonctionne » : exclusif avec vide / panne, envoye tel quel a la RPC', async ({ page }) => {
+        const payloads = [];
+        await page.route(RPC_ROUTE, route => {
+            payloads.push(route.request().postDataJSON());
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ inserted: 1, skipped: 0, source: 'anon' }) });
+        });
+        await openDistModal(page);
+        await page.click('#dist-action-confirm');
+        const empty = page.locator('#availability-modal .availability-machine-btn[data-machine="empty"]');
+        const working = page.locator('#availability-modal .availability-machine-btn[data-machine="working"]');
+        await expect(working).toHaveText('Ça fonctionne');
+        await empty.click();
+        await working.click();
+        await expect(working).toHaveAttribute('aria-pressed', 'true');
+        await expect(empty).toHaveAttribute('aria-pressed', 'false');
+        await page.click('#availability-submit');
+        await expect(page.locator('#availability-modal')).not.toHaveClass(/active/);
+        expect(payloads[0].p_machine_state).toBe('working');
+    });
+
+    test('dernier etat machine « fonctionne » : aucun bandeau vide / panne sur la fiche', async ({ page }) => {
+        const status = { state: 'empty' };
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route => route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify([{ distributor_id: 'x', state: status.state, source: 'anon', weight: 0.5, created_at: new Date(Date.now() - 10 * 60000).toISOString(), age_seconds: 600 }])
+        }));
+        await openDistModal(page);
+        await expect(page.locator('#dist-status-banner')).toHaveText(/Signalée vide/);
+        await page.click('#dist-modal-close');
+        status.state = 'working';
+        await openDistModal(page);
+        await expect(page.locator('#dist-status-banner')).not.toHaveClass(/is-visible/);
+        await expect(page.locator('#dist-status-banner')).toHaveText('');
+    });
+
     test('erreur serveur (503) -> toast d\'erreur, la modale reste ouverte', async ({ page }) => {
         await page.route(RPC_ROUTE, route => route.fulfill({
             status: 503, contentType: 'application/json',
@@ -1722,6 +1859,23 @@ test.describe('20. Liste via le hamburger', () => {
         await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
     });
 
+    // Retour terrain 2026-09-25 (T1-US3) : depuis une page, la liste s'ouvrait
+    // sous la page (z-index 50 contre 150). Le burger revient a la carte d'abord.
+    for (const view of ['notifications', 'subscriptions', 'activity', 'account']) {
+        test(`depuis la page ${view}, le burger ferme la page et ouvre la liste, cliquable`, async ({ page }) => {
+            await page.setViewportSize({ width: 390, height: 844 });
+            await page.evaluate((v) => window.switchView(v), view);
+            await expect(page.locator(`#${view === 'notifications' ? 'notifications-view' : view === 'subscriptions' ? 'subscriptions-view' : view + '-view'}`)).toHaveClass(/view-active/);
+            await page.click('#sidebar-toggle');
+            await expect(page.locator('#sidebar')).toHaveClass(/open/);
+            expect(await page.evaluate(() => !!document.querySelector('.view-page.view-active'))).toBe(false);
+            // Le premier item est au premier plan : un clic reel ouvre la fiche
+            const item = page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first();
+            await item.click();
+            await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
+        });
+    }
+
     test('un chip ouvre le panneau avec le premier groupe non vide deja deplie', async ({ page }) => {
         await page.click('.filter-chip[data-type="pizza"]');
         await expect(page.locator('#side-panel-list .side-panel-group-items:not([hidden]) .side-panel-item').first()).toBeVisible();
@@ -1802,37 +1956,40 @@ test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
 });
 
 // ============================================
-// 22. ENTRER SANS GEOLOCALISATION (audit UX-02)
+// 22. GEOLOCALISATION OBLIGATOIRE (retour terrain 2026-09-25, annule UX-02)
 // ============================================
-// L'overlay d'accueil a une issue secondaire ; apres un deep link (QR), fermer
-// la fiche laisse la carte utilisable au lieu de reafficher le mur.
+// Decision Stephane (2026-09-25, T1-US5) : pas de carte sans geolocalisation.
+// Refus -> l'ecran reste, avec les instructions et « Réessayer ». Un deep link
+// (QR) montre la fiche, mais la fermer ramene l'ecran de geolocalisation.
 
 const overlayGone = (page) => page.evaluate(() => { const o = document.getElementById('geoloc-overlay'); return !o || o.classList.contains('hidden'); });
 
-test.describe('22. Sans geolocalisation', () => {
+test.describe('22. Geolocalisation obligatoire', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
-    test('« Voir la carte sans me localiser » : carte et marqueurs visibles, panneau trie par nom avec rappel', async ({ browser }) => {
+    test('plus de « Voir la carte sans me localiser » ; un refus laisse l\'ecran avec « Réessayer »', async ({ browser }) => {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        // Refus simule : l'API de geolocalisation repond PERMISSION_DENIED
+        await context.addInitScript(() => {
+            navigator.geolocation.getCurrentPosition = (ok, err) => setTimeout(() => err({ code: 1, message: 'denied' }), 50);
+        });
         const page = await context.newPage();
         await page.goto(BASE_URL);
-        await page.waitForSelector('#geoloc-skip', { state: 'visible', timeout: 15000 });
-        await page.click('#geoloc-skip');
-        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, { timeout: 50000 });
-        await page.waitForSelector('.leaflet-container', { timeout: 10000 });
-        await expect.poll(() => page.evaluate(() => document.querySelectorAll('.distributor-marker-container').length)).toBeGreaterThan(0);
-        expect(await overlayGone(page)).toBe(true);
-        expect(await page.evaluate(() => window.AppState.userLocation)).toBeFalsy();
-        await page.click('#sidebar-toggle');
-        await expect(page.locator('#side-panel-list .side-panel-hint')).toContainText('Active la localisation');
-        const names = await page.$$eval('#side-panel-list .side-panel-item', els => els.map(e => (e.querySelector('.side-panel-item-name, h4, strong') || e).textContent.trim()));
-        expect(names.length).toBeGreaterThan(1);
-        expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+        await page.waitForSelector('#geoloc-btn', { state: 'visible', timeout: 15000 });
+        await expect(page.locator('#geoloc-skip')).toHaveCount(0);
+        await expect(page.locator('#geoloc-overlay')).not.toContainText('sans me localiser');
+
+        await page.click('#geoloc-btn');
+        await expect(page.locator('#geoloc-error')).toBeVisible();
+        await expect(page.locator('#geoloc-error')).toContainText('Géolocalisation refusée');
+        await expect(page.locator('#geoloc-btn')).toContainText('Réessayer');
+        await expect(page.locator('#geoloc-btn')).toBeEnabled();
+        expect(await overlayGone(page)).toBe(false);
         await context.close();
     });
 
-    test('deep link QR sans geoloc : fermer la fiche laisse la carte, pas le mur', async ({ browser }) => {
+    test('deep link QR sans geoloc : la fiche s\'ouvre, la fermer ramene l\'ecran de geolocalisation', async ({ browser }) => {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
@@ -1843,9 +2000,10 @@ test.describe('22. Sans geolocalisation', () => {
         await page.waitForSelector('#availability-modal.active', { timeout: 50000 });
         await page.click('#availability-cancel');
         await page.click('#dist-modal-close');
-        await expect.poll(() => overlayGone(page)).toBe(true);
-        await page.waitForSelector('.leaflet-container', { timeout: 10000 });
-        await expect.poll(() => page.evaluate(() => document.querySelectorAll('.distributor-marker-container').length)).toBeGreaterThan(0);
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await page.waitForTimeout(500);
+        expect(await overlayGone(page)).toBe(false);
+        await expect(page.locator('#geoloc-btn')).toBeVisible();
         await context.close();
     });
 });

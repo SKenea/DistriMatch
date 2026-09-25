@@ -14,6 +14,7 @@ import { escapeHTML, showToast, timeAgo, getFreshness, getDeviceId, buildAvailab
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
 import { logEvent } from './events.js';
+import { rememberOwnSignal } from './favorites-watch.js';
 
 // Meme regle que la fraicheur : vert < 2 h. Bandeau machine : signal < 24 h.
 const SEEN_FRESH_MS = 2 * 60 * 60 * 1000;
@@ -26,7 +27,7 @@ const STATE_LABELS = { available: 'Vu dispo', absent: 'Vu absent', unseen: 'Pas 
 let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
 // Choix en cours dans le panneau : { [productId]: 'available' | 'absent' | 'unseen' }
 let choices = {};
-let machineState = null;   // 'empty' | 'broken' | null
+let machineState = null;   // 'empty' | 'broken' | 'working' | null
 let isSending = false;
 
 // ============================================
@@ -103,7 +104,8 @@ export function renderAvailabilityHints() {
     if (!banner) return;
     const status = loaded.status;
     const ts = signalTs(status);
-    if (!status || Number.isNaN(ts) || Date.now() - ts >= STATUS_MAX_AGE_MS) {
+    // « Ça fonctionne » (011) est le dernier etat : pas de bandeau d'alerte
+    if (!status || status.state === 'working' || Number.isNaN(ts) || Date.now() - ts >= STATUS_MAX_AGE_MS) {
         banner.textContent = '';
         banner.className = 'dist-status-banner';
         return;
@@ -169,7 +171,10 @@ function renderPanel(distributor) {
     const list = document.getElementById('availability-products');
     const products = signalableProducts(distributor);
     list.innerHTML = products.length === 0
-        ? '<p class="availability-empty">Aucun produit référencé ici : tu peux quand même signaler la machine vide ou en panne.</p>'
+        ? `<div class="availability-empty">
+                <p>Aucun produit référencé ici : tu peux quand même dire si la machine fonctionne, est vide ou en panne.</p>
+                <button type="button" class="btn-secondary-clean availability-add-products" id="availability-add-products">Ajouter les produits</button>
+            </div>`
         : products.map(p => `
             <div class="availability-row" data-product-id="${escapeHTML(String(p.id))}">
                 <span class="availability-name">${escapeHTML(p.name)}</span>
@@ -201,6 +206,13 @@ function wirePanelOnce(modal) {
     modal.dataset.wired = '1';
 
     document.getElementById('availability-products').addEventListener('click', (e) => {
+        // Fiche sans produit : on passe par le stylo "Modifier" de la fiche,
+        // qui garde la verification de connexion (UC2, modale gate sinon).
+        if (e.target.closest('#availability-add-products')) {
+            closeAvailabilityPanel();
+            document.getElementById('dist-action-edit')?.click();
+            return;
+        }
         const btn = e.target.closest('.availability-seg-btn');
         if (!btn) return;
         const row = btn.closest('.availability-row');
@@ -271,6 +283,7 @@ async function submitAvailability() {
         }
         closeAvailabilityPanel();
         loadAvailabilityForDistributor(distributor.id);
+        rememberOwnSignal(distributor.id);   // pas de notification de son propre signal
     } catch (e) {
         console.warn('[DistriMatch] Signal de dispo refuse :', e?.message || e);
         if (!setPanelError('Signal non envoyé, réessaie plus tard')) {

@@ -242,7 +242,7 @@ export function initDistModal() {
         }
     });
 
-    // Bouton stylo "Modifier" : toujours visible (canEdit). Identifie ->
+    // Bouton stylo "Modifier" : visible sur toute fiche. Identifie ->
     // mode edition. Non identifie -> modale d'explication invitant a se
     // connecter via la page Compte (point d'entree unique de la connexion).
     document.getElementById('dist-action-edit')?.addEventListener('click', () => {
@@ -469,10 +469,11 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Boutons
     updateFavoriteButton();
 
-    // Stylo "Modifier" : visible si ouvert depuis Favoris (canEdit) ET en
-    // lecture. La verification d'identite se fait au clic (modale gate).
+    // Stylo "Modifier" : visible sur toute fiche en lecture, d'ou qu'elle soit
+    // ouverte (retour terrain 2026-09-25 : une fiche sans produit doit pouvoir
+    // etre completee sur place). L'identite est verifiee au clic (modale gate).
     const editBtn = document.getElementById('dist-action-edit');
-    if (editBtn) editBtn.style.display = (canEdit && !editMode) ? '' : 'none';
+    if (editBtn) editBtn.style.display = editMode ? 'none' : '';
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');
