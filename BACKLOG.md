@@ -23,9 +23,9 @@
 Objectif : que le parcours reel devant une machine marche sans accroc, du scan a la
 notification. Valeur : un testeur terrain peut completer une fiche vide, dire que la
 machine marche, naviguer librement et faire confiance a son centre de notifications.
-Reformulation validee par Stephane le 2026-09-25.
+Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration 011 executee).
 
-- [ ] T1-US1 Ajouter des produits depuis n'importe quelle fiche
+- [x] T1-US1 Ajouter des produits depuis n'importe quelle fiche
   - En tant que contributeur connecte devant une machine sans produits, je veux pouvoir
     les ajouter depuis la fiche, afin que les suivants sachent ce qu'elle vend.
   - Constat : le stylo « Modifier » n'apparait que si la fiche est ouverte depuis
@@ -35,7 +35,7 @@ Reformulation validee par Stephane le 2026-09-25.
     quoi ? », une fiche sans produit propose « Ajouter les produits », qui ferme le
     panneau et ouvre la fiche en edition.
 
-- [ ] T1-US2 Signaler « Ça fonctionne »
+- [x] T1-US2 Signaler « Ça fonctionne »
   - En tant que client devant une machine, je veux dire en un tap qu'elle fonctionne,
     afin d'effacer un vieux « vide / en panne » et de rassurer les suivants.
   - Acceptance : 3e bouton machine « Ça fonctionne », exclusif avec « Machine vide » et
@@ -46,14 +46,14 @@ Reformulation validee par Stephane le 2026-09-25.
     et RPC `confirm_availability` acceptent `working`), executee par Claude ; KPI et
     vues inchangees (`distributor_status` renvoie deja le dernier etat).
 
-- [ ] T1-US3 Le burger marche depuis toutes les pages
+- [x] T1-US3 Le burger marche depuis toutes les pages
   - En tant qu'utilisateur sur Notifications, Favoris, Activite ou Compte, je veux que le
     burger ouvre la liste des machines, afin de ne jamais etre bloque.
   - Constat : la liste (z-index 50) s'ouvre sous la page (z-index 150).
   - Acceptance : depuis chacune de ces pages, le burger ferme la page, revient a la
     carte et ouvre la liste, visible et cliquable ; e2e sur les 4 pages.
 
-- [ ] T1-US4 Une notification, une seule fois, et la bonne qui s'efface
+- [x] T1-US4 Une notification, une seule fois, et la bonne qui s'efface
   - En tant qu'abonne, je veux recevoir chaque changement une seule fois et pouvoir
     supprimer exactement la ligne choisie, afin de faire confiance au centre.
   - Causes : (a) l'app notifie son propre signal ; (b) la liste ouverte ne se
@@ -64,7 +64,7 @@ Reformulation validee par Stephane le 2026-09-25.
     suppression cible la ligne cliquee (identifiant stable, plus d'index) ; e2e qui
     reproduisent les deux cas avant correction.
 
-- [ ] T1-US5 Géolocalisation obligatoire
+- [x] T1-US5 Géolocalisation obligatoire
   - Decision Stephane : pas de carte sans geolocalisation (annule le « Voir la carte sans
     me localiser » d'UX-02, PR #112).
   - Acceptance : le bouton est retire ; en cas de refus, l'ecran reste avec les

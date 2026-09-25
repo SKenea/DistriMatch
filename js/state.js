@@ -137,7 +137,8 @@ export const NOTIFICATION_TYPES = {
     // Changements sur une machine en favori (js/favorites-watch.js)
     empty: { icon: '🚫', title: 'Machine signalée vide' },
     broken: { icon: '⚠️', title: 'Machine signalée en panne' },
-    restock: { icon: '✅', title: 'De nouveau disponible' }
+    restock: { icon: '✅', title: 'De nouveau disponible' },
+    working: { icon: '✅', title: 'Machine de nouveau en service' }
 };
 
 export const GREETING_MESSAGES = {

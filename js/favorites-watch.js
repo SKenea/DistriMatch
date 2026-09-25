@@ -21,7 +21,12 @@ import { canNotify, notifyFavoriteEvent } from './notifications.js';
 const WATCH_INTERVAL_MS = 5 * 60 * 1000;
 
 let isChecking = false;
+let rerunRequested = false;
 let isStarted = false;
+// Machines dont le prochain etat est a memoriser sans notifier : celles ou
+// l'utilisateur vient lui-meme d'envoyer un signal (on ne notifie pas
+// quelqu'un de ce qu'il vient de dire, retour terrain 2026-09-25).
+const silentIds = new Set();
 
 function groupByDistributor(rows) {
     const groups = {};
@@ -32,12 +37,24 @@ function groupByDistributor(rows) {
 }
 
 // Retourne une promesse (pratique pour les tests) mais ne rejette jamais :
-// les appelants ne l'attendent pas.
-export async function checkFavoriteUpdates() {
+// les appelants ne l'attendent pas. options.silentIds : machines a memoriser
+// sans notifier. Un appel pendant un controle en cours n'est pas perdu : un
+// nouveau controle part a la fin (favori ajoute, signal envoye entre-temps).
+export async function checkFavoriteUpdates(options = {}) {
+    for (const id of options.silentIds || []) silentIds.add(id);
+    if (isChecking) {
+        rerunRequested = true;
+        return [];
+    }
     const ids = [...AppState.subscriptions];
-    if (isChecking || ids.length === 0 || !supabaseClient) return [];
+    if (ids.length === 0 || !supabaseClient) {
+        silentIds.clear();
+        return [];
+    }
 
     isChecking = true;
+    const silent = new Set(silentIds);
+    silentIds.clear();
     const sent = [];
     try {
         const [statusRes, productsRes] = await Promise.all([
@@ -65,6 +82,11 @@ export async function checkFavoriteUpdates() {
                 { machine: (machines[id] || [])[0] || null, products: products[id] || [] },
                 { followedProducts: NotificationPrefs.followedProducts, productNames }
             );
+            // Signal envoye par l'utilisateur lui-meme : on memorise, sans notifier
+            if (silent.has(id)) {
+                seen[id] = snapshot;
+                continue;
+            }
             // Cooldown en cours : on ne memorise pas, l'evenement repassera au
             // prochain controle au lieu d'etre perdu.
             if (event && !canNotify(id)) continue;
@@ -85,8 +107,19 @@ export async function checkFavoriteUpdates() {
         console.warn('[DistriMatch] Veille des favoris indisponible :', e?.message || e);
     } finally {
         isChecking = false;
+        if (rerunRequested) {
+            rerunRequested = false;
+            checkFavoriteUpdates();
+        }
     }
     return sent;
+}
+
+// Apres un signal envoye depuis la fiche : si la machine est en favori, son
+// nouvel etat devient l'etat vu, sans notification.
+export function rememberOwnSignal(distributorId) {
+    if (!AppState.subscriptions.includes(distributorId)) return;
+    checkFavoriteUpdates({ silentIds: [distributorId] });
 }
 
 export function startFavoritesWatch() {

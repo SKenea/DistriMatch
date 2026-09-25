@@ -1061,6 +1061,16 @@
     color: var(--gray);
 }
 
+.availability-empty p {
+    margin: 0 0 0.75rem;
+}
+
+/* Fiche sans produit : mene a l'edition de la fiche (connexion requise) */
+.availability-add-products {
+    width: 100%;
+    min-height: 44px;
+}
+
 /* Erreur d'envoi affichee dans la modale (le toast seul peut passer inapercu) */
 .availability-error {
     margin: 0.75rem 0 0;
@@ -1097,6 +1107,13 @@
     background: rgba(214, 40, 40, 0.10);
     border-color: var(--danger);
     color: #991B1B;
+}
+
+/* « Ça fonctionne » (011) : une bonne nouvelle, pas une alerte */
+.availability-machine-btn[data-machine="working"].is-selected {
+    background: rgba(106, 153, 78, 0.12);
+    border-color: var(--success-dark);
+    color: var(--success-dark);
 }
 
 .btn-primary-clean[disabled] {

@@ -118,9 +118,10 @@ describe('signal de dispo (UC11) : getDeviceId / buildAvailabilityPayload', () =
         assert.equal(p.p_device_hash, DEVICE);
     });
 
-    it('etat machine borne a empty / broken, sinon null', () => {
+    it('etat machine borne a empty / broken / working (011), sinon null', () => {
         assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'empty').p_machine_state, 'empty');
         assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'broken').p_machine_state, 'broken');
+        assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'working').p_machine_state, 'working');
         assert.equal(buildAvailabilityPayload('d', DEVICE, {}, 'autre').p_machine_state, null);
     });
 
@@ -361,6 +362,17 @@ describe('diffFavoriteSignals (veille des favoris)', () => {
         assert.deepEqual(
             diffFavoriteSignals(EMPTY, current, { now: NOW, productNames: names, followedProducts: [' BAGUETTE '] }).event,
             { type: 'stock', at: ts(5), product: 'Baguette tradition' });
+    });
+
+    it('« Ça fonctionne » apres un vide ou une panne : de nouveau en service ; sinon rien', () => {
+        const wasEmpty = { machineState: 'empty', machineAt: ts(120), products: {} };
+        assert.deepEqual(diffFavoriteSignals(wasEmpty, { machine: machine('working', 5), products: [] }, { now: NOW }).event, { type: 'working', at: ts(5) });
+        const wasBroken = { machineState: 'broken', machineAt: ts(300), products: {} };
+        assert.equal(diffFavoriteSignals(wasBroken, { machine: machine('working', 5), products: [] }, { now: NOW }).event.type, 'working');
+        // Rien a annoncer si la machine n'etait pas en defaut
+        assert.equal(diffFavoriteSignals(EMPTY, { machine: machine('working', 5), products: [] }, { now: NOW }).event, null);
+        const wasWorking = { machineState: 'working', machineAt: ts(60), products: {} };
+        assert.equal(diffFavoriteSignals(wasWorking, { machine: machine('working', 5), products: [] }, { now: NOW }).event, null);
     });
 
     it('un seul evenement par passage, le plus important : panne > vide > suivi > retour', () => {

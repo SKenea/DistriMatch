@@ -38,9 +38,9 @@
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=32">
     <link rel="stylesheet" href="css/map.css?v=27">
-    <link rel="stylesheet" href="css/panels.css?v=35">
+    <link rel="stylesheet" href="css/panels.css?v=36">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=34">
+    <link rel="stylesheet" href="css/overlays.css?v=35">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -90,8 +90,6 @@
             </button>
 
             <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
-            <!-- Issue secondaire (audit UX-02) : la carte reste utilisable sans position -->
-            <button type="button" id="geoloc-skip" class="geoloc-skip">Voir la carte sans me localiser</button>
             <p class="geoloc-hint">Ta position reste privée. Jamais partagée, jamais stockée.</p>
         </div>
     </div>
@@ -858,6 +856,7 @@
             <div class="availability-machine" role="group" aria-label="État de la machine">
                 <button type="button" class="availability-machine-btn" data-machine="empty" aria-pressed="false">Machine vide</button>
                 <button type="button" class="availability-machine-btn" data-machine="broken" aria-pressed="false">En panne</button>
+                <button type="button" class="availability-machine-btn" data-machine="working" aria-pressed="false">Ça fonctionne</button>
             </div>
             <p class="availability-error" id="availability-error" role="alert" hidden></p>
             <div class="modal-actions-clean">
@@ -981,26 +980,26 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=50",
-            "./js/state.js": "./js/state.js?v=50",
-            "./js/config.js": "./js/config.js?v=50",
-            "./js/utils.js": "./js/utils.js?v=50",
-            "./js/auth.js": "./js/auth.js?v=50",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=50",
-            "./js/map.js": "./js/map.js?v=50",
-            "./js/navigation.js": "./js/navigation.js?v=50",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=50",
-            "./js/distributor.js": "./js/distributor.js?v=50",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=50",
-            "./js/chat.js": "./js/chat.js?v=50",
-            "./js/activity.js": "./js/activity.js?v=50",
-            "./js/notifications.js": "./js/notifications.js?v=50",
-            "./js/availability.js": "./js/availability.js?v=50",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=50",
-            "./js/events.js": "./js/events.js?v=50",
-            "./js/stats.js": "./js/stats.js?v=50",
-            "./js/history.js": "./js/history.js?v=50",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=50"
+            "./js/app.js": "./js/app.js?v=51",
+            "./js/state.js": "./js/state.js?v=51",
+            "./js/config.js": "./js/config.js?v=51",
+            "./js/utils.js": "./js/utils.js?v=51",
+            "./js/auth.js": "./js/auth.js?v=51",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=51",
+            "./js/map.js": "./js/map.js?v=51",
+            "./js/navigation.js": "./js/navigation.js?v=51",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=51",
+            "./js/distributor.js": "./js/distributor.js?v=51",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=51",
+            "./js/chat.js": "./js/chat.js?v=51",
+            "./js/activity.js": "./js/activity.js?v=51",
+            "./js/notifications.js": "./js/notifications.js?v=51",
+            "./js/availability.js": "./js/availability.js?v=51",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=51",
+            "./js/events.js": "./js/events.js?v=51",
+            "./js/stats.js": "./js/stats.js?v=51",
+            "./js/history.js": "./js/history.js?v=51",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=51"
         }
     }
     </script>

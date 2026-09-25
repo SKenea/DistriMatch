@@ -160,13 +160,14 @@ export function triggerProductNotification(distributor, product) {
 }
 
 // Changement sur une machine en favori (js/favorites-watch.js).
-// event : { type: 'empty' | 'broken' | 'stock' | 'restock', at, product? }
+// event : { type: 'empty' | 'broken' | 'working' | 'stock' | 'restock', at, product? }
 // L'horodatage est celui du SIGNAL : le centre affiche "il y a 40 min" par
 // rapport au moment ou quelqu'un l'a vu, pas au moment ou l'app l'a appris.
 export function buildFavoriteMessage(distributorName, event) {
     const product = event.product || 'Un produit';
     switch (event.type) {
         case 'broken': return `${distributorName} a été signalée en panne`;
+        case 'working': return `${distributorName} fonctionne de nouveau`;
         case 'empty': return `${distributorName} a été signalée vide`;
         case 'stock': return `${product} vu dispo chez ${distributorName}`;
         default: return `${product} de nouveau vu dispo chez ${distributorName}`;
@@ -202,11 +203,23 @@ function openNotificationTarget(distributorId) {
 // ENVOI
 // ============================================
 
+// Identifiant stable d'une notification (les anciennes n'en ont pas : il est
+// pose au premier affichage et sauvegarde avec la file).
+export function ensureNotificationId(notif) {
+    if (!notif.id) notif.id = `n-${notif.timestamp || Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    return notif.id;
+}
+
+function isNotificationsViewOpen() {
+    return !!document.getElementById('notifications-view')?.classList.contains('view-active');
+}
+
 function sendNotification(notif) {
     if (!NotificationPrefs.enabled) return;
 
     notif.read = false;
     notif.timestamp = notif.timestamp || Date.now();
+    ensureNotificationId(notif);
     NotificationQueue.history.unshift(notif);
     if (NotificationQueue.history.length > 50) {
         NotificationQueue.history.pop();
@@ -246,7 +259,13 @@ function sendNotification(notif) {
     }
 
     markNotified(notif.distributorId);
-    updateNotificationsBadge();
+    // Page Notifications ouverte : la liste suit en direct (retour terrain
+    // 2026-09-25 : une liste figee faisait supprimer la mauvaise ligne).
+    if (isNotificationsViewOpen()) {
+        openNotificationsView();
+    } else {
+        updateNotificationsBadge();
+    }
 
     addActivityItem('notification', notif.distributorId, {
         subtype: notif.type,
@@ -295,6 +314,11 @@ function renderNotificationsList() {
     if (!list.dataset.wired) {
         list.dataset.wired = '1';
         list.addEventListener('click', (e) => {
+            const del = e.target.closest('.notif-item-delete');
+            if (del) {
+                deleteNotification(del.dataset.notifId);
+                return;
+            }
             const row = e.target.closest('.notif-item-open');
             if (row && row.dataset.distributorId) openNotificationTarget(row.dataset.distributorId);
         });
@@ -307,7 +331,8 @@ function renderNotificationsList() {
         return;
     }
     if (empty) empty.style.display = 'none';
-    list.innerHTML = items.map((n, index) => {
+    list.innerHTML = items.map((n) => {
+        ensureNotificationId(n);
         const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
         return `
             <div class="notif-item ${n.read ? '' : 'unread'}">
@@ -319,13 +344,16 @@ function renderNotificationsList() {
                         <span class="notif-item-time">${timeAgo(n.timestamp)}</span>
                     </span>
                 </button>
-                <button class="notif-item-delete" aria-label="Supprimer cette notification" title="Supprimer" onclick="deleteNotification(${index})">${TRASH_SVG}</button>
+                <button type="button" class="notif-item-delete" data-notif-id="${escapeHTML(n.id)}" aria-label="Supprimer cette notification" title="Supprimer">${TRASH_SVG}</button>
             </div>`;
     }).join('');
 }
 
-export function deleteNotification(index) {
-    if (index < 0 || index >= NotificationQueue.history.length) return;
+// Suppression par identifiant stable (plus par position : une liste qui a
+// bouge entre l'affichage et le clic retirait une autre ligne).
+export function deleteNotification(id) {
+    const index = NotificationQueue.history.findIndex(n => n.id === id);
+    if (index === -1) return;
     NotificationQueue.history.splice(index, 1);
     saveNotificationQueue();
     renderNotificationsList();
