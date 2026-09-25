@@ -19,6 +19,31 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T3 Un signal part toujours, meme connecte (Stephane, 2026-09-25)
+Constat terrain : « Fonctionne » sur Gaztainbidea -> « Signal non envoyé ». En
+navigation privee (sans compte) les memes signaux passent. La base accepte le signal
+en anonyme comme connecte (verifie) : c'est l'envoi avec la session du telephone
+Android qui echoue, pour une raison que le message generique ne dit pas.
+Correctif valide par Stephane le 2026-09-25.
+
+- [ ] T3-US1 Renvoi anonyme si l'envoi echoue
+  - En tant que client connecte devant une machine, je veux que mon signal parte
+    meme si ma session pose probleme, afin de ne jamais etre bloque (UC11 n'exige
+    pas de compte).
+  - Acceptance : si l'appel a `confirm_availability` echoue pour une raison autre
+    qu'un refus metier (trop de signaux, donnees invalides, machine inconnue), il est
+    renvoye une fois par un client anonyme sans session ; succes -> meme parcours
+    qu'un envoi normal (toast « Merci », ligne / puce mises a jour) ; e2e : 1er appel
+    en 401, 2e en 200 -> « Merci » ; refus « trop de signaux » -> pas de renvoi.
+
+- [ ] T3-US2 Un message d'erreur qui dit la raison
+  - En tant que testeur, je veux lire pourquoi un signal n'est pas parti, afin de
+    pouvoir le signaler precisement.
+  - Acceptance : « Trop de signaux depuis ce téléphone, réessaie dans une heure »
+    (P0001), « Pas de réseau : signal non envoyé » (hors ligne), « Machine inconnue
+    du serveur » (P0002), sinon « Signal non envoyé, réessaie plus tard (code X) »
+    avec le code HTTP ou Postgres ; `describeSignalError` pure, testee.
+
 ### EPIC-T2 La fiche repond en un coup d'oeil : dispo ou pas (Stephane, 2026-09-25)
 Objectif : sur la fiche, savoir tout de suite si chaque aliment est dispo et si la
 machine marche, et le signaler la ou on regarde. Valeur : plus de vocabulaire a
