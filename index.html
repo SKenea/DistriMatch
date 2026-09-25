@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=36">
+    <link rel="stylesheet" href="css/overlays.css?v=37">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -279,13 +279,12 @@
                 </svg>
             </button>
 
-            <!-- Photo header -->
-            <div class="dist-modal-photo" id="dist-modal-photo" style="display:none">
-                <div id="dist-modal-photos-gallery" class="photos-gallery"></div>
-            </div>
-
-            <!-- Header titre + meta -->
-            <div class="dist-modal-header">
+            <!-- Bandeau d'etat (EPIC-T4, inspire de l'app EuroMillions) : couleur de l'etat
+                 de la machine, info cle en tres grand. Photo eventuelle en fond assombri.
+                 Rempli par js/availability.js (renderFicheStatus) et gmaps-ui.js (photo). -->
+            <div class="dist-hero is-unknown" id="dist-hero">
+                <img class="dist-hero-photo" id="dist-hero-photo" alt="" hidden>
+                <div class="dist-hero-content">
                 <!-- Tag « Démo » frere du h2 (jamais enfant : textContent = nom l'effacerait) ; distributors.is_demo -->
                 <div class="dist-modal-title">
                     <div class="dist-modal-name-wrap">
@@ -300,8 +299,14 @@
                         <svg class="machine-chip-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                 </div>
+                <!-- L'info cle, en tres grand : « 3 sur 5 dispo », ou l'etat de la machine -->
+                <p class="dist-hero-kpi" id="dist-hero-kpi">Pas d'info</p>
                 <!-- UNE ligne : d'ou vient l'etat (« Signalée vide il y a 34 min », sinon « Vérifié il y a X ») -->
                 <div class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="dist-modal-header">
                 <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
                     <p class="machine-choices-title" id="dist-machine-choices-title">La machine, là maintenant :</p>
                     <div class="machine-choices-row">
@@ -377,7 +382,7 @@
                     <!-- EPIC-T2 : le signal se fait sur l'aliment (toucher une ligne) -->
                     <div class="products-section-head" id="dist-products-head">
                         <h3 class="products-section-title" id="dist-products-title">Il reste quoi ?</h3>
-                        <p class="products-hint" id="dist-products-hint">Touche un produit pour dire s'il en reste.</p>
+                        <p class="products-hint" id="dist-products-hint">Touche un produit : <strong class="hint-yes">Il y en a</strong> ou <strong class="hint-no">Plus rien</strong></p>
                     </div>
                     <div id="dist-products-list"></div>
                     <!-- Section ajout produit (seulement en mode edit favoris) -->
@@ -433,6 +438,11 @@
                     <div class="dist-apropos-row" id="dist-apropos-demo-row" style="display:none">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
                         <span>Fiche de démonstration : machine fictive, données inventées</span>
+                    </div>
+                    <!-- Photos de la machine (la 1re sert aussi de fond au bandeau d'etat) -->
+                    <div class="dist-apropos-photos" id="dist-modal-photo" hidden>
+                        <h4 class="dist-apropos-photos-title">Photos</h4>
+                        <div id="dist-modal-photos-gallery" class="photos-gallery"></div>
                     </div>
                 </div>
             </div>
@@ -962,26 +972,26 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=54",
-            "./js/state.js": "./js/state.js?v=54",
-            "./js/config.js": "./js/config.js?v=54",
-            "./js/utils.js": "./js/utils.js?v=54",
-            "./js/auth.js": "./js/auth.js?v=54",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=54",
-            "./js/map.js": "./js/map.js?v=54",
-            "./js/navigation.js": "./js/navigation.js?v=54",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=54",
-            "./js/distributor.js": "./js/distributor.js?v=54",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=54",
-            "./js/chat.js": "./js/chat.js?v=54",
-            "./js/activity.js": "./js/activity.js?v=54",
-            "./js/notifications.js": "./js/notifications.js?v=54",
-            "./js/availability.js": "./js/availability.js?v=54",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=54",
-            "./js/events.js": "./js/events.js?v=54",
-            "./js/stats.js": "./js/stats.js?v=54",
-            "./js/history.js": "./js/history.js?v=54",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=54"
+            "./js/app.js": "./js/app.js?v=55",
+            "./js/state.js": "./js/state.js?v=55",
+            "./js/config.js": "./js/config.js?v=55",
+            "./js/utils.js": "./js/utils.js?v=55",
+            "./js/auth.js": "./js/auth.js?v=55",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=55",
+            "./js/map.js": "./js/map.js?v=55",
+            "./js/navigation.js": "./js/navigation.js?v=55",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=55",
+            "./js/distributor.js": "./js/distributor.js?v=55",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=55",
+            "./js/chat.js": "./js/chat.js?v=55",
+            "./js/activity.js": "./js/activity.js?v=55",
+            "./js/notifications.js": "./js/notifications.js?v=55",
+            "./js/availability.js": "./js/availability.js?v=55",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=55",
+            "./js/events.js": "./js/events.js?v=55",
+            "./js/stats.js": "./js/stats.js?v=55",
+            "./js/history.js": "./js/history.js?v=55",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=55"
         }
     }
     </script>

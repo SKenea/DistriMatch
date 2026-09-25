@@ -20,7 +20,11 @@ const html = `<!DOCTYPE html>
     <div id="dist-modal-overlay" class="dist-modal-overlay">
         <div id="dist-modal">
             <button id="dist-modal-close"></button>
-            <div id="dist-modal-photo" style="display:none">
+            <div id="dist-hero" class="dist-hero is-unknown">
+                <img id="dist-hero-photo" hidden>
+                <p id="dist-hero-kpi"></p>
+            </div>
+            <div id="dist-modal-photo" hidden>
                 <div id="dist-modal-photos-gallery"></div>
             </div>
             <div class="dist-modal-header">

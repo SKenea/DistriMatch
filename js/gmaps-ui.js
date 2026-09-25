@@ -446,25 +446,11 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const chatSection = document.getElementById('dist-chat-section');
     if (chatSection) chatSection.style.display = (FEATURES.chat && editMode) ? 'block' : 'none';
 
-    // Photos : bandeau toujours visible. Par defaut un fallback degrade +
-    // emoji + label type (la fiche n'est jamais "vide" en haut), remplace
-    // par les vraies photos si Supabase en renvoie.
-    const photoSection = document.getElementById('dist-modal-photo');
-    const photoGallery = document.getElementById('dist-modal-photos-gallery');
-    photoGallery.innerHTML = `
-        <div class="dist-photo-fallback" style="background:${escapeHTML(typeConfig.gradient || '#E63946')}">
-            <span class="dist-photo-fallback-emoji">${escapeHTML(distributor.emoji || '📍')}</span>
-        </div>`;
-    photoSection.style.display = 'block';
-    photoSection.classList.add('is-fallback');   // hero reduit sans photo (audit UX-05)
-
+    // Photos (EPIC-T4) : la 1re passe en fond assombri du bandeau d'etat, la
+    // galerie complete dans l'onglet « À propos ». Sans photo : bandeau uni.
+    showDistributorPhotos([]);
     loadDistributorPhotos(distributor.id).then(photos => {
-        if (photos.length > 0) {
-            photoSection.classList.remove('is-fallback');
-            photoGallery.innerHTML = photos.map(p =>
-                `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
-            ).join('');
-        }
+        if (AppState.currentDistributor?.id === distributor.id) showDistributorPhotos(photos);
     });
 
     // Boutons
@@ -524,12 +510,7 @@ async function processPhotoUpload(distributor, files) {
         // Recharge la galerie de la fiche (remplace le fallback ou les
         // photos existantes par les vraies photos approuvees a jour).
         const photos = await loadDistributorPhotos(distributor.id);
-        const photoGallery = document.getElementById('dist-modal-photos-gallery');
-        if (photos.length > 0 && photoGallery) {
-            photoGallery.innerHTML = photos.map(p =>
-                `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo distributeur" loading="lazy"></div>`
-            ).join('');
-        }
+        if (photos.length > 0) showDistributorPhotos(photos);
 
         // Met a jour le cache vignette pour que le side panel affiche
         // immediatement la 1ere photo (sans reload de la page).
@@ -684,6 +665,27 @@ function showEditAuthGate() {
         // l'utilisateur reprend son action.
         requireAuth();
     });
+}
+
+// Photos de la fiche : fond du bandeau d'etat (1re photo) + galerie « À propos ».
+function showDistributorPhotos(photos) {
+    const hero = document.getElementById('dist-hero');
+    const heroPhoto = document.getElementById('dist-hero-photo');
+    const section = document.getElementById('dist-modal-photo');
+    const gallery = document.getElementById('dist-modal-photos-gallery');
+    const has = photos.length > 0;
+    hero?.classList.toggle('has-photo', has);
+    if (heroPhoto) {
+        heroPhoto.hidden = !has;
+        if (has) heroPhoto.src = photos[0].url;
+        else heroPhoto.removeAttribute('src');
+    }
+    if (section) section.hidden = !has;
+    if (gallery) {
+        gallery.innerHTML = photos.map(p =>
+            `<div class="photo-gallery-item"><img src="${escapeHTML(p.url)}" alt="Photo du distributeur" loading="lazy"></div>`
+        ).join('');
+    }
 }
 
 function switchDistTab(tabName) {

@@ -715,60 +715,73 @@
     background: var(--light);
 }
 
-.dist-modal-photo {
-    width: 100%;
-    height: 200px;
+/* ===== Bandeau d'etat (EPIC-T4, inspire de l'app EuroMillions) =====
+   Aplat de la couleur de l'etat (pas de degrade : le contraste reste mesurable),
+   texte blanc >= 4,5:1, info cle en tres grand. Photo eventuelle en fond assombri. */
+.dist-hero {
+    position: relative;
     overflow: hidden;
+    padding: 3.75rem 1.25rem 1.25rem;
+    color: #fff;
+    background-color: #334155;   /* Pas d'info : ardoise (le rouge dirait « panne ») */
 }
-
-.dist-modal-photo .photos-gallery {
-    display: flex;
-    height: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 4px;
-}
-
-.dist-modal-photo .photo-gallery-item {
-    flex: 0 0 100%;
-    height: 100%;
-    scroll-snap-align: start;
-}
-
-.dist-modal-photo .photo-gallery-item img {
+.dist-hero.is-working { background-color: #15803d; }
+.dist-hero.is-empty { background-color: #c2410c; }
+.dist-hero.is-broken { background-color: #b91c1c; }
+.dist-hero-photo {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    opacity: 0.22;
+    pointer-events: none;
 }
-
-/* Bandeau fallback quand aucune photo : degrade du type + emoji + label */
-.dist-photo-fallback {
-    flex: 0 0 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+.dist-hero-photo[hidden] { display: none; }
+.dist-hero-content { position: relative; }
+.dist-hero h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
     color: #fff;
+    overflow-wrap: anywhere;
 }
+.dist-hero .demo-tag { color: #fff; border-color: rgba(255, 255, 255, 0.85); background: transparent; }
+.dist-hero-kpi {
+    margin: 0.6rem 0 0.2rem;
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: #FDE68A;              /* le « 130 MILLIONS » jaune de la reference */
+}
+#dist-hero .dist-modal-verified { margin: 0; color: #fff; font-weight: 600; font-style: normal; }
+/* Puce d'etat sur le bandeau : pastille blanche, texte de la couleur de l'etat */
+#dist-hero .machine-chip { background: #fff; border-color: rgba(255, 255, 255, 0.9); }
+#dist-hero .machine-chip.is-unknown { color: #334155; border-style: solid; }
 
-.dist-photo-fallback-emoji {
-    font-size: 64px;
-    line-height: 1;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+/* Galerie photos dans « À propos » */
+.dist-apropos-photos { padding-top: 0.75rem; }
+.dist-apropos-photos[hidden] { display: none; }
+.dist-apropos-photos-title { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+.dist-apropos-photos .photos-gallery {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
 }
-
-.dist-photo-fallback-label {
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: capitalize;
-    opacity: 0.95;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+.dist-apropos-photos .photo-gallery-item {
+    flex: 0 0 75%;
+    height: 180px;
+    border-radius: 12px;
+    overflow: hidden;
+    scroll-snap-align: start;
 }
+.dist-apropos-photos .photo-gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
 .dist-modal-header {
-    padding: 1.25rem 1.25rem 0.5rem;
+    padding: 0.75rem 1.25rem 0.25rem;
 }
 
 .dist-modal-header h2 {
@@ -824,11 +837,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.625rem 0.5rem;
-    background: none;
-    border: 1px solid var(--light-gray);
-    border-radius: 10px;
+    gap: 0.35rem;
+    padding: 0.8rem 0.25rem;
+    background: var(--white);
+    border: 1.5px solid var(--light-gray);
+    border-radius: 16px;
     cursor: pointer;
     color: var(--primary-text);
     font-size: 0.75rem;
@@ -878,6 +891,8 @@
     }
 }
 
+.dist-action-btn svg { width: 24px; height: 24px; }
+
 .dist-action-btn.favorited svg {
     fill: white;
 }
@@ -895,8 +910,9 @@
 
 .dist-modal-tabs {
     display: flex;
-    border-bottom: 1px solid var(--light-gray);
-    padding: 0 1rem;
+    gap: 0.4rem;
+    border-bottom: 1px solid var(--light);
+    padding: 0.6rem 1rem;
     background: var(--white);
     position: sticky;
     top: 0;
@@ -905,12 +921,13 @@
 
 .dist-tab {
     flex: 1;
-    padding: 0.875rem 0.5rem;
+    min-height: 44px;
+    padding: 0.55rem 0.5rem;
     background: none;
     border: none;
-    border-bottom: 2px solid transparent;
-    font-size: 0.875rem;
-    font-weight: 600;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--gray);
     cursor: pointer;
     transition: all 0.15s;
@@ -921,8 +938,8 @@
 }
 
 .dist-tab.active {
-    color: var(--primary-text);
-    border-bottom-color: var(--primary-text);
+    color: #fff;
+    background: var(--primary-text);
 }
 
 .dist-modal-content {
@@ -1126,9 +1143,6 @@
 }
 
 /* ===== Fiche : hierarchie (audit UX-05/13) ===== */
-/* Hero sans photo : reduit, emoji seul (le type est deja dans la ligne meta) */
-.dist-modal-photo.is-fallback { height: 120px; }
-.dist-modal-photo.is-fallback .dist-photo-fallback-emoji { font-size: 44px; }
 
 /* Rappel « Tous » en tete du panneau quand un filtre est actif (audit UX-11) */
 .side-panel-all {
@@ -1230,8 +1244,10 @@
 /* ===== « Il reste quoi ? » : statut et signal sur chaque aliment (EPIC-T2) ===== */
 .products-section-head { margin: 0 0 0.6rem; }
 .products-section-head[hidden] { display: none; }
-.products-section-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--dark); }
-.products-hint { margin: 0.15rem 0 0; font-size: 0.875rem; color: var(--text-muted); border-radius: 6px; }
+.products-section-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--dark); }
+.products-hint { margin: 0.2rem 0 0; font-size: 1rem; color: var(--dark); border-radius: 6px; }
+.products-hint .hint-yes { color: #166534; }
+.products-hint .hint-no { color: #991B1B; }
 .products-hint[hidden] { display: none; }
 .products-hint.is-highlighted { animation: hintPulse 2.4s ease; }
 @keyframes hintPulse {
@@ -1242,13 +1258,17 @@
 .product-item-clean.product-row {
     display: block;
     padding: 0;
-    border-left: 3px solid var(--light-gray);
+    margin-bottom: 0.5rem;
+    background: var(--white);
+    border: 1.5px solid var(--light-gray);
+    border-left: 5px solid var(--light-gray);
+    border-radius: 14px;
 }
 .product-row.is-available { border-left-color: var(--success); }
 .product-row.is-absent { border-left-color: #991B1B; }
 .product-row-main {
     width: 100%;
-    min-height: 48px;
+    min-height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1268,13 +1288,15 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 
 .product-pill {
     flex: 0 0 auto;
-    padding: 0.2rem 0.65rem;
-    border: 1px solid var(--light-gray);
+    padding: 0.35rem 0.8rem;
+    border: 1.5px solid var(--light-gray);
     border-radius: 999px;
     background: var(--white);
     color: var(--gray);
     font-size: 0.8125rem;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 .product-pill.is-unknown { border-style: dashed; color: var(--text-muted); font-weight: 600; }
@@ -1287,7 +1309,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices[hidden] { display: none; }
 .product-choice {
     flex: 1;
-    min-height: 44px;
+    min-height: 48px;
     border: 1px solid var(--light-gray);
     border-radius: var(--radius-sm);
     background: var(--white);

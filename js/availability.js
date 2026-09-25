@@ -17,7 +17,8 @@ import { AppState, supabaseClient } from './state.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
-    resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError
+    resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
+    describeFicheHero
 } from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
@@ -97,6 +98,17 @@ export function renderFicheStatus() {
             : `${machine.tone}${machine.fresh ? ' is-fresh' : ''}`;
         detail.className = `dist-modal-verified is-${tone}`;
     }
+
+    // Bandeau d'etat (EPIC-T4) : couleur de l'etat, info cle en tres grand
+    const statuses = (distributor.products || []).map(p => resolveProductStatus(p, loaded.products[p.id], machine));
+    const hero = describeFicheHero(machine, statuses);
+    const heroEl = document.getElementById('dist-hero');
+    if (heroEl) {
+        heroEl.classList.remove('is-working', 'is-empty', 'is-broken', 'is-unknown');
+        heroEl.classList.add(`is-${hero.tone}`);
+    }
+    const kpi = document.getElementById('dist-hero-kpi');
+    if (kpi) kpi.textContent = hero.kpi;
 
     document.querySelectorAll('#dist-products-list .product-row[data-product-id]').forEach(row => {
         const product = (distributor.products || []).find(p => String(p.id) === row.dataset.productId);

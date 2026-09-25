@@ -24,9 +24,9 @@ Objectif : une fiche qui se lit comme l'ecran de jeu FDJ (capture fournie) : un
 bandeau colore avec l'info cle en tres grand, des pastilles, des tuiles franches,
 une consigne aux mots-cles colores, de grosses cibles contrastees. Theme clair
 retenu par Stephane (lisible au soleil, coherent avec la carte). Hors perimetre :
-carte, panneau lateral, autres pages. Reformulation validee le 2026-09-25.
+carte, panneau lateral, autres pages. Reformulation validee le 2026-09-25, livre le meme jour.
 
-- [ ] T4-US1 Bandeau d'etat en tete de fiche
+- [x] T4-US1 Bandeau d'etat en tete de fiche
   - En tant que client, je veux voir en haut de la fiche, en tres grand, si ca vaut
     le deplacement, afin de decider en une seconde.
   - Acceptance : le bandeau prend la couleur de l'etat de la machine (vert
@@ -38,12 +38,12 @@ carte, panneau lateral, autres pages. Reformulation validee le 2026-09-25.
     galerie complete va dans l'onglet « À propos » ; plus de bandeau emoji.
   - TS : `describeFicheHero(machine, productStatuses)` pure (utils.js).
 
-- [ ] T4-US2 Onglets en pastilles, tuiles d'action franches
+- [x] T4-US2 Onglets en pastilles, tuiles d'action franches
   - Acceptance : Produits / Avis / À propos en pastilles, l'active remplie ; les
     tuiles Itinéraire, Favori, Modifier, Photo, Partager : icone plus grande, coins
     plus ronds, contour plus marque ; cibles >= 44 px ; rien ne deborde en 390 px.
 
-- [ ] T4-US3 Consigne coloree, lignes produit contrastees
+- [x] T4-US3 Consigne coloree, lignes produit contrastees
   - Acceptance : « Touche un produit : Il y en a ou Plus rien », « Il y en a » en
     vert et « Plus rien » en rouge ; lignes produit sur fond blanc bordees, statut en
     grosse pastille en majuscules (« DISPO », « PAS DISPO », « PAS D'INFO ») ;

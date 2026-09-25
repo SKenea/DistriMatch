@@ -1431,6 +1431,9 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(chip).toContainText('Vide');
         await expect(chip).toHaveAttribute('aria-expanded', 'false');
         await expect(page.locator('#dist-modal-verified')).toHaveText("Signalée vide à l'instant");
+        // Bandeau d'etat (EPIC-T4) : orange, aucun produit dispo
+        await expect(page.locator('#dist-hero')).toHaveClass(/is-empty/);
+        await expect(page.locator('#dist-hero-kpi')).toHaveText(/^0 sur \d+ dispo$/);
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
         await expect(row.locator('.product-pill')).toHaveText('Pas dispo');
         await expect(row.locator('.product-seen')).toHaveText('Machine vide');
@@ -2152,7 +2155,7 @@ test.describe('23. Bouton retour', () => {
 // pas de separateur orphelin.
 
 test.describe('24. Hierarchie de la fiche', () => {
-    test('etat machine a droite du nom, provenance au-dessus de la note, pas de CTA rouge, hero reduit, meta sans separateur final', async ({ page }) => {
+    test('bandeau d\u2019etat en tete (info cle en grand), etat machine a droite du nom, provenance au-dessus de la note, pas de CTA rouge, onglets en pastilles', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await openDistModal(page);
         await page.waitForTimeout(500);
@@ -2173,8 +2176,12 @@ test.describe('24. Hierarchie de la fiche', () => {
                 ficheRight: document.getElementById('dist-modal').getBoundingClientRect().right,
                 hasCta: !!document.getElementById('dist-action-confirm'),
                 overflow: document.documentElement.scrollWidth > innerWidth,
-                heroHeight: rect('dist-modal-photo').height,
-                heroIsFallback: document.getElementById('dist-modal-photo').classList.contains('is-fallback'),
+                heroTop: rect('dist-hero').top,
+                ficheTop: document.getElementById('dist-modal').getBoundingClientRect().top,
+                heroBg: getComputedStyle(document.getElementById('dist-hero')).backgroundColor,
+                kpiSize: parseFloat(getComputedStyle(document.getElementById('dist-hero-kpi')).fontSize),
+                kpiText: document.getElementById('dist-hero-kpi').textContent,
+                activeTabBg: getComputedStyle(document.querySelector('.dist-tab.active')).backgroundColor,
                 lastMetaIsSeparator: !!last && last.classList.contains('meta-separator'),
                 typeOccurrences: (() => {
                     // Libelle du type sans l'emoji, accents conserves, echappe pour la RegExp
@@ -2190,7 +2197,12 @@ test.describe('24. Hierarchie de la fiche', () => {
         expect(r.ficheRight - r.chipRight).toBeLessThan(40);                // cale a droite
         expect(r.hasCta).toBe(false);
         expect(r.overflow).toBe(false);
-        if (r.heroIsFallback) expect(r.heroHeight).toBeLessThanOrEqual(120);
+        // EPIC-T4 : bandeau d'etat en tete, aplat colore, info cle en tres grand, onglet actif rempli
+        expect(r.heroTop).toBeLessThanOrEqual(r.ficheTop + 1);
+        expect(r.heroBg).not.toBe('rgba(0, 0, 0, 0)');
+        expect(r.kpiSize).toBeGreaterThanOrEqual(32);
+        expect(r.kpiText.length).toBeGreaterThan(0);
+        expect(r.activeTabBg).not.toBe('rgba(0, 0, 0, 0)');
         expect(r.lastMetaIsSeparator).toBe(false);
         expect(r.typeOccurrences).toBe(1);
     });

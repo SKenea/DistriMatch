@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError,
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     mapDistributorRow, diffFavoriteSignals
 } from '../js/utils.js';
 
@@ -330,6 +330,25 @@ describe('resolveMachineStatus (etat a droite du nom)', () => {
         assert.equal(s.detail, 'Vérifié il y a 10 min');
         assert.equal(resolveMachineStatus(null, [], null, NOW).detail, 'Pas encore vérifié');
         assert.equal(resolveMachineStatus({ state: 'empty', created_at: 'n/a' }, [], null, NOW).state, 'unknown');
+    });
+});
+
+// EPIC-T4 : le bandeau de la fiche, couleur de l'etat + info cle en tres grand
+describe('describeFicheHero (bandeau d\u2019etat de la fiche)', () => {
+    const machine = (state, label) => ({ state, tone: state, label });
+    const s = (tone) => ({ tone });
+
+    it('avec des produits connus : « N sur M dispo », couleur de la machine', () => {
+        assert.deepEqual(describeFicheHero(machine('working', 'Fonctionne'), [s('available'), s('absent'), s('available'), s('unknown')]),
+            { tone: 'working', kpi: '2 sur 4 dispo' });
+        assert.deepEqual(describeFicheHero(machine('empty', 'Vide'), [s('absent'), s('absent')]),
+            { tone: 'empty', kpi: '0 sur 2 dispo' });
+    });
+
+    it('sans produit, ou rien de connu : l\u2019etat de la machine', () => {
+        assert.deepEqual(describeFicheHero(machine('broken', 'En panne'), []), { tone: 'broken', kpi: 'En panne' });
+        assert.deepEqual(describeFicheHero(machine('unknown', "Pas d'info"), [s('unknown'), s('unknown')]), { tone: 'unknown', kpi: "Pas d'info" });
+        assert.deepEqual(describeFicheHero(null, []), { tone: 'unknown', kpi: "Pas d'info" });
     });
 });
 
