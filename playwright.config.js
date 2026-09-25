@@ -6,13 +6,14 @@ import { defineConfig, devices } from '@playwright/test';
 // fait exploser le temps de run).
 const headed = process.env.PWDEBUG_HEADED === '1';
 
+// Deux niveaux de tests navigateur (EPIC-T7) :
+//   functional : l'app locale (npx http-server -p 8080 -c-1), serveur simule la
+//                ou il le faut -> npm run test:functional
+//   e2e        : le site EN LIGNE, vraie base, aucune simulation, sans ecriture
+//                -> npm run test:e2e  (E2E_BASE_URL pour viser un autre hote)
 export default defineConfig({
-    testDir: './tests',
-    testMatch: '**/*.spec.js',
     timeout: 90000,
-    retries: 1,
     use: {
-        baseURL: 'http://localhost:8080',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'off',
@@ -23,8 +24,18 @@ export default defineConfig({
     },
     projects: [
         {
-            name: 'chromium',
-            use: { ...devices['Desktop Chrome'] }
+            name: 'functional',
+            testDir: './tests/functional',
+            testMatch: '**/*.spec.js',
+            retries: 1,
+            use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:8080' }
+        },
+        {
+            name: 'e2e',
+            testDir: './tests/e2e',
+            testMatch: '**/*.spec.js',
+            retries: 0,
+            use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium', baseURL: process.env.E2E_BASE_URL || 'https://skenea.github.io/DistriMatch/' }
         }
     ]
 });

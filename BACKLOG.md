@@ -19,6 +19,40 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T7 Quatre niveaux de tests : unitaire, integration, fonctionnel, E2E (Stephane, 2026-09-25)
+Objectif : que chaque niveau de risque ait son filet. Les regles de la base (010 a
+014), les plus fragiles aujourd'hui, n'etaient verifiees par aucun test rejouable.
+Hors perimetre : execution sur GitHub Actions (quota presque plein) ; tout se
+lance en local (par Claude, `/auto`). Reformulation validee le 2026-09-25, avec un
+compte de test dedie pour les vrais E2E. Livre le meme jour sauf T7-US4b (bloquee).
+Etat : 140 unitaires, 114 integration (98 DOM + 16 vraie base), 117 fonctionnels, 5 E2E.
+
+- [x] T7-US1 Unitaires : `tests/unit/`, `npm run test:unit` (fonctions pures).
+- [x] T7-US2 Integration : `tests/integration/`, `npm run test:integration`
+  - les tests DOM (modules + page jsdom) ;
+  - un lot contre la VRAIE base (API de gestion, jeton `.env.local`), chaque cas dans
+    une transaction annulee, rien d'ecrit : signal sans compte refuse (014),
+    connecte accepte, 21e signal / heure refuse, compte bloque refuse, purge,
+    fonctions admin inaccessibles par l'API, correction dans l'heure (011 / 012),
+    droits par colonne (013), garde is_demo (010), vues lisibles en anonyme,
+    ecriture directe dans availability_signals refusee. Sans jeton : lot saute,
+    avec un message.
+- [x] T7-US3 Fonctionnels : `tests/functional/`, `npm run test:functional`, les
+  scenarios navigateur a serveur simule, ranges par domaine (fiche, notifications,
+  navigation, onboarding, politique d'auth, accessibilite, donnees) avec les user
+  stories couvertes en tete de chaque fichier ; aides partagees dans `helpers.js`.
+- [x] T7-US4 E2E : `tests/e2e/`, `npm run test:e2e`, sans aucune simulation, sur le
+  site en ligne : parcours visiteur (carte, fiche, lecture seule, encadre de
+  connexion, signal refuse par la vraie base).
+- [ ] T7-US4b E2E connecte (BLOQUE) : un vrai compte de test signale « Fonctionne »
+  sur une fiche de demo, verifie l'affichage, puis ses signaux sont purges.
+  Bloque le 2026-09-25 : ouvrir une session de test en ecrivant dans les tables de
+  connexion de Supabase a ete refuse par le garde-fou de securite ; la connexion par
+  mot de passe est probablement protegee par le captcha. Decision a prendre avec
+  Stephane (voir le message de livraison).
+- [x] T7-US5 `npm run test:all` enchaine les quatre niveaux ; CLAUDE.md explique
+  quand lancer quoi ; le skill `/auto` suit les nouveaux chemins.
+
 ### EPIC-T6 Des signaux proteges contre l'abus (Stephane, 2026-09-25)
 Crainte de Stephane : « des personnes mettent des signaux juste pour s'amuser ».
 Trou constate : l'app reserve les boutons aux connectes (EPIC-T5) mais la base
