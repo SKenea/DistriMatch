@@ -89,12 +89,4 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
     });
 });
 
-// EPIC-T7 T7-US4b : parcours connecte de bout en bout (vrai compte de test qui
-// signale sur une fiche de demo, puis purge). BLOQUE : ouvrir une session de test
-// sans magic link demande soit d'ecrire dans les tables de connexion de Supabase
-// (refuse par le garde-fou de securite), soit une connexion par mot de passe que
-// le captcha du projet bloque probablement. Decision en attente (BACKLOG).
-test.describe('E2E connecte (site en ligne, vrai compte de test)', () => {
-    test.skip(true, 'BLOQUE (EPIC-T7 T7-US4b) : pas encore de session de test possible sans magic link');
-    test('un compte de test signale « Fonctionne » sur une fiche de demo, voit l’affichage, puis ses signaux sont purges', async () => {});
-});
+// Parcours connecte (vrai compte de test) : tests/e2e/connecte.spec.js

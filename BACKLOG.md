@@ -25,7 +25,7 @@ Objectif : que chaque niveau de risque ait son filet. Les regles de la base (010
 Hors perimetre : execution sur GitHub Actions (quota presque plein) ; tout se
 lance en local (par Claude, `/auto`). Reformulation validee le 2026-09-25, avec un
 compte de test dedie pour les vrais E2E. Livre le meme jour sauf T7-US4b (bloquee).
-Etat : 140 unitaires, 114 integration (98 DOM + 16 vraie base), 117 fonctionnels, 5 E2E.
+Etat : 140 unitaires, 114 integration (98 DOM + 16 vraie base), 117 fonctionnels, 8 E2E (5 visiteur + 3 connecte).
 
 - [x] T7-US1 Unitaires : `tests/unit/`, `npm run test:unit` (fonctions pures).
 - [x] T7-US2 Integration : `tests/integration/`, `npm run test:integration`
@@ -44,12 +44,13 @@ Etat : 140 unitaires, 114 integration (98 DOM + 16 vraie base), 117 fonctionnels
 - [x] T7-US4 E2E : `tests/e2e/`, `npm run test:e2e`, sans aucune simulation, sur le
   site en ligne : parcours visiteur (carte, fiche, lecture seule, encadre de
   connexion, signal refuse par la vraie base).
-- [ ] T7-US4b E2E connecte (BLOQUE) : un vrai compte de test signale « Fonctionne »
+- [x] T7-US4b E2E connecte (debloque le 2026-09-25, option 1 de Stephane) : un vrai compte de test signale « Fonctionne »
   sur une fiche de demo, verifie l'affichage, puis ses signaux sont purges.
-  Bloque le 2026-09-25 : ouvrir une session de test en ecrivant dans les tables de
-  connexion de Supabase a ete refuse par le garde-fou de securite ; la connexion par
-  mot de passe est probablement protegee par le captcha. Decision a prendre avec
-  Stephane (voir le message de livraison).
+  Livre : compte `e2e@distrimatch.test` (migration 015, sans mot de passe, marque
+  app_metadata.e2e), session ouverte en base pour CE compte puis echangee aupres du
+  vrai serveur d'auth (tests/e2e/session.mjs) ; 3 tests (controles visibles, signal
+  machine, signal produit) verifies en base ; purge des signaux et des sessions a la
+  fin, verifiee.
 - [x] T7-US5 `npm run test:all` enchaine les quatre niveaux ; CLAUDE.md explique
   quand lancer quoi ; le skill `/auto` suit les nouveaux chemins.
 
