@@ -179,21 +179,21 @@ globalThis.supabase = undefined;
 // IMPORTS (apres setup DOM)
 // ============================================
 
-const { AppState, Conversations, UserProfile, NotificationPrefs } = await import('../js/state.js');
+const { AppState, Conversations, UserProfile, NotificationPrefs } = await import('../../js/state.js');
 const {
     escapeHTML, showToast, saveToLocalStorage, loadFromLocalStorage,
     saveStore, loadStore, saveProfile, loadProfile,
     saveConversations, loadConversations
-} = await import('../js/utils.js');
-const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../js/distributor.js');
-const { openDistributorModal, closeDistModal, buildShareUrl, openSidePanelForFilters, closeSidePanel } = await import('../js/gmaps-ui.js');
-const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../js/navigation.js');
-const { updateUnreadCounts } = await import('../js/chat.js');
-const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../js/notifications.js');
-const { NotificationQueue, setSupabaseClient } = await import('../js/state.js');
-const { checkFavoriteUpdates } = await import('../js/favorites-watch.js');
-const { activateFocusTrap, deactivateFocusTrap } = await import('../js/focus-trap.js');
-const { buildStatsModel, renderStatsView, percent, formatPercent } = await import('../js/stats.js');
+} = await import('../../js/utils.js');
+const { renderProductsList, toggleSubscription, displaySubscriptions } = await import('../../js/distributor.js');
+const { openDistributorModal, closeDistModal, buildShareUrl, openSidePanelForFilters, closeSidePanel } = await import('../../js/gmaps-ui.js');
+const { hideAllViews, switchView, switchTab, updateBadges, getTotalUnreadCount, updateProfileStats } = await import('../../js/navigation.js');
+const { updateUnreadCounts } = await import('../../js/chat.js');
+const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../../js/notifications.js');
+const { NotificationQueue, setSupabaseClient } = await import('../../js/state.js');
+const { checkFavoriteUpdates } = await import('../../js/favorites-watch.js');
+const { activateFocusTrap, deactivateFocusTrap } = await import('../../js/focus-trap.js');
+const { buildStatsModel, renderStatsView, percent, formatPercent } = await import('../../js/stats.js');
 
 // ============================================
 // ESCAPEHTML (DOM)

@@ -33,15 +33,16 @@ Pour chaque item (max N items), execute le pipeline suivant. **Arret immediat** 
    - Modifications minimales (KISS, pas d'over-engineering)
    - Pas de feature creep
 
-4. TEST UNIT + DOM
-   - `npm test`
+4. TESTS UNITAIRES + INTEGRATION
+   - `npm run test:unit` puis `npm run test:integration` (DOM + vraie base, transactions annulees)
    - Si echec : fix + reessai (1 fois max)
    - Si echec persistant : STOP + rapport
 
-5. TEST E2E
-   - `npx playwright test tests/e2e.spec.js --workers=1 --timeout=60000`
+5. TESTS FONCTIONNELS (navigateur, serveur 8080 lance a part)
+   - `npm run test:functional`
    - Tolerer flaky (retry deja configure)
    - Si echec non-flaky : STOP + rapport
+   - Apres le deploiement Pages (etape suivi deploy) : `npm run test:e2e` sur le site en ligne
 
 6. VERIF VISUELLE (si UI changee)
    - Playwright headed : navigate http://localhost:8080 + screenshot

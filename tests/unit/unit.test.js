@@ -3,7 +3,7 @@
  * Lancer avec : node --test tests/unit.test.js
  */
 
-import './setup.js';
+import '../setup.js';
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -19,20 +19,20 @@ import {
     saveUserDistributor, loadUserDistributors, getLevelInfo,
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     mapDistributorRow, diffFavoriteSignals
-} from '../js/utils.js';
+} from '../../js/utils.js';
 
 import {
     AppState, UserProfile, NotificationPrefs, Conversations,
     GREETING_MESSAGES, ALERT_MESSAGES,
     setMainMap, setDistributorMarkers, setUserMarker,
     incrementAddProductCounter
-} from '../js/state.js';
+} from '../../js/state.js';
 
-import { isQuietHours, canNotify, markNotified } from '../js/notifications.js';
-import { generateGreetingMessage } from '../js/chat.js';
+import { isQuietHours, canNotify, markNotified } from '../../js/notifications.js';
+import { generateGreetingMessage } from '../../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
-import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY } from '../js/events.js';
-import { setSupabaseClient } from '../js/state.js';
+import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY } from '../../js/events.js';
+import { setSupabaseClient } from '../../js/state.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
@@ -491,7 +491,7 @@ describe('diffFavoriteSignals (veille des favoris)', () => {
 // releves par l'audit : aucun ne doit reapparaitre sans accent.
 
 describe('accents des libelles UI (audit UX-16)', () => {
-    const root = new URL('../', import.meta.url);
+    const root = new URL('../../', import.meta.url);
     const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
     const sources = [['index.html', readFileSync(new URL('index.html', root), 'utf8')]];
     for (const f of readdirSync(new URL('js/', root)).filter(f => f.endsWith('.js'))) {
@@ -522,7 +522,7 @@ describe('accents des libelles UI (audit UX-16)', () => {
 // ============================================
 
 describe('aucun territoire en dur dans index.html et manifest.json', () => {
-    const root = new URL('../', import.meta.url);
+    const root = new URL('../../', import.meta.url);
     it('ni « Côte Basque » ni « Cote Basque » dans les textes servis', () => {
         for (const f of ['index.html', 'manifest.json']) {
             const src = readFileSync(new URL(f, root), 'utf8');
@@ -564,7 +564,7 @@ describe('mapDistributorRow (ligne Supabase -> distributeur, isDemo)', () => {
 });
 
 describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
-    const cssDir = new URL('../css/', import.meta.url);
+    const cssDir = new URL('../../css/', import.meta.url);
     const base = readFileSync(new URL('base.css', cssDir), 'utf8');
     const cssVar = (name) => base.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
     const BACKGROUNDS = ['--white', '--light', '--lighter'];
@@ -636,7 +636,7 @@ describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
 // (ou par index.html) y figure, avec une seule et meme version ?v=N.
 
 describe('cache-busting : import map de index.html', () => {
-    const root = new URL('../', import.meta.url);
+    const root = new URL('../../', import.meta.url);
     const jsDir = new URL('js/', root);
     const html = readFileSync(new URL('index.html', root), 'utf8');
     const match = html.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);

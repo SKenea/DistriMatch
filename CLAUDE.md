@@ -20,19 +20,21 @@ Carte Leaflet + fiche distributeur style Google Maps + favoris qui notifient (ce
 ## Commandes
 
 ```bash
-# Lancer en local (requis aussi pour les tests e2e, port 8080 attendu)
+# Lancer en local (requis pour les tests fonctionnels, port 8080 attendu)
 npx http-server -p 8080 -c-1
 
-# Tests unitaires + DOM (Node test runner, pas de serveur requis)
-npm test                      # unit puis dom
-npm run test:unit             # tests/unit.test.js (mocks DOM/Leaflet dans tests/setup.js)
-npm run test:dom              # tests/dom.test.js (jsdom)
-node --test --test-name-pattern="escapeHTML" tests/unit.test.js   # un seul test
-
-# Tests e2e Playwright (Chromium, serveur 8080 lance a part : pas de webServer dans la config)
-npx playwright test tests/e2e.spec.js --workers=1
-npx playwright test -g "nom du test"                              # un seul test
-PWDEBUG_HEADED=1 npx playwright test -g "..."                     # headed + slowMo (debug visuel)
+# Quatre niveaux de tests (EPIC-T7), du plus rapide au plus lent
+npm test                      # rapide, hors ligne : unitaires + integration DOM
+npm run test:unit             # 1. UNITAIRES   tests/unit/        fonctions pures (mocks dans tests/setup.js)
+npm run test:integration      # 2. INTEGRATION tests/integration/ dom.test.js (modules + page jsdom)
+                              #    + db.test.js : VRAIE base, transactions annulees (jeton .env.local, sinon saute)
+npm run test:functional       # 3. FONCTIONNELS tests/functional/  navigateur sur localhost:8080, serveur simule,
+                              #    un fichier par domaine (fiche, notifications, navigation, auth...)
+npm run test:e2e              # 4. E2E         tests/e2e/         site EN LIGNE, vraie base, aucune simulation, aucune ecriture
+npm run test:all              # les quatre, dans l'ordre
+node --test --test-name-pattern="escapeHTML" tests/unit/unit.test.js   # un seul test unitaire
+npx playwright test --project=functional -g "nom du test"              # un seul test fonctionnel
+PWDEBUG_HEADED=1 npx playwright test --project=functional -g "..."     # headed + slowMo (debug visuel)
 
 # SQL Supabase (migrations, seed, verifications) via l'API de gestion, en tant que postgres.
 # Jeton d'acces dans .env.local (ignore par git), portee Database read-write sur le projet.
@@ -40,7 +42,7 @@ node scripts/supabase-sql.mjs supabase/010_is_demo.sql
 node scripts/supabase-sql.mjs -e "select count(*) from distributors;"
 ```
 
-Les tests e2e injectent une geoloc Bayonne et pilotent l'app via les globals `window.AppState` / `window.openDistributorModal`. Verification visuelle possible via le MCP Playwright (`.mcp.json`).
+Quand lancer quoi : `npm test` a chaque modification ; `test:integration` des qu'une migration ou une regle de la base change ; `test:functional` avant chaque PR (le skill `/auto` le fait) ; `test:e2e` apres chaque deploiement Pages (il vise le site en ligne). Les tests fonctionnels injectent une geoloc Bayonne et pilotent l'app via les globals `window.AppState` / `window.openDistributorModal` ; aides partagees dans `tests/functional/helpers.js` (`setupApp`, `loginForTest`, `openSignalableFiche`, `routeSignals`...). Le E2E connecte (vrai compte de test) est BLOQUE (BACKLOG EPIC-T7 T7-US4b). Verification visuelle possible via le MCP Playwright (`.mcp.json`).
 
 ## Architecture
 
