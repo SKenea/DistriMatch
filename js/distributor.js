@@ -127,8 +127,8 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
                     onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">
             </div>
             <div class="product-actions-clean">
-                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Vendu ici — toucher pour marquer plus vendu' : 'Plus vendu — toucher pour marquer vendu ici'}" title="${p.available ? 'Toucher pour marquer plus vendu' : 'Toucher pour marquer vendu ici'}">
-                    ${p.available ? 'Vendu ici' : 'Plus vendu'}
+                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Disponible — toucher pour marquer non disponible' : 'Non disponible — toucher pour marquer disponible'}" title="${p.available ? 'Toucher pour marquer non disponible' : 'Toucher pour marquer disponible'}">
+                    ${p.available ? 'Disponible' : 'Non disponible'}
                 </button>
                 <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer ce produit">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

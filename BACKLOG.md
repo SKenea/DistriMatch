@@ -35,7 +35,7 @@ pas, et on le dit sur le produit »). Livre le 2026-09-25 (migration 012 execute
     couleur vive si le signal a moins de 2 h, grisee de 2 h a 24 h (meme mot), « Pas
     d'info » au-dela ou sans signal ; l'age est ecrit sous le nom (« vu il y a 12 min ») ;
     machine signalee vide / en panne plus recemment que le dernier « vu dispo » ->
-    « Pas dispo » avec « machine vide » / « machine en panne » ; produit « Plus vendu »
+    « Pas dispo » avec « machine vide » / « machine en panne » ; produit « Non disponible »
     -> « Pas dispo » sans age. Le mot « catalogue » n'apparait plus en lecture.
   - TS : `resolveProductStatus(product, signalRow, machineStatus, now)` pure (utils.js)
     remplace `resolveAvailabilityBadge`.
@@ -65,11 +65,11 @@ pas, et on le dit sur le produit »). Livre le 2026-09-25 (migration 012 execute
     reste a droite, rien ne deborde en 390 px.
   - TS : `resolveMachineStatus(statusRow, productRows, lastVerified, now)` pure.
 
-- [x] T2-US4 Mode Modifier : le catalogue dit son nom
-  - En tant que contributeur, je veux que le bouton d'un produit en edition dise s'il
-    est vendu ici, afin de ne pas le confondre avec la dispo du moment.
-  - Acceptance : « Vendu ici » / « Plus vendu » a la place de « Disponible /
-    Indisponible » ; liste vide en lecture : « Aucun produit référencé » + bouton
+- [x] T2-US4 Mode Modifier : bouton de produit et liste vide
+  - En tant que contributeur, je veux marquer un produit disponible ou non en edition,
+    et pouvoir ajouter des produits a une machine qui n'en a pas.
+  - Acceptance : bouton « Disponible » / « Non disponible » (correction Stephane
+    2026-09-25 : « Vendu ici / Plus vendu » refuse) ; liste vide en lecture : « Aucun produit référencé » + bouton
     « Ajouter les produits » (connexion exigee, UC2).
 
 ### EPIC-T1 Retour terrain Gaztainbidea (test de Stephane, 2026-09-25)
