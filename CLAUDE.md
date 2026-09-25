@@ -152,6 +152,7 @@ UC11 deroge a la regle structurante (cf. `docs/STRATEGIE.md`) : ce n'est pas du 
 
 - La carte exige la geolocalisation (decision Stephane 2026-09-25) : pas de « continuer sans position ». Seul un deep link (`?id=`, QR) montre la fiche avant le consentement ; la fermer ramene l'ecran de geolocalisation.
 - Le stylo « Modifier » est visible sur toute fiche (plus seulement depuis Favoris) ; la connexion est verifiee au clic (UC2). En edition, le bouton d'un produit dit « Disponible / Non disponible » (choix de Stephane 2026-09-25) ; un produit marque non disponible s'affiche « Pas dispo » en lecture.
+- Structure de la fiche (EPIC-T4, inspiree de l'app EuroMillions, theme clair) : bandeau d'etat en tete (`#dist-hero`, aplat de la couleur de l'etat machine, jamais un degrade pour que le contraste reste mesure par l'e2e 21 ; info cle en tres grand via `describeFicheHero` ; 1re photo en fond assombri), onglets en pastilles, tuiles d'action, galerie photos dans « À propos ».
 - Vocabulaire de la fiche (decision Stephane 2026-09-25) : trois mots par aliment (« Dispo », « Pas dispo », « Pas d'info »), jamais « catalogue » en lecture. Le mot repond, la couleur dit la confiance (vive < 2 h, adoucie jusqu'a 24 h). Une machine vide / en panne plus recente que le signal d'un aliment le passe en « Pas dispo ».
 - `sw.js` se desinstalle volontairement. Ne pas le reactiver sans plan de cache.
 - `data/distributors.json` et `EMBEDDED_DATA` sont des fallbacks ; en prod la verite est Supabase.
