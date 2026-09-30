@@ -1,0 +1,630 @@
+<title>Fiche lieu</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --page: #F3F4F6;
+    --ink: #111827;
+    --ink-2: #374151;
+    --muted: #6B7280;
+    --faint: #6B7280;
+    --line: #E5E7EB;
+    --line-2: #D1D5DB;
+    --link: #1D4ED8;
+    --link-bg: #EFF6FF;
+    --focus: #2563EB;
+    --green: #16A34A;  --green-ink: #166534;  --green-soft: #15803D;
+    --orange: #EA580C; --orange-ink: #9A3412; --orange-soft: #C2410C;
+    --red: #DC2626;    --red-ink: #991B1B;    --red-soft: #B91C1C;
+    --off: #CBD5E1;    --none-ink: #475569;
+    --review: #1E293B;
+    --radius-s: 6px;
+    --radius-m: 12px;
+    --radius-l: 20px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  /* ---------- Reglages de la maquette (outil de revue) ---------- */
+  .review {
+    background: var(--review);
+    color: #F8FAFC;
+    font-size: 13px;
+  }
+  .review-toggle {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; min-height: 44px; padding: 0 16px;
+    background: none; border: 0; cursor: pointer; color: #F8FAFC;
+    font-weight: 600; letter-spacing: .01em;
+  }
+  .review-toggle svg { transition: transform .2s; }
+  .review-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .review-toggle .tag { margin-left: auto; font-weight: 500; color: #CBD5E1; }
+  .review-body { padding: 4px 16px 14px; display: grid; gap: 10px; }
+  .review fieldset { border: 0; margin: 0; padding: 0; }
+  .review legend { color: #CBD5E1; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg label {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: 44px; padding: 0 12px; border-radius: 8px;
+    background: #334155; cursor: pointer; font-size: 14px;
+  }
+  .seg input { accent-color: #93C5FD; width: 16px; height: 16px; margin: 0; }
+  .seg label:has(input:checked) { background: #F8FAFC; color: #0F172A; }
+  .seg label:has(input:focus-visible) { outline: 3px solid #93C5FD; outline-offset: 2px; }
+
+  /* ---------- En-tete ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 0; }
+  .icon-btn {
+    width: 44px; height: 44px; display: grid; place-items: center;
+    border: 0; background: none; border-radius: 50%; cursor: pointer; color: var(--ink-2);
+  }
+  .icon-btn:hover { background: #F3F4F6; }
+  .head { padding: 0 16px 14px; }
+  .title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 21px; line-height: 1.25; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  .demo {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 5px;
+    text-transform: uppercase; letter-spacing: .05em; transform: translateY(-2px);
+  }
+  .meta { color: var(--muted); margin-top: 3px; font-size: 14px; }
+  .meta .sep { padding: 0 4px; }
+  .rating-line { color: var(--muted); font-size: 14px; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+  .rating-line b { color: var(--ink-2); font-weight: 600; }
+  .star { color: #B45309; }
+
+  /* ---------- Ligne d'etat + mini-feu ---------- */
+  .status-line {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+    margin-top: 8px; font-size: 14.5px; min-height: 24px;
+  }
+  .feu {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 5px; border-radius: 999px;
+    background: #F1F5F9; border: 1px solid #E2E8F0; flex: none;
+  }
+  .feu i { width: 9px; height: 9px; border-radius: 50%; background: var(--off); display: block; }
+  .feu[data-state="working"] i:nth-child(1) { background: var(--green); }
+  .feu[data-state="empty"]   i:nth-child(2) { background: var(--orange); }
+  .feu[data-state="broken"]  i:nth-child(3) { background: var(--red); }
+  .feu.soft i { opacity: .5; }
+  .st-word { font-weight: 600; }
+  .st-word[data-state="working"] { color: var(--green-ink); }
+  .st-word[data-state="empty"]   { color: var(--orange-ink); }
+  .st-word[data-state="broken"]  { color: var(--red-ink); }
+  .st-word[data-state="none"]    { color: var(--none-ink); }
+  .soft .st-word[data-state="working"], .st-word.soft[data-state="working"] { color: var(--green-soft); font-weight: 500; }
+  .st-word.soft[data-state="empty"]  { color: var(--orange-soft); font-weight: 500; }
+  .st-word.soft[data-state="broken"] { color: var(--red-soft); font-weight: 500; }
+  .st-age { color: var(--muted); }
+  .update-link {
+    margin-left: auto; border: 0; background: none; cursor: pointer;
+    color: var(--link); font-weight: 600; font-size: 14px;
+    min-height: 44px; padding: 0 2px 0 8px; margin-top: -10px; margin-bottom: -10px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .update-link:hover { text-decoration: underline; }
+
+  /* ---------- Rangee d'actions (retrogradee) ---------- */
+  .actions {
+    display: flex; gap: 4px; padding: 4px 8px 14px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .actions::-webkit-scrollbar { display: none; }
+  .act {
+    flex: 1 0 64px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 0; background: none; cursor: pointer; padding: 2px 0; min-height: 58px;
+    font-size: 12px; color: var(--ink-2); font-weight: 500;
+  }
+  .act .ring {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid var(--line-2); display: grid; place-items: center; color: var(--ink-2);
+    background: var(--bg);
+  }
+  .act:hover .ring { background: #F9FAFB; }
+  .act[aria-pressed="true"] .ring { color: #BE123C; border-color: #FDA4AF; background: #FFF1F2; }
+  .act[aria-pressed="true"] .heart path { fill: currentColor; }
+
+  /* ---------- Produits : le coeur ---------- */
+  .products { padding: 18px 16px 6px; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  .count { font-size: 15px; color: var(--muted); white-space: nowrap; }
+  .count b { color: var(--ink); font-size: 17px; font-weight: 700; }
+  .plist { list-style: none; margin: 0; padding: 0; }
+  .plist li + li .prow { border-top: 1px solid var(--line); }
+  .prow {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 13px 0; background: none; border: 0; text-align: left; min-height: 64px;
+  }
+  button.prow { cursor: pointer; }
+  button.prow:hover .pname { text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .pmain { flex: 1; min-width: 0; }
+  .pname { font-size: 17.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .pstat { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .pword { font-weight: 600; }
+  /* Dispo */
+  .is-yes .dot { background: var(--green); }
+  .is-yes .pword { color: var(--green-ink); }
+  .is-yes.stale .dot { opacity: .5; }
+  .is-yes.stale .pword { color: var(--green-soft); font-weight: 500; }
+  /* Pas dispo : attenue */
+  .is-no .pname { color: #4B5563; font-weight: 500; }
+  .is-no .dot { background: transparent; border: 1.5px solid #6B7280; }
+  .is-no .pword { color: #4B5563; font-weight: 500; }
+  /* Pas d'info : plus pale encore */
+  .is-none .pname { color: var(--faint); font-weight: 400; }
+  .is-none .dot { background: transparent; border: 1.5px dashed #9CA3AF; }
+  .is-none .pword { color: var(--faint); font-weight: 400; }
+  .chev { color: #9CA3AF; flex: none; }
+  .still {
+    flex: none; font-size: 13px; font-weight: 600; color: var(--link);
+    background: var(--link-bg); border-radius: 999px; padding: 6px 10px;
+    border: 1px solid #DBEAFE; white-space: nowrap;
+  }
+  .mnote { margin: 2px 0 2px; font-size: 14px; color: var(--muted); }
+  .just { color: var(--ink-2); font-weight: 600; }
+  .empty-prod { padding: 18px 0 10px; color: var(--muted); font-size: 15px; }
+  .empty-prod p { margin: 0 0 12px; }
+  .empty-prod strong { color: var(--ink-2); display: block; font-size: 16px; margin-bottom: 2px; }
+
+  .btn {
+    min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer;
+    font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-outline { background: var(--bg); border: 1px solid var(--line-2); color: var(--ink); }
+  .btn-outline:hover { background: #F9FAFB; }
+  .btn-primary { background: #111827; border: 1px solid #111827; color: #fff; }
+  .btn-primary:hover { background: #1F2937; }
+
+  .invite {
+    margin: 10px 16px 4px; padding: 14px; border: 1px solid var(--line);
+    border-radius: var(--radius-m); background: #F9FAFB;
+    display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  }
+  .invite p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+
+  /* ---------- Avis / A propos ---------- */
+  .block { padding: 18px 16px; border-top: 8px solid #F3F4F6; margin-top: 16px; }
+  .block + .block { margin-top: 0; }
+  .block h2 { font-size: 17px; margin-bottom: 10px; }
+  .rev { display: flex; align-items: center; gap: 14px; }
+  .rev-big { font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .rev-stars { color: #B45309; letter-spacing: 1px; font-size: 15px; }
+  .rev-sub { color: var(--muted); font-size: 14px; }
+  .link-btn {
+    border: 0; background: none; color: var(--link); font-weight: 600; cursor: pointer;
+    padding: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; font-size: 15px;
+  }
+  .about { list-style: none; margin: 0; padding: 0; }
+  .about li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; color: var(--ink-2); font-size: 15px; }
+  .about li + li { border-top: 1px solid var(--line); }
+  .about svg { color: var(--muted); flex: none; margin-top: 1px; }
+  .about small { display: block; color: var(--muted); font-size: 13.5px; }
+
+  /* ---------- Feuille du bas ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(17,24,39,.4); z-index: 20; }
+  .sheet {
+    position: fixed; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 100%; max-width: 480px; z-index: 21;
+    background: var(--bg); border-radius: 16px 16px 0 0;
+    padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0,0,0,.15);
+    animation: up .22s ease-out;
+  }
+  @keyframes up { from { transform: translate(-50%, 24px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 0 auto 12px; }
+  .sheet h3 { margin: 0; font-size: 17px; }
+  .sheet .sub { margin: 2px 0 14px; color: var(--muted); font-size: 14px; }
+  .choices { display: grid; gap: 8px; }
+  .choice {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    min-height: 52px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--line-2); background: var(--bg); cursor: pointer;
+    font-size: 16px; font-weight: 600; text-align: left;
+  }
+  .choice:hover { background: #F9FAFB; border-color: #9CA3AF; }
+  .choice .dot { width: 12px; height: 12px; }
+  .choice .hint { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 13.5px; }
+  .d-green { background: var(--green); } .d-orange { background: var(--orange); } .d-red { background: var(--red); }
+  .d-gray { background: transparent; border: 2px solid #6B7280; }
+  .cancel { width: 100%; margin-top: 10px; min-height: 44px; border: 0; background: none; color: var(--ink-2); font-weight: 600; cursor: pointer; border-radius: 10px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 12px 16px; border-radius: 10px;
+    font-size: 14.5px; z-index: 30; max-width: calc(100% - 32px); width: max-content;
+    box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="app">
+  <!-- Outil de revue -->
+  <section class="review" aria-label="Réglages de la maquette">
+    <button class="review-toggle" id="reviewToggle" aria-expanded="false" aria-controls="reviewBody">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      Réglages de la maquette
+      <span class="tag" id="reviewSummary">Fonctionne · Visiteur</span>
+    </button>
+    <div class="review-body" id="reviewBody" hidden>
+      <fieldset>
+        <legend>État machine</legend>
+        <div class="seg">
+          <label><input type="radio" name="m" value="working" checked> Fonctionne</label>
+          <label><input type="radio" name="m" value="empty"> Vide</label>
+          <label><input type="radio" name="m" value="broken"> En panne</label>
+          <label><input type="radio" name="m" value="none"> Pas d'info</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Mode</legend>
+        <div class="seg">
+          <label><input type="radio" name="mode" value="visitor" checked> Visiteur</label>
+          <label><input type="radio" name="mode" value="connected"> Connecté</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Fiche</legend>
+        <div class="seg">
+          <label><input type="radio" name="fiche" value="with" checked> Avec produits</label>
+          <label><input type="radio" name="fiche" value="without"> Sans produit</label>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <main>
+    <div class="topbar">
+      <button class="icon-btn" aria-label="Retour à la carte" data-toast="Retour à la carte">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="Fermer la fiche" data-toast="Fiche fermée">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <header class="head">
+      <div class="title-row">
+        <h1 id="name">Légumes Bio Cambo</h1>
+        <span class="demo" id="demoTag">Démo</span>
+      </div>
+      <div class="meta" id="meta"></div>
+      <div class="status-line" id="statusLine"></div>
+      <div class="rating-line" id="ratingLine"></div>
+    </header>
+
+    <nav class="actions" aria-label="Actions" id="actions"></nav>
+
+    <section class="products" aria-labelledby="prodTitle">
+      <div class="sec-head">
+        <h2 id="prodTitle">Il reste quoi ?</h2>
+        <span class="count" id="count"></span>
+      </div>
+      <p class="mnote" id="mnote" hidden></p>
+      <ul class="plist" id="plist"></ul>
+      <div class="empty-prod" id="emptyProd" hidden>
+        <p><strong>Aucun produit référencé</strong>Personne n'a encore indiqué ce que vend cette machine.</p>
+        <button class="btn btn-outline" id="addProducts" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter les produits
+        </button>
+      </div>
+    </section>
+
+    <div class="invite" id="invite">
+      <p>Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste.</p>
+      <button class="btn btn-primary" id="loginBtn">Se connecter</button>
+    </div>
+
+    <section class="block" aria-labelledby="revTitle">
+      <h2 id="revTitle">Avis</h2>
+      <div id="reviews"></div>
+    </section>
+
+    <section class="block" aria-labelledby="aboutTitle">
+      <h2 id="aboutTitle">À propos</h2>
+      <ul class="about" id="about"></ul>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="grab" aria-hidden="true"></div>
+  <h3 id="sheetTitle"></h3>
+  <p class="sub" id="sheetSub"></p>
+  <div class="choices" id="choices"></div>
+  <button class="cancel" id="sheetCancel">Annuler</button>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var FICHES = {
+    with: {
+      name: 'Légumes Bio Cambo', demo: true, type: 'Produits agricoles', price: '€€', dist: '2,3 km',
+      address: 'Route des Thermes, 64250 Cambo-les-Bains', rating: '4,7', reviews: 91,
+      products: [
+        { id: 'panier', name: 'Panier légumes saison' },
+        { id: 'pdt', name: 'Pommes de terre (2 kg)' },
+        { id: 'carottes', name: 'Carottes (1 kg)' },
+        { id: 'salades', name: 'Salades (lot de 2)' }
+      ]
+    },
+    without: {
+      name: 'Gaztainbidea', demo: false, type: 'Terroir local', price: '€', dist: '450 m',
+      address: 'impasse Gaztainbidea', rating: null, reviews: 0, products: []
+    }
+  };
+
+  /* Etat machine : mot, age (minutes), produits deduits */
+  var MACHINE = {
+    working: { word: 'Fonctionne', age: 12, prod: { panier: ['yes', 12], pdt: ['yes', 12], carottes: ['no', 40], salades: ['none'] } },
+    empty:   { word: 'Vide', age: 34, detail: 'Machine vide' },
+    broken:  { word: 'En panne', age: 120, detail: 'Machine en panne' },
+    none:    { word: "Pas d'info", age: 4 * 24 * 60 }
+  };
+
+  var S = { machine: 'working', mode: 'visitor', fiche: 'with', fav: false, userMachine: null, userProd: {} };
+  var $ = function (id) { return document.getElementById(id); };
+  var lastFocus = null;
+
+  function ageText(min) {
+    if (min === 0) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    if (min < 24 * 60) return 'il y a ' + Math.round(min / 60) + ' h';
+    return 'il y a ' + Math.round(min / 1440) + ' j';
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function currentMachine() {
+    if (S.userMachine) return { key: S.userMachine, word: MACHINE[S.userMachine].word, age: 0, detail: MACHINE[S.userMachine].detail };
+    var m = MACHINE[S.machine];
+    return { key: S.machine, word: m.word, age: m.age, detail: m.detail };
+  }
+
+  function productState(p, m) {
+    var u = S.userProd[p.id];
+    if (u) return { st: u, age: 0, by: 'user' };  /* signal plus recent : l'emporte */
+    if (m.key === 'empty' || m.key === 'broken') return { st: 'no', age: m.age, detail: m.detail };
+    if (m.key === 'none') return { st: 'none' };
+    var base = MACHINE.working.prod[p.id] || ['none'];
+    if (S.machine !== 'working' && S.userMachine === 'working') return { st: 'none' };
+    return { st: base[0], age: base[1] };
+  }
+
+  function feuHTML(key, soft) {
+    var label = key === 'none' ? "Pas d'info" : MACHINE[key].word;
+    return '<span class="feu' + (soft ? ' soft' : '') + '" data-state="' + key + '" role="img" aria-label="Feu : ' + esc(label) + '"><i></i><i></i><i></i></span>';
+  }
+
+  function renderHead(f, m) {
+    $('name').textContent = f.name;
+    $('demoTag').hidden = !f.demo;
+    $('meta').innerHTML = esc(f.type) + '<span class="sep" aria-hidden="true">·</span>' + esc(f.price) + '<span class="sep" aria-hidden="true">·</span>à ' + esc(f.dist);
+    var soft = m.age >= 120;
+    var ageLabel = m.key === 'none' ? 'vérifié ' + ageText(m.age) : ageText(m.age);
+    var html = feuHTML(m.key, soft) +
+      '<span class="st-word' + (soft ? ' soft' : '') + '" data-state="' + m.key + '">' + esc(m.word) + '</span>' +
+      '<span class="st-age">· ' + esc(ageLabel) + '</span>';
+    if (S.mode === 'connected') {
+      html += '<button class="update-link" id="updateBtn" aria-haspopup="dialog">Mettre à jour' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>';
+    }
+    $('statusLine').innerHTML = html;
+    if (S.mode === 'connected') $('updateBtn').addEventListener('click', openMachineSheet);
+    $('ratingLine').innerHTML = f.rating
+      ? '<b>' + f.rating + '</b><span class="star" aria-hidden="true">★</span><span>(' + f.reviews + ' avis)</span><span class="sr">sur 5</span>'
+      : '<span>Pas encore d\'avis</span>';
+  }
+
+  var ICONS = {
+    route: '<path d="M3 11 21 3l-8 18-2-8-8-2z"/>',
+    heart: '<path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9z"/>',
+    share: '<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M7 8l5-5 5 5"/>',
+    photo: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>'
+  };
+  function actBtn(id, icon, label, extra) {
+    return '<button class="act" id="' + id + '"' + (extra || '') + '><span class="ring"><svg class="' + icon + '" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[icon] + '</svg></span>' + label + '</button>';
+  }
+  function renderActions() {
+    var h = actBtn('aRoute', 'route', 'Itinéraire') +
+      actBtn('aFav', 'heart', 'Favori', ' aria-pressed="' + S.fav + '"') +
+      actBtn('aShare', 'share', 'Partager');
+    if (S.mode === 'connected') h += actBtn('aPhoto', 'photo', 'Photo') + actBtn('aEdit', 'edit', 'Modifier');
+    $('actions').innerHTML = h;
+  }
+
+  function renderProducts(f, m) {
+    var list = $('plist');
+    var hasProd = f.products.length > 0;
+    $('emptyProd').hidden = hasProd;
+    $('addProducts').hidden = S.mode !== 'connected';
+    list.hidden = !hasProd;
+    if (!hasProd) { $('count').textContent = ''; $('mnote').hidden = true; return; }
+    var noteOn = (m.key === 'empty' || m.key === 'broken');
+    $('mnote').hidden = !noteOn;
+    if (noteOn) $('mnote').textContent = m.detail + ' : sauf signal plus récent, les produits passent en Pas dispo.';
+    var rows = f.products.map(function (p) { var s = productState(p, m); s.p = p; return s; });
+    var order = { yes: 0, no: 1, none: 2 };
+    rows.sort(function (a, b) { return order[a.st] - order[b.st]; });
+    var nYes = rows.filter(function (r) { return r.st === 'yes'; }).length;
+    $('count').innerHTML = '<b>' + nYes + '</b> sur ' + rows.length + ' dispo';
+    var connected = S.mode === 'connected';
+    list.innerHTML = rows.map(function (r) {
+      var stale = r.age != null && r.age >= 120;
+      var word = r.st === 'yes' ? 'Dispo' : r.st === 'no' ? 'Pas dispo' : "Pas d'info";
+      var detail = '';
+      if (r.by === 'user') detail = '<span class="just">· à l\'instant, par toi</span>';
+      else if (r.st === 'yes') detail = '<span>· vu ' + ageText(r.age) + '</span>';
+      else if (r.st === 'no') detail = '<span>· ' + ageText(r.age) + '</span>';
+      var cls = 'prow is-' + r.st + (stale ? ' stale' : '');
+      var inner = '<span class="pmain"><span class="pname">' + esc(r.p.name) + '</span>' +
+        '<span class="pstat"><span class="dot" aria-hidden="true"></span><span class="pword">' + word + '</span>' + detail + '</span></span>';
+      if (!connected) return '<li><div class="' + cls + '">' + inner + '</div></li>';
+      var chip = '';
+      if (r.by !== 'user' && (stale || r.st === 'none')) chip = '<span class="still" aria-hidden="true">' + (r.st === 'none' ? 'Tu en vois ?' : 'Toujours là ?') + '</span>';
+      else chip = '<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+      return '<li><button class="' + cls + '" data-pid="' + r.p.id + '" aria-haspopup="dialog" aria-label="' + esc(r.p.name) + ', ' + word + '. Signaler">' + inner + chip + '</button></li>';
+    }).join('');
+  }
+
+  function renderReviews(f) {
+    if (!f.rating) {
+      $('reviews').innerHTML = '<p class="rev-sub" style="margin:0 0 4px">Pas encore d\'avis sur cette machine.</p>' +
+        '<button class="link-btn" data-toast="' + (S.mode === 'connected' ? 'Maquette : formulaire d\'avis' : 'Connecte-toi pour donner ton avis') + '">Donner le premier avis</button>';
+      return;
+    }
+    $('reviews').innerHTML = '<div class="rev"><span class="rev-big">' + f.rating + '</span><span><span class="rev-stars" aria-hidden="true">★★★★★</span><br><span class="rev-sub">' + f.reviews + ' avis</span></span></div>' +
+      '<button class="link-btn" data-toast="Maquette : liste des avis">Voir les avis' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>';
+  }
+
+  function renderAbout(f, m) {
+    $('about').innerHTML =
+      '<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>' + esc(f.address) + '<small>à ' + esc(f.dist) + ' de toi</small></span></li>' +
+      '<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6"/></svg><span>' + esc(f.type) + ' · ' + esc(f.price) + '<small>Machine en libre-service</small></span></li>' +
+      '<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Dernière info ' + esc(ageText(m.age)) + '<small>Les infos viennent de la communauté</small></span></li>';
+  }
+
+  function render() {
+    var f = FICHES[S.fiche];
+    var m = currentMachine();
+    renderHead(f, m);
+    renderActions();
+    renderProducts(f, m);
+    $('invite').hidden = S.mode === 'connected';
+    renderReviews(f);
+    renderAbout(f, m);
+    var mLabel = MACHINE[S.machine].word;
+    $('reviewSummary').textContent = mLabel + ' · ' + (S.mode === 'connected' ? 'Connecté' : 'Visiteur') + (S.fiche === 'without' ? ' · Sans produit' : '');
+  }
+
+  /* ---------- Feuille du bas ---------- */
+  function openSheet(title, sub, choices, onPick) {
+    lastFocus = document.activeElement;
+    $('sheetTitle').textContent = title;
+    $('sheetSub').textContent = sub;
+    $('choices').innerHTML = choices.map(function (c) {
+      return '<button class="choice" data-v="' + c.v + '"><span class="dot ' + c.dot + '" aria-hidden="true"></span>' + esc(c.label) + (c.hint ? '<span class="hint">' + esc(c.hint) + '</span>' : '') + '</button>';
+    }).join('');
+    $('choices').onclick = function (e) {
+      var b = e.target.closest('.choice'); if (!b) return;
+      closeSheet(); onPick(b.getAttribute('data-v'));
+    };
+    $('scrim').hidden = false; $('sheet').hidden = false;
+    $('choices').querySelector('button').focus();
+  }
+  function closeSheet() {
+    $('scrim').hidden = true; $('sheet').hidden = true;
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  }
+  function openMachineSheet() {
+    openSheet('Comment est la machine ?', 'Ce que tu vois maintenant, devant elle.', [
+      { v: 'working', label: 'Fonctionne', dot: 'd-green' },
+      { v: 'empty', label: 'Vide', dot: 'd-orange' },
+      { v: 'broken', label: 'En panne', dot: 'd-red' }
+    ], function (v) {
+      S.userMachine = v;
+      if (v !== 'working') S.userProd = {};  /* la machine plus recente l'emporte */
+      render(); thanks(); var u = $('updateBtn'); if (u) u.focus();
+    });
+  }
+  function openProductSheet(pid) {
+    var p = FICHES[S.fiche].products.filter(function (x) { return x.id === pid; })[0];
+    openSheet(p.name, 'Tu en vois dans la machine ?', [
+      { v: 'yes', label: 'Il y en a', dot: 'd-green' },
+      { v: 'no', label: 'Plus rien', dot: 'd-gray' }
+    ], function (v) {
+      S.userProd[pid] = v; render(); thanks();
+      var b = document.querySelector('[data-pid="' + pid + '"]'); if (b) b.focus();
+    });
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function thanks() { toast('Merci ! Ton signal aide les suivants'); }
+
+  /* ---------- Evenements ---------- */
+  $('reviewToggle').addEventListener('click', function () {
+    var open = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', String(!open));
+    $('reviewBody').hidden = open;
+  });
+  document.querySelectorAll('.review input').forEach(function (i) {
+    i.addEventListener('change', function () {
+      if (i.name === 'm') { S.machine = i.value; S.userMachine = null; S.userProd = {}; }
+      if (i.name === 'mode') S.mode = i.value;
+      if (i.name === 'fiche') { S.fiche = i.value; S.userProd = {}; }
+      render();
+    });
+  });
+  $('loginBtn').addEventListener('click', function () {
+    S.mode = 'connected';
+    document.querySelector('.review input[value="connected"]').checked = true;
+    render(); toast('Connecté : tu peux signaler');
+    var u = $('updateBtn'); if (u) u.focus();
+  });
+  $('plist').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pid]'); if (b) openProductSheet(b.getAttribute('data-pid'));
+  });
+  $('actions').addEventListener('click', function (e) {
+    var b = e.target.closest('.act'); if (!b) return;
+    if (b.id === 'aFav') { S.fav = !S.fav; renderActions(); $('aFav').focus(); toast(S.fav ? 'Ajouté aux favoris' : 'Retiré des favoris'); }
+    if (b.id === 'aRoute') toast('Maquette : ouverture de l\'itinéraire');
+    if (b.id === 'aShare') toast('Lien de la fiche copié');
+    if (b.id === 'aPhoto') toast('Maquette : ajout de photo');
+    if (b.id === 'aEdit') toast('Maquette : modifier la fiche');
+  });
+  $('addProducts').addEventListener('click', function () { toast('Maquette : ajouter les produits'); });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-toast]'); if (t) toast(t.getAttribute('data-toast'));
+  });
+  $('scrim').addEventListener('click', closeSheet);
+  $('sheetCancel').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) {
+    if ($('sheet').hidden) return;
+    if (e.key === 'Escape') { closeSheet(); return; }
+    if (e.key === 'Tab') {
+      var f = $('sheet').querySelectorAll('button'); var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  render();
+})();
+</script>
