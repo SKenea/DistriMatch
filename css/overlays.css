@@ -1602,3 +1602,127 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     font-size: 1rem;
 }
 .dist-modal-actions .dist-action-btn.primary:hover { background: #1F2937; }
+
+/* ==========================================
+   FICHE : ZONES ET BOUTONS DISTINCTS (EPIC-T11)
+   En-tete blanc | onglets en selecteur segmente | contenu sur fond gris clair
+   | pied avec ombre. Trois niveaux de boutons : principal plein, secondaire en
+   contour + icone, petit bouton en pastille.
+   ========================================== */
+
+/* Zones */
+.dist-modal { background: #FFFFFF; }
+.dist-modal-header { padding-bottom: 0.75rem; }
+.dist-modal-tabs {
+    display: block;
+    padding: 0.6rem 1.25rem;
+    background: #FFFFFF;
+    border-top: 1px solid #E5E7EB;
+    border-bottom: 1px solid #E5E7EB;
+}
+.dist-modal > .dist-modal-content { background: #F4F5F7; }
+.dist-modal-actions { box-shadow: 0 -6px 16px rgba(17, 24, 39, 0.07); border-top-color: #E5E7EB; }
+
+/* Onglets : piste grise, onglet actif blanc en gras (plus de rouge) */
+.dist-tabs-track {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: #ECEEF1;
+}
+.dist-tab {
+    min-height: 44px;
+    border-radius: 9px;
+    color: #4B5563;
+    font-weight: 600;
+}
+.dist-tab:hover { color: #111827; }
+.dist-tab.active {
+    background: #FFFFFF;
+    color: #111827;
+    font-weight: 800;
+    box-shadow: 0 1px 3px rgba(17, 24, 39, 0.14);
+}
+.dist-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Cartes sur fond gris : chaque etat reste distinct du fond */
+.product-item-clean.product-row { box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06); }
+.product-row.is-unknown { background: #FFFFFF; border-color: #E2E5EA; }
+.product-row.is-absent { background: #E9EBEE; border-color: #D5D9DF; box-shadow: none; }
+.products-empty-state { background: #FFFFFF; }
+
+/* Petit bouton en pastille : « Mettre à jour » (zone de toucher 44 px par ::after) */
+.dist-status-update {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 34px;
+    margin-left: 0.25rem;
+    padding: 0 0.75rem 0 0.6rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 999px;
+    background: #FFFFFF;
+    color: #111827;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+.dist-status-update svg { width: 15px; height: 15px; flex: none; }
+.dist-status-update::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 44px;
+    width: 100%;
+    transform: translateY(-50%);
+}
+.dist-status-update:hover { background: #F3F4F6; }
+.dist-status-update[aria-expanded="true"] { background: #111827; border-color: #111827; color: #FFFFFF; font-weight: 600; }
+.dist-status-update:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Secondaire : contour + icone (Photo, Modifier, Ajouter les produits) */
+.dist-modal-actions .dist-action-btn:not(.primary),
+.products-add-first {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 48px;
+    padding: 0 0.9rem;
+    border: 1.5px solid #9CA3AF;
+    border-radius: 12px;
+    background: #FFFFFF;
+    color: #111827;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.dist-modal-actions .dist-action-btn:not(.primary):hover,
+.products-add-first:hover { background: #F3F4F6; border-color: #6B7280; }
+.products-add-first { margin-top: 0.85rem; }
+.products-add-first svg { width: 18px; height: 18px; }
+
+/* Principal plein : Itineraire (noir) ; Se connecter garde son rouge */
+.dist-modal-actions .dist-action-btn.primary { box-shadow: 0 2px 6px rgba(17, 24, 39, 0.25); }
+.dist-invite-card .dist-login-invite-btn { box-shadow: 0 2px 6px rgba(200, 30, 30, 0.3); }
+
+/* Dispo / Pas dispo sur les cartes : de vrais boutons (bordure, relief) */
+.product-choice {
+    border: 1.5px solid #D1D5DB;
+    background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.1);
+}
+.product-choice.is-yes { color: #166534; border-color: #86C99A; }
+.product-choice.is-no { color: #374151; border-color: #B8BEC7; }
+.product-choice.is-yes:hover { background: #F0FDF4; }
+.product-choice.is-no:hover { background: #F3F4F6; }
+.product-choice:active { box-shadow: none; transform: translateY(1px); }
+
+/* Trois etats derriere « Mettre à jour » : memes boutons en relief */
+.machine-choice { border: 1.5px solid #D1D5DB; box-shadow: 0 1px 2px rgba(17, 24, 39, 0.1); }
