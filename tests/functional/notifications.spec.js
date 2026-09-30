@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { setupApp, loginForTest, RPC_ROUTE } from './helpers.js';
+import { setupApp, loginForTest, RPC_ROUTE, chooseMachineState } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -194,8 +194,8 @@ test.describe('6bis. Centre de notifications fiable', () => {
 
         await loginForTest(page);
         await page.evaluate((distId) => window.openDistributorModal(distId), id);
-        await page.click('#dist-machine-choices .machine-choice[data-machine="empty"]');
-        await expect(page.locator('#dist-hero-kpi')).toHaveText('Vide');
+        await chooseMachineState(page, 'empty');
+        await expect(page.locator('#dist-status-word')).toHaveText('Vide');
 
         await page.waitForTimeout(500);
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));

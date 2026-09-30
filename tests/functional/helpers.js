@@ -90,10 +90,21 @@ export async function openSignalableFiche(page, { login = true } = {}) {
     return first;
 }
 
-// Signale le premier aliment depuis sa ligne : toucher la ligne, puis le choix.
+// Signale le premier aliment depuis sa carte (EPIC-T10) : toucher la carte si
+// ses boutons ne sont pas deja visibles (info recente), puis « Dispo » /
+// « Pas dispo » (data-state available / absent).
 export async function signalFirstProduct(page, state = 'available') {
-    await page.locator('#dist-products-list button.product-row-main').first().click();
-    await page.locator(`#dist-products-list .product-choices:not([hidden]) .product-choice[data-state="${state}"]`).click();
+    const row = page.locator('#dist-products-list .product-row').filter({ has: page.locator('button.product-row-main') }).first();
+    if (await row.locator('.product-choices').isHidden()) await row.locator('button.product-row-main').click();
+    await row.locator(`.product-choice[data-state="${state}"]`).click();
+}
+
+// EPIC-T10 : les trois etats du distributeur sont replies derriere « Mettre à
+// jour » (connecte) ; deplie si besoin puis touche l'etat (working / empty / broken).
+export async function chooseMachineState(page, state) {
+    const toggle = page.locator('#dist-status-update');
+    if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+    await page.click(`#dist-machine-choices .machine-choice[data-machine="${state}"]`);
 }
 
 // Vues de lecture des signaux (007) interceptees : l'etat de depart est maitrise.

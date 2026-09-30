@@ -5,8 +5,9 @@
 import { AppState, Conversations, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, formatDistance, showToast,
-    updateImplicitProfile, saveToLocalStorage
-, resolveProductStatus } from './utils.js';
+    updateImplicitProfile, saveToLocalStorage,
+    resolveProductStatus, productIconKey
+} from './utils.js';
 import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
@@ -104,18 +105,16 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
     // re-render dans la bonne liste (sinon fige sur 'products-list').
     AppState.productsListTarget = targetId;
 
+    productsList.classList.toggle('products-grid', readonly && (distributor.products || []).length > 0);
+
     if (!distributor.products || distributor.products.length === 0) {
-        // En lecture, une machine sans produit invite a les ajouter (connexion
+        // En lecture, un distributeur sans produit invite a les ajouter (connexion
         // exigee au clic : on passe par le stylo « Modifier », UC2).
         productsList.innerHTML = `
             <div class="products-empty-state">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
-                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <path d="M16 10a4 4 0 01-8 0"/>
-                </svg>
-                <p>Aucun produit référencé pour le moment</p>
-                ${readonly && canInform ? '<button type="button" class="btn-secondary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
+                <p class="products-empty-title">Aucun produit référencé</p>
+                <p class="products-empty-text">Personne n'a encore dit ce que vend ce distributeur.</p>
+                ${readonly && canInform ? '<button type="button" class="btn-primary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
             </div>`;
         return;
     }
@@ -149,29 +148,60 @@ export function isSignalableProduct(p) {
     return !!p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
 }
 
-// Ligne produit de la fiche en lecture (EPIC-T2) : nom + « vu il y a X » a
-// gauche, statut « Dispo / Pas dispo / Pas d'info » a droite. Connecte
-// (EPIC-T5) : toucher la ligne deplie « Il y en a / Plus rien »
-// (js/availability.js envoie le signal). Visiteur : lecture seule.
-// Statut initial sans signal ; availability.js le met a jour au chargement.
+// Pictos au trait des cartes produit (EPIC-T10), choisis par productIconKey
+// (utils.js) d'apres le nom. Neutres : la couleur vient de l'etat de la carte.
+const PRODUCT_ICON_PATHS = {
+    basket: '<path d="M4 10h16l-1.6 8.4A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.6z"/><path d="M8.5 10 12 4.5 15.5 10M9.5 14v2.5M14.5 14v2.5"/>',
+    potato: '<path d="M7.5 5.5c3.2-2.1 8.8-1.2 10.7 2.6 1.9 3.9.6 8.8-3.4 10.4-4.1 1.7-9.7.7-10.9-3.8C3 11.4 4.6 7.4 7.5 5.5z"/><path d="M9.5 10h.01M14 13.5h.01M11.5 15.5h.01"/>',
+    carrot: '<path d="M15.5 8.5c1.4 1.4 1.3 3-.1 4.4L6.2 20.1c-.9.6-2-.4-1.4-1.3L12 9.6c1.4-1.4 2.9-1.5 3.5-1.1z"/><path d="M15.5 8.5 19 5M15.5 8.5 16 3.5M15.5 8.5l5 .5M9 13.5l1.5 1.5M11.5 11l1 1"/>',
+    salad: '<path d="M12 20c-4.8 0-8-2.8-8-6.6 0-1.8.9-3 2-3.8.2-3 2.8-5.1 6-5.1s5.8 2.1 6 5.1c1.1.8 2 2 2 3.8 0 3.8-3.2 6.6-8 6.6z"/><path d="M12 20v-9M12 15l-3-3M12 17l3-3"/>',
+    egg: '<path d="M12 3c-3.3 0-6 5-6 9.5A6 6 0 0 0 12 19a6 6 0 0 0 6-6.5C18 8 15.3 3 12 3z"/>',
+    milk: '<path d="M9 3h6v3l2 3v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9l2-3z"/><path d="M7 12h10"/>',
+    cheese: '<path d="M3 17V11l12-6 6 4v8z"/><path d="M3 11h18M8 14.5h.01M14 15h.01M17 12.5h.01"/>',
+    bread: '<path d="M5 11a4 4 0 0 1 3-7h8a4 4 0 0 1 3 7v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M9 9v2M15 9v2"/>',
+    pizza: '<path d="M12 21 3.5 6.5a15 15 0 0 1 17 0z"/><path d="M5.3 9.5a12 12 0 0 1 13.4 0M10 11h.01M14 13h.01M12 16h.01"/>',
+    meat: '<path d="M15 4c3 0 5 2.4 5 5.3 0 4.2-4.3 7.7-8.5 7.7L9 20l-2.5-.5L6 17l2.9-2.4C7.8 10.3 11 4 15 4z"/><circle cx="15" cy="9" r="1.6"/>',
+    fish: '<path d="M3 12c3-4 8-5.5 12-3.5l4-2.5v12l-4-2.5C11 17.5 6 16 3 12z"/><path d="M8 11h.01"/>',
+    fruit: '<path d="M12 7c-4.5-2-8 1-8 5.5C4 17 7 21 9.5 21c1.1 0 1.6-.6 2.5-.6s1.4.6 2.5.6C17 21 20 17 20 12.5 20 8 16.5 5 12 7z"/><path d="M12 7c0-2 1-3.5 3-4"/>',
+    honey: '<path d="M7 8h10v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/><path d="M6 5h12v3H6zM7 13h10"/>',
+    ice: '<path d="M8 10a4 4 0 0 1 8 0z"/><path d="M8 10h8l-4 11z"/>',
+    fries: '<path d="M6 10h12l-1.5 10h-9z"/><path d="M8 10 7 4M11 10V3M14 10l1-6M17 10l1.5-4"/>',
+    drink: '<path d="M7 4h10l-1.5 16h-7z"/><path d="M7.5 9h9"/>',
+    meal: '<path d="M4 13h16a8 8 0 0 1-16 0z"/><path d="M3 13h18M9 9c0-1.5 1-2 1-3.5M13 9c0-1.5 1-2 1-3.5"/>',
+    generic: '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'
+};
+
+export function renderProductIcon(name) {
+    const paths = PRODUCT_ICON_PATHS[productIconKey(name)] || PRODUCT_ICON_PATHS.generic;
+    return `<span class="product-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></span>`;
+}
+
+// Carte produit de la fiche en lecture (EPIC-T10, maquette « carte teintée ») :
+// picto + etiquette en haut, nom (toujours en noir), ligne d'age. Toute la carte
+// prend la teinte de l'etat (classe is-available / is-absent / is-unknown).
+// Connecte : toucher la carte deplie « Dispo / Pas dispo » (js/availability.js
+// envoie le signal ; deja deplie si l'info a plus de 2 h ou n'existe pas).
+// Visiteur : lecture seule. Statut initial sans signal ; availability.js le
+// met a jour au chargement.
 export function renderProductRow(p, index, canInform = false) {
     const status = resolveProductStatus(p, null);
     const id = escapeHTML(String(p.id ?? ''));
     const name = escapeHTML(p.name);
     const pill = `<span class="product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}">${escapeHTML(status.label)}</span>`;
+    const top = `<span class="product-card-top">${renderProductIcon(p.name)}${pill}</span>`;
     const text = `<span class="product-row-text"><span class="product-name-clean">${name}</span><span class="product-seen">${escapeHTML(status.detail)}</span></span>`;
     if (!canInform || !isSignalableProduct(p)) {
         return `
         <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
-            <div class="product-row-main">${text}${pill}</div>
+            <div class="product-row-main">${top}${text}</div>
         </div>`;
     }
     return `
         <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
-            <button type="button" class="product-row-main" aria-expanded="false" aria-controls="product-choices-${id}">${text}${pill}</button>
-            <div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : il en reste ?" hidden>
-                <button type="button" class="product-choice is-yes" data-state="available">✓ Il y en a</button>
-                <button type="button" class="product-choice is-no" data-state="absent">✗ Plus rien</button>
+            <button type="button" class="product-row-main" aria-expanded="false" aria-controls="product-choices-${id}">${top}${text}</button>
+            <div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : signaler" hidden>
+                <button type="button" class="product-choice is-yes" data-state="available">Dispo</button>
+                <button type="button" class="product-choice is-no" data-state="absent">Pas dispo</button>
             </div>
         </div>`;
 }

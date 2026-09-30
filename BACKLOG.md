@@ -19,6 +19,60 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T10 Fiche v3 : les produits d'abord, l'etat en discret (Stephane, 2026-09-30)
+Objectif : on voit d'abord ce qu'il reste ; l'etat du distributeur se lit en passant.
+Valeur : Stephane trouvait le bandeau d'etat trop imposant et le vocabulaire flou
+(« Fonctionne », « Il y en a / Plus rien », « machine »). Maquette retenue :
+`docs/maquettes/2026-09-30-v3/vitrine-b-teintee.html` (PR #141 a #146, benchmark
+Google Maps / Chargemap / Instacart / Waze dans `docs/maquettes/2026-09-30-v2/`).
+Hors perimetre : carte, side panel, mode edition (« Disponible / Non disponible »),
+schema Supabase (etats `working` / `empty` / `broken` inchanges).
+Valide par Stephane le 2026-09-30, livre le meme jour.
+
+- [x] T10-US1 En tant que visiteur, je veux lire l'etat du distributeur en une
+  petite ligne sous son nom, afin que l'etat ne cache pas les produits
+  - Acceptance : plus de bandeau d'etat (`#dist-hero`) ; sous le nom, mini-feu
+    tricolore (vert En service, orange Vide, rouge En panne, eteint Pas d'info) +
+    mot + age (« En service · il y a 12 min », sinon « Vérifié il y a X ») en
+    14-15 px ; adouci entre 2 h et 24 h. Connecte : « Mettre à jour » deplie
+    En service / Vide / En panne (etat actuel marque) ; un tap envoie le signal.
+
+- [x] T10-US2 En tant que visiteur, je veux voir les produits en cartes teintees,
+  afin de savoir d'un coup d'oeil ce qu'il reste
+  - Acceptance : grille 2 colonnes triee Dispo -> Pas d'info -> Pas dispo ; une
+    seule carte pour tous les etats (nom en noir, picto neutre, etiquette,
+    ligne d'age toujours presente : « vu il y a X » / « il y a X » / « aucun
+    signal depuis 24 h ») ; teinte de toute la carte : vert pale Dispo, gris
+    pale Pas dispo, blanc Pas d'info ; picto choisi d'apres le nom du produit
+    (pur, `productIconKey`), generique sinon ; distributeur vide / en panne :
+    un seul liseré au-dessus de la grille, pas de repetition par carte.
+
+- [x] T10-US3 En tant que membre connecte, je veux signaler un produit avec les
+  memes mots que l'affichage, afin de ne pas hesiter
+  - Acceptance : toucher une carte deplie « Dispo / Pas dispo » ; si l'info a
+    plus de 2 h ou n'existe pas, les deux boutons sont deja visibles sur la
+    carte ; meme RPC `confirm_availability` (available / absent) ; toast de
+    remerciement, carte « vu à l'instant ».
+
+- [x] T10-US4 En tant que visiteur, je veux une invitation claire a me connecter,
+  afin de savoir tout ce que la connexion debloque
+  - Acceptance : encadre « Tu es devant le distributeur ? Connecte-toi pour
+    signaler ce qu'il reste, donner ton avis et ajouter des photos » + apercu
+    (Etat, Dispo / Pas dispo, Avis, Photos) + bouton rouge « Se connecter » ;
+    Favori et Partager en icones dans l'en-tete ; Itineraire bouton principal ;
+    Photo et Modifier seulement en connecte.
+
+- [x] T10-US5 En tant que visiteur, je veux un vocabulaire simple et constant
+  - Acceptance : « En service » (plus « Fonctionne ») ; « Dispo / Pas dispo »
+    pour signaler (plus « Il y en a / Plus rien ») ; le mot « machine »
+    n'apparait dans aucun texte de la fiche (libelles, toasts, erreurs d'avis
+    et de signal, bandeau « enregistre sur ton telephone ») ; un test le garde.
+
+- [x] T10-TS Tests des 4 niveaux et documentation a jour
+  - Acceptance : unitaires, integration DOM, fonctionnels et E2E adaptes (dont
+    le contraste, mesure sur les cartes et le mini-feu) ; `CLAUDE.md` (fiche,
+    vocabulaire) a jour ; verification visuelle iPhone avant fusion.
+
 ### EPIC-T9 Machines enregistrees seulement sur le telephone (Stephane, 2026-09-30)
 Constat : avis sur Gaztainbidea -> « code 23503 ». Le telephone de Stephane garde
 une 2e copie locale de Gaztainbidea (id inconnu de la base, position un peu

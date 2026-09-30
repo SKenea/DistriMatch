@@ -224,7 +224,7 @@ export function initDistModal() {
     initReviews();
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
-    // Machine seulement locale : « Publier cette machine » (EPIC-T9)
+    // Distributeur seulement local : « Publier ce distributeur » (EPIC-T9)
     document.getElementById('dist-local-publish')?.addEventListener('click', publishCurrentLocalDistributor);
 
     // Boutons d'action
@@ -403,14 +403,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // sans avis, « Pas encore d'avis » explicite plutot qu'un « 5.0 (0) » trompeur.
     renderRatingHeader(distributor);
     document.getElementById('dist-modal-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
-    // Fraicheur : age de la derniere verification, toujours affiche
-    // (docs/STRATEGIE.md : la confiance = l'horodatage, jamais un vert perime).
-    const verifiedEl = document.getElementById('dist-modal-verified');
-    if (verifiedEl) {
-        const fresh = getFreshness(distributor.lastVerified);
-        verifiedEl.textContent = fresh.label;
-        verifiedEl.className = `dist-modal-verified is-${fresh.state}`;
-    }
+    // Ligne d'etat (mini-feu + mot + age) : posee par renderFicheStatus
+    // (availability.js), appele par loadAvailabilityForDistributor ci-dessous.
     // Niveau de prix : valeur bornee a € / €€ / €€€ (defaut €€)
     const PRICE_LEVELS = ['€', '€€', '€€€'];
     const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : '€€';
@@ -431,8 +425,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Produits : mode edit (boutons CRUD) ou readonly
     renderProductsList(distributor, 'dist-products-list', { readonly: !editMode, canInform: canInformOn(distributor) });
     applyFicheAuthState();
-    // Signaux de dispo (UC11) : "vu dispo il y a X" par produit + bandeau
-    // machine. Fire-and-forget, jamais await : Supabase absent = rien.
+    // Signaux de dispo (UC11) : etat de chaque carte produit + ligne d'etat du
+    // distributeur. Fire-and-forget, jamais await : Supabase absent = rien.
     loadAvailabilityForDistributor(distributor.id);
     // Avis (EPIC-T8) : liste + mon avis, fire-and-forget
     if (!editMode) loadReviewsForDistributor(distributor);
@@ -443,8 +437,7 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const chatSection = document.getElementById('dist-chat-section');
     if (chatSection) chatSection.style.display = (FEATURES.chat && editMode) ? 'block' : 'none';
 
-    // Photos (EPIC-T4) : la 1re passe en fond assombri du bandeau d'etat, la
-    // galerie complete dans l'onglet « À propos ». Sans photo : bandeau uni.
+    // Photos : galerie dans l'onglet « À propos » (EPIC-T10 : plus de bandeau).
     showDistributorPhotos([]);
     loadDistributorPhotos(distributor.id).then(photos => {
         if (AppState.currentDistributor?.id === distributor.id) showDistributorPhotos(photos);
@@ -661,11 +654,11 @@ function showEditAuthGate() {
     });
 }
 
-// EPIC-T5 : lire pour tous, informer / modifier quand on est connecte.
-// Connecte : boutons d'etat de la machine, Photo, Modifier. Visiteur : l'encadre
-// « Connecte-toi pour informer » a la place.
-// Une machine seulement locale (EPIC-T9) est inconnue de la base : ni signal,
-// ni avis, ni photo, ni modification tant qu'elle n'est pas publiee.
+// EPIC-T5 / T10 : lire pour tous, informer / modifier quand on est connecte.
+// Connecte : « Mettre à jour » (etat du distributeur), cartes touchables, Photo,
+// Modifier. Visiteur : l'invitation « Tu es devant le distributeur ? » a la place.
+// Un distributeur seulement local (EPIC-T9) est inconnu de la base : ni signal,
+// ni avis, ni photo, ni modification tant qu'il n'est pas publie.
 function canInformOn(distributor) {
     return isAuthenticated() && !distributor?.isLocalOnly;
 }
@@ -673,21 +666,28 @@ function canInformOn(distributor) {
 function applyFicheAuthState() {
     const authed = isAuthenticated();
     const localOnly = !!AppState.currentDistributor?.isLocalOnly;
+    const canUpdate = authed && !localOnly && !AppState.modalEditMode;
+    const statusUpdate = document.getElementById('dist-status-update');
+    if (statusUpdate) {
+        statusUpdate.hidden = !canUpdate;
+        if (!canUpdate) statusUpdate.setAttribute('aria-expanded', 'false');
+    }
+    // Les trois etats restent replies derriere « Mettre à jour »
     const machineChoices = document.getElementById('dist-machine-choices');
-    if (machineChoices) machineChoices.hidden = !authed || localOnly;
+    if (machineChoices && (!canUpdate || statusUpdate?.getAttribute('aria-expanded') !== 'true')) machineChoices.hidden = true;
     const invite = document.getElementById('dist-login-invite');
-    if (invite) invite.hidden = authed || localOnly;
+    if (invite) invite.hidden = authed || localOnly || !!AppState.modalEditMode;
     const localBanner = document.getElementById('dist-local-only');
     if (localBanner) localBanner.hidden = !localOnly;
     const publishBtn = document.getElementById('dist-local-publish');
-    if (publishBtn) publishBtn.textContent = authed ? 'Publier cette machine' : 'Me connecter pour la publier';
+    if (publishBtn) publishBtn.textContent = authed ? 'Publier ce distributeur' : 'Me connecter pour le publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
     if (photoBtn) photoBtn.style.display = (authed && !localOnly) ? '' : 'none';
     const editBtn = document.getElementById('dist-action-edit');
     if (editBtn) editBtn.style.display = (authed && !AppState.modalEditMode && !localOnly) ? '' : 'none';
 }
 
-// « Publier cette machine » : l'envoie a la base (connexion exigee, UC1), puis
+// « Publier ce distributeur » : l'envoie a la base (connexion exigee, UC1), puis
 // la fiche redevient normale (signaux, avis, photo, modifier).
 let isPublishing = false;
 async function publishCurrentLocalDistributor() {
@@ -708,7 +708,7 @@ async function publishCurrentLocalDistributor() {
         }
         d.isLocalOnly = false;
         removeUserDistributors([d.id]);   // desormais dans la base
-        showToast('Machine publiée : merci, elle est visible par tous', 'success');
+        showToast('Distributeur publié : merci, il est visible par tous', 'success');
         openDistributorModal(d.id);
     } finally {
         isPublishing = false;
@@ -730,19 +730,11 @@ export function refreshFicheForAuth() {
     refreshReviewsForAuth();
 }
 
-// Photos de la fiche : fond du bandeau d'etat (1re photo) + galerie « À propos ».
+// Photos de la fiche : galerie de l'onglet « À propos ».
 function showDistributorPhotos(photos) {
-    const hero = document.getElementById('dist-hero');
-    const heroPhoto = document.getElementById('dist-hero-photo');
     const section = document.getElementById('dist-modal-photo');
     const gallery = document.getElementById('dist-modal-photos-gallery');
     const has = photos.length > 0;
-    hero?.classList.toggle('has-photo', has);
-    if (heroPhoto) {
-        heroPhoto.hidden = !has;
-        if (has) heroPhoto.src = photos[0].url;
-        else heroPhoto.removeAttribute('src');
-    }
     if (section) section.hidden = !has;
     if (gallery) {
         gallery.innerHTML = photos.map(p =>

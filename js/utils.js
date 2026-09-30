@@ -173,7 +173,7 @@ export function describeSignalError(error, status = 0, online = true) {
         return 'Pas de réseau : signal non envoyé';
     }
     if (error?.code === 'P0001') return 'Trop de signaux depuis ce compte, réessaie dans une heure';
-    if (error?.code === 'P0002') return "Cette machine n'est pas encore sur le serveur : signal non envoyé";
+    if (error?.code === 'P0002') return "Ce distributeur n'est pas encore sur le serveur : signal non envoyé";
     if (error?.code === '42501') return 'Ce compte ne peut plus envoyer de signaux';
     if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';
     const code = error?.code || status || '?';
@@ -599,9 +599,11 @@ export function centroidOf(points) {
 // ============================================
 // FICHE : DISPO OU PAS, EN UN COUP D'OEIL (EPIC-T2)
 // ============================================
-// Un seul vocabulaire (retour de Stephane, 2026-09-25) :
-//   produit : « Dispo » / « Pas dispo » / « Pas d'info »
-//   machine : « Fonctionne » / « Vide » / « En panne » / « Pas d'info »
+// Un seul vocabulaire (Stephane, 2026-09-25, revu le 2026-09-30 / EPIC-T10) :
+//   produit : « Dispo » / « Pas dispo » / « Pas d'info » (et on signale avec
+//             les memes mots : « Dispo » / « Pas dispo »)
+//   distributeur : « En service » / « Vide » / « En panne » / « Pas d'info »
+//   Le mot « machine » n'apparait jamais sur la fiche.
 // Le mot repond a la question, la couleur dit la confiance : vive si le signal a
 // moins de 2 h (fresh), grisee jusqu'a 24 h, « Pas d'info » au-dela
 // (docs/STRATEGIE.md : jamais un vert perime).
@@ -617,9 +619,9 @@ function isRecent(ts, now) {
 }
 
 const MACHINE_LABELS = {
-    working: { label: 'Fonctionne', detail: 'Vue en marche' },
-    empty: { label: 'Vide', detail: 'Signalée vide' },
-    broken: { label: 'En panne', detail: 'Signalée en panne' }
+    working: { label: 'En service', detail: 'Vu en service' },
+    empty: { label: 'Vide', detail: 'Signalé vide' },
+    broken: { label: 'En panne', detail: 'Signalé en panne' }
 };
 
 // Etat de la machine a droite du nom + la ligne qui dit d'ou il vient.
@@ -627,7 +629,8 @@ const MACHINE_LABELS = {
 //   productRows : lignes de product_availability de la machine
 //   lastVerified: distributors.last_verified (repli de la ligne de provenance)
 // Un « vu dispo » plus recent que tout signal machine prouve qu'elle marche :
-// « Fonctionne » deduit. Retour : { state, label, tone, fresh, at, detail }.
+// « En service » deduit. Retour : { state, label, tone, fresh, at, age, detail }
+// (age : « il y a 12 min », la ligne d'etat de la fiche l'affiche apres le mot).
 export function resolveMachineStatus(statusRow, productRows = [], lastVerified = null, now = Date.now()) {
     let best = null;
     const machineTs = rowTime(statusRow);
@@ -642,7 +645,7 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
     }
     if (!best) {
         const fresh = getFreshness(lastVerified, now);
-        return { state: 'unknown', label: "Pas d'info", tone: 'unknown', fresh: false, at: null, detail: fresh.label };
+        return { state: 'unknown', label: "Pas d'info", tone: 'unknown', fresh: false, at: null, age: fresh.label, detail: fresh.label };
     }
     const info = MACHINE_LABELS[best.state];
     return {
@@ -651,6 +654,7 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
         tone: best.state,
         fresh: now - best.at < FRESH_MAX_AGE_MS,
         at: best.at,
+        age: timeAgo(best.at, now),
         detail: `${info.detail} ${timeAgo(best.at, now)}`
     };
 }
@@ -661,9 +665,13 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
 //   machine   : resultat de resolveMachineStatus (ou null)
 // Une machine vide / en panne plus recente que le signal du produit l'emporte :
 // on ne peut rien acheter dans une machine vide. Retour : { label, tone, fresh, detail }.
+// detail = la ligne d'age de la carte, toujours remplie (EPIC-T10) ; la cause
+// « vide / en panne » est dite une seule fois, par le liseré (describeMachineNotice).
+export const NO_SIGNAL_DETAIL = 'aucun signal depuis 24 h';
+
 export function resolveProductStatus(product, signalRow, machine = null, now = Date.now()) {
     if (product && product.available === false) {
-        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: '' };
+        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'indiqué sur la fiche' };
     }
     const ts = rowTime(signalRow);
     const hasSignal = signalRow && (signalRow.state === 'available' || signalRow.state === 'absent') && isRecent(ts, now);
@@ -673,7 +681,7 @@ export function resolveProductStatus(product, signalRow, machine = null, now = D
             label: 'Pas dispo',
             tone: 'absent',
             fresh: machine.fresh,
-            detail: machine.state === 'empty' ? 'Machine vide' : 'Machine en panne'
+            detail: timeAgo(machine.at, now)
         };
     }
     if (hasSignal) {
@@ -684,7 +692,55 @@ export function resolveProductStatus(product, signalRow, machine = null, now = D
             detail: `vu ${timeAgo(ts, now)}`
         };
     }
-    return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: '' };
+    return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: NO_SIGNAL_DETAIL };
+}
+
+// Ordre des cartes produit (EPIC-T10) : Dispo, puis Pas d'info, puis Pas dispo.
+const PRODUCT_TONE_RANK = { available: 0, unknown: 1, absent: 2 };
+
+export function productToneRank(tone) {
+    return PRODUCT_TONE_RANK[tone] ?? 1;
+}
+
+// Liseré unique au-dessus des cartes quand le distributeur est vide ou en panne
+// (EPIC-T10) : la cause n'est plus repetee sur chaque carte. '' sinon.
+export function describeMachineNotice(machine) {
+    if (!machine || machine.at === null || machine.at === undefined) return '';
+    if (machine.state === 'empty') return `Distributeur signalé vide ${machine.age} : les produits sont probablement épuisés.`;
+    if (machine.state === 'broken') return `Distributeur signalé en panne ${machine.age}.`;
+    return '';
+}
+
+// Picto d'un produit d'apres son nom (EPIC-T10) : mots-cles sans accents ni
+// casse, au debut d'un mot, du plus precis au plus general (« pommes de terre »
+// avant « pomme »).
+// Aucun territoire en dur : des aliments courants ; 'generic' si rien ne colle.
+const PRODUCT_ICON_RULES = [
+    ['potato', ['pomme de terre', 'pommes de terre', 'patate']],
+    ['carrot', ['carotte']],
+    ['salad', ['salade', 'laitue', 'mache', 'epinard']],
+    ['basket', ['panier', 'legume', 'soupe']],
+    ['egg', ['oeuf', 'œuf']],
+    ['milk', ['lait', 'yaourt', 'yogourt', 'creme', 'beurre']],
+    ['pizza', ['pizza']],
+    ['cheese', ['fromage', 'tomme', 'brebis', 'chevre', 'comte']],
+    ['bread', ['pain', 'baguette', 'viennoiserie', 'croissant', 'brioche']],
+    ['meat', ['viande', 'boeuf', 'porc', 'agneau', 'veau', 'volaille', 'poulet', 'saucisse', 'jambon', 'charcuterie', 'terrine', 'burger']],
+    ['fish', ['poisson', 'thon', 'saumon', 'crevette']],
+    ['fruit', ['pomme', 'poire', 'fraise', 'cerise', 'fruit', 'kiwi', 'peche', 'abricot', 'prune', 'raisin']],
+    ['honey', ['miel', 'confiture']],
+    ['ice', ['glace', 'sorbet', 'esquimau']],
+    ['fries', ['frite']],
+    ['drink', ['jus', 'boisson', 'cidre', 'vin', 'biere', 'eau', 'soda', 'cafe', 'the ']],
+    ['meal', ['plat', 'repas', 'sandwich', 'wrap', 'lasagne']]
+];
+
+export function productIconKey(name) {
+    const n = ` ${normalizeName(name)} `;
+    for (const [key, words] of PRODUCT_ICON_RULES) {
+        if (words.some(w => n.includes(` ${w}`))) return key;
+    }
+    return 'generic';
 }
 
 // Fiche (EPIC-T4 / T5) : chaque information a une seule place.
@@ -745,8 +801,8 @@ export function describeReviewError(error, status = 0, online = true) {
     if (online === false || /failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
         return 'Pas de réseau : avis non publié';
     }
-    if (error?.code === '23505') return 'Tu as déjà donné ton avis sur cette machine : tu peux le modifier';
-    if (error?.code === '23503') return "Cette machine n'est pas encore sur le serveur : avis non publié";
+    if (error?.code === '23505') return 'Tu as déjà donné ton avis sur ce distributeur : tu peux le modifier';
+    if (error?.code === '23503') return "Ce distributeur n'est pas encore sur le serveur : avis non publié";
     if (error?.code === 'P0001') return "Trop d'avis depuis ce compte, réessaie dans une heure";
     if (error?.code === '42501' && /publier/i.test(message)) return "Ce compte ne peut plus publier d'avis";
     if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';

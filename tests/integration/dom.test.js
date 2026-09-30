@@ -494,11 +494,27 @@ describe('renderProductsList', () => {
         assert.equal(rows[0].querySelector('.product-pill').textContent, "Pas d'info");
         assert.ok(rows[0].classList.contains('is-unknown'));
         assert.equal(rows[1].querySelector('.product-pill').textContent, 'Pas dispo');
-        assert.equal(rows[1].querySelector('.product-seen').textContent, '');
+        assert.equal(rows[1].querySelector('.product-seen').textContent, 'indiqué sur la fiche');
+        // EPIC-T10 : ligne d'age toujours presente
+        assert.equal(rows[0].querySelector('.product-seen').textContent, 'aucun signal depuis 24 h');
         assert.ok(!/catalogue/i.test(document.getElementById('dist-products-list').textContent));
     });
 
-    it('lecture : la ligne est un bouton qui deplie « Il y en a / Plus rien », AUCUN prix', () => {
+    // EPIC-T10 : cartes teintees en grille, picto d'apres le nom
+    it('lecture : cartes en grille, un picto par produit, jamais « machine »', () => {
+        renderProductsList({ products: [{ id: 1, name: 'Carottes (1 kg)', available: true }, { id: 2, name: 'Truc inconnu', available: true }] }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
+        assert.ok(list.classList.contains('products-grid'));
+        assert.equal(list.querySelectorAll('.product-row .product-card-top .product-icon svg').length, 2);
+        assert.ok(!/machine/i.test(list.textContent));
+        renderProductsList({ products: [] }, 'dist-products-list', { canInform: true });
+        assert.ok(!list.classList.contains('products-grid'), 'pas de grille sans produit');
+        assert.match(list.textContent, /Aucun produit référencé/);
+        assert.match(list.textContent, /ce distributeur/);
+        assert.ok(!/machine/i.test(list.textContent));
+    });
+
+    it('lecture : la carte est un bouton qui deplie « Dispo / Pas dispo », AUCUN prix', () => {
         renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
@@ -509,6 +525,7 @@ describe('renderProductsList', () => {
         const choices = list.querySelector('#product-choices-7');
         assert.ok(choices.hidden, 'choix replies par defaut');
         assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.dataset.state), ['available', 'absent']);
+        assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.textContent.trim()), ['Dispo', 'Pas dispo']);
         assert.ok(list.querySelector('.product-name-clean').textContent.includes('Test'));
     });
 

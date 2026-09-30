@@ -1,23 +1,23 @@
 /**
- * DistriMatch - Signaux de disponibilite, sur la fiche (UC11, EPIC-T2)
+ * DistriMatch - Signaux de disponibilite, sur la fiche (UC11, EPIC-T2 / T10)
  *
- * Chantier 2 de docs/STRATEGIE.md : devant la machine, un client dit ce qu'il
- * reste, produit par produit, ou si la machine fonctionne, est vide ou en panne.
- * Depuis EPIC-T2 (2026-09-25) plus de fenetre a part : on touche l'aliment dans
- * la liste « Il reste quoi ? » (« Il y en a » / « Plus rien »), ou la puce a
- * droite du nom pour l'etat de la machine. Un tap = un signal.
+ * Chantier 2 de docs/STRATEGIE.md : devant le distributeur, un membre dit ce
+ * qu'il reste, produit par produit, ou s'il est en service, vide ou en panne.
+ * Fiche v3 (EPIC-T10) : l'etat tient en une petite ligne sous le nom (mini-feu
+ * + mot + age, « Mettre à jour » deplie les trois etats) ; les produits sont des
+ * cartes teintees triees Dispo -> Pas d'info -> Pas dispo ; toucher une carte
+ * deplie « Dispo / Pas dispo » (deja deplie si l'info a plus de 2 h ou n'existe
+ * pas). Un tap = un signal.
  *
- * Contribution ANONYME (exception assumee, cf. CLAUDE.md UC11) : un horodatage
- * a poids reduit, limite par appareil et par heure cote serveur (migrations 007,
- * 011, 012 : RPC confirm_availability, correction possible dans l'heure). Ce
- * module ne bloque jamais l'init : lecture en fire-and-forget, envoi sur clic.
+ * Signal = privilege de compte (EPIC-T5 / T6, migration 014). Ce module ne
+ * bloque jamais l'init : lecture en fire-and-forget, envoi sur clic.
  */
 
 import { AppState, supabaseClient } from './state.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
-    describeFicheHero
+    describeFicheHero, describeMachineNotice, productToneRank
 } from './utils.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
@@ -73,49 +73,61 @@ function isNewer(a, b) {
     return new Date(a.created_at).getTime() > new Date(b.created_at).getTime();
 }
 
-// Met a jour la puce machine, la ligne de provenance sous le nom, le rythme
-// et le statut de chaque produit. Idempotent : un re-rendu de la liste des
-// produits peut le rappeler sans doublon.
+// Met a jour la ligne d'etat sous le nom, le liseré, le rythme et chaque carte
+// produit (teinte, etiquette, age, ordre). Idempotent : un re-rendu de la liste
+// des produits peut le rappeler sans doublon.
 export function renderFicheStatus() {
     const distributor = AppState.currentDistributor;
     if (!distributor) return;
     const machine = resolveMachineStatus(loaded.status, Object.values(loaded.products), distributor.lastVerified);
 
-    // Boutons d'etat (connecte) : l'etat actuel est colore
+    // Choix d'etat (connecte, derriere « Mettre à jour ») : l'etat actuel est marque
     document.querySelectorAll('#dist-machine-choices .machine-choice').forEach(btn => {
         const current = btn.dataset.machine === machine.state;
         btn.classList.toggle('is-current', current);
         btn.setAttribute('aria-pressed', String(current));
     });
+
+    // Ligne d'etat (EPIC-T10) : mini-feu + mot + age, adoucie au-dela de 2 h
+    const statusLine = document.getElementById('dist-status');
+    if (statusLine) {
+        statusLine.dataset.state = machine.state;
+        statusLine.classList.toggle('is-soft', machine.state !== 'unknown' && !machine.fresh);
+    }
+    const word = document.getElementById('dist-status-word');
+    if (word) word.textContent = machine.label;
     const detail = document.getElementById('dist-modal-verified');
     if (detail) {
-        detail.textContent = machine.detail;
-        // Sans etat machine : la ligne « Vérifié il y a X » garde sa regle
-        // (vert < 2 h, italique si jamais verifie).
-        const tone = machine.state === 'unknown'
-            ? getFreshness(distributor.lastVerified).state
-            : `${machine.tone}${machine.fresh ? ' is-fresh' : ''}`;
-        detail.className = `dist-modal-verified is-${tone}`;
+        // Etat connu : « il y a 12 min » ; sinon « Vérifié il y a X » /
+        // « Pas encore vérifié » (regle de fraicheur de la fiche). Le « · » est en CSS.
+        detail.textContent = machine.age;
+        const tone = machine.state === 'unknown' ? getFreshness(distributor.lastVerified).state : machine.tone;
+        detail.className = `dist-modal-verified is-${tone}${machine.fresh ? ' is-fresh' : ''}`;
     }
 
-    // Bandeau d'etat (EPIC-T4) : couleur de l'etat, info cle en tres grand
+    // Liseré unique quand le distributeur est vide / en panne (plus repete par carte)
+    const notice = document.getElementById('dist-products-notice');
+    if (notice) {
+        const text = AppState.modalEditMode || !(distributor.products || []).length ? '' : describeMachineNotice(machine);
+        notice.textContent = text;
+        notice.hidden = !text;
+        notice.className = `products-notice is-${machine.state}`;
+    }
+
     const statuses = (distributor.products || []).map(p => resolveProductStatus(p, loaded.products[p.id], machine));
     const hero = describeFicheHero(machine, statuses);
-    const heroEl = document.getElementById('dist-hero');
-    if (heroEl) {
-        heroEl.classList.remove('is-working', 'is-empty', 'is-broken', 'is-unknown');
-        heroEl.classList.add(`is-${hero.tone}`);
-    }
-    const kpi = document.getElementById('dist-hero-kpi');
-    if (kpi) kpi.textContent = hero.kpi;
     const count = document.getElementById('dist-products-count');
     if (count) count.textContent = hero.count ? `· ${hero.count}` : '';
 
-    document.querySelectorAll('#dist-products-list .product-row[data-product-id]').forEach(row => {
+    const list = document.getElementById('dist-products-list');
+    const rows = Array.from(document.querySelectorAll('#dist-products-list .product-row[data-product-id]'));
+    const ranked = [];
+    rows.forEach((row, index) => {
         const product = (distributor.products || []).find(p => String(p.id) === row.dataset.productId);
         const status = resolveProductStatus(product, loaded.products[row.dataset.productId], machine);
-        row.classList.remove('is-available', 'is-absent', 'is-unknown');
+        row.classList.remove('is-available', 'is-absent', 'is-unknown', 'is-soft');
         row.classList.add(`is-${status.tone}`);
+        if (status.tone !== 'unknown' && !status.fresh) row.classList.add('is-soft');
         const pill = row.querySelector('.product-pill');
         if (pill) {
             pill.textContent = status.label;
@@ -123,14 +135,24 @@ export function renderFicheStatus() {
         }
         const seen = row.querySelector('.product-seen');
         if (seen) seen.textContent = status.detail;
+        // Info ancienne (> 2 h) ou absente : les deux boutons sont deja visibles
+        row.classList.toggle('needs-check', !status.fresh);
+        syncChoices(row);
+        ranked.push({ row, rank: productToneRank(status.tone), index: Number(row.dataset.index ?? index) });
     });
+    // Ordre des cartes : Dispo, puis Pas d'info, puis Pas dispo (stable)
+    if (list && !AppState.modalEditMode) {
+        ranked.sort((a, b) => a.rank - b.rank || a.index - b.index)
+            .forEach(({ row }) => list.appendChild(row));
+    }
 
     // En-tete « Il reste quoi ? » : seulement en lecture ; la consigne seulement
     // s'il y a au moins un produit qu'on peut signaler.
     const head = document.getElementById('dist-products-head');
     if (head) head.hidden = !!AppState.modalEditMode;
     const hint = document.getElementById('dist-products-hint');
-    if (hint) hint.hidden = !document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
+    // (inutile quand toutes les cartes montrent deja « Dispo / Pas dispo »)
+    if (hint) hint.hidden = !document.querySelector('#dist-products-list .product-row:not(.needs-check) button.product-row-main');
 
     // Rythme infere (couche 2) : une phrase seulement quand les signaux la justifient.
     const rhythmEl = document.getElementById('dist-modal-rhythm');
@@ -145,22 +167,57 @@ export function renderFicheStatus() {
 // SIGNALER : toucher un aliment, ou la puce machine
 // ============================================
 
-function collapseAll(except = null) {
-    document.querySelectorAll('#dist-products-list .product-row-main[aria-expanded="true"]').forEach(btn => {
-        if (btn === except) return;
-        btn.setAttribute('aria-expanded', 'false');
-        const choices = btn.parentElement?.querySelector('.product-choices');
-        if (choices) choices.hidden = true;
+// Boutons « Dispo / Pas dispo » d'une carte : visibles si le membre l'a depliee
+// (data-open, toucher) ou si son info a plus de 2 h / n'existe pas (needs-check).
+function syncChoices(row) {
+    const btn = row.querySelector('button.product-row-main');
+    const choices = row.querySelector('.product-choices');
+    if (!btn || !choices) return;
+    const open = row.dataset.open === '1' || row.classList.contains('needs-check');
+    choices.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+}
+
+function collapseAll(exceptRow = null) {
+    document.querySelectorAll('#dist-products-list .product-row[data-open="1"]').forEach(row => {
+        if (row === exceptRow) return;
+        delete row.dataset.open;
+        syncChoices(row);
     });
+    collapseMachineChoices();
 }
 
 function toggleProductRow(btn) {
-    const open = btn.getAttribute('aria-expanded') !== 'true';
-    collapseAll(btn);
-    btn.setAttribute('aria-expanded', String(open));
-    const choices = btn.parentElement?.querySelector('.product-choices');
-    if (choices) choices.hidden = !open;
-    if (open) choices?.querySelector('.product-choice')?.focus();
+    const row = btn.closest('.product-row');
+    if (!row) return;
+    if (row.classList.contains('needs-check')) {
+        row.querySelector('.product-choice')?.focus();
+        return;
+    }
+    const open = row.dataset.open !== '1';
+    collapseAll(row);
+    if (open) row.dataset.open = '1';
+    else delete row.dataset.open;
+    syncChoices(row);
+    if (open) row.querySelector('.product-choice')?.focus();
+}
+
+// « Mettre à jour » (connecte) deplie / replie les trois etats du distributeur
+function setMachineChoicesOpen(open) {
+    const toggle = document.getElementById('dist-status-update');
+    const choices = document.getElementById('dist-machine-choices');
+    if (!toggle || !choices) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    choices.hidden = !open;
+}
+
+function collapseMachineChoices() {
+    setMachineChoicesOpen(false);
+}
+
+export function openMachineChoices() {
+    setMachineChoicesOpen(true);
+    document.querySelector('#dist-machine-choices .machine-choice')?.focus();
 }
 
 // Listeners poses une seule fois : la liste est re-rendue a chaque ouverture
@@ -195,6 +252,16 @@ export function initFicheSignals() {
             if (choice) sendSignal({ machine: choice.dataset.machine });
         });
     }
+
+    const toggle = document.getElementById('dist-status-update');
+    if (toggle && !toggle.dataset.signalsWired) {
+        toggle.dataset.signalsWired = '1';
+        toggle.addEventListener('click', () => {
+            const open = toggle.getAttribute('aria-expanded') !== 'true';
+            if (open) openMachineChoices();
+            else collapseMachineChoices();
+        });
+    }
 }
 
 function pulse(el) {
@@ -204,9 +271,9 @@ function pulse(el) {
     el.classList.add('is-highlighted');
 }
 
-// QR colle sur la machine (&confirm=1). Visiteur : l'encadre de connexion mis
-// en avant (informer est un privilege de compte, EPIC-T5). Connecte : la liste
-// « Il reste quoi ? », ou les boutons d'etat si la machine n'a pas de produit.
+// QR colle sur le distributeur (&confirm=1). Visiteur : l'encadre de connexion
+// mis en avant (informer est un privilege de compte, EPIC-T5). Connecte : la
+// liste « Il reste quoi ? », ou les trois etats (deplies) s'il n'a pas de produit.
 export function focusSignalFromQr() {
     if (!isAuthenticated()) {
         const invite = document.getElementById('dist-login-invite');
@@ -214,8 +281,9 @@ export function focusSignalFromQr() {
         pulse(invite);
         return;
     }
-    const signalable = document.querySelector('#dist-products-list .product-row-main[aria-expanded]');
+    const signalable = document.querySelector('#dist-products-list button.product-row-main');
     if (!signalable) {
+        openMachineChoices();
         const machineChoices = document.getElementById('dist-machine-choices');
         machineChoices?.scrollIntoView({ block: 'center' });
         pulse(machineChoices);
