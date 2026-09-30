@@ -169,9 +169,8 @@ button.card:hover { border-color: #D1D5DB; }
 
 .card .hint { font-size: 12.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
 .still { display: grid; gap: 6px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
-.still span { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
 .still .btns { display: flex; gap: 6px; }
-.still .yn { flex: 1; }
+.still .yn { flex: 1; min-width: 0; padding: 0 2px; font-size: 13px; font-weight: 600; font-family: inherit; white-space: nowrap; }
 .yn {
   min-width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
@@ -309,7 +308,7 @@ button.card:hover { border-color: #D1D5DB; }
       <fieldset>
         <legend>État machine</legend>
         <div class="opts">
-          <label><input type="radio" name="machine" value="working" checked> Fonctionne</label>
+          <label><input type="radio" name="machine" value="working" checked> En service</label>
           <label><input type="radio" name="machine" value="empty"> Vide</label>
           <label><input type="radio" name="machine" value="broken"> En panne</label>
           <label><input type="radio" name="machine" value="none"> Pas d'info</label>
@@ -375,11 +374,13 @@ button.card:hover { border-color: #D1D5DB; }
       </span>
       <div class="invite-text">
         <h3 id="invite-t">Tu es devant la machine ?</h3>
-        <p>Connecte-toi pour dire si elle marche et ce qu'il reste.</p>
+        <p>Connecte-toi pour signaler ce qu'il reste, donner ton avis et ajouter des photos.</p>
       </div>
       <div class="invite-preview" aria-label="Ce que tu pourras signaler">
-        <span class="invite-chip"><span class="feu" aria-hidden="true"><i></i><i></i><i></i></span>État de la machine</span>
-        <span class="invite-chip"><b class="y">✓</b> Il y en a <b class="n">✗</b> Plus rien</span>
+        <span class="invite-chip"><span class="feu" aria-hidden="true"><i></i><i></i><i></i></span>État</span>
+        <span class="invite-chip">Dispo / Pas dispo</span>
+        <span class="invite-chip">Avis</span>
+        <span class="invite-chip">Photos</span>
       </div>
       <button class="btn btn-brand" id="login">Se connecter</button>
     </div>
@@ -480,7 +481,7 @@ button.card:hover { border-color: #D1D5DB; }
     none:    { machine: { state: 'none', age: 5760 },  products: { p1: null, p2: null, p3: null, p4: null } }
   };
 
-  var MACHINE_WORD = { working: 'Fonctionne', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
+  var MACHINE_WORD = { working: 'En service', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
   var state = { machineKey: 'working', mode: 'visitor', fiche: 'products', fav: false, machine: null, signals: null };
 
   function $(id) { return document.getElementById(id); }
@@ -564,10 +565,10 @@ button.card:hover { border-color: #D1D5DB; }
     }
     var still = '';
     if (member) {
-      var q = r.status === 'in' ? 'Toujours là ?' : 'Il y en a ?';
-      still = '<div class="still"><span>' + q + '</span><span class="btns">'
-        + '<button class="yn yes" data-sig="in" data-id="' + p.id + '" aria-label="Il y en a : ' + esc(p.name) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></button>'
-        + '<button class="yn no" data-sig="out" data-id="' + p.id + '" aria-label="Plus rien : ' + esc(p.name) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>'
+      // Info ancienne ou absente : on signale d'un tap avec les memes mots que l'affichage
+      still = '<div class="still"><span class="btns">'
+        + '<button class="yn yes" data-sig="in" data-id="' + p.id + '" aria-label="Signaler ' + esc(p.name) + ' : Dispo">Dispo</button>'
+        + '<button class="yn no" data-sig="out" data-id="' + p.id + '" aria-label="Signaler ' + esc(p.name) + ' : Pas dispo">Pas dispo</button>'
         + '</span></div>';
     }
     return '<div class="' + cls + '" data-card="' + p.id + '">' + head + '<div class="body">' + body + still + '</div></div>';
@@ -657,8 +658,8 @@ button.card:hover { border-color: #D1D5DB; }
     var r = resolveProduct(p);
     var now = r.status === 'in' ? 'Dispo' : r.status === 'out' ? 'Pas dispo' : "Pas d'info";
     openSheet(p.name, 'Actuellement : ' + now + (r.age !== null ? ' · ' + formatAge(r.age) : '') + '. Qu\'est-ce que tu vois ?',
-      '<button class="choice" data-psig="in" data-id="' + id + '"><i style="background:var(--ok)"></i>Il y en a</button>'
-      + '<button class="choice" data-psig="out" data-id="' + id + '"><i style="background:#9CA3AF"></i>Plus rien</button>', 'two');
+      '<button class="choice" data-psig="in" data-id="' + id + '"><i style="background:var(--ok)"></i>Dispo</button>'
+      + '<button class="choice" data-psig="out" data-id="' + id + '"><i style="background:#9CA3AF"></i>Pas dispo</button>', 'two');
   }
 
   function openMachineSheet() {
