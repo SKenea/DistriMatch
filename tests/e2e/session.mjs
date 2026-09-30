@@ -64,14 +64,22 @@ export async function openTestSession() {
     return { uid: session.user.id, session };
 }
 
-// Purge les signaux du compte de test et supprime ses sessions.
+// Purge les signaux et les avis du compte de test et supprime ses sessions.
 export async function closeTestSession() {
     const rows = await sql(`
         with u as (select id from auth.users where email = '${TEST_EMAIL}' and raw_app_meta_data->>'e2e' = 'true'),
              purge as (select purge_user_signals((select id from u), false, null) as r),
+             avis as (select purge_user_reviews((select id from u)) as n),
              del as (delete from auth.sessions where user_id = (select id from u) returning 1)
-        select (select r from purge) as purge, (select count(*) from del) as sessions_supprimees;`);
+        select (select r from purge) as purge, (select n from avis) as avis_supprimes, (select count(*) from del) as sessions_supprimees;`);
     return rows[0];
+}
+
+// Avis du compte de test sur une fiche (verification apres le parcours).
+export async function testAccountReviews(distributorId) {
+    return sql(`select r.rating, r.body, r.author_name from reviews r
+                join auth.users u on u.id = r.user_id
+                where u.email = '${TEST_EMAIL}' and r.distributor_id = '${distributorId}'`);
 }
 
 // Signaux du compte de test sur une fiche (verification apres le parcours).

@@ -184,6 +184,107 @@ describe('base : fiches (010, 013)', { skip: SKIP }, () => {
     });
 });
 
+describe('base : avis (016)', { skip: SKIP }, () => {
+    const insertReview = (rating = 4, body = "'itest avis'") =>
+        `insert into reviews (distributor_id, rating, body) values ('${DEMO}', ${rating}, ${body})`;
+
+    it('sans compte : impossible de deposer un avis', async () => {
+        const p = await probe(`${AS_ANON} ${insertReview()}`);
+        assert.equal(p.reachedEnd, false);
+        assert.equal(p.code, '42501');
+    });
+
+    it('avec un compte : avis depose, auteur et compte forces par la base', async () => {
+        const p = await probe(`${AS_USER} ${insertReview()};
+            select json_build_object('auteur', author_name, 'moi', user_id = auth.uid())::text into r
+              from reviews where distributor_id = '${DEMO}' and user_id = auth.uid()`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.deepEqual(JSON.parse(p.result), { auteur: 'Membre DistriMatch', moi: true });
+    });
+
+    it('un seul avis par compte et par machine (23505)', async () => {
+        const p = await probe(`${AS_USER} ${insertReview()}; ${insertReview(5)}`);
+        assert.equal(p.code, '23505');
+    });
+
+    it('on modifie et supprime son avis, jamais celui d\u2019un autre', async () => {
+        const p = await probe(`${AS_USER} ${insertReview(2)};
+            update reviews set rating = 5 where distributor_id = '${DEMO}' and user_id = auth.uid();
+            update reviews set rating = 1 where distributor_id = '${DEMO}' and user_id is null;
+            get diagnostics v_n = row_count;
+            r := json_build_object(
+                'mien', (select rating from reviews where distributor_id = '${DEMO}' and user_id = auth.uid()),
+                'autres_modifies', v_n
+            )::text;
+            delete from reviews where distributor_id = '${DEMO}' and user_id is null;
+            get diagnostics v_n = row_count;
+            r := (r::jsonb || jsonb_build_object('autres_supprimes', v_n))::text`, 'v_n int;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.deepEqual(JSON.parse(p.result), { mien: 5, autres_modifies: 0, autres_supprimes: 0 });
+    });
+
+    it('on ne choisit ni l\u2019auteur ni le compte (droits par colonne)', async () => {
+        const p = await probe(`${AS_USER} insert into reviews (distributor_id, rating, author_name) values ('${DEMO}', 5, 'Faux nom')`);
+        assert.equal(p.code, '42501');
+    });
+
+    it('note hors bornes ou commentaire de plus de 500 caracteres : refuses (23514)', async () => {
+        assert.equal((await probe(`${AS_USER} ${insertReview(6)}`)).code, '23514');
+        assert.equal((await probe(`${AS_USER} ${insertReview(4, "repeat('a', 501)")}`)).code, '23514');
+    });
+
+    it('11e avis dans l\u2019heure pour un compte : refuse (P0001)', async () => {
+        const p = await probe(`
+            insert into reviews (distributor_id, user_id, rating)
+            select id, ${USER}, 4 from distributors where is_demo and id <> '${DEMO}' order by id limit 10;
+            ${AS_USER} ${insertReview()}`);
+        assert.equal(p.code, 'P0001');
+        assert.match(p.message, /ce compte/);
+    });
+
+    it('compte bloque : refuse (42501)', async () => {
+        const p = await probe(`insert into signal_bans (user_id, reason) values (${USER}, 'itest'); ${AS_USER} ${insertReview()}`);
+        assert.equal(p.code, '42501');
+        assert.match(p.message, /publier/);
+    });
+
+    it('la note affichee vient des avis (vue lisible par un visiteur)', async () => {
+        const p = await probe(`${AS_ANON}
+            select json_build_object('avis', avis, 'moyenne', moyenne)::text into r
+              from distributor_ratings where distributor_id = '${DEMO}'`);
+        assert.ok(p.reachedEnd, p.message);
+        const res = JSON.parse(p.result);
+        assert.ok(res.avis > 0);
+        assert.ok(res.moyenne >= 1 && res.moyenne <= 5);
+    });
+
+    it('demo : chaque fiche de demo a ses avis annonces, aucune fiche reelle n\u2019a d\u2019avis de demo', async () => {
+        const [r] = await query(`select
+            count(*) filter (where coalesce(x.avis, 0) <> d.review_count) as ecarts,
+            count(*) filter (where x.avis > 0 and abs(x.moyenne - d.rating) > 0.1) as moyennes_hors,
+            (select count(*) from reviews rv join distributors f on f.id = rv.distributor_id where not f.is_demo and rv.user_id is null) as demo_sur_reel
+            from distributors d left join distributor_ratings x on x.distributor_id = d.id
+            where d.is_demo and d.review_count > 0 and d.rating >= 1`);
+        assert.deepEqual(r, { ecarts: 0, moyennes_hors: 0, demo_sur_reel: 0 });
+    });
+
+    it('purge_user_reviews efface les avis du compte', async () => {
+        const p = await probe(`
+            insert into reviews (distributor_id, user_id, rating) values ('${DEMO}', ${USER}, 3);
+            r := purge_user_reviews(${USER})::text`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.ok(Number(p.result) >= 1);
+    });
+
+    it('fonctions d\u2019admin des avis : jamais appelables par l\u2019API', async () => {
+        const [r] = await query(`select
+            has_function_privilege('authenticated', 'public.purge_user_reviews(uuid)', 'execute') as auth_purge,
+            has_function_privilege('anon', 'public.seed_demo_reviews()', 'execute') as anon_seed,
+            has_function_privilege('authenticated', 'public.seed_demo_reviews()', 'execute') as auth_seed`);
+        assert.deepEqual(r, { auth_purge: false, anon_seed: false, auth_seed: false });
+    });
+});
+
 describe('base : lectures anonymes', { skip: SKIP }, () => {
     it('un visiteur lit les fiches, les produits et les vues de signaux', async () => {
         const p = await probe(`${AS_ANON}
@@ -206,7 +307,8 @@ describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
         const [r] = await query(`select
             (select count(*) from availability_signals where device_hash like 'itest-%') as signaux,
             (select count(*) from distributors where id like 'itest-%') as fiches,
-            (select count(*) from signal_bans where reason = 'itest') as bans`);
-        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0 });
+            (select count(*) from signal_bans where reason = 'itest') as bans,
+            (select count(*) from reviews where body = 'itest avis') as avis`);
+        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0 });
     });
 });

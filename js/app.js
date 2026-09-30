@@ -109,13 +109,25 @@ function initSupabase() {
 async function loadDistributorsFromSupabase() {
     if (!supabaseClient) return null;
     try {
-        const { data, error } = await supabaseClient
-            .from('distributors')
-            .select('*, products(id, name, price, available)');
+        const [{ data, error }, ratingsRes] = await Promise.all([
+            supabaseClient.from('distributors').select('*, products(id, name, price, available)'),
+            supabaseClient.from('distributor_ratings').select('distributor_id, avis, moyenne')
+        ]);
         if (error) throw error;
         if (!data || data.length === 0) return null;
 
-        return data.map(mapDistributorRow);
+        const distributors = data.map(mapDistributorRow);
+        // EPIC-T8 : la note affichee vient des vrais avis (vue distributor_ratings,
+        // migration 016). Vue indisponible : on garde les colonnes de la fiche.
+        if (!ratingsRes.error && Array.isArray(ratingsRes.data)) {
+            const ratings = new Map(ratingsRes.data.map(r => [r.distributor_id, r]));
+            for (const d of distributors) {
+                const r = ratings.get(d.id);
+                d.reviewCount = r ? Number(r.avis) || 0 : 0;
+                d.rating = r ? Number(r.moyenne) || 0 : 0;
+            }
+        }
+        return distributors;
     } catch (e) {
         console.warn('[DistriMatch] Erreur chargement Supabase:', e.message);
         return null;

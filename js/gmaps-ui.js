@@ -4,7 +4,7 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, generateStars, calculateDistance, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
+import { escapeHTML, formatDistance, calculateDistance, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
 import { uploadDistributorPhotos } from './add-distributor.js';
 import { openConversation } from './chat.js';
@@ -14,6 +14,7 @@ import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
 import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
+import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -220,6 +221,7 @@ export function initDistModal() {
     // « Il reste quoi ? » se dit sur les aliments et les boutons d'etat de la
     // machine (EPIC-T2), reserves aux comptes connectes (EPIC-T5)
     initFicheSignals();
+    initReviews();
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
 
@@ -394,22 +396,9 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Fiche fictive (distributors.is_demo, migration 010) : tag « Démo », frere du h2
     const demoTag = document.getElementById('dist-modal-demo');
     if (demoTag) demoTag.hidden = !distributor.isDemo;
-    // Rating : on n'affiche pas "5.0 ★★★★★ (0)" quand il n'y a aucun
-    // avis, c'est trompeur (les user-added partent a 5.0 par defaut). A
-    // la place : "Pas encore d'avis" explicite.
-    const ratingEl = document.getElementById('dist-modal-rating');
-    const reviewsEl = document.getElementById('dist-modal-reviews');
-    if ((distributor.reviewCount || 0) > 0) {
-        ratingEl.textContent = `${(distributor.rating || 0).toFixed(1)} ${generateStars(distributor.rating || 0)}`;
-        ratingEl.classList.remove('no-reviews');
-        reviewsEl.textContent = `(${distributor.reviewCount})`;
-        reviewsEl.style.display = '';
-    } else {
-        ratingEl.textContent = 'Pas encore d\'avis';
-        ratingEl.classList.add('no-reviews');
-        reviewsEl.textContent = '';
-        reviewsEl.style.display = 'none';
-    }
+    // Note : calculee depuis les vrais avis (EPIC-T8, vue distributor_ratings) ;
+    // sans avis, « Pas encore d'avis » explicite plutot qu'un « 5.0 (0) » trompeur.
+    renderRatingHeader(distributor);
     document.getElementById('dist-modal-type').textContent = `${distributor.emoji} ${typeConfig.label || distributor.type}`;
     // Fraicheur : age de la derniere verification, toujours affiche
     // (docs/STRATEGIE.md : la confiance = l'horodatage, jamais un vert perime).
@@ -442,6 +431,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Signaux de dispo (UC11) : "vu dispo il y a X" par produit + bandeau
     // machine. Fire-and-forget, jamais await : Supabase absent = rien.
     loadAvailabilityForDistributor(distributor.id);
+    // Avis (EPIC-T8) : liste + mon avis, fire-and-forget
+    if (!editMode) loadReviewsForDistributor(distributor);
 
     // En mode edit, afficher la section "+ Ajouter produit" + "Discuter"
     const addSection = document.getElementById('dist-products-add-section');
@@ -693,6 +684,7 @@ export function refreshFicheForAuth() {
     }
     applyFicheAuthState();
     renderFicheStatus();
+    refreshReviewsForAuth();
 }
 
 // Photos de la fiche : fond du bandeau d'etat (1re photo) + galerie « À propos ».

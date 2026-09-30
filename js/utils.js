@@ -666,6 +666,58 @@ export function describeFicheHero(machine, statuses = []) {
     return { tone, kpi, count: `${dispo} sur ${statuses.length} dispo` };
 }
 
+// ============================================
+// AVIS (EPIC-T8)
+// ============================================
+
+export const REVIEW_BODY_MAX = 500;
+
+// Libelle de la note d'une machine, calcule depuis les vrais avis (vue
+// distributor_ratings). Retour : { hasReviews, score, stars, count, label }.
+//   describeRating(12, 4.58) -> { hasReviews: true, score: '4.6', stars: '★★★★½', count: '(12)', label: '4.6 ★★★★½ (12)' }
+//   describeRating(0, null)  -> { hasReviews: false, ..., label: "Pas encore d'avis" }
+export function describeRating(avis, moyenne) {
+    const n = Number(avis) || 0;
+    const m = Number(moyenne);
+    if (n <= 0 || !Number.isFinite(m) || m <= 0) {
+        return { hasReviews: false, score: '', stars: '', count: '', label: "Pas encore d'avis" };
+    }
+    const rounded = Math.round(m * 10) / 10;
+    const score = rounded.toFixed(1);
+    const stars = generateStars(rounded);
+    const count = `(${n})`;
+    return { hasReviews: true, score, stars, count, label: `${score} ${stars} ${count}` };
+}
+
+// Validation d'un avis avant envoi (la base revalide) : note entiere 1..5,
+// commentaire facultatif de REVIEW_BODY_MAX caracteres au plus (espaces retires,
+// vide -> null). Retour : { ok, error, value: { rating, body } }.
+export function validateReview({ rating, body } = {}) {
+    const r = Number(rating);
+    if (!Number.isInteger(r) || r < 1 || r > 5) {
+        return { ok: false, error: 'Choisis une note de 1 à 5 étoiles', value: null };
+    }
+    const text = typeof body === 'string' ? body.trim() : '';
+    if (text.length > REVIEW_BODY_MAX) {
+        return { ok: false, error: `Ton commentaire dépasse ${REVIEW_BODY_MAX} caractères`, value: null };
+    }
+    return { ok: true, error: null, value: { rating: r, body: text || null } };
+}
+
+// Message d'un avis refuse par la base (migration 016), qui dit la raison.
+export function describeReviewError(error, status = 0, online = true) {
+    const message = String(error?.message || error || '');
+    if (online === false || /failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
+        return 'Pas de réseau : avis non publié';
+    }
+    if (error?.code === '23505') return 'Tu as déjà donné ton avis sur cette machine : tu peux le modifier';
+    if (error?.code === 'P0001') return "Trop d'avis depuis ce compte, réessaie dans une heure";
+    if (error?.code === '42501' && /publier/i.test(message)) return "Ce compte ne peut plus publier d'avis";
+    if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';
+    if (error?.code === '23514') return 'Avis invalide : note de 1 à 5, 500 caractères au plus';
+    return `Avis non publié, réessaie plus tard (code ${error?.code || status || '?'})`;
+}
+
 // Ligne Supabase (snake_case, produits imbriques) -> distributeur de l'app
 // (camelCase). isDemo vient de distributors.is_demo (migration 010) : true
 // = fiche du jeu de donnees factice ; absent (migration pas encore passee)
