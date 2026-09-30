@@ -24,10 +24,11 @@ Constat : « comment je depose un avis ? » -> impossible ; l'onglet Avis dit «
 le premier a partager ton experience » sans bouton, et la note des fiches de demo
 est inventee (colonnes rating / review_count, aucun avis derriere).
 Reformulation validee le 2026-09-30, avec les avis de demo (absorbe US-1).
+Livre le 2026-09-30 : migration 016 executee, 2 635 avis de demo sur 25 fiches (4 fiches demo a 0 avis).
 Hors perimetre : moderation avis par avis, reponses du proprietaire, photos dans
 les avis, pseudo choisi par l'utilisateur.
 
-- [ ] T8-US1 Lire les avis
+- [x] T8-US1 Lire les avis
   - En tant que client, je veux lire les avis d'une machine et sa note reelle, afin
     de savoir si elle vaut le detour.
   - Acceptance : onglet Avis du plus recent au plus ancien (auteur, etoiles,
@@ -35,7 +36,7 @@ les avis, pseudo choisi par l'utilisateur.
     d'avis en tete (fiche, liste laterale, favoris) calcules depuis les avis
     reels (vue `distributor_ratings`) ; sans avis : « Pas encore d'avis ».
 
-- [ ] T8-US2 Deposer, modifier, supprimer son avis (compte connecte)
+- [x] T8-US2 Deposer, modifier, supprimer son avis (compte connecte)
   - En tant que connecte, je veux noter une machine (1 a 5) et ecrire un
     commentaire facultatif (500 caracteres max), afin d'aider les suivants.
   - Acceptance : un avis par compte et par machine ; etoiles en boutons >= 44 px ;
@@ -43,13 +44,13 @@ les avis, pseudo choisi par l'utilisateur.
     recharger ; auteur affiche « Membre DistriMatch » (jamais l'e-mail) ;
     visiteur : « Connecte-toi pour donner ton avis ».
 
-- [ ] T8-US3 Avis proteges contre l'abus
+- [x] T8-US3 Avis proteges contre l'abus
   - Acceptance : migration `016_reviews.sql` : RLS (ecriture seulement sur son
     propre avis), droits par colonne, 10 avis / heure / compte (P0001), comptes
     bloques refuses (42501, table `signal_bans` partagee), `purge_user_reviews`
     reservee a l'admin ; tests d'integration contre la vraie base.
 
-- [ ] T8-US4 Avis de demo realistes et identifiables (remplace US-1)
+- [x] T8-US4 Avis de demo realistes et identifiables (remplace US-1)
   - Acceptance : `seed_demo_reviews()` (admin) : chaque fiche `is_demo` recoit
     exactement `review_count` avis, moyenne a +/- 0,1 de `rating`, dates sur 18
     mois, textes courts selon le type de machine, `user_id` NULL (seul le seed

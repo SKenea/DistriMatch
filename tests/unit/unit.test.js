@@ -18,6 +18,7 @@ import {
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
+    describeRating, validateReview, describeReviewError,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
 
@@ -299,6 +300,53 @@ describe('describeSignalError / isBusinessSignalError (signal non envoye)', () =
         assert.equal(describeSignalError({ code: 'PGRST116', message: 'inattendu' }, 406), 'Signal non envoyé, réessaie plus tard (code PGRST116)');
         assert.equal(describeSignalError({ message: 'boom' }, 503), 'Signal non envoyé, réessaie plus tard (code 503)');
         assert.equal(describeSignalError(undefined), 'Signal non envoyé, réessaie plus tard (code ?)');
+    });
+});
+
+// EPIC-T8 : avis reels
+describe('describeRating (note affichee, depuis les vrais avis)', () => {
+    it('avec des avis : note arrondie au dixieme, etoiles, nombre', () => {
+        assert.deepEqual(describeRating(12, 4.58), { hasReviews: true, score: '4.6', stars: '★★★★½', count: '(12)', label: '4.6 ★★★★½ (12)' });
+        assert.equal(describeRating('91', '4.7').label, '4.7 ★★★★½ (91)');
+        assert.equal(describeRating(1, 5).label, '5.0 ★★★★★ (1)');
+    });
+
+    it('sans avis ou donnees absentes : « Pas encore d\'avis », jamais un « 5.0 (0) »', () => {
+        for (const [n, m] of [[0, 5], [0, null], [null, null], [3, null], [3, 0], [undefined, 'x']]) {
+            const r = describeRating(n, m);
+            assert.equal(r.hasReviews, false, `${n} / ${m}`);
+            assert.equal(r.label, "Pas encore d'avis");
+        }
+    });
+});
+
+describe('validateReview (avant envoi)', () => {
+    it('note entiere de 1 a 5, commentaire facultatif nettoye', () => {
+        assert.deepEqual(validateReview({ rating: 4, body: '  Super  ' }), { ok: true, error: null, value: { rating: 4, body: 'Super' } });
+        assert.deepEqual(validateReview({ rating: '5', body: '   ' }).value, { rating: 5, body: null });
+        assert.deepEqual(validateReview({ rating: 1 }).value, { rating: 1, body: null });
+    });
+
+    it('refuse une note absente ou hors bornes, et un commentaire trop long', () => {
+        for (const rating of [0, 6, 2.5, null, undefined, 'x']) {
+            assert.equal(validateReview({ rating, body: 'ok' }).ok, false, String(rating));
+        }
+        assert.equal(validateReview({ rating: 3, body: 'a'.repeat(500) }).ok, true);
+        const tooLong = validateReview({ rating: 3, body: 'a'.repeat(501) });
+        assert.equal(tooLong.ok, false);
+        assert.match(tooLong.error, /500/);
+    });
+});
+
+describe('describeReviewError (avis refuse, la raison)', () => {
+    it('chaque refus de la base a son message', () => {
+        assert.match(describeReviewError({ code: '23505' }, 409), /déjà donné ton avis/);
+        assert.equal(describeReviewError({ code: 'P0001' }, 400), "Trop d'avis depuis ce compte, réessaie dans une heure");
+        assert.equal(describeReviewError({ code: '42501', message: "Ce compte ne peut plus publier d'avis" }, 403), "Ce compte ne peut plus publier d'avis");
+        assert.equal(describeReviewError({ code: '28000' }, 403), 'Ta session a expiré : reconnecte-toi');
+        assert.equal(describeReviewError({ code: 'PGRST301' }, 401), 'Ta session a expiré : reconnecte-toi');
+        assert.equal(describeReviewError(new TypeError('Failed to fetch'), 0), 'Pas de réseau : avis non publié');
+        assert.equal(describeReviewError({ code: '42501', message: 'permission denied for table reviews' }, 403), 'Avis non publié, réessaie plus tard (code 42501)');
     });
 });
 

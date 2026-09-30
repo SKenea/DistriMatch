@@ -48,7 +48,23 @@ const html = `<!DOCTYPE html>
                     <button id="dist-open-chat"></button>
                 </div>
             </div>
-            <div class="dist-tab-pane" data-tab-pane="avis"></div>
+            <div class="dist-tab-pane" data-tab-pane="avis">
+                <div id="dist-review-mine" hidden>
+                    <h3 id="dist-review-mine-title">Donne ton avis</h3>
+                    <div id="dist-review-stars">
+                        <button class="review-star" data-rating="1"></button><button class="review-star" data-rating="2"></button><button class="review-star" data-rating="3"></button><button class="review-star" data-rating="4"></button><button class="review-star" data-rating="5"></button>
+                    </div>
+                    <textarea id="dist-review-body"></textarea>
+                    <span id="dist-review-chars"></span>
+                    <button id="dist-review-delete" hidden></button>
+                    <button id="dist-review-submit" disabled>Publier</button>
+                </div>
+                <div id="dist-review-invite" hidden><button id="dist-review-invite-btn"></button></div>
+                <p id="dist-reviews-summary" hidden></p>
+                <ul id="dist-reviews-list"></ul>
+                <p id="dist-reviews-empty" hidden></p>
+                <button id="dist-reviews-more" hidden></button>
+            </div>
             <div class="dist-tab-pane" data-tab-pane="apropos">
                 <span id="dist-apropos-address"></span>
                 <span id="dist-apropos-distance"></span>
@@ -192,6 +208,7 @@ const { updateUnreadCounts } = await import('../../js/chat.js');
 const { getUnreadCount, updateNotificationsBadge, openNotificationsView, deleteNotification, clearAllNotifications, promptAddProductFollow } = await import('../../js/notifications.js');
 const { NotificationQueue, setSupabaseClient } = await import('../../js/state.js');
 const { checkFavoriteUpdates } = await import('../../js/favorites-watch.js');
+const { renderRatingHeader, renderReviews, initReviews } = await import('../../js/reviews.js');
 const { activateFocusTrap, deactivateFocusTrap } = await import('../../js/focus-trap.js');
 const { buildStatsModel, renderStatsView, percent, formatPercent } = await import('../../js/stats.js');
 
@@ -351,6 +368,42 @@ describe('openDistributorModal', () => {
         assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
         openDistributorModal('dist-test', true, false);
         assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
+        window.__testLogout();
+    });
+});
+
+// EPIC-T8 : avis
+describe('Avis (onglet et note de la fiche)', () => {
+    beforeEach(() => {
+        window.__testLogout();
+        AppState.currentDistributor = { id: 'dist-avis', name: 'Avis test', rating: 4.58, reviewCount: 12, products: [] };
+    });
+
+    it('en-tete : note calculee et nombre d\u2019avis ; sans avis, « Pas encore d\u2019avis »', () => {
+        renderRatingHeader({ rating: 4.58, reviewCount: 12 });
+        assert.equal(document.getElementById('dist-modal-rating').textContent, '4.6 ★★★★½');
+        assert.equal(document.getElementById('dist-modal-reviews').textContent, '(12)');
+        renderRatingHeader({ rating: 5, reviewCount: 0 });
+        assert.equal(document.getElementById('dist-modal-rating').textContent, "Pas encore d'avis");
+        assert.equal(document.getElementById('dist-modal-reviews').style.display, 'none');
+    });
+
+    it('visiteur : invitation a se connecter, pas de formulaire', () => {
+        renderReviews();
+        assert.equal(document.getElementById('dist-review-invite').hidden, false);
+        assert.equal(document.getElementById('dist-review-mine').hidden, true);
+    });
+
+    it('connecte : formulaire ; Publier actif seulement avec une note', () => {
+        window.__testLogin();
+        initReviews();
+        renderReviews();
+        assert.equal(document.getElementById('dist-review-mine').hidden, false);
+        assert.equal(document.getElementById('dist-review-invite').hidden, true);
+        assert.equal(document.getElementById('dist-review-submit').disabled, true);
+        document.querySelector('#dist-review-stars .review-star[data-rating="4"]').click();
+        assert.equal(document.querySelectorAll('#dist-review-stars .review-star.is-on').length, 4);
+        assert.equal(document.getElementById('dist-review-submit').disabled, false);
         window.__testLogout();
     });
 });

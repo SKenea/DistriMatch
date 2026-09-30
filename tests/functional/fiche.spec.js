@@ -509,7 +509,9 @@ test.describe('24. Hierarchie de la fiche', () => {
                     // Libelle du type sans l'emoji, accents conserves, echappe pour la RegExp
                     const label = document.getElementById('dist-modal-type').textContent.replace(/^[^A-Za-zÀ-ÿ]+/, '').trim();
                     const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    return (document.getElementById('dist-modal').textContent.match(new RegExp(escaped, 'g')) || []).length;
+                    // Tete de fiche seulement (les avis d'un onglet peuvent citer le type)
+                    const head = [...document.querySelectorAll('#dist-hero, .dist-modal-header, .dist-modal-actions')].map(e => e.textContent).join(' ');
+                    return (head.match(new RegExp(escaped, 'g')) || []).length;
                 })()
             };
         });

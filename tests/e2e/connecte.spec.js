@@ -13,7 +13,7 @@
  */
 import { test, expect } from '@playwright/test';
 import {
-    canOpenTestSession, openTestSession, closeTestSession, testAccountSignals, STORAGE_KEY
+    canOpenTestSession, openTestSession, closeTestSession, testAccountSignals, testAccountReviews, STORAGE_KEY
 } from './session.mjs';
 
 const DEMO_ID = 'dist-007';
@@ -29,6 +29,7 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
     test.afterAll(async () => {
         await closeTestSession();
         expect(await testAccountSignals(DEMO_ID)).toEqual([]);   // rien ne reste en base
+        expect(await testAccountReviews(DEMO_ID)).toEqual([]);
     });
 
     async function openAsTestAccount(page, context) {
@@ -58,6 +59,24 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         await expect(page.locator('#dist-hero-kpi')).toHaveText('Fonctionne');
         const rows = await testAccountSignals(DEMO_ID);
         expect(rows.some(r => r.state === 'working' && r.source === 'user' && r.product_id === null)).toBe(true);
+    });
+
+    test('avis : le compte publie un avis, le voit, la base l\u2019enregistre, puis il le supprime', async ({ page, context }) => {
+        await openAsTestAccount(page, context);
+        await page.click('.dist-tab[data-tab="avis"]');
+        await expect(page.locator('#dist-review-mine')).toBeVisible({ timeout: 15000 });
+        await page.click('#dist-review-stars .review-star[data-rating="5"]');
+        await page.fill('#dist-review-body', 'Avis de test E2E, supprime aussitot.');
+        await page.click('#dist-review-submit');
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Merci pour ton avis', { timeout: 15000 });
+        await expect(page.locator('#dist-reviews-list .review-item.is-mine')).toContainText('Avis de test E2E');
+        const saved = await testAccountReviews(DEMO_ID);
+        expect(saved).toEqual([{ rating: 5, body: 'Avis de test E2E, supprime aussitot.', author_name: 'Membre DistriMatch' }]);
+
+        await page.click('#dist-review-delete');
+        await page.click('#confirm-ok');
+        await expect(page.locator('#toast-container .toast', { hasText: 'Avis supprimé' })).toBeVisible({ timeout: 15000 });
+        expect(await testAccountReviews(DEMO_ID)).toEqual([]);
     });
 
     test('« Il y en a » sur un aliment : enregistre en base, la ligne passe en « Dispo »', async ({ page, context }) => {

@@ -61,6 +61,31 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
         expect(await page.evaluate(() => typeof window.__testLogin)).toBe('undefined');      // pas d'acces de test en ligne
     });
 
+    test('les avis de la fiche viennent de la vraie base : le nombre affiche egale celui de la base', async ({ page, context, request }) => {
+        await openApp(page, context);
+        await passGeoloc(page);
+        await page.evaluate((id) => window.openDistributorModal(id), DEMO_ID);
+        await page.waitForSelector('#dist-modal-overlay.active');
+        const res = await request.get(`${SUPABASE_URL}/rest/v1/distributor_ratings?distributor_id=eq.${DEMO_ID}&select=avis,moyenne`, {
+            headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` }
+        });
+        const [rating] = await res.json();
+        expect(rating.avis).toBeGreaterThan(0);
+        await expect(page.locator('#dist-modal-reviews')).toHaveText(`(${rating.avis})`);
+        await page.click('.dist-tab[data-tab="avis"]');
+        await expect(page.locator('#dist-reviews-list .review-item')).toHaveCount(Math.min(10, rating.avis), { timeout: 15000 });
+        await expect(page.locator('#dist-review-invite')).toBeVisible();
+        await expect(page.locator('#dist-review-mine')).toBeHidden();
+    });
+
+    test('la vraie base refuse un avis sans compte', async ({ request }) => {
+        const res = await request.post(`${SUPABASE_URL}/rest/v1/reviews`, {
+            headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+            data: { distributor_id: DEMO_ID, rating: 5, body: 'pirate' }
+        });
+        expect(res.status()).toBeGreaterThanOrEqual(400);
+    });
+
     test('scan du QR code en visiteur : la fiche s’ouvre et invite a se connecter', async ({ page, context }) => {
         await openApp(page, context, `?id=${DEMO_ID}&confirm=1&src=qr`);
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 60000 });

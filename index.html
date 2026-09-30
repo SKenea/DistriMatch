@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=38">
+    <link rel="stylesheet" href="css/overlays.css?v=39">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -412,11 +412,36 @@
                 </div>
 
                 <!-- Onglet Avis -->
+                <!-- Avis (EPIC-T8) : tout le monde lit ; un compte connecte depose, modifie ou
+                     supprime SON avis (js/reviews.js, migration 016). -->
                 <div class="dist-tab-pane" data-tab-pane="avis">
-                    <div class="dist-avis-empty">
-                        <p>Aucun avis pour le moment</p>
-                        <small>Sois le premier à partager ton expérience.</small>
+                    <div class="reviews-mine" id="dist-review-mine" hidden>
+                        <h3 class="reviews-mine-title" id="dist-review-mine-title">Donne ton avis</h3>
+                        <div class="review-stars-input" id="dist-review-stars" role="group" aria-label="Ta note">
+                            <button type="button" class="review-star" data-rating="1" aria-pressed="false" aria-label="1 étoile">★</button>
+                            <button type="button" class="review-star" data-rating="2" aria-pressed="false" aria-label="2 étoiles">★</button>
+                            <button type="button" class="review-star" data-rating="3" aria-pressed="false" aria-label="3 étoiles">★</button>
+                            <button type="button" class="review-star" data-rating="4" aria-pressed="false" aria-label="4 étoiles">★</button>
+                            <button type="button" class="review-star" data-rating="5" aria-pressed="false" aria-label="5 étoiles">★</button>
+                        </div>
+                        <label class="sr-only" for="dist-review-body">Ton commentaire (facultatif)</label>
+                        <textarea id="dist-review-body" class="review-body-input" maxlength="500" rows="3" placeholder="Qu'as-tu pensé de cette machine ? (facultatif)"></textarea>
+                        <div class="review-form-footer">
+                            <span class="review-chars" id="dist-review-chars">0 / 500</span>
+                            <div class="review-actions">
+                                <button type="button" class="btn-secondary-clean" id="dist-review-delete" hidden>Supprimer</button>
+                                <button type="button" class="btn-primary-clean" id="dist-review-submit" disabled>Publier</button>
+                            </div>
+                        </div>
                     </div>
+                    <div class="dist-login-invite" id="dist-review-invite" hidden>
+                        <p><strong>Tu connais cette machine ?</strong> Connecte-toi pour donner ton avis.</p>
+                        <button type="button" class="dist-login-invite-btn" id="dist-review-invite-btn">Se connecter</button>
+                    </div>
+                    <p class="reviews-summary" id="dist-reviews-summary" hidden></p>
+                    <ul class="reviews-list" id="dist-reviews-list"></ul>
+                    <p class="reviews-empty" id="dist-reviews-empty" hidden>Pas encore d'avis sur cette machine.</p>
+                    <button type="button" class="btn-secondary-clean reviews-more" id="dist-reviews-more" hidden>Voir plus d'avis</button>
                 </div>
 
                 <!-- Onglet À propos -->
@@ -971,26 +996,27 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=57",
-            "./js/state.js": "./js/state.js?v=57",
-            "./js/config.js": "./js/config.js?v=57",
-            "./js/utils.js": "./js/utils.js?v=57",
-            "./js/auth.js": "./js/auth.js?v=57",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=57",
-            "./js/map.js": "./js/map.js?v=57",
-            "./js/navigation.js": "./js/navigation.js?v=57",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=57",
-            "./js/distributor.js": "./js/distributor.js?v=57",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=57",
-            "./js/chat.js": "./js/chat.js?v=57",
-            "./js/activity.js": "./js/activity.js?v=57",
-            "./js/notifications.js": "./js/notifications.js?v=57",
-            "./js/availability.js": "./js/availability.js?v=57",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=57",
-            "./js/events.js": "./js/events.js?v=57",
-            "./js/stats.js": "./js/stats.js?v=57",
-            "./js/history.js": "./js/history.js?v=57",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=57"
+            "./js/app.js": "./js/app.js?v=58",
+            "./js/state.js": "./js/state.js?v=58",
+            "./js/config.js": "./js/config.js?v=58",
+            "./js/utils.js": "./js/utils.js?v=58",
+            "./js/auth.js": "./js/auth.js?v=58",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=58",
+            "./js/map.js": "./js/map.js?v=58",
+            "./js/navigation.js": "./js/navigation.js?v=58",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=58",
+            "./js/distributor.js": "./js/distributor.js?v=58",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=58",
+            "./js/chat.js": "./js/chat.js?v=58",
+            "./js/activity.js": "./js/activity.js?v=58",
+            "./js/notifications.js": "./js/notifications.js?v=58",
+            "./js/availability.js": "./js/availability.js?v=58",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=58",
+            "./js/events.js": "./js/events.js?v=58",
+            "./js/stats.js": "./js/stats.js?v=58",
+            "./js/history.js": "./js/history.js?v=58",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=58",
+            "./js/reviews.js": "./js/reviews.js?v=58"
         }
     }
     </script>
