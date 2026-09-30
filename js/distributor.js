@@ -114,7 +114,7 @@ export function renderProductsList(distributor, targetId = 'products-list', opti
             <div class="products-empty-state">
                 <p class="products-empty-title">Aucun produit référencé</p>
                 <p class="products-empty-text">Personne n'a encore dit ce que vend ce distributeur.</p>
-                ${readonly && canInform ? '<button type="button" class="btn-primary-clean products-add-first" id="dist-products-add-first">Ajouter les produits</button>' : ''}
+                ${readonly && canInform ? '<button type="button" class="products-add-first" id="dist-products-add-first"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter les produits</button>' : ''}
             </div>`;
         return;
     }

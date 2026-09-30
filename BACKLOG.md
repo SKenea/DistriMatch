@@ -19,6 +19,31 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T11 Fiche : des zones et des boutons qu'on distingue (Stephane, 2026-09-30)
+Objectif : voir d'un coup d'oeil ou commence chaque zone de la fiche, et reconnaitre
+un bouton et son importance. Retour de Stephane sur la fiche v3 : « c'est mieux, par
+contre, distingue les differentes zones, et aussi les boutons ». Visuel seulement :
+ni contenu, ni mots, ni fonctionnement ne changent. Valide le 2026-09-30 ; captures
+avant / apres montrees a Stephane avant fusion.
+
+- [x] T11-US1 En tant que visiteur, je veux distinguer les zones de la fiche
+  - Acceptance : en-tete (nom, etat, note) sur fond blanc ; separateur net avant
+    les onglets ; zone de contenu (produits, avis, a propos) sur fond gris tres
+    clair ou les cartes se detachent (carte Pas dispo encore distincte du fond) ;
+    pied avec ombre vers le haut ; contrastes >= 4,5:1 inchanges.
+
+- [x] T11-US2 En tant que visiteur, je veux des onglets qui ne concurrencent pas l'action
+  - Acceptance : selecteur segmente gris, onglet actif blanc en gras ; plus de
+    rouge sur les onglets (le rouge est reserve a « Se connecter »).
+
+- [x] T11-US3 En tant que visiteur, je veux reconnaitre un bouton et son importance
+  - Acceptance : trois niveaux partout sur la fiche : principal plein (Itineraire
+    noir, Se connecter rouge, un par zone) ; secondaire en contour avec icone
+    (Photo, Modifier, Ajouter les produits) ; petit bouton en pastille avec icone
+    (« Mettre à jour », plus un lien souligne) ; « Dispo / Pas dispo » des cartes
+    en vrais boutons (bordure marquee, relief, Dispo vert, Pas dispo gris) ; cibles
+    tactiles >= 44 px.
+
 ### EPIC-T10 Fiche v3 : les produits d'abord, l'etat en discret (Stephane, 2026-09-30)
 Objectif : on voit d'abord ce qu'il reste ; l'etat du distributeur se lit en passant.
 Valeur : Stephane trouvait le bandeau d'etat trop imposant et le vocabulaire flou
