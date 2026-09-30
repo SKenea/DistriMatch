@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=39">
+    <link rel="stylesheet" href="css/overlays.css?v=40">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -300,6 +300,11 @@
             </div>
 
             <div class="dist-modal-header">
+                <!-- EPIC-T9 : machine enregistree seulement sur ce telephone (inconnue de la base) -->
+                <div class="dist-login-invite dist-local-only" id="dist-local-only" hidden>
+                    <p><strong>Cette machine n'est enregistrée que sur ton téléphone.</strong> Publie-la pour que les autres la voient et pour recevoir signaux et avis.</p>
+                    <button type="button" class="dist-login-invite-btn" id="dist-local-publish">Publier cette machine</button>
+                </div>
                 <!-- EPIC-T5 : informer est un privilege de compte. Connecte : les trois etats en
                      tuiles, l'etat actuel colore, un tap envoie. Visiteur : l'encadre de connexion. -->
                 <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
@@ -996,27 +1001,27 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=58",
-            "./js/state.js": "./js/state.js?v=58",
-            "./js/config.js": "./js/config.js?v=58",
-            "./js/utils.js": "./js/utils.js?v=58",
-            "./js/auth.js": "./js/auth.js?v=58",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=58",
-            "./js/map.js": "./js/map.js?v=58",
-            "./js/navigation.js": "./js/navigation.js?v=58",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=58",
-            "./js/distributor.js": "./js/distributor.js?v=58",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=58",
-            "./js/chat.js": "./js/chat.js?v=58",
-            "./js/activity.js": "./js/activity.js?v=58",
-            "./js/notifications.js": "./js/notifications.js?v=58",
-            "./js/availability.js": "./js/availability.js?v=58",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=58",
-            "./js/events.js": "./js/events.js?v=58",
-            "./js/stats.js": "./js/stats.js?v=58",
-            "./js/history.js": "./js/history.js?v=58",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=58",
-            "./js/reviews.js": "./js/reviews.js?v=58"
+            "./js/app.js": "./js/app.js?v=59",
+            "./js/state.js": "./js/state.js?v=59",
+            "./js/config.js": "./js/config.js?v=59",
+            "./js/utils.js": "./js/utils.js?v=59",
+            "./js/auth.js": "./js/auth.js?v=59",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=59",
+            "./js/map.js": "./js/map.js?v=59",
+            "./js/navigation.js": "./js/navigation.js?v=59",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=59",
+            "./js/distributor.js": "./js/distributor.js?v=59",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=59",
+            "./js/chat.js": "./js/chat.js?v=59",
+            "./js/activity.js": "./js/activity.js?v=59",
+            "./js/notifications.js": "./js/notifications.js?v=59",
+            "./js/availability.js": "./js/availability.js?v=59",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=59",
+            "./js/events.js": "./js/events.js?v=59",
+            "./js/stats.js": "./js/stats.js?v=59",
+            "./js/history.js": "./js/history.js?v=59",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=59",
+            "./js/reviews.js": "./js/reviews.js?v=59"
         }
     }
     </script>

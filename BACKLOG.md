@@ -19,6 +19,35 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T9 Machines enregistrees seulement sur le telephone (Stephane, 2026-09-30)
+Constat : avis sur Gaztainbidea -> « code 23503 ». Le telephone de Stephane garde
+une 2e copie locale de Gaztainbidea (id inconnu de la base, position un peu
+differente, donc pas vue comme doublon) ; c'est elle qui s'ouvrait. Avis, signal,
+photo et mesure y sont refuses par la base (cle etrangere). Tres probablement aussi
+la vraie cause du « Signal non envoye » du 2026-09-25 (OK en navigation privee, qui
+n'a pas de donnees locales). Origine : a l'ajout d'une machine, un echec d'envoi vers
+la base etait avale en silence et la machine gardee en local.
+Correctif valide par Stephane le 2026-09-30, livre le meme jour. Hors perimetre : fusion de doublons
+deja presents dans la base (aucun aujourd'hui).
+
+- [x] T9-US1 Nettoyage automatique des doublons locaux
+  - Acceptance : au chargement (donnees venues de la base seulement), une machine
+    locale absente de la base qui porte le meme nom (casse, accents et espaces
+    ignores) qu'une machine de la base a moins de 100 m est retiree du telephone
+    (localStorage) et de la carte ; la vraie fiche reste. `findLocalDuplicates` pure.
+
+- [x] T9-US2 Les vraies machines locales sont signalees et publiables
+  - Acceptance : fiche marquee « Cette machine n'est enregistree que sur ton
+    telephone » ; avis, signaux, photo et modifier masques tant qu'elle n'est pas
+    publiee ; bouton « Publier cette machine » (connecte ; visiteur -> connexion) qui
+    l'envoie a la base avec ses produits, puis la fiche redevient normale ; a l'ajout
+    d'une machine, un echec d'envoi est dit (« Enregistree sur ton telephone
+    seulement ») au lieu d'etre avale.
+
+- [x] T9-US3 Un message clair plutot qu'un code
+  - Acceptance : avis refuse pour machine inconnue (23503) et signal refuse pour
+    machine inconnue (P0002) -> « Cette machine n'est pas encore sur le serveur ».
+
 ### EPIC-T8 Des avis reels sur les machines (Stephane, 2026-09-30)
 Constat : « comment je depose un avis ? » -> impossible ; l'onglet Avis dit « Sois
 le premier a partager ton experience » sans bouton, et la note des fiches de demo

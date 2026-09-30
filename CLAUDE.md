@@ -54,7 +54,7 @@ Quand lancer quoi : `npm test` a chaque modification ; `test:integration` des qu
 3. `loadDistributors()` lance **en parallele** de l'overlay de geolocalisation (pour que le deep link `?id=<distId>` ouvre la fiche avant le consentement geoloc)
 4. Apres geoloc : carte, side panel, filtres, geofence, notifications. Les vignettes photos et signalements Supabase sont en fire-and-forget (ne jamais les `await` : un Supabase injoignable gelait l'init)
 
-**Source des distributeurs, par priorite** : Supabase `distributors` (+ `products`) -> `fetch('data/distributors.json')` -> `EMBEDDED_DATA` (`js/state.js`, fallback `file://`). Puis fusion des distributeurs ajoutes localement (`snackmatch_user_distributors`) avec dedup par id **et** par signature nom+coords. Attention : avec Supabase, `typeConfig` vient de `EMBEDDED_DATA`, pas du JSON.
+**Source des distributeurs, par priorite** : Supabase `distributors` (+ `products`) -> `fetch('data/distributors.json')` -> `EMBEDDED_DATA` (`js/state.js`, fallback `file://`). Puis fusion des distributeurs ajoutes localement (`snackmatch_user_distributors`) avec dedup par id **et** par signature nom+coords. **EPIC-T9** (quand la base a repondu) : une copie locale d'une machine de la base (meme nom normalise a moins de 100 m, `findLocalDuplicates`) est retiree du telephone ; les machines vraiment locales sont marquees `isLocalOnly` (fiche : bandeau « enregistree seulement sur ton telephone », signaux / avis / photo / modifier masques, bouton « Publier cette machine » -> `publishDistributor`, add-distributor.js). Un echec d'envoi a l'ajout n'est plus avale (toast). Attention : avec Supabase, `typeConfig` vient de `EMBEDDED_DATA`, pas du JSON.
 
 ### Modules JS (`js/`)
 

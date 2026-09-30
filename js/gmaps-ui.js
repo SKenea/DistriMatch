@@ -4,9 +4,9 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, calculateDistance, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
+import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
-import { uploadDistributorPhotos } from './add-distributor.js';
+import { uploadDistributorPhotos, publishDistributor } from './add-distributor.js';
 import { openConversation } from './chat.js';
 import { FEATURES } from './config.js';
 import { requireAuth, isAuthenticated } from './auth.js';
@@ -224,6 +224,8 @@ export function initDistModal() {
     initReviews();
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
+    // Machine seulement locale : « Publier cette machine » (EPIC-T9)
+    document.getElementById('dist-local-publish')?.addEventListener('click', publishCurrentLocalDistributor);
 
     // Boutons d'action
     document.getElementById('dist-action-directions')?.addEventListener('click', () => {
@@ -385,7 +387,8 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     AppState.modalCanEdit = canEdit;
     // Mesure (008) : une ouverture de fiche = un evenement. Le passage en mode
     // edition re-rend la meme fiche : pas recompte.
-    if (!editMode) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
+    // (une machine seulement locale est inconnue de la base : pas de mesure)
+    if (!editMode && !distributor.isLocalOnly) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
     modalOpenSource = 'organic';
 
     const typeConfig = AppState.typeConfig[distributor.type] || {};
@@ -426,7 +429,7 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     if (demoRow) demoRow.style.display = distributor.isDemo ? 'flex' : 'none';
 
     // Produits : mode edit (boutons CRUD) ou readonly
-    renderProductsList(distributor, 'dist-products-list', { readonly: !editMode, canInform: isAuthenticated() });
+    renderProductsList(distributor, 'dist-products-list', { readonly: !editMode, canInform: canInformOn(distributor) });
     applyFicheAuthState();
     // Signaux de dispo (UC11) : "vu dispo il y a X" par produit + bandeau
     // machine. Fire-and-forget, jamais await : Supabase absent = rien.
@@ -661,16 +664,56 @@ function showEditAuthGate() {
 // EPIC-T5 : lire pour tous, informer / modifier quand on est connecte.
 // Connecte : boutons d'etat de la machine, Photo, Modifier. Visiteur : l'encadre
 // « Connecte-toi pour informer » a la place.
+// Une machine seulement locale (EPIC-T9) est inconnue de la base : ni signal,
+// ni avis, ni photo, ni modification tant qu'elle n'est pas publiee.
+function canInformOn(distributor) {
+    return isAuthenticated() && !distributor?.isLocalOnly;
+}
+
 function applyFicheAuthState() {
     const authed = isAuthenticated();
+    const localOnly = !!AppState.currentDistributor?.isLocalOnly;
     const machineChoices = document.getElementById('dist-machine-choices');
-    if (machineChoices) machineChoices.hidden = !authed;
+    if (machineChoices) machineChoices.hidden = !authed || localOnly;
     const invite = document.getElementById('dist-login-invite');
-    if (invite) invite.hidden = authed;
+    if (invite) invite.hidden = authed || localOnly;
+    const localBanner = document.getElementById('dist-local-only');
+    if (localBanner) localBanner.hidden = !localOnly;
+    const publishBtn = document.getElementById('dist-local-publish');
+    if (publishBtn) publishBtn.textContent = authed ? 'Publier cette machine' : 'Me connecter pour la publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
-    if (photoBtn) photoBtn.style.display = authed ? '' : 'none';
+    if (photoBtn) photoBtn.style.display = (authed && !localOnly) ? '' : 'none';
     const editBtn = document.getElementById('dist-action-edit');
-    if (editBtn) editBtn.style.display = (authed && !AppState.modalEditMode) ? '' : 'none';
+    if (editBtn) editBtn.style.display = (authed && !AppState.modalEditMode && !localOnly) ? '' : 'none';
+}
+
+// « Publier cette machine » : l'envoie a la base (connexion exigee, UC1), puis
+// la fiche redevient normale (signaux, avis, photo, modifier).
+let isPublishing = false;
+async function publishCurrentLocalDistributor() {
+    const d = AppState.currentDistributor;
+    if (!d?.isLocalOnly || isPublishing) return;
+    if (!isAuthenticated()) {
+        requireAuth();
+        return;
+    }
+    isPublishing = true;
+    const btn = document.getElementById('dist-local-publish');
+    if (btn) btn.disabled = true;
+    try {
+        const res = await publishDistributor(d);
+        if (!res.ok) {
+            showToast(`Publication impossible, réessaie plus tard (code ${res.error?.code || '?'})`, 'error');
+            return;
+        }
+        d.isLocalOnly = false;
+        removeUserDistributors([d.id]);   // desormais dans la base
+        showToast('Machine publiée : merci, elle est visible par tous', 'success');
+        openDistributorModal(d.id);
+    } finally {
+        isPublishing = false;
+        if (btn) btn.disabled = false;
+    }
 }
 
 // Connexion / deconnexion pendant qu'une fiche est ouverte : la fiche bascule
@@ -680,7 +723,7 @@ export function refreshFicheForAuth() {
     const d = AppState.currentDistributor;
     if (!d || !overlay?.classList.contains('active')) return;
     if (!AppState.modalEditMode) {
-        renderProductsList(d, 'dist-products-list', { readonly: true, canInform: isAuthenticated() });
+        renderProductsList(d, 'dist-products-list', { readonly: true, canInform: canInformOn(d) });
     }
     applyFicheAuthState();
     renderFicheStatus();

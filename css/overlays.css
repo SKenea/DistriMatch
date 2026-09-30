@@ -1265,6 +1265,17 @@
 .machine-choice:disabled { opacity: 0.5; cursor: wait; }
 .machine-choice:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* Machine seulement locale (EPIC-T9) : gabarit de l'encadre de connexion, ton
+   orange, texte au-dessus du bouton (le message est plus long) */
+.dist-login-invite.dist-local-only {
+    flex-direction: column;
+    align-items: stretch;
+    background: #fff7ed;
+    border-color: rgba(194, 65, 12, 0.35);
+}
+.dist-login-invite.dist-local-only[hidden] { display: none; }
+.dist-login-invite-btn:disabled { opacity: 0.6; cursor: wait; }
+
 /* Visiteur : informer demande un compte (EPIC-T5) */
 .dist-login-invite {
     display: flex;
