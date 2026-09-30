@@ -1,0 +1,707 @@
+<title>Vitrine produits</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root {
+  --bg: #FFFFFF;
+  --surface: #F4F5F7;
+  --line: #E5E7EB;
+  --ink: #111827;
+  --ink-2: #374151;
+  --muted: #6B7280;
+  --focus: #2563EB;
+  --ok: #16A34A; --ok-ink: #166534; --ok-bg: #ECFDF3;
+  --warn: #EA580C; --warn-ink: #9A3412; --warn-bg: #FFF7ED;
+  --ko: #DC2626; --ko-ink: #991B1B;
+  --none-ink: #475569;
+  --off: #CBD5E1;
+  --star: #B45309;
+  --r-card: 14px;
+  --r-btn: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-size: 15px; line-height: 1.4;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.app { max-width: 480px; margin: 0 auto; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* ---------- Reglages de la maquette (outil de revue) ---------- */
+.review { background: #1F2937; color: #F9FAFB; font-size: 13px; }
+.review-toggle {
+  width: 100%; min-height: 44px; padding: 0 16px; border: 0; background: transparent; color: #F9FAFB;
+  display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  font-size: 13px; font-weight: 600; letter-spacing: .02em;
+  background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgba(255,255,255,.04) 10px 20px);
+}
+.review-toggle .chev { transition: transform .2s; }
+.review-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.review-body { padding: 4px 16px 14px; display: grid; gap: 10px; }
+.review fieldset { border: 0; margin: 0; padding: 0; }
+.review legend { color: #D1D5DB; font-size: 12px; margin-bottom: 4px; }
+.review .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.review label {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px;
+  border: 1px solid #4B5563; border-radius: 999px; cursor: pointer; color: #F9FAFB;
+}
+.review label:has(input:checked) { background: #F9FAFB; color: #111827; border-color: #F9FAFB; }
+.review input { accent-color: #111827; margin: 0; }
+
+/* ---------- En-tete ---------- */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0; }
+.icon-btn {
+  width: 44px; height: 44px; border: 0; background: transparent; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink);
+}
+.icon-btn:hover { background: var(--surface); }
+.icon-btn svg { width: 22px; height: 22px; }
+.icon-btn[aria-pressed="true"] { color: #BE123C; }
+.icon-btn[aria-pressed="true"] .heart { fill: currentColor; }
+.top-actions { display: flex; gap: 2px; }
+
+.head { padding: 2px 16px 0; }
+.title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
+.tag-demo {
+  font-size: 11px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .04em;
+}
+.status-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 2px; min-height: 28px; }
+.status {
+  display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0;
+  font-size: 14px; color: var(--muted);
+}
+button.status { min-height: 44px; cursor: pointer; padding-right: 2px; }
+.status-word { font-weight: 600; }
+.status[data-state="working"] .status-word { color: var(--ok-ink); }
+.status[data-state="empty"] .status-word { color: var(--warn-ink); }
+.status[data-state="broken"] .status-word { color: var(--ko-ink); }
+.status[data-state="none"] .status-word { color: var(--none-ink); }
+.status.soft .status-word { color: #4B5563; }
+.update-link {
+  border: 0; background: transparent; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px;
+  font-size: 14px; min-height: 44px; padding: 0 6px; cursor: pointer;
+}
+
+/* Mini-feu tricolore */
+.feu {
+  display: inline-flex; gap: 4px; padding: 4px 6px; border-radius: 999px;
+  background: #F1F5F9; border: 1px solid var(--line); flex: none;
+}
+.feu i { width: 9px; height: 9px; border-radius: 50%; background: var(--off); display: block; }
+.feu[data-state="working"] i:nth-child(1) { background: var(--ok); }
+.feu[data-state="empty"] i:nth-child(2) { background: var(--warn); }
+.feu[data-state="broken"] i:nth-child(3) { background: var(--ko); }
+.feu.soft i { opacity: .5; }
+
+.meta { margin: 0; color: var(--muted); font-size: 14px; }
+.meta .star { color: var(--star); }
+
+/* ---------- Vitrine ---------- */
+.section { padding: 0 16px; }
+.shelf-head { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 0 10px; }
+.shelf-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.count { font-size: 14px; color: var(--muted); }
+.count strong { color: var(--ink); font-weight: 700; }
+
+.notice {
+  margin: 0 0 12px; padding: 2px 0 2px 10px; border-left: 2px solid var(--warn);
+  color: var(--ink-2); font-size: 13px; line-height: 1.35;
+}
+.notice b { color: var(--warn-ink); font-weight: 600; }
+.notice.broken { border-left-color: var(--ko); }
+.notice.broken b { color: var(--ko-ink); }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card {
+  position: relative; display: flex; flex-direction: column; text-align: left; width: 100%;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-card);
+  overflow: hidden; padding: 0; margin: 0;
+  box-shadow: 0 1px 2px rgba(17,24,39,.05);
+}
+button.card { cursor: pointer; }
+button.card:hover { border-color: #D1D5DB; }
+.card .art {
+  height: 100px; display: flex; align-items: center; justify-content: center;
+  background: var(--art-bg, #F3F4F1);
+}
+.card .art svg { width: 88px; height: 88px; }
+.card .body { padding: 10px 11px 12px; display: grid; gap: 5px; flex: 1; align-content: start; }
+.card .name { font-size: 16px; font-weight: 700; line-height: 1.2; color: var(--ink); }
+.pill {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; padding: 2px 8px 2px 7px; border-radius: 999px;
+}
+.pill i { width: 7px; height: 7px; border-radius: 50%; display: block; flex: none; }
+.pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.pill.ok i { background: var(--ok); }
+.pill.out { background: #F3F4F6; color: #4B5563; }
+.pill.out i { background: #9CA3AF; }
+.pill.none { background: transparent; color: var(--none-ink); border: 1px dashed #94A3B8; }
+.pill.none i { background: transparent; border: 1px solid #94A3B8; }
+.pill.ok.soft { background: #F3F4F6; color: #3F6212; }
+.pill.ok.soft i { background: #86EFAC; }
+.fresh { font-size: 12.5px; color: var(--muted); }
+
+/* Pas dispo : attenue facon Instacart */
+.card.is-out { background: #FAFAFA; }
+.card.is-out .art { background: #F1F1F1; }
+.card.is-out .art svg { filter: grayscale(1); opacity: .45; }
+.card.is-out .name { color: #4B5563; }
+/* Pas d'info : contour pointille */
+.card.is-none { border: 1.5px dashed #CBD5E1; box-shadow: none; }
+.card.is-none .art svg { opacity: .8; }
+
+.card .hint { font-size: 12.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+.still { display: grid; gap: 6px; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); }
+.still span { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.still .btns { display: flex; gap: 6px; }
+.still .yn { flex: 1; }
+.yn {
+  min-width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.yn svg { width: 18px; height: 18px; }
+.yn.yes { color: var(--ok-ink); }
+.yn.no { color: #4B5563; }
+.yn:hover { background: var(--surface); }
+
+.similar {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-top: 4px;
+  border: 0; background: transparent; padding: 0; color: var(--ink-2); font-size: 14px;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+
+.empty {
+  border: 1.5px dashed #CBD5E1; border-radius: var(--r-card); padding: 22px 16px; text-align: center; color: var(--muted);
+}
+.empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+
+.invite {
+  margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  display: flex; align-items: center; gap: 12px; justify-content: space-between;
+}
+.invite p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.btn {
+  min-height: 44px; padding: 0 16px; border-radius: var(--r-btn); border: 1px solid var(--line);
+  background: var(--bg); font-weight: 600; font-size: 14px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+}
+.btn:hover { background: var(--surface); }
+.btn svg { width: 18px; height: 18px; }
+.btn-dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn-dark:hover { background: #1F2937; }
+.secondary { display: flex; gap: 8px; margin-top: 14px; }
+.secondary .btn { flex: 1; }
+
+.block { border-top: 8px solid var(--surface); margin-top: 22px; padding: 16px; }
+.block h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.rating { display: flex; align-items: center; gap: 12px; }
+.rating .big { font-size: 28px; font-weight: 700; }
+.stars { color: var(--star); letter-spacing: 1px; }
+.review-item { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-2); }
+.review-item b { color: var(--ink); }
+.link-row {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px;
+  border: 0; background: transparent; padding: 0; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px;
+}
+.about { display: grid; gap: 10px; font-size: 14px; }
+.about-row { display: flex; gap: 12px; align-items: flex-start; color: var(--ink-2); }
+.about-row svg { width: 20px; height: 20px; flex: none; color: var(--muted); margin-top: 1px; }
+
+/* Barre collante */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: rgba(255,255,255,.96); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+.dock-in { max-width: 448px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+.dock .btn-dark { flex: 1; min-height: 48px; font-size: 15px; }
+.dock .dist { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+/* Feuilles */
+.scrim { position: fixed; inset: 0; background: rgba(17,24,39,.4); z-index: 40; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; margin: 0 auto; max-width: 480px;
+  background: var(--bg); border-radius: 16px 16px 0 0; padding: 10px 16px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 30px rgba(17,24,39,.15); animation: up .2s ease-out;
+}
+@keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.grab { width: 36px; height: 4px; border-radius: 4px; background: #D1D5DB; margin: 0 auto 12px; }
+.sheet h3 { margin: 0 0 2px; font-size: 17px; }
+.sheet .sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.choices { display: grid; gap: 8px; }
+.choices.two { grid-template-columns: 1fr 1fr; }
+.choices.three { grid-template-columns: 1fr 1fr 1fr; }
+.choice {
+  min-height: 56px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-weight: 600; font-size: 14px; padding: 8px 4px;
+}
+.choice:hover { background: var(--surface); }
+.choice i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.choice.current { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.sheet .cancel { width: 100%; margin-top: 10px; border: 0; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 60;
+  max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0,0,0,.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+  <!-- Outil de revue -->
+  <section class="review" aria-label="Outil de revue">
+    <button class="review-toggle" id="review-toggle" aria-expanded="false" aria-controls="review-body">
+      <span>Réglages de la maquette</span>
+      <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="review-body" id="review-body" hidden>
+      <fieldset>
+        <legend>État machine</legend>
+        <div class="opts">
+          <label><input type="radio" name="machine" value="working" checked> Fonctionne</label>
+          <label><input type="radio" name="machine" value="empty"> Vide</label>
+          <label><input type="radio" name="machine" value="broken"> En panne</label>
+          <label><input type="radio" name="machine" value="none"> Pas d'info</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Mode</legend>
+        <div class="opts">
+          <label><input type="radio" name="mode" value="visitor" checked> Visiteur</label>
+          <label><input type="radio" name="mode" value="member"> Connecté</label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Fiche</legend>
+        <div class="opts">
+          <label><input type="radio" name="fiche" value="products" checked> Avec produits</label>
+          <label><input type="radio" name="fiche" value="empty"> Sans produit</label>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <div class="topbar">
+    <button class="icon-btn" aria-label="Retour à la carte" id="back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="top-actions">
+      <button class="icon-btn" id="fav" aria-pressed="false" aria-label="Ajouter aux favoris">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path class="heart" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+      </button>
+      <button class="icon-btn" id="share" aria-label="Partager">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <header class="head">
+    <div class="title-row">
+      <h1 class="title" id="name">Légumes Bio Cambo</h1>
+      <span class="tag-demo" id="demo">Démo</span>
+    </div>
+    <div class="status-row" id="status-row"></div>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <main class="section">
+    <div class="shelf-head">
+      <h2>Il reste quoi ?</h2>
+      <span class="count" id="count"></span>
+    </div>
+    <p class="notice" id="notice" hidden></p>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>
+      <strong>Aucun produit référencé</strong>
+      <span>Personne n'a encore dit ce que vend cette machine.</span>
+      <div style="margin-top:12px" id="add-products-wrap" hidden>
+        <button class="btn btn-dark" id="add-products">Ajouter les produits</button>
+      </div>
+    </div>
+    <button class="similar" id="similar" hidden>Voir d'autres machines proches
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </button>
+
+    <div class="invite" id="invite">
+      <p>Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste</p>
+      <button class="btn" id="login">Se connecter</button>
+    </div>
+
+    <div class="secondary" id="secondary" hidden>
+      <button class="btn" id="photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Photo
+      </button>
+      <button class="btn" id="edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+        Modifier
+      </button>
+    </div>
+  </main>
+
+  <section class="block" aria-labelledby="avis-t">
+    <h2 id="avis-t">Avis</h2>
+    <div id="reviews"></div>
+  </section>
+
+  <section class="block" aria-labelledby="about-t">
+    <h2 id="about-t">À propos</h2>
+    <div class="about">
+      <div class="about-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        <span id="address"></span>
+      </div>
+      <div class="about-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12h18M13 6l6 6-6 6"/></svg>
+        <span id="distance"></span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <button class="btn btn-dark" id="route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 3 21l9-5 9 5z"/></svg>
+      Itinéraire
+    </button>
+    <span class="dist" id="dock-dist"></span>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="grab" aria-hidden="true"></div>
+  <h3 id="sheet-title"></h3>
+  <p class="sub" id="sheet-sub"></p>
+  <div class="choices" id="sheet-choices"></div>
+  <button class="btn cancel" id="sheet-cancel">Annuler</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var SOFT_AFTER = 120; // minutes : au-dela, info adoucie
+
+  var ART = {
+    basket: '<svg viewBox="0 0 96 96" aria-hidden="true"><ellipse cx="48" cy="84" rx="32" ry="4" fill="#000" opacity=".08"/><path d="M26 40c6-16 38-16 44 0" fill="none" stroke="#8B5A2B" stroke-width="4" stroke-linecap="round"/><circle cx="36" cy="40" r="9" fill="#E11D48"/><path d="M36 31c1-3 3-4 5-4" stroke="#15803D" stroke-width="2" fill="none"/><ellipse cx="56" cy="38" rx="11" ry="8" fill="#65A30D"/><path d="M50 36c3 2 9 2 12 0" stroke="#3F6212" stroke-width="1.5" fill="none"/><path d="M44 42l10-16" stroke="#EA580C" stroke-width="6" stroke-linecap="round"/><path d="M54 26l3-5M54 26l6-2" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/><path d="M18 44h60l-7 36H25z" fill="#C08A4B"/><path d="M18 44h60l-2 8H20z" fill="#A0703A"/><path d="M28 56h40M27 64h42M26 72h44" stroke="#8B5A2B" stroke-width="2" opacity=".6"/><path d="M38 52l-2 28M48 52v28M58 52l2 28" stroke="#8B5A2B" stroke-width="2" opacity=".45"/></svg>',
+    potato: '<svg viewBox="0 0 96 96" aria-hidden="true"><ellipse cx="48" cy="82" rx="32" ry="4" fill="#000" opacity=".08"/><ellipse cx="36" cy="60" rx="20" ry="15" fill="#C9A066" transform="rotate(-12 36 60)"/><ellipse cx="60" cy="54" rx="19" ry="14" fill="#D6B07A" transform="rotate(14 60 54)"/><ellipse cx="50" cy="70" rx="17" ry="11" fill="#BF9358"/><g fill="#8C6A3C" opacity=".7"><circle cx="30" cy="56" r="1.6"/><circle cx="40" cy="64" r="1.4"/><circle cx="58" cy="48" r="1.6"/><circle cx="66" cy="58" r="1.3"/><circle cx="46" cy="72" r="1.4"/><circle cx="56" cy="70" r="1.2"/></g><path d="M52 46c4-2 9-1 12 2" stroke="#F1D9A8" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/></svg>',
+    carrot: '<svg viewBox="0 0 96 96" aria-hidden="true"><ellipse cx="48" cy="84" rx="30" ry="4" fill="#000" opacity=".08"/><g transform="rotate(-28 48 50)"><path d="M40 30h12l-5 50h-2z" fill="#F97316"/><path d="M41 38h10M42 50h8M43 62h6" stroke="#C2410C" stroke-width="1.6" opacity=".6"/><path d="M46 30c-6-8-10-14-8-20M46 30c0-8 1-15 4-20M46 30c5-7 10-11 14-12" stroke="#16A34A" stroke-width="3" fill="none" stroke-linecap="round"/></g><g transform="rotate(18 60 54)"><path d="M56 34h11l-4 44h-2z" fill="#FB923C"/><path d="M57 42h9M58 54h7M59 64h5" stroke="#C2410C" stroke-width="1.5" opacity=".55"/><path d="M61 34c-4-7-6-12-4-17M61 34c2-7 5-12 9-14" stroke="#22C55E" stroke-width="3" fill="none" stroke-linecap="round"/></g></svg>',
+    salad: '<svg viewBox="0 0 96 96" aria-hidden="true"><ellipse cx="48" cy="84" rx="32" ry="4" fill="#000" opacity=".08"/><circle cx="48" cy="56" r="26" fill="#4D7C0F"/><path d="M26 58c2-16 14-26 22-26s20 10 22 26c-8-6-14-8-22-8s-14 2-22 8z" fill="#65A30D"/><path d="M32 62c2-12 9-19 16-19s14 7 16 19c-5-4-10-5-16-5s-11 1-16 5z" fill="#84CC16"/><path d="M40 64c1-7 4-11 8-11s7 4 8 11c-3-2-5-2-8-2s-5 0-8 2z" fill="#BEF264"/><path d="M48 44v34M36 50l8 20M60 50l-8 20" stroke="#3F6212" stroke-width="1.5" opacity=".5" fill="none"/></svg>'
+  };
+
+  var FICHES = {
+    products: {
+      name: 'Légumes Bio Cambo', demo: true, type: 'Produits agricoles', price: '€€',
+      address: 'Route des Thermes, 64250 Cambo-les-Bains', distance: '2,3 km',
+      rating: '4,7', reviews: 91,
+      products: [
+        { id: 'p1', name: 'Panier légumes saison', art: 'basket', bg: '#F3EFE6' },
+        { id: 'p2', name: 'Pommes de terre (2 kg)', art: 'potato', bg: '#F5F0E6' },
+        { id: 'p3', name: 'Carottes (1 kg)', art: 'carrot', bg: '#FDF2E7' },
+        { id: 'p4', name: 'Salades (lot de 2)', art: 'salad', bg: '#EEF6E6' }
+      ]
+    },
+    empty: {
+      name: 'Gaztainbidea', demo: false, type: 'Terroir local', price: '€',
+      address: 'impasse Gaztainbidea', distance: '450 m', rating: null, reviews: 0, products: []
+    }
+  };
+
+  // Signaux bruts par scenario : machine { state, age } ; produits { status, age } (null = aucun signal)
+  var SCENARIOS = {
+    working: { machine: { state: 'working', age: 12 }, products: { p1: { status: 'in', age: 12 }, p2: { status: 'in', age: 12 }, p3: { status: 'out', age: 40 }, p4: null } },
+    empty:   { machine: { state: 'empty', age: 34 },   products: { p1: null, p2: null, p3: null, p4: null } },
+    broken:  { machine: { state: 'broken', age: 120 }, products: { p1: null, p2: null, p3: null, p4: null } },
+    none:    { machine: { state: 'none', age: 5760 },  products: { p1: null, p2: null, p3: null, p4: null } }
+  };
+
+  var MACHINE_WORD = { working: 'Fonctionne', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
+  var state = { machineKey: 'working', mode: 'visitor', fiche: 'products', fav: false, machine: null, signals: null };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function formatAge(min) {
+    if (min < 1) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    if (min < 1440) return 'il y a ' + Math.floor(min / 60) + ' h';
+    return 'il y a ' + Math.floor(min / 1440) + ' j';
+  }
+
+  function loadScenario() {
+    var sc = SCENARIOS[state.machineKey];
+    state.machine = { state: sc.machine.state, age: sc.machine.age };
+    state.signals = {};
+    Object.keys(sc.products).forEach(function (k) { state.signals[k] = sc.products[k] ? { status: sc.products[k].status, age: sc.products[k].age } : null; });
+  }
+
+  // Un signal produit plus recent qu'une machine vide / en panne l'emporte
+  function resolveProduct(p) {
+    var sig = state.signals[p.id];
+    var m = state.machine;
+    var machineDown = m.state === 'empty' || m.state === 'broken';
+    if (machineDown && (!sig || sig.age > m.age)) {
+      return { status: 'out', age: m.age, detail: m.state === 'empty' ? 'Machine vide' : 'Machine en panne' };
+    }
+    if (!sig || sig.age >= 1440) return { status: 'none', age: null, detail: '' };
+    return { status: sig.status, age: sig.age, detail: '' };
+  }
+
+  function feuHTML(m) {
+    var soft = m.state !== 'none' && m.age >= SOFT_AFTER ? ' soft' : '';
+    return '<span class="feu' + soft + '" data-state="' + m.state + '" aria-hidden="true"><i></i><i></i><i></i></span>';
+  }
+
+  function renderStatus() {
+    var m = state.machine;
+    var soft = m.state !== 'none' && m.age >= SOFT_AFTER ? ' soft' : '';
+    var when = m.state === 'none' ? 'vérifié ' + formatAge(m.age) : formatAge(m.age);
+    var inner = feuHTML(m) + '<span class="status-word">' + MACHINE_WORD[m.state] + '</span><span>· ' + esc(when) + '</span>';
+    var html;
+    if (state.mode === 'member') {
+      html = '<button class="status' + soft + '" data-state="' + m.state + '" id="machine-btn" aria-label="État de la machine : ' + MACHINE_WORD[m.state] + ', ' + esc(when) + '. Mettre à jour">' + inner + '</button>'
+        + '<button class="update-link" id="machine-link">Mettre à jour</button>';
+    } else {
+      html = '<span class="status' + soft + '" data-state="' + m.state + '">' + inner + '</span>';
+    }
+    $('status-row').innerHTML = html;
+  }
+
+  function renderMeta(f) {
+    var parts = [esc(f.type), esc(f.price), esc(f.distance)];
+    parts.push(f.rating ? '<span class="star" aria-hidden="true">★</span> ' + f.rating + ' (' + f.reviews + ')' : 'Pas encore d\'avis');
+    $('meta').innerHTML = parts.join(' · ');
+  }
+
+  function cardHTML(p, r) {
+    var member = state.mode === 'member';
+    var cls = 'card' + (r.status === 'out' ? ' is-out' : r.status === 'none' ? ' is-none' : '');
+    var soft = r.age !== null && r.age >= SOFT_AFTER;
+    var pill, info = '';
+    if (r.status === 'in') {
+      pill = '<span class="pill ok' + (soft ? ' soft' : '') + '"><i></i>Dispo</span>';
+      info = '<span class="fresh">vu ' + esc(formatAge(r.age)) + '</span>';
+    } else if (r.status === 'out') {
+      // la cause (machine vide / en panne) est deja dite une fois par le liseré au-dessus de la grille
+      pill = '<span class="pill out"><i></i>Pas dispo</span>';
+      info = '<span class="fresh">' + esc(formatAge(r.age)) + '</span>';
+    } else {
+      pill = '<span class="pill none"><i></i>Pas d\'info</span>';
+    }
+    var art = '<div class="art" style="--art-bg:' + p.bg + '">' + ART[p.art] + '</div>';
+    var body = '<span class="name">' + esc(p.name) + '</span>' + pill + info;
+    var needsCheck = r.status === 'none' || soft;
+
+    if (member && !needsCheck) {
+      return '<button class="' + cls + '" data-open="' + p.id + '" aria-label="' + esc(p.name) + ' : ' + (r.status === 'in' ? 'Dispo' : 'Pas dispo') + '. Mettre à jour">'
+        + art + '<span class="body">' + body + '<span class="hint">Mettre à jour <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span></span></button>';
+    }
+    var still = '';
+    if (member) {
+      var q = r.status === 'in' ? 'Toujours là ?' : 'Il y en a ?';
+      still = '<div class="still"><span>' + q + '</span><span class="btns">'
+        + '<button class="yn yes" data-sig="in" data-id="' + p.id + '" aria-label="Il y en a : ' + esc(p.name) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></button>'
+        + '<button class="yn no" data-sig="out" data-id="' + p.id + '" aria-label="Plus rien : ' + esc(p.name) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>'
+        + '</span></div>';
+    }
+    return '<div class="' + cls + '" data-card="' + p.id + '">' + art + '<div class="body">' + body + still + '</div></div>';
+  }
+
+  function renderShelf(f) {
+    var m = state.machine;
+    var member = state.mode === 'member';
+    var hasProducts = f.products.length > 0;
+    $('grid').hidden = !hasProducts;
+    $('empty').hidden = hasProducts;
+    $('add-products-wrap').hidden = !member;
+
+    var notice = $('notice');
+    if (m.state === 'empty' || m.state === 'broken') {
+      notice.hidden = false;
+      notice.className = 'notice' + (m.state === 'broken' ? ' broken' : '');
+      notice.innerHTML = '<b>Machine signalée ' + (m.state === 'empty' ? 'vide' : 'en panne') + '</b> ' + esc(formatAge(m.age))
+        + (hasProducts ? ' — les produits ci-dessous sont probablement épuisés.' : '.');
+    } else {
+      notice.hidden = true;
+    }
+
+    if (!hasProducts) {
+      $('count').textContent = '';
+      $('similar').hidden = true;
+      return;
+    }
+    var ORDER = { in: 0, none: 1, out: 2 };
+    var rows = f.products.map(function (p, i) { return { p: p, r: resolveProduct(p), i: i }; });
+    rows.sort(function (a, b) { return (ORDER[a.r.status] - ORDER[b.r.status]) || (a.i - b.i); });
+    var dispo = rows.filter(function (x) { return x.r.status === 'in'; }).length;
+    $('count').innerHTML = '<strong>' + dispo + ' sur ' + rows.length + '</strong> dispo';
+    $('grid').innerHTML = rows.map(function (x) { return cardHTML(x.p, x.r); }).join('');
+    $('similar').hidden = !rows.some(function (x) { return x.r.status === 'out'; });
+  }
+
+  function renderReviews(f) {
+    if (!f.rating) {
+      $('reviews').innerHTML = '<p style="margin:0;color:var(--muted);font-size:14px">Pas encore d\'avis sur cette machine.</p>'
+        + (state.mode === 'member' ? '<button class="link-row" data-toast="Maquette : formulaire d\'avis">Donner ton avis <span aria-hidden="true">›</span></button>' : '');
+      return;
+    }
+    $('reviews').innerHTML = '<div class="rating"><span class="big">' + f.rating + '</span><div><div class="stars" aria-label="4,7 sur 5">★★★★★</div><div style="font-size:13px;color:var(--muted)">' + f.reviews + ' avis</div></div></div>'
+      + '<div class="review-item"><b>Membre DistriMatch</b> · <span class="stars" aria-label="5 sur 5">★★★★★</span><br>Légumes très frais, le panier change chaque semaine. Paiement CB sans souci.</div>'
+      + '<button class="link-row" data-toast="Maquette : liste des avis">Voir les ' + f.reviews + ' avis <span aria-hidden="true">›</span></button>';
+  }
+
+  function render() {
+    var f = FICHES[state.fiche];
+    $('name').textContent = f.name;
+    $('demo').hidden = !f.demo;
+    renderStatus();
+    renderMeta(f);
+    renderShelf(f);
+    renderReviews(f);
+    $('address').textContent = f.address;
+    $('distance').textContent = 'À ' + f.distance + ' de toi';
+    $('dock-dist').textContent = f.distance;
+    var member = state.mode === 'member';
+    $('invite').hidden = member;
+    $('secondary').hidden = !member;
+  }
+
+  // ---------- Feuilles ----------
+  var lastFocus = null;
+  function openSheet(title, sub, choicesHTML, cols) {
+    lastFocus = document.activeElement;
+    $('sheet-title').textContent = title;
+    $('sheet-sub').textContent = sub;
+    var c = $('sheet-choices');
+    c.className = 'choices ' + cols;
+    c.innerHTML = choicesHTML;
+    $('scrim').hidden = false;
+    $('sheet').hidden = false;
+    var first = c.querySelector('button');
+    if (first) first.focus();
+  }
+  function closeSheet() {
+    $('scrim').hidden = true;
+    $('sheet').hidden = true;
+    if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+  }
+
+  function openProductSheet(id) {
+    var p = FICHES[state.fiche].products.filter(function (x) { return x.id === id; })[0];
+    var r = resolveProduct(p);
+    var now = r.status === 'in' ? 'Dispo' : r.status === 'out' ? 'Pas dispo' : "Pas d'info";
+    openSheet(p.name, 'Actuellement : ' + now + (r.age !== null ? ' · ' + formatAge(r.age) : '') + '. Qu\'est-ce que tu vois ?',
+      '<button class="choice" data-psig="in" data-id="' + id + '"><i style="background:var(--ok)"></i>Il y en a</button>'
+      + '<button class="choice" data-psig="out" data-id="' + id + '"><i style="background:#9CA3AF"></i>Plus rien</button>', 'two');
+  }
+
+  function openMachineSheet() {
+    var cur = state.machine.state;
+    function ch(s, color) {
+      return '<button class="choice' + (cur === s ? ' current' : '') + '" data-msig="' + s + '"' + (cur === s ? ' aria-current="true"' : '') + '><i style="background:' + color + '"></i>' + MACHINE_WORD[s] + '</button>';
+    }
+    openSheet('La machine, là maintenant ?', 'Un tap suffit.', ch('working', 'var(--ok)') + ch('empty', 'var(--warn)') + ch('broken', 'var(--ko)'), 'three');
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  function signalProduct(id, status) {
+    state.signals[id] = { status: status, age: 0 };
+    render();
+    toast('Merci ! Ton signal aide les suivants');
+    var el = document.querySelector('[data-open="' + id + '"], [data-card="' + id + '"] .yn');
+    if (el) el.focus();
+  }
+  function signalMachine(s) {
+    state.machine = { state: s, age: 0 };
+    render();
+    toast('Merci ! Ton signal aide les suivants');
+    var b = $('machine-btn');
+    if (b) b.focus();
+  }
+
+  // ---------- Evenements ----------
+  $('review-toggle').addEventListener('click', function () {
+    var open = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', String(!open));
+    $('review-body').hidden = open;
+  });
+  document.querySelectorAll('.review input').forEach(function (inp) {
+    inp.addEventListener('change', function () {
+      if (inp.name === 'machine') { state.machineKey = inp.value; loadScenario(); }
+      if (inp.name === 'mode') state.mode = inp.value;
+      if (inp.name === 'fiche') state.fiche = inp.value;
+      render();
+    });
+  });
+
+  $('login').addEventListener('click', function () {
+    document.querySelector('input[name="mode"][value="member"]').checked = true;
+    state.mode = 'member';
+    render();
+    toast('Connecté (maquette)');
+    var b = $('machine-btn'); if (b) b.focus();
+  });
+
+  $('fav').addEventListener('click', function () {
+    state.fav = !state.fav;
+    this.setAttribute('aria-pressed', String(state.fav));
+    this.setAttribute('aria-label', state.fav ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    toast(state.fav ? 'Ajouté à tes favoris' : 'Retiré de tes favoris');
+  });
+  $('share').addEventListener('click', function () { toast('Lien copié'); });
+  $('back').addEventListener('click', function () { toast('Maquette : retour à la carte'); });
+  $('route').addEventListener('click', function () { toast('Maquette : ouverture de l\'itinéraire'); });
+  $('similar').addEventListener('click', function () { toast('Maquette : machines proches sur la carte'); });
+  $('photo').addEventListener('click', function () { toast('Maquette : ajouter une photo'); });
+  $('edit').addEventListener('click', function () { toast('Maquette : modifier la fiche'); });
+  $('add-products').addEventListener('click', function () { toast('Maquette : ajouter les produits'); });
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button');
+    if (!t) return;
+    if (t.id === 'machine-btn' || t.id === 'machine-link') { openMachineSheet(); return; }
+    if (t.dataset.open) { openProductSheet(t.dataset.open); return; }
+    if (t.dataset.sig) { signalProduct(t.dataset.id, t.dataset.sig); return; }
+    if (t.dataset.psig) { closeSheet(); signalProduct(t.dataset.id, t.dataset.psig); return; }
+    if (t.dataset.msig) { closeSheet(); signalMachine(t.dataset.msig); return; }
+    if (t.dataset.toast) { toast(t.dataset.toast); }
+  });
+  $('scrim').addEventListener('click', closeSheet);
+  $('sheet-cancel').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) {
+    if ($('sheet').hidden) return;
+    if (e.key === 'Escape') { closeSheet(); return; }
+    if (e.key !== 'Tab') return;
+    var f = $('sheet').querySelectorAll('button');
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  loadScenario();
+  render();
+})();
+</script>

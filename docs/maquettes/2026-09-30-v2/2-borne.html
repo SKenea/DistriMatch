@@ -1,0 +1,642 @@
+<title>Fiche borne</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root {
+    --bg: #EEF1F5;
+    --surface: #FFFFFF;
+    --ink: #0F172A;
+    --ink-2: #334155;
+    --muted: #5B6472;
+    --line: #E2E8F0;
+    --line-2: #CBD5E1;
+    --accent: #1D4ED8;
+    --accent-ink: #FFFFFF;
+    --green: #16A34A;
+    --green-ink: #166534;
+    --green-ink-soft: #4D7C5A;
+    --green-fill: #EFFAF2;
+    --green-line: #BFE6CB;
+    --orange: #EA580C;
+    --orange-ink: #9A3412;
+    --orange-ink-soft: #A0583A;
+    --red: #DC2626;
+    --red-ink: #991B1B;
+    --red-ink-soft: #A34848;
+    --off: #CBD5E1;
+    --none-ink: #475569;
+    --radius-card: 14px;
+    --radius-ctl: 10px;
+    --focus: 0 0 0 3px #FFFFFF, 0 0 0 5px #1D4ED8;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 var(--font); -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: none; box-shadow: var(--focus); }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--surface); padding-bottom: 96px; }
+
+  /* ---------- Reglages de la maquette (outil de revue) ---------- */
+  .review { background: #111827; color: #E5E7EB; font-size: 13px; }
+  .review-toggle {
+    width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between;
+    background: repeating-linear-gradient(135deg, #111827 0 10px, #1F2937 10px 20px);
+    border: 0; color: #FDE68A; padding: 0 16px; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12px; letter-spacing: .04em;
+  }
+  .review-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .review-body { padding: 8px 16px 14px; display: grid; gap: 10px; }
+  .review fieldset { border: 1px dashed #4B5563; border-radius: 8px; margin: 0; padding: 6px 10px 8px; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  .review legend { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: #9CA3AF; padding: 0 4px; }
+  .review label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 6px; background: #1F2937; cursor: pointer; }
+  .review label:has(input:checked) { background: #FDE68A; color: #111827; font-weight: 600; }
+  .review input { accent-color: #111827; margin: 0; }
+
+  /* ---------- Barre haute ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 0; }
+  .icon-btn {
+    width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%;
+    border: 0; background: transparent; color: var(--ink);
+  }
+  .icon-btn:hover { background: #F1F5F9; }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  /* ---------- En-tete ---------- */
+  .head { padding: 2px 16px 14px; }
+  .title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 20px; line-height: 1.25; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  .tag-demo { font-size: 11px; font-weight: 600; color: var(--none-ink); border: 1px solid var(--line-2); border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .meta { margin-top: 2px; color: var(--muted); font-size: 14px; }
+
+  .status-line { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; min-height: 24px; }
+  .feu { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border-radius: 999px; background: #F1F5F9; border: 1px solid var(--line); flex: none; }
+  .feu i { width: 9px; height: 9px; border-radius: 50%; background: var(--off); display: block; }
+  .feu[data-s="ok"] .g { background: var(--green); }
+  .feu[data-s="empty"] .o { background: var(--orange); }
+  .feu[data-s="broken"] .r { background: var(--red); }
+  .feu.soft[data-s="ok"] .g, .feu.soft[data-s="empty"] .o, .feu.soft[data-s="broken"] .r { opacity: .5; }
+  .feu-word { font-weight: 600; font-size: 14px; }
+  .feu-word[data-s="ok"] { color: var(--green-ink); }
+  .feu-word[data-s="empty"] { color: var(--orange-ink); }
+  .feu-word[data-s="broken"] { color: var(--red-ink); }
+  .feu-word[data-s="none"] { color: var(--none-ink); }
+  .feu-word.soft[data-s="ok"] { color: var(--green-ink-soft); }
+  .feu-word.soft[data-s="empty"] { color: var(--orange-ink-soft); }
+  .feu-word.soft[data-s="broken"] { color: var(--red-ink-soft); }
+  .feu-age { color: #6B7280; }
+
+  /* Mode signalement : le mini-feu s'etend en 3 boutons */
+  .machine-signal { margin-top: 10px; }
+  .machine-signal p { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button {
+    min-height: 44px; border-radius: var(--radius-ctl); border: 1px solid var(--line-2); background: var(--surface);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 0 6px;
+  }
+  .seg button i { width: 9px; height: 9px; border-radius: 50%; display: block; flex: none; }
+  .seg [data-v="ok"] i { background: var(--green); }
+  .seg [data-v="empty"] i { background: var(--orange); }
+  .seg [data-v="broken"] i { background: var(--red); }
+  .seg button[aria-pressed="true"][data-v="ok"] { border-color: var(--green); background: var(--green-fill); color: var(--green-ink); }
+  .seg button[aria-pressed="true"][data-v="empty"] { border-color: var(--orange); background: #FFF4ED; color: var(--orange-ink); }
+  .seg button[aria-pressed="true"][data-v="broken"] { border-color: var(--red); background: #FEF2F2; color: var(--red-ink); }
+
+  /* ---------- Heros : compteur ---------- */
+  .counter { margin: 0 16px; padding: 16px 16px 14px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+  .counter-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .counter-main { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+  .counter-num { font-size: 52px; line-height: 1; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .counter-num.dim { color: #94A3B8; }
+  .counter-of { font-size: 17px; font-weight: 600; color: var(--ink-2); }
+  .counter-sub { margin-top: 6px; font-size: 14px; color: #6B7280; }
+  .counter-sub b { font-weight: 600; color: var(--ink-2); }
+  .gauge { display: flex; gap: 4px; margin-top: 12px; }
+  .gauge span { flex: 1; height: 6px; border-radius: 3px; background: #E5E7EB; }
+  .gauge .dispo { background: var(--green); }
+  .gauge .dispo.soft { background: #8CCB9F; }
+  .gauge .none { background: transparent; border: 1.5px dashed #94A3B8; height: 6px; }
+  .counter.empty-list .counter-num { font-size: 20px; letter-spacing: 0; }
+
+  /* ---------- Grille de pastilles produit ---------- */
+  .section { padding: 0 16px; }
+  .hint { margin: 14px 16px 0; font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+  .hint svg { width: 16px; height: 16px; flex: none; color: var(--accent); }
+  .grid { list-style: none; margin: 10px 16px 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pill {
+    width: 100%; min-height: 76px; text-align: left; display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; align-items: start;
+    padding: 10px 10px 10px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+  }
+  .pill .ico { grid-row: span 2; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: #F1F5F9; color: var(--ink-2); }
+  .pill .ico svg { width: 20px; height: 20px; }
+  .pill .name { font-size: 14px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+  .pill .st { font-size: 13px; display: flex; align-items: center; gap: 5px; color: var(--none-ink); flex-wrap: wrap; }
+  .pill .st i { width: 7px; height: 7px; border-radius: 50%; background: #94A3B8; display: block; flex: none; }
+  .pill .st small { flex-basis: 100%; padding-left: 12px; font-size: 12px; color: #6B7280; font-weight: 400; }
+  .pill[data-s="dispo"] { background: var(--green-fill); border-color: var(--green-line); }
+  .pill[data-s="dispo"] .ico { background: #FFFFFF; color: var(--green-ink); }
+  .pill[data-s="dispo"] .st { color: var(--green-ink); font-weight: 600; }
+  .pill[data-s="dispo"] .st i { background: var(--green); }
+  .pill[data-s="dispo"].soft { background: #F6FBF7; border-color: #DCEFE2; }
+  .pill[data-s="dispo"].soft .st { color: var(--green-ink-soft); }
+  .pill[data-s="dispo"].soft .st i { opacity: .5; }
+  .pill[data-s="pasdispo"] { background: #F3F4F6; border-color: #E5E7EB; }
+  .pill[data-s="pasdispo"] .ico { opacity: .5; background: #FFFFFF; }
+  .pill[data-s="pasdispo"] .name { color: #4B5563; font-weight: 500; }
+  .pill[data-s="pasdispo"] .st { color: #4B5563; }
+  .pill[data-s="pasdispo"] .st i { background: #9CA3AF; }
+  .pill[data-s="none"] { border: 1.5px dashed #94A3B8; background: var(--surface); }
+  .pill[data-s="none"] .st i { background: transparent; border: 1.5px solid #94A3B8; }
+  .pill.just { box-shadow: 0 0 0 2px var(--accent) inset; }
+  button.pill { position: relative; }
+  button.pill::after {
+    content: ""; position: absolute; top: 8px; right: 8px; width: 16px; height: 16px;
+    background: no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D4ED8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/%3E%3C/svg%3E");
+  }
+  button.pill .name { padding-right: 16px; }
+
+  .no-products { margin: 10px 16px 0; padding: 14px; border: 1.5px dashed var(--line-2); border-radius: 12px; color: var(--ink-2); font-size: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+  /* ---------- Invitation / Je suis devant ---------- */
+  .contrib { margin: 14px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 12px; background: #F8FAFC; border: 1px solid var(--line); }
+  .contrib p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  .btn {
+    min-height: 44px; padding: 0 14px; border-radius: var(--radius-ctl); border: 1px solid var(--line-2);
+    background: var(--surface); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; color: var(--ink);
+  }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn:hover { background: #F8FAFC; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: #1E40AF; }
+  .btn-dark { background: var(--ink); border-color: var(--ink); color: #FFFFFF; }
+  .btn-dark:hover { background: #1E293B; }
+  .btn-link { border: 0; background: transparent; color: var(--accent); padding: 0 6px; }
+
+  /* ---------- Actions ---------- */
+  .actions { margin: 18px 16px 0; display: flex; gap: 8px; }
+  .actions .btn-primary { flex: 1; }
+  .sq { width: 48px; padding: 0; }
+  .sq[aria-pressed="true"] { color: #BE123C; border-color: #FDA4AF; background: #FFF1F2; }
+  .sq[aria-pressed="true"] svg path { fill: currentColor; }
+  .actions-2 { margin: 8px 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* ---------- Blocs secondaires ---------- */
+  .block { margin: 22px 16px 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  .block h2 { font-size: 16px; margin: 0 0 8px; font-weight: 700; }
+  .row-link { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; background: none; border: 0; padding: 0; text-align: left; }
+  .rating { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .rating strong { font-size: 18px; }
+  .stars { display: inline-flex; gap: 1px; color: #B45309; }
+  .stars svg { width: 15px; height: 15px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .chev-r { width: 20px; height: 20px; color: var(--muted); }
+  .about { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .about li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; font-size: 14px; color: var(--ink-2); }
+  .about svg { width: 20px; height: 20px; color: var(--muted); }
+
+  /* ---------- Barre du mode signalement ---------- */
+  .signal-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); pointer-events: none;
+  }
+  .signal-bar-inner { pointer-events: auto; width: 100%; max-width: 448px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0F172A; color: #FFFFFF; border-radius: 14px; padding: 8px 8px 8px 14px; box-shadow: 0 8px 24px rgba(15,23,42,.25); }
+  .signal-bar-inner span { font-size: 14px; }
+  .signal-bar .btn { background: #FFFFFF; color: var(--ink); border-color: #FFFFFF; }
+
+  /* ---------- Feuille produit ---------- */
+  .backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.4); z-index: 30; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; margin: 0 auto; max-width: 480px;
+    background: var(--surface); border-radius: 18px 18px 0 0; padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+    animation: up .18s ease-out;
+  }
+  @keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 0 auto 12px; }
+  .sheet h3 { margin: 0; font-size: 17px; }
+  .sheet p { margin: 2px 0 14px; font-size: 14px; color: var(--muted); }
+  .sheet-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sheet-choices button { min-height: 52px; border-radius: 12px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .yes { background: var(--green-fill); border: 1px solid var(--green); color: var(--green-ink); }
+  .no { background: #F3F4F6; border: 1px solid #9CA3AF; color: #374151; }
+  .yes i, .no i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .yes i { background: var(--green); }
+  .no i { background: #9CA3AF; }
+  .sheet .cancel { margin-top: 8px; width: 100%; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40;
+    background: #0F172A; color: #FFFFFF; padding: 12px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); width: max-content;
+    box-shadow: 0 8px 24px rgba(15,23,42,.25);
+  }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="app">
+  <!-- Outil de revue : pas une partie de l'app -->
+  <section class="review" aria-label="Réglages de la maquette">
+    <button class="review-toggle" id="reviewToggle" aria-expanded="false" aria-controls="reviewBody">
+      <span>Réglages de la maquette</span>
+      <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="review-body" id="reviewBody" hidden>
+      <fieldset>
+        <legend>État machine</legend>
+        <label><input type="radio" name="machine" value="ok" checked> Fonctionne</label>
+        <label><input type="radio" name="machine" value="empty"> Vide</label>
+        <label><input type="radio" name="machine" value="broken"> En panne</label>
+        <label><input type="radio" name="machine" value="none"> Pas d'info</label>
+      </fieldset>
+      <fieldset>
+        <legend>Mode</legend>
+        <label><input type="radio" name="mode" value="visitor" checked> Visiteur</label>
+        <label><input type="radio" name="mode" value="member"> Connecté</label>
+      </fieldset>
+      <fieldset>
+        <legend>Fiche</legend>
+        <label><input type="radio" name="fiche" value="full" checked> Avec produits</label>
+        <label><input type="radio" name="fiche" value="bare"> Sans produit</label>
+      </fieldset>
+    </div>
+  </section>
+
+  <div class="topbar">
+    <button class="icon-btn" aria-label="Retour à la carte">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
+    </button>
+  </div>
+
+  <main>
+    <header class="head">
+      <div class="title-row">
+        <h1 id="name">Légumes Bio Cambo</h1>
+        <span class="tag-demo" id="demoTag">Démo</span>
+      </div>
+      <div class="status-line" id="statusLine"></div>
+      <div class="meta" id="meta"></div>
+      <div class="machine-signal" id="machineSignal" hidden>
+        <p id="machineQ">La machine, là maintenant&nbsp;?</p>
+        <div class="seg" role="group" aria-labelledby="machineQ">
+          <button type="button" data-v="ok" aria-pressed="false"><i aria-hidden="true"></i>Fonctionne</button>
+          <button type="button" data-v="empty" aria-pressed="false"><i aria-hidden="true"></i>Vide</button>
+          <button type="button" data-v="broken" aria-pressed="false"><i aria-hidden="true"></i>En panne</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="counter" id="counter" aria-live="polite"></section>
+
+    <p class="hint" id="hint" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      Touche un produit pour dire s'il en reste.
+    </p>
+    <ul class="grid" id="grid" aria-label="Produits"></ul>
+    <div class="no-products" id="noProducts" hidden>
+      <span><strong>Aucun produit référencé</strong><br>Personne n'a encore listé ce que propose cette machine.</span>
+      <button class="btn" id="addProducts" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Ajouter les produits
+      </button>
+    </div>
+
+    <div class="contrib" id="invite">
+      <p>Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste</p>
+      <button class="btn" id="loginBtn" type="button">Se connecter</button>
+    </div>
+    <div class="contrib" id="imHere" hidden>
+      <p>Tu vois la machine ?</p>
+      <button class="btn" id="startSignal" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        Je suis devant
+      </button>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" type="button" id="routeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-8-8 18-2-8z"/></svg>
+        Itinéraire
+      </button>
+      <button class="btn sq" type="button" id="favBtn" aria-pressed="false" aria-label="Ajouter aux favoris">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.6-9-9.3C2 7.4 4.2 4.5 7.4 4.5c2 0 3.5 1.1 4.6 2.7 1.1-1.6 2.6-2.7 4.6-2.7 3.2 0 5.4 2.9 4.4 6.2C19.5 15.4 12 20 12 20z"/></svg>
+      </button>
+      <button class="btn sq" type="button" id="shareBtn" aria-label="Partager">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+      </button>
+    </div>
+    <div class="actions-2" id="memberActions" hidden>
+      <button class="btn" type="button" data-toast="Photo : ouverture de l'appareil (maquette)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Photo
+      </button>
+      <button class="btn" type="button" data-toast="Modifier : édition de la fiche (maquette)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        Modifier
+      </button>
+    </div>
+
+    <section class="block" aria-labelledby="avisTitle">
+      <h2 id="avisTitle">Avis</h2>
+      <div id="avis"></div>
+    </section>
+
+    <section class="block" aria-labelledby="aboutTitle">
+      <h2 id="aboutTitle">À propos</h2>
+      <ul class="about" id="about"></ul>
+    </section>
+  </main>
+</div>
+
+<div class="signal-bar" id="signalBar" hidden>
+  <div class="signal-bar-inner">
+    <span>Mode signalement</span>
+    <button class="btn" id="endSignal" type="button">Terminé</button>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="grab" aria-hidden="true"></div>
+  <h3 id="sheetTitle">Produit</h3>
+  <p id="sheetNow">Actuellement : Dispo</p>
+  <div class="sheet-choices">
+    <button type="button" class="yes" data-v="dispo"><i aria-hidden="true"></i>Il y en a</button>
+    <button type="button" class="no" data-v="pasdispo"><i aria-hidden="true"></i>Plus rien</button>
+  </div>
+  <button type="button" class="btn cancel" id="sheetCancel">Annuler</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var ICONS = {
+    basket: '<path d="M4 10h16l-1.6 8.4A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.6z"/><path d="M8.5 10 12 4.5 15.5 10M9.5 14v2.5M14.5 14v2.5"/>',
+    potato: '<path d="M7.5 5.5c3.2-2.1 8.8-1.2 10.7 2.6 1.9 3.9.6 8.8-3.4 10.4-4.1 1.7-9.7.7-10.9-3.8C3 11.4 4.6 7.4 7.5 5.5z"/><path d="M9.5 10h.01M14 13.5h.01M11.5 15.5h.01"/>',
+    carrot: '<path d="M15.5 8.5c1.4 1.4 1.3 3-.1 4.4L6.2 20.1c-.9.6-2-.4-1.4-1.3L12 9.6c1.4-1.4 2.9-1.5 3.5-1.1z"/><path d="M15.5 8.5 19 5M15.5 8.5 16 3.5M15.5 8.5l5 .5M9 13.5l1.5 1.5M11.5 11l1 1"/>',
+    salad: '<path d="M12 20c-4.8 0-8-2.8-8-6.6 0-1.8.9-3 2-3.8.2-3 2.8-5.1 6-5.1s5.8 2.1 6 5.1c1.1.8 2 2 2 3.8 0 3.8-3.2 6.6-8 6.6z"/><path d="M12 20v-9M12 15l-3-3M12 17l3-3"/>'
+  };
+  var PRODUCTS = [
+    { id: 'panier', name: 'Panier légumes saison', icon: 'basket' },
+    { id: 'pdt', name: 'Pommes de terre (2 kg)', icon: 'potato' },
+    { id: 'carottes', name: 'Carottes (1 kg)', icon: 'carrot' },
+    { id: 'salades', name: 'Salades (lot de 2)', icon: 'salad' }
+  ];
+  // Signaux bruts par scenario (age en minutes). Machine vide / en panne plus recente => produits Pas dispo.
+  var SCENARIOS = {
+    ok:     { machine: { s: 'ok', age: 12 },     products: { panier: ['dispo', 12], pdt: ['dispo', 12], carottes: ['pasdispo', 40], salades: ['none', null] } },
+    empty:  { machine: { s: 'empty', age: 34 },  products: { panier: ['dispo', 95], pdt: ['dispo', 95], carottes: ['pasdispo', 130], salades: ['none', null] } },
+    broken: { machine: { s: 'broken', age: 120 }, products: { panier: ['dispo', 300], pdt: ['dispo', 300], carottes: ['pasdispo', 320], salades: ['none', null] } },
+    none:   { machine: { s: 'none', age: 5760 }, products: { panier: ['none', null], pdt: ['none', null], carottes: ['none', null], salades: ['none', null] } }
+  };
+  var MACHINE_WORD = { ok: 'Fonctionne', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
+  var PRODUCT_WORD = { dispo: 'Dispo', pasdispo: 'Pas dispo', none: "Pas d'info" };
+  var FRESH = 120, STALE = 1440;
+
+  var state = { scenario: 'ok', member: false, bare: false, signalMode: false, fav: false, machineOverride: null, productOverrides: {}, justId: null };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ago(min) {
+    if (min < 1) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    if (min < STALE) return 'il y a ' + Math.floor(min / 60) + ' h';
+    return 'il y a ' + Math.floor(min / STALE) + ' j';
+  }
+
+  function machine() {
+    var m = state.machineOverride || SCENARIOS[state.scenario].machine;
+    var s = m.age > STALE ? 'none' : m.s;
+    return { s: s, raw: m.s, age: m.age, soft: s !== 'none' && m.age >= FRESH };
+  }
+  function productView(p) {
+    var raw = state.productOverrides[p.id] || SCENARIOS[state.scenario].products[p.id];
+    var st = raw[0], age = raw[1];
+    var m = machine();
+    var rawAge = age === null ? Infinity : age;
+    if ((m.s === 'empty' || m.s === 'broken') && m.age < rawAge) return { s: 'pasdispo', age: m.age, soft: m.age >= FRESH };
+    if (st !== 'none' && age > STALE) return { s: 'none', age: null, soft: false };
+    return { s: st, age: age, soft: st !== 'none' && age >= FRESH };
+  }
+
+  function renderStatus() {
+    var m = machine();
+    var soft = m.soft ? ' soft' : '';
+    var age = m.s === 'none' ? 'vérifié ' + ago(m.age) : ago(m.age);
+    $('statusLine').innerHTML =
+      '<span class="feu' + soft + '" data-s="' + m.s + '" aria-hidden="true"><i class="g"></i><i class="o"></i><i class="r"></i></span>' +
+      '<span class="feu-word' + soft + '" data-s="' + m.s + '"><span class="sr">État de la machine : </span>' + MACHINE_WORD[m.s] + '</span>' +
+      '<span class="feu-age">· ' + age + '</span>';
+    var pressed = state.machineOverride ? state.machineOverride.s : null;
+    document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === pressed)); });
+  }
+
+  function renderCounter() {
+    var c = $('counter');
+    var m = machine();
+    // Sans produit : un seul encadre (#noProducts), pas de compteur en double
+    c.hidden = state.bare;
+    if (state.bare) return;
+    var views = PRODUCTS.map(productView);
+    var total = views.length;
+    var dispo = views.filter(function (v) { return v.s === 'dispo'; });
+    var allNone = views.every(function (v) { return v.s === 'none'; });
+    var num, numDim = false, sub;
+    if (m.s === 'broken' && dispo.length === 0) {
+      num = '—'; numDim = true;
+      sub = '<b>Machine en panne</b> · signalé ' + ago(m.age);
+    } else if (allNone) {
+      num = '?';
+      sub = m.s === 'none' ? 'vérifié ' + ago(m.age) : 'Personne n\'a encore dit ce qu\'il reste';
+    } else {
+      num = String(dispo.length);
+      var ages = dispo.length ? dispo.map(function (v) { return v.age; }) : views.filter(function (v) { return v.age !== null; }).map(function (v) { return v.age; });
+      var freshest = ages.length ? Math.min.apply(null, ages) : m.age;
+      sub = (m.s === 'empty' && dispo.length === 0 ? '<b>Machine vide</b> · ' : '') + 'vu ' + ago(freshest);
+    }
+    var segs = views.map(function (v) {
+      if (m.s === 'broken' && dispo.length === 0) return '<span></span>';
+      return '<span class="' + (v.s === 'dispo' ? 'dispo' + (v.soft ? ' soft' : '') : v.s === 'none' ? 'none' : '') + '"></span>';
+    }).join('');
+    c.className = 'counter';
+    c.innerHTML =
+      '<div class="counter-label">Dispo maintenant</div>' +
+      '<div class="counter-main"><span class="counter-num' + (numDim ? ' dim' : '') + '">' + num + '</span>' +
+      '<span class="counter-of">sur ' + total + ' produits dispo</span></div>' +
+      '<div class="counter-sub">' + sub + '</div>' +
+      '<div class="gauge" aria-hidden="true">' + segs + '</div>';
+  }
+
+  function renderGrid() {
+    var g = $('grid');
+    $('noProducts').hidden = !state.bare;
+    $('addProducts').hidden = !(state.bare && state.member);
+    g.hidden = state.bare;
+    $('hint').hidden = !(state.signalMode && !state.bare);
+    if (state.bare) { g.innerHTML = ''; return; }
+    var tag = state.signalMode ? 'button' : 'div';
+    g.innerHTML = PRODUCTS.map(function (p) {
+      var v = productView(p);
+      var age = v.age !== null && v.s !== 'none' ? ' <small>' + esc(ago(v.age)) + '</small>' : '';
+      var cls = 'pill' + (v.soft ? ' soft' : '') + (state.justId === p.id ? ' just' : '');
+      var attrs = state.signalMode ? ' type="button" data-id="' + p.id + '" aria-label="' + esc(p.name + ' : ' + PRODUCT_WORD[v.s] + '. Signaler') + '"' : '';
+      return '<li><' + tag + ' class="' + cls + '" data-s="' + v.s + '"' + attrs + '>' +
+        '<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[p.icon] + '</svg></span>' +
+        '<span class="name">' + esc(p.name) + '</span>' +
+        '<span class="st"><i aria-hidden="true"></i>' + PRODUCT_WORD[v.s] + age + '</span>' +
+        '</' + tag + '></li>';
+    }).join('');
+  }
+
+  function renderStatic() {
+    var full = !state.bare;
+    $('name').textContent = full ? 'Légumes Bio Cambo' : 'Gaztainbidea';
+    $('demoTag').hidden = !full;
+    $('meta').textContent = full ? 'Produits agricoles · €€ · à 2,3 km' : 'Terroir local · € · à 450 m';
+    var star = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+    var chev = '<svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+    if (full) {
+      $('avis').innerHTML = '<button class="row-link" type="button" data-toast="Avis : liste complète (maquette)"><span class="rating"><strong>4,7</strong><span class="stars" aria-hidden="true">' + star + star + star + star + star + '</span><span class="muted">91 avis</span></span>' + chev + '</button>' +
+        (state.member ? '<button class="btn" type="button" data-toast="Mon avis : formulaire (maquette)">Donner mon avis</button>' : '');
+    } else {
+      $('avis').innerHTML = '<p class="muted" style="margin:0 0 8px">Pas encore d\'avis.</p>' +
+        (state.member ? '<button class="btn" type="button" data-toast="Mon avis : formulaire (maquette)">Donner le premier avis</button>' : '');
+    }
+    var pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+    var walk = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M14 6l6 6-6 6"/></svg>';
+    var tagI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>';
+    $('about').innerHTML = full
+      ? '<li>' + pin + '<span>Route des Thermes, 64250 Cambo-les-Bains</span></li><li>' + walk + '<span>À 2,3 km de toi</span></li><li>' + tagI + '<span>Produits agricoles · €€</span></li>'
+      : '<li>' + pin + '<span>impasse Gaztainbidea</span></li><li>' + walk + '<span>À 450 m de toi</span></li><li>' + tagI + '<span>Terroir local · €</span></li>';
+  }
+
+  function render() {
+    renderStatic();
+    renderStatus();
+    renderCounter();
+    renderGrid();
+    $('invite').hidden = state.member;
+    $('imHere').hidden = !state.member || state.signalMode;
+    $('memberActions').hidden = !state.member;
+    $('machineSignal').hidden = !state.signalMode;
+    $('signalBar').hidden = !state.signalMode;
+  }
+
+  // ---------- Toast ----------
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  // ---------- Reglages ----------
+  $('reviewToggle').addEventListener('click', function () {
+    var open = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', String(!open));
+    $('reviewBody').hidden = open;
+  });
+  function resetSignals() { state.machineOverride = null; state.productOverrides = {}; state.justId = null; }
+  document.querySelectorAll('.review input').forEach(function (inp) {
+    inp.addEventListener('change', function () {
+      if (inp.name === 'machine') { state.scenario = inp.value; resetSignals(); }
+      if (inp.name === 'mode') { state.member = inp.value === 'member'; if (!state.member) state.signalMode = false; }
+      if (inp.name === 'fiche') { state.bare = inp.value === 'bare'; resetSignals(); }
+      render();
+    });
+  });
+  function setMember() {
+    state.member = true;
+    document.querySelector('.review input[value="member"]').checked = true;
+    render();
+    toast('Connecté (maquette)');
+    $('startSignal').focus();
+  }
+  $('loginBtn').addEventListener('click', setMember);
+
+  // ---------- Mode signalement ----------
+  $('startSignal').addEventListener('click', function () {
+    state.signalMode = true; render();
+    document.querySelector('.seg button').focus();
+  });
+  $('endSignal').addEventListener('click', function () {
+    state.signalMode = false; state.justId = null; render();
+    $('startSignal').focus();
+  });
+  document.querySelectorAll('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.machineOverride = { s: b.dataset.v, age: 0 };
+      render();
+      toast('Merci ! Ton signal aide les suivants');
+    });
+  });
+
+  // ---------- Feuille produit ----------
+  var currentId = null, lastFocus = null;
+  function openSheet(id) {
+    var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
+    var v = productView(p);
+    currentId = id; lastFocus = document.activeElement;
+    $('sheetTitle').textContent = p.name;
+    $('sheetNow').textContent = 'Actuellement : ' + PRODUCT_WORD[v.s] + (v.age !== null && v.s !== 'none' ? ' · ' + ago(v.age) : '') + '. Et là, tu vois quoi\u00a0?';
+    $('backdrop').hidden = false; $('sheet').hidden = false;
+    $('sheet').querySelector('.yes').focus();
+  }
+  function closeSheet() {
+    $('backdrop').hidden = true; $('sheet').hidden = true;
+    var id = currentId; currentId = null;
+    var target = id && document.querySelector('.pill[data-id="' + id + '"]');
+    (target || lastFocus || document.body).focus();
+  }
+  $('grid').addEventListener('click', function (e) {
+    var btn = e.target.closest('button.pill');
+    if (btn) openSheet(btn.dataset.id);
+  });
+  document.querySelectorAll('.sheet-choices button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.productOverrides[currentId] = [b.dataset.v, 0];
+      state.justId = currentId;
+      render();
+      closeSheet();
+      toast('Merci ! Ton signal aide les suivants');
+    });
+  });
+  $('sheetCancel').addEventListener('click', closeSheet);
+  $('backdrop').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function (e) {
+    if ($('sheet').hidden) return;
+    if (e.key === 'Escape') { closeSheet(); return; }
+    if (e.key === 'Tab') {
+      var f = Array.prototype.slice.call($('sheet').querySelectorAll('button'));
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  // ---------- Secondaires ----------
+  $('favBtn').addEventListener('click', function () {
+    state.fav = !state.fav;
+    this.setAttribute('aria-pressed', String(state.fav));
+    this.setAttribute('aria-label', state.fav ? 'Retirer des favoris' : 'Ajouter aux favoris');
+    toast(state.fav ? 'Ajouté aux favoris : tu seras prévenu des changements' : 'Retiré des favoris');
+  });
+  $('shareBtn').addEventListener('click', function () { toast('Lien de la fiche copié'); });
+  $('routeBtn').addEventListener('click', function () { toast('Itinéraire : ouverture de ton appli de navigation (maquette)'); });
+  $('addProducts').addEventListener('click', function () { toast('Ajouter les produits : formulaire (maquette)'); });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-toast]');
+    if (t) toast(t.dataset.toast);
+  });
+
+  render();
+})();
+</script>
