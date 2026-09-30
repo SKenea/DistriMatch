@@ -1,0 +1,716 @@
+<title>Fiche vitrine</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+  --page: #E9EDF1;
+  --ink: #1F2933;
+  --ink-2: #52606D;
+  --line: #CBD2D9;
+  --card: #FFFFFF;
+  --body: #2E3A4B;         /* carrosserie de la machine */
+  --body-edge: #1C2533;
+  --body-ink: #E4E9F0;
+  --screen: #0B1510;       /* afficheur */
+  --screen-edge: #050A07;
+  --lcd-works: #4ADE80;
+  --lcd-empty: #FBBF24;
+  --lcd-broken: #F87171;
+  --lcd-unknown: #CBD5E1;
+  --lcd-works-soft: #9AD9AE;
+  --lcd-empty-soft: #E3C877;
+  --lcd-broken-soft: #E3A7A7;
+  --yes: #166534;
+  --yes-fill: #15803d;
+  --yes-soft: #3F6B50;
+  --no: #991B1B;
+  --no-fill: #b91c1c;
+  --no-soft: #8A4B4B;
+  --unknown: #475569;
+  --brand: #D62828;
+  --focus: #2563EB;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font-family: var(--sans); font-size: 16px; line-height: 1.4;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Panneau maquette (outil de revue, hors design) ---------- */
+.mq {
+  position: sticky; top: 0; z-index: 30;
+  background: #FEF3C7; color: #422006;
+  border-bottom: 2px dashed #92400E;
+  font-family: var(--mono); font-size: 13px;
+}
+.mq summary {
+  list-style: none; cursor: pointer; padding: 10px 16px; min-height: 44px;
+  display: flex; align-items: center; gap: 8px; max-width: 480px; margin: 0 auto;
+}
+.mq summary::-webkit-details-marker { display: none; }
+.mq summary::before { content: "▸"; }
+.mq[open] summary::before { content: "▾"; }
+.mq summary b { background: #92400E; color: #FFFFFF; padding: 1px 6px; border-radius: 3px; letter-spacing: .06em; }
+.mq-body { max-width: 480px; margin: 0 auto; padding: 0 16px 12px; display: grid; gap: 10px; }
+.mq fieldset { border: 0; margin: 0; padding: 0; }
+.mq legend { font-weight: 700; margin-bottom: 4px; }
+.mq-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.mq-opts label {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border: 1px solid #92400E; border-radius: 4px; background: #FFFBEB; cursor: pointer;
+}
+.mq-opts input { position: absolute; opacity: 0; pointer-events: none; }
+.mq-opts input:checked + span { font-weight: 700; }
+.mq-opts label:has(input:checked) { background: #92400E; color: #FFFFFF; }
+.mq-opts label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- App ---------- */
+.app { max-width: 480px; margin: 0 auto; padding: 8px 16px 40px; }
+.topbar { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.topbar .spacer { flex: 1; }
+.icon-btn {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border: 0; background: transparent; border-radius: 50%; color: var(--ink);
+}
+.icon-btn:hover { background: #DDE3E9; }
+.icon-btn svg { width: 24px; height: 24px; }
+.icon-btn[aria-pressed="true"] { color: var(--brand); }
+.icon-btn[aria-pressed="true"] .heart { fill: var(--brand); }
+
+/* La machine */
+.machine {
+  background: var(--body);
+  border-radius: 14px 14px 6px 6px;
+  padding: 14px 12px 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -3px 0 var(--body-edge), 0 6px 18px rgba(28,37,51,.25);
+  color: var(--body-ink);
+}
+.plate { padding: 0 4px 12px; }
+.plate h1 { margin: 0; font-size: 22px; line-height: 1.2; color: #FFFFFF; font-weight: 800; letter-spacing: -.01em; }
+.demo {
+  display: inline-block; vertical-align: 3px; margin-left: 6px;
+  font: 600 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  color: #E4E9F0; border: 1px solid #7B8794; border-radius: 3px; padding: 3px 5px;
+}
+.plate .meta { margin: 4px 0 0; font-size: 14px; color: #C3CDD8; }
+
+/* Afficheur */
+.screen {
+  background: var(--screen);
+  border: 3px solid var(--screen-edge);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px #1d2b22, inset 0 8px 20px rgba(0,0,0,.6);
+  padding: 14px 14px 12px;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);
+}
+.screen-label { grid-column: 1 / -1; font: 600 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: #8FA396; }
+.screen-state { display: flex; align-items: center; gap: 10px; font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -.01em; }
+.led { flex: none; width: 14px; height: 14px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.screen-when { grid-column: 1; font: 500 14px/1.3 var(--mono); }
+.screen-count { grid-column: 2; grid-row: 2 / span 2; text-align: right; font-family: var(--mono); border-left: 1px solid #243429; padding-left: 12px; }
+.screen-count strong { display: block; font-size: 30px; line-height: 1; color: #F1F5F9; }
+.screen-count span { font-size: 12px; color: #A7B8AC; }
+.st-works  { color: var(--lcd-works); }
+.st-empty  { color: var(--lcd-empty); }
+.st-broken { color: var(--lcd-broken); }
+.st-unknown{ color: var(--lcd-unknown); }
+.st-works.soft  { color: var(--lcd-works-soft); }
+.st-empty.soft  { color: var(--lcd-empty-soft); }
+.st-broken.soft { color: var(--lcd-broken-soft); }
+.st-unknown .led { box-shadow: none; background: transparent; border: 2px solid currentColor; }
+.soft .led { box-shadow: none; opacity: .75; }
+@keyframes pulse { 50% { opacity: .45; } }
+.st-works:not(.soft) .led { animation: pulse 2.4s ease-in-out infinite; }
+
+/* Clavier d'etat (connecte) */
+.keypad { margin-top: 10px; }
+.keypad-label { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #C3CDD8; margin: 0 2px 6px; }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.key {
+  min-height: 48px; border: 0; border-radius: 6px;
+  background: #F1F4F7; color: #1F2933; font-weight: 700; font-size: 15px;
+  box-shadow: inset 0 -3px 0 #9AA5B1, 0 1px 0 #111827;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.key .dot { width: 10px; height: 10px; border-radius: 50%; }
+.key[data-state="works"] .dot { background: var(--yes-fill); }
+.key[data-state="empty"] .dot { background: #c2410c; }
+.key[data-state="broken"] .dot { background: var(--no-fill); }
+.key:active { transform: translateY(2px); box-shadow: inset 0 -1px 0 #9AA5B1; }
+.key[aria-pressed="true"] { box-shadow: inset 0 2px 4px rgba(0,0,0,.35); color: #FFFFFF; }
+.key[aria-pressed="true"] .dot { background: #FFFFFF; }
+.key[data-state="works"][aria-pressed="true"] { background: var(--yes-fill); }
+.key[data-state="empty"][aria-pressed="true"] { background: #c2410c; }
+.key[data-state="broken"][aria-pressed="true"] { background: var(--no-fill); }
+
+/* Casiers */
+.bays-head { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 2px 8px; }
+.bays-head h2 { margin: 0; font-size: 13px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #E4E9F0; }
+.bays-head p { margin: 0; font-size: 13px; color: #C3CDD8; }
+.bays {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  background: var(--body-edge); padding: 8px; border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+}
+.bay {
+  position: relative; display: flex; flex-direction: column; text-align: left;
+  min-height: 44px; width: 100%; margin: 0;
+  background: #F5F7FA; border: 2px solid #7B8794; border-radius: 4px;
+  padding: 0 0 10px; overflow: hidden; color: var(--ink);
+}
+button.bay:hover { filter: brightness(1.03); }
+button.bay:active { transform: scale(.985); }
+.bay-window {
+  position: relative; height: 62px; margin: 0 0 8px;
+  border-bottom: 2px solid #9AA5B1;
+  display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 0 10px 8px;
+}
+/* reflet de la vitre */
+.bay-window::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, rgba(255,255,255,.55) 0 18%, transparent 18% 30%, rgba(255,255,255,.25) 30% 36%, transparent 36%);
+  pointer-events: none;
+}
+.bay-code {
+  position: absolute; top: 5px; left: 5px; z-index: 1;
+  font: 700 12px/1 var(--mono); background: #1F2933; color: #FFFFFF; padding: 3px 5px; border-radius: 2px;
+}
+.goods i { display: block; width: 22px; border-radius: 5px 5px 2px 2px; }
+.goods { display: flex; align-items: flex-end; gap: 5px; }
+.goods i:nth-child(1) { height: 26px; background: #6B8E23; }
+.goods i:nth-child(2) { height: 32px; background: #B45309; }
+.goods i:nth-child(3) { height: 22px; background: #4D7C0F; }
+.bay-name { padding: 0 10px; font-size: 15px; font-weight: 600; line-height: 1.25; min-height: 38px; }
+.bay-status { padding: 4px 10px 0; font-size: 20px; font-weight: 800; line-height: 1.15; display: flex; align-items: center; gap: 6px; }
+.bay-status::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.bay-detail { padding: 2px 10px 0; font-size: 13px; color: var(--ink-2); }
+
+/* Dispo : casier eclaire */
+.bay.is-yes { border-color: var(--yes-fill); }
+.bay.is-yes .bay-window {
+  background: radial-gradient(ellipse at 50% -10%, #FFFFFF 0%, #FFF4C7 45%, #F7DE8A 100%);
+  box-shadow: inset 0 3px 0 #FFFBEA;
+}
+.bay.is-yes .bay-status { color: var(--yes); }
+.bay.is-yes.soft { border-color: #86B596; }
+.bay.is-yes.soft .bay-window { background: linear-gradient(#FBF4DC, #EFE3BC); }
+.bay.is-yes.soft .bay-status { color: var(--yes-soft); }
+.bay.is-yes.soft .goods { opacity: .7; }
+/* Pas dispo : casier eteint, vide */
+.bay.is-no .bay-window { background: linear-gradient(#27313D, #1B232D); border-bottom-color: #4B5563; }
+.bay.is-no .bay-window::after { opacity: .25; }
+.bay.is-no .goods { display: none; }
+.bay.is-no .spiral { display: block; }
+.bay.is-no .bay-status { color: var(--no); }
+.bay.is-no.soft .bay-status { color: var(--no-soft); }
+.bay.is-no.soft .bay-window { background: linear-gradient(#3B4654, #2F3844); }
+.spiral {
+  display: none; width: 80%; height: 12px; margin-bottom: 2px;
+  background: repeating-linear-gradient(90deg, #6B7280 0 3px, transparent 3px 12px);
+  border-bottom: 2px solid #6B7280; opacity: .8;
+}
+/* Pas d'info : vitre embuee */
+.bay.is-unknown { border-style: dashed; border-color: #7B8794; }
+.bay.is-unknown .bay-window {
+  background: repeating-linear-gradient(135deg, #D9DFE6 0 8px, #CBD2D9 8px 16px);
+  align-items: center;
+}
+.bay.is-unknown .goods { display: none; }
+.bay.is-unknown .fog { display: block; }
+.bay.is-unknown .bay-status { color: var(--unknown); }
+.bay.is-unknown .bay-status::before { background: transparent; border: 2px solid currentColor; }
+.fog { display: none; font: 800 24px/1 var(--mono); color: #52606D; }
+.bay-touch { display: none; }
+button.bay .bay-touch {
+  display: block; position: absolute; top: 5px; right: 5px; z-index: 1;
+  font: 600 11px/1 var(--mono); background: rgba(255,255,255,.92); color: #1F2933;
+  border: 1px solid #9AA5B1; padding: 3px 5px; border-radius: 2px;
+}
+
+/* Fiche sans produit */
+.bays-empty {
+  grid-column: 1 / -1; text-align: center; padding: 22px 12px;
+  border: 2px dashed #52606D; border-radius: 4px; background: #253041; color: #E4E9F0;
+}
+.bays-empty strong { display: block; font-size: 17px; }
+.bays-empty span { display: block; font-size: 14px; color: #C3CDD8; margin-top: 4px; }
+.bays-empty .btn { margin-top: 12px; }
+
+/* Encadre visiteur, facon fente de la machine */
+.invite {
+  margin-top: 10px; background: #FFFFFF; color: var(--ink);
+  border-radius: 6px; padding: 12px; display: grid; gap: 10px;
+  border-top: 4px solid var(--brand);
+}
+.invite p { margin: 0; font-size: 15px; font-weight: 600; }
+.btn {
+  min-height: 48px; border-radius: 8px; border: 0; padding: 0 16px;
+  font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-brand { background: var(--brand); color: #FFFFFF; }
+.btn-brand:hover { background: #B91F1F; }
+.btn-light { background: #FFFFFF; color: var(--ink); }
+
+/* Socle : actions secondaires */
+.base {
+  background: #3E4C5E; border-radius: 0 0 10px 10px; margin: 0 6px;
+  padding: 8px; display: grid; grid-template-columns: 1fr auto auto; gap: 6px;
+  box-shadow: 0 4px 10px rgba(28,37,51,.18);
+}
+.base.no-extras { grid-template-columns: 1fr; }
+.act {
+  min-height: 48px; min-width: 48px; border: 0; border-radius: 6px;
+  background: #F1F4F7; color: #1F2933; font-weight: 700; font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px;
+}
+.act svg { width: 20px; height: 20px; flex: none; }
+.act:hover { background: #FFFFFF; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-top: 14px; }
+.row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px;
+  padding: 10px 14px; background: none; border: 0; text-align: left;
+}
+.row + .row { border-top: 1px solid #E4E7EB; }
+.row svg { width: 20px; height: 20px; flex: none; color: var(--ink-2); }
+.row .grow { flex: 1; }
+.row small { display: block; color: var(--ink-2); font-size: 14px; }
+.stars { color: #9A3412; font-weight: 800; }
+.chev { color: var(--ink-2); }
+.section-title { font-size: 13px; font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 18px 4px 0; }
+
+/* Tiroir de signalement */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  width: 100%; max-width: 480px; background: #FFFFFF; border-radius: 16px 16px 0 0;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+  animation: up .18s ease-out;
+}
+@keyframes up { from { transform: translateY(24px); } }
+.grip { width: 40px; height: 4px; border-radius: 2px; background: #CBD2D9; margin: 0 auto 12px; }
+.sheet-code { font: 700 12px/1 var(--mono); background: #1F2933; color: #FFFFFF; padding: 3px 6px; border-radius: 2px; }
+.sheet h3 { margin: 10px 0 2px; font-size: 20px; }
+.sheet .now { margin: 0 0 14px; color: var(--ink-2); font-size: 15px; }
+.sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice { min-height: 64px; border: 0; border-radius: 10px; font-size: 18px; font-weight: 800; color: #FFFFFF; }
+.choice-yes { background: var(--yes-fill); }
+.choice-no { background: var(--no-fill); }
+.choice small { display: block; font-size: 13px; font-weight: 500; opacity: .95; }
+.sheet .cancel { margin-top: 10px; width: 100%; min-height: 48px; background: #F1F4F7; border: 0; border-radius: 10px; font-weight: 700; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+  background: #1F2933; color: #FFFFFF; padding: 12px 16px; border-radius: 10px; font-weight: 600;
+  width: max-content; max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  button.bay:active, .key:active { transform: none; }
+}
+</style>
+
+<details class="mq">
+  <summary><b>MAQUETTE</b> Réglages de la maquette</summary>
+  <div class="mq-body">
+    <fieldset>
+      <legend>État de la machine</legend>
+      <div class="mq-opts">
+        <label><input type="radio" name="mq-machine" value="works" checked><span>Fonctionne</span></label>
+        <label><input type="radio" name="mq-machine" value="empty"><span>Vide</span></label>
+        <label><input type="radio" name="mq-machine" value="broken"><span>En panne</span></label>
+        <label><input type="radio" name="mq-machine" value="unknown"><span>Pas d'info</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Mode</legend>
+      <div class="mq-opts">
+        <label><input type="radio" name="mq-mode" value="visitor" checked><span>Visiteur</span></label>
+        <label><input type="radio" name="mq-mode" value="member"><span>Connecté</span></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Fiche</legend>
+      <div class="mq-opts">
+        <label><input type="radio" name="mq-fiche" value="full" checked><span>Avec produits</span></label>
+        <label><input type="radio" name="mq-fiche" value="bare"><span>Sans produit</span></label>
+      </div>
+    </fieldset>
+  </div>
+</details>
+
+<main class="app">
+  <div class="topbar">
+    <button class="icon-btn" type="button" aria-label="Retour à la carte" data-toast="Retour à la carte (maquette)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="spacer"></span>
+    <button class="icon-btn" type="button" id="fav" aria-pressed="false" aria-label="Ajouter aux favoris">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path class="heart" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+    </button>
+    <button class="icon-btn" type="button" id="share" aria-label="Partager">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 13v6h14v-6"/></svg>
+    </button>
+  </div>
+
+  <section class="machine" aria-labelledby="dist-name">
+    <div class="plate">
+      <h1 id="dist-name"></h1>
+      <p class="meta" id="dist-meta"></p>
+    </div>
+
+    <div class="screen" id="screen" role="status" aria-live="polite">
+      <div class="screen-label">État de la machine</div>
+      <div class="screen-state" id="screen-state"><span class="led" aria-hidden="true"></span><span id="screen-word"></span></div>
+      <div class="screen-count" id="screen-count"></div>
+      <div class="screen-when" id="screen-when"></div>
+    </div>
+
+    <div class="keypad" id="keypad" hidden>
+      <p class="keypad-label" id="keypad-label">Tu es devant ? Dis-nous :</p>
+      <div class="keys" role="group" aria-labelledby="keypad-label">
+        <button class="key" type="button" data-state="works" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Fonctionne</button>
+        <button class="key" type="button" data-state="empty" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Vide</button>
+        <button class="key" type="button" data-state="broken" aria-pressed="false"><span class="dot" aria-hidden="true"></span>En panne</button>
+      </div>
+    </div>
+
+    <div class="bays-head">
+      <h2 id="bays-title">Casiers</h2>
+      <p id="bays-hint"></p>
+    </div>
+    <div class="bays" id="bays" aria-labelledby="bays-title"></div>
+
+    <div class="invite" id="invite">
+      <p>Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste</p>
+      <button class="btn btn-brand" type="button" id="login">Se connecter</button>
+    </div>
+  </section>
+
+  <div class="base" id="base">
+    <button class="act" type="button" data-toast="Itinéraire ouvert dans ton appli de navigation (maquette)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+      Itinéraire
+    </button>
+    <button class="act member-only" type="button" aria-label="Ajouter une photo" data-toast="Appareil photo ouvert (maquette)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    </button>
+    <button class="act member-only" type="button" aria-label="Modifier la fiche" data-toast="Mode édition (maquette)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+    </button>
+  </div>
+
+  <div class="card">
+    <button class="row" type="button" id="reviews-row" data-toast="Avis (maquette)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      <span class="grow" id="reviews"></span>
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
+  </div>
+
+  <h2 class="section-title">À propos</h2>
+  <div class="card">
+    <div class="row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.3-6-11a6 6 0 0 1 12 0c0 5.7-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
+      <span class="grow"><span id="about-address"></span><small id="about-distance"></small></span>
+    </div>
+    <div class="row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h3M13 11h3M8 15h3M13 15h3"/></svg>
+      <span class="grow"><span id="about-type"></span><small id="about-price"></small></span>
+    </div>
+  </div>
+</main>
+
+<div class="sheet-backdrop" id="sheet-backdrop" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="grip" aria-hidden="true"></div>
+    <span class="sheet-code" id="sheet-code"></span>
+    <h3 id="sheet-title"></h3>
+    <p class="now" id="sheet-now"></p>
+    <div class="sheet-actions">
+      <button class="choice choice-yes" type="button" data-answer="yes">Il y en a<small>je le vois</small></button>
+      <button class="choice choice-no" type="button" data-answer="no">Plus rien<small>casier vide</small></button>
+    </div>
+    <button class="cancel" type="button" id="sheet-cancel">Annuler</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var FICHES = {
+    full: {
+      name: "Légumes Bio Cambo", demo: true, type: "Produits agricoles", price: "€€",
+      address: "Route des Thermes, 64250 Cambo-les-Bains", distance: "2,3 km",
+      rating: "4,7", reviews: 91,
+      products: ["Panier légumes saison", "Pommes de terre (2 kg)", "Carottes (1 kg)", "Salades (lot de 2)"]
+    },
+    bare: {
+      name: "Gaztainbidea", demo: false, type: "Terroir local", price: "€",
+      address: "impasse Gaztainbidea", distance: "450 m", rating: null, reviews: 0, products: []
+    }
+  };
+
+  /* Chaque scenario : signal machine (etat + anciennete en minutes) et dernier signal par produit */
+  var SCENARIOS = {
+    works:   { machine: { kind: "works", ago: 12 },   products: [["yes", 12], ["yes", 12], ["no", 40], [null, null]] },
+    empty:   { machine: { kind: "empty", ago: 34 },   products: [["yes", 95], ["yes", 95], ["no", 130], [null, null]] },
+    broken:  { machine: { kind: "broken", ago: 120 }, products: [["yes", 300], ["no", 300], [null, null], [null, null]] },
+    unknown: { machine: { kind: "works", ago: 5760 }, products: [[null, null], [null, null], [null, null], [null, null]] }
+  };
+
+  var FRESH = 120, STALE = 1440;
+  var WORDS = { works: "Fonctionne", empty: "Vide", broken: "En panne", unknown: "Pas d'info" };
+  var PWORDS = { yes: "Dispo", no: "Pas dispo", unknown: "Pas d'info" };
+
+  var state = { fiche: "full", member: false, machine: null, products: [] };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function fmtAgo(min) {
+    if (min <= 0) return "à l'instant";
+    if (min < 60) return "il y a " + min + " min";
+    if (min < STALE) return "il y a " + Math.round(min / 60) + " h";
+    return "il y a " + Math.round(min / STALE) + " j";
+  }
+  function bayCode(i) { return String.fromCharCode(65 + Math.floor(i / 2)) + (i % 2 + 1); }
+
+  function applyScenario(key) {
+    var sc = SCENARIOS[key];
+    state.machine = { kind: sc.machine.kind, ago: sc.machine.ago };
+    state.products = FICHES[state.fiche].products.map(function (name, i) {
+      var p = sc.products[i] || [null, null];
+      return { name: name, signal: p[0], ago: p[1] };
+    });
+  }
+
+  function resolveMachine() {
+    var m = state.machine;
+    if (m.ago >= STALE) return { kind: "unknown", soft: false, when: "Vérifié " + fmtAgo(m.ago) };
+    var lead = { works: "Vue en marche ", empty: "Signalée vide ", broken: "Signalée en panne " }[m.kind];
+    return { kind: m.kind, soft: m.ago >= FRESH, when: lead + fmtAgo(m.ago) };
+  }
+
+  /* Une machine vide / en panne plus recente que le signal d'un produit le passe en Pas dispo */
+  function resolveProduct(p) {
+    var m = state.machine;
+    var machineDown = m.ago < STALE && (m.kind === "empty" || m.kind === "broken");
+    if (machineDown && (p.ago === null || m.ago <= p.ago)) {
+      return { status: "no", soft: m.ago >= FRESH, detail: m.kind === "empty" ? "Machine vide" : "Machine en panne" };
+    }
+    if (p.signal && p.ago < STALE) return { status: p.signal, soft: p.ago >= FRESH, detail: "vu " + fmtAgo(p.ago) };
+    return { status: "unknown", soft: false, detail: "Aucun signal récent" };
+  }
+
+  function renderHeader() {
+    var f = FICHES[state.fiche];
+    $("dist-name").innerHTML = esc(f.name) + (f.demo ? '<span class="demo">Démo</span>' : "");
+    $("dist-meta").textContent = f.type + " · " + f.price + " · à " + f.distance;
+    $("reviews").innerHTML = f.rating
+      ? '<span class="stars">' + esc(f.rating) + ' ★</span> · ' + f.reviews + ' avis<small>Lire ou laisser un avis</small>'
+      : 'Pas encore d\'avis<small>Sois le premier à donner le tien</small>';
+    $("about-address").textContent = f.address;
+    $("about-distance").textContent = "À " + f.distance + " de toi";
+    $("about-type").textContent = f.type;
+    $("about-price").textContent = "Prix " + f.price;
+  }
+
+  function renderScreen() {
+    var r = resolveMachine();
+    var el = $("screen-state");
+    el.className = "screen-state st-" + r.kind + (r.soft ? " soft" : "");
+    $("screen-word").textContent = WORDS[r.kind];
+    var when = $("screen-when");
+    when.className = "screen-when st-" + r.kind + (r.soft ? " soft" : "");
+    when.textContent = r.when;
+
+    var total = state.products.length;
+    var count = $("screen-count");
+    if (!total) {
+      count.innerHTML = "<strong>—</strong><span>aucun produit</span>";
+    } else {
+      var ok = state.products.filter(function (p) { return resolveProduct(p).status === "yes"; }).length;
+      count.innerHTML = "<strong>" + ok + "/" + total + "</strong><span>dispo</span>";
+      count.setAttribute("aria-label", ok + " sur " + total + " dispo");
+    }
+
+    var keys = document.querySelectorAll(".key");
+    for (var i = 0; i < keys.length; i++) {
+      var on = r.kind === keys[i].getAttribute("data-state");
+      keys[i].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+
+  function renderBays() {
+    var box = $("bays");
+    var total = state.products.length;
+    if (!total) {
+      box.innerHTML = '<div class="bays-empty"><strong>Aucun produit référencé</strong>' +
+        '<span>Les casiers de cette machine ne sont pas encore renseignés.</span>' +
+        (state.member ? '<button class="btn btn-light" type="button" data-toast="Ajout des produits (maquette)">Ajouter les produits</button>' : "") +
+        "</div>";
+      $("bays-hint").textContent = "";
+      return;
+    }
+    $("bays-hint").textContent = state.member ? "Touche un casier pour signaler" : "";
+    var html = state.products.map(function (p, i) {
+      var r = resolveProduct(p);
+      var code = bayCode(i);
+      var cls = "bay is-" + r.status + (r.soft ? " soft" : "");
+      var inner =
+        '<span class="bay-code" aria-hidden="true">' + code + "</span>" +
+        '<span class="bay-touch" aria-hidden="true">Signaler</span>' +
+        '<span class="bay-window" aria-hidden="true"><span class="goods"><i></i><i></i><i></i></span><span class="spiral"></span><span class="fog">?</span></span>' +
+        '<span class="bay-name">' + esc(p.name) + "</span>" +
+        '<span class="bay-status">' + PWORDS[r.status] + "</span>" +
+        '<span class="bay-detail">' + esc(r.detail) + "</span>";
+      var label = "Casier " + code + ", " + p.name + " : " + PWORDS[r.status] + ", " + r.detail;
+      if (state.member) {
+        return '<button type="button" class="' + cls + '" data-i="' + i + '" aria-label="' + esc(label + ". Toucher pour signaler") + '">' + inner + "</button>";
+      }
+      return '<div class="' + cls + '" role="group" aria-label="' + esc(label) + '">' + inner + "</div>";
+    }).join("");
+    box.innerHTML = html;
+  }
+
+  function renderMode() {
+    $("keypad").hidden = !state.member;
+    $("invite").hidden = state.member;
+    var extras = document.querySelectorAll(".member-only");
+    for (var i = 0; i < extras.length; i++) extras[i].hidden = !state.member;
+    $("base").classList.toggle("no-extras", !state.member);
+  }
+
+  function render() {
+    renderHeader();
+    renderMode();
+    renderScreen();
+    renderBays();
+  }
+
+  /* ---------- Toast ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  /* ---------- Tiroir de signalement ---------- */
+  var sheetIndex = null, sheetOpener = null;
+  function openSheet(i, opener) {
+    var p = state.products[i];
+    var r = resolveProduct(p);
+    sheetIndex = i;
+    sheetOpener = opener;
+    $("sheet-code").textContent = "Casier " + bayCode(i);
+    $("sheet-title").textContent = p.name;
+    $("sheet-now").textContent = "Affiché : " + PWORDS[r.status] + " · " + r.detail + ". Qu'est-ce que tu vois ?";
+    $("toast").hidden = true;
+    $("sheet-backdrop").hidden = false;
+    document.querySelector(".choice-yes").focus();
+  }
+  function closeSheet() {
+    $("sheet-backdrop").hidden = true;
+    var opener = sheetOpener;
+    sheetIndex = null;
+    sheetOpener = null;
+    if (opener && document.body.contains(opener)) opener.focus();
+  }
+  function answer(signal) {
+    var i = sheetIndex;
+    state.products[i].signal = signal;
+    state.products[i].ago = 0;
+    $("sheet-backdrop").hidden = true;
+    sheetIndex = null;
+    render();
+    var btn = document.querySelector('.bay[data-i="' + i + '"]');
+    if (btn) btn.focus();
+    toast("Merci ! Ton signal aide les suivants");
+  }
+
+  $("sheet-backdrop").addEventListener("click", function (e) {
+    if (e.target === this) closeSheet();
+    var a = e.target.closest("[data-answer]");
+    if (a) answer(a.getAttribute("data-answer"));
+  });
+  $("sheet-cancel").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", function (e) {
+    if ($("sheet-backdrop").hidden) return;
+    if (e.key === "Escape") { closeSheet(); return; }
+    if (e.key !== "Tab") return;
+    var f = $("sheet-backdrop").querySelectorAll("button");
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  /* ---------- Interactions ---------- */
+  $("bays").addEventListener("click", function (e) {
+    var b = e.target.closest("button.bay");
+    if (b) openSheet(Number(b.getAttribute("data-i")), b);
+  });
+  $("keypad").addEventListener("click", function (e) {
+    var k = e.target.closest(".key");
+    if (!k) return;
+    state.machine = { kind: k.getAttribute("data-state"), ago: 0 };
+    render();
+    toast("Merci ! Ton signal aide les suivants");
+  });
+  $("login").addEventListener("click", function () {
+    setMode(true);
+    toast("Connecté (maquette) : tu peux signaler");
+  });
+  $("fav").addEventListener("click", function () {
+    var on = this.getAttribute("aria-pressed") !== "true";
+    this.setAttribute("aria-pressed", on ? "true" : "false");
+    this.setAttribute("aria-label", on ? "Retirer des favoris" : "Ajouter aux favoris");
+    toast(on ? "Ajouté à tes favoris : on te prévient si ça change" : "Retiré de tes favoris");
+  });
+  $("share").addEventListener("click", function () {
+    try {
+      if (navigator.clipboard) navigator.clipboard.writeText(location.href).catch(function () {});
+    } catch (err) { /* maquette : copie facultative */ }
+    toast("Lien de la fiche copié");
+  });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-toast]");
+    if (t) toast(t.getAttribute("data-toast"));
+  });
+
+  /* ---------- Panneau maquette ---------- */
+  function checked(name) { return document.querySelector('input[name="' + name + '"]:checked').value; }
+  function setMode(member) {
+    state.member = member;
+    document.querySelector('input[name="mq-mode"][value="' + (member ? "member" : "visitor") + '"]').checked = true;
+    render();
+  }
+  document.querySelector(".mq").addEventListener("change", function (e) {
+    var n = e.target.name;
+    if (n === "mq-mode") { setMode(e.target.value === "member"); return; }
+    state.fiche = checked("mq-fiche");
+    applyScenario(checked("mq-machine"));
+    render();
+  });
+
+  applyScenario("works");
+  render();
+})();
+</script>
