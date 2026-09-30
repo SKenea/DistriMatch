@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { captureEvents, setupApp, openDistModal, RPC_ROUTE, openSignalableFiche, signalFirstProduct, routeSignals, kpiFixture, routeKpi } from './helpers.js';
+import { captureEvents, setupApp, openDistModal, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, kpiFixture, routeKpi } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -213,7 +213,7 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         await signalFirstProduct(page, 'available');
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci');
         // Un 2e signal sur la meme fiche (la machine) : le KPI compte une contribution
-        await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
+        await chooseMachineState(page, 'working');
         await page.waitForTimeout(400);
         await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'signal_envoye']);
         expect(await page.$('#toast-container .toast.error')).toBeNull();

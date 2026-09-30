@@ -56,18 +56,19 @@ test.describe('33. Machines seulement locales', () => {
         await page.evaluate(() => window.openDistributorModal('user-local-only'));
         await page.waitForSelector('#dist-modal-overlay.active');
         await expect(page.locator('#dist-local-only')).toBeVisible();
-        await expect(page.locator('#dist-local-only')).toContainText("n'est enregistrée que sur ton téléphone");
-        await expect(page.locator('#dist-local-publish')).toHaveText('Publier cette machine');
+        await expect(page.locator('#dist-local-only')).toContainText("n'est enregistré que sur ton téléphone");
+        await expect(page.locator('#dist-local-publish')).toHaveText('Publier ce distributeur');
+        await expect(page.locator('#dist-status-update')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list button.product-row-main')).toHaveCount(0);
         await expect(page.locator('#dist-action-edit')).toBeHidden();
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         await page.click('.dist-tab[data-tab="avis"]');
-        await expect(page.locator('#dist-reviews-empty')).toHaveText("Publie d'abord cette machine pour recevoir des avis.");
+        await expect(page.locator('#dist-reviews-empty')).toHaveText("Publie d'abord ce distributeur pour recevoir des avis.");
         await expect(page.locator('#dist-review-mine')).toBeHidden();
     });
 
-    test('« Publier cette machine » l’envoie a la base avec ses produits ; la fiche redevient normale', async ({ page, context }) => {
+    test('« Publier ce distributeur » l’envoie a la base avec ses produits ; la fiche redevient normale', async ({ page, context }) => {
         await withLocalMachines(page, context);
         const posted = { distributors: null, products: null };
         await page.route(url => url.pathname.endsWith('/rest/v1/distributors'), route => {
@@ -85,12 +86,12 @@ test.describe('33. Machines seulement locales', () => {
         await page.waitForSelector('#dist-modal-overlay.active');
         await page.click('#dist-local-publish');
 
-        await expect(page.locator('#toast-container .toast.success')).toContainText('Machine publiée');
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Distributeur publié');
         expect(posted.distributors).toMatchObject({ id: 'user-local-only', name: 'Machine locale de test', is_user_added: true });
         expect(posted.distributors.is_demo).toBeUndefined();   // jamais envoye
         expect(posted.products).toEqual([{ distributor_id: 'user-local-only', name: 'Produit test', available: true }]);
         await expect(page.locator('#dist-local-only')).toBeHidden();
-        await expect(page.locator('#dist-machine-choices')).toBeVisible();
+        await expect(page.locator('#dist-status-update')).toBeVisible();
         await expect(page.locator('#dist-action-edit')).toBeVisible();
         expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).length, LOCAL_KEY)).toBe(0);
     });
@@ -99,7 +100,7 @@ test.describe('33. Machines seulement locales', () => {
         await withLocalMachines(page, context);
         await page.evaluate(() => window.openDistributorModal('user-local-only'));
         await page.waitForSelector('#dist-modal-overlay.active');
-        await expect(page.locator('#dist-local-publish')).toHaveText('Me connecter pour la publier');
+        await expect(page.locator('#dist-local-publish')).toHaveText('Me connecter pour le publier');
         await expect(page.locator('#dist-login-invite')).toBeHidden();   // un seul encadre
     });
 });

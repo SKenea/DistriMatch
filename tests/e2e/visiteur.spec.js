@@ -45,15 +45,20 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
         expect(errors).toEqual([]);
     });
 
-    test('une fiche se lit sans compte : etat en grand, dispo, aucun controle pour informer', async ({ page, context }) => {
+    test('une fiche se lit sans compte : etat en petit sous le nom, dispo, aucun controle pour informer', async ({ page, context }) => {
         await openApp(page, context);
         await passGeoloc(page);
         await page.evaluate((id) => window.openDistributorModal(id), DEMO_ID);
         await page.waitForSelector('#dist-modal-overlay.active');
-        await expect(page.locator('#dist-hero-kpi')).toHaveText(/^(Fonctionne|Vide|En panne|Pas d'info)$/, { timeout: 15000 });
+        await expect(page.locator('#dist-status-word')).toHaveText(/^(En service|Vide|En panne|Pas d'info)$/, { timeout: 15000 });
+        await expect(page.locator('#dist-hero')).toHaveCount(0);                            // plus de bandeau (EPIC-T10)
+        // Jamais « machine » dans les textes de l'app (les avis des membres ne comptent pas)
+        await expect(page.locator('#dist-modal .dist-modal-header')).not.toContainText(/machine/i);
+        await expect(page.locator('#dist-modal [data-tab-pane="produits"]')).not.toContainText(/machine/i);
         await expect(page.locator('#dist-products-title')).toHaveText(/^Il reste quoi \?/);
         await expect(page.locator('#dist-modal-demo')).toBeVisible();                       // fiche de demo signalee
         await expect(page.locator('#dist-login-invite')).toBeVisible();
+        await expect(page.locator('#dist-status-update')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list button.product-row-main')).toHaveCount(0);
         await expect(page.locator('#dist-action-edit')).toBeHidden();

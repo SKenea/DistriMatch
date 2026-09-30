@@ -194,8 +194,8 @@ export function renderReviews() {
     const empty = document.getElementById('dist-reviews-empty');
     if (empty) {
         empty.textContent = localOnly
-            ? 'Publie d\'abord cette machine pour recevoir des avis.'
-            : 'Pas encore d\'avis sur cette machine.';
+            ? 'Publie d\'abord ce distributeur pour recevoir des avis.'
+            : 'Pas encore d\'avis sur ce distributeur.';
         empty.hidden = !(state.loaded && state.total === 0);
     }
     const more = document.getElementById('dist-reviews-more');
@@ -281,7 +281,7 @@ async function deleteReview() {
     if (!state.mine || state.busy || !supabaseClient) return;
     const ok = await confirmDialog({
         title: 'Supprimer ton avis ?',
-        message: 'Il disparaîtra de la fiche de cette machine.',
+        message: 'Il disparaîtra de la fiche de ce distributeur.',
         confirmLabel: 'Supprimer'
     });
     if (!ok) return;

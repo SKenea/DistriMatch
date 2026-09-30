@@ -19,6 +19,7 @@ import {
     saveUserDistributor, loadUserDistributors, getLevelInfo,
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
+    productToneRank, describeMachineNotice, productIconKey,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
 
@@ -291,7 +292,7 @@ describe('describeSignalError / isBusinessSignalError (signal non envoye)', () =
         assert.equal(describeSignalError({ code: '42501' }, 403), 'Ce compte ne peut plus envoyer de signaux');
         assert.equal(describeSignalError({ code: '28000', message: 'Connexion requise pour signaler' }, 403), 'Ta session a expiré : reconnecte-toi');
         assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401), 'Ta session a expiré : reconnecte-toi');
-        assert.equal(describeSignalError({ code: 'P0002' }, 404), "Cette machine n'est pas encore sur le serveur : signal non envoyé");
+        assert.equal(describeSignalError({ code: 'P0002' }, 404), "Ce distributeur n'est pas encore sur le serveur : signal non envoyé");
         assert.equal(describeSignalError(new TypeError('Failed to fetch'), 0), 'Pas de réseau : signal non envoyé');
         assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401, false), 'Pas de réseau : signal non envoyé');
     });
@@ -341,7 +342,7 @@ describe('validateReview (avant envoi)', () => {
 describe('describeReviewError (avis refuse, la raison)', () => {
     it('chaque refus de la base a son message', () => {
         assert.match(describeReviewError({ code: '23505' }, 409), /déjà donné ton avis/);
-        assert.equal(describeReviewError({ code: '23503' }, 409), "Cette machine n'est pas encore sur le serveur : avis non publié");
+        assert.equal(describeReviewError({ code: '23503' }, 409), "Ce distributeur n'est pas encore sur le serveur : avis non publié");
         assert.equal(describeReviewError({ code: 'P0001' }, 400), "Trop d'avis depuis ce compte, réessaie dans une heure");
         assert.equal(describeReviewError({ code: '42501', message: "Ce compte ne peut plus publier d'avis" }, 403), "Ce compte ne peut plus publier d'avis");
         assert.equal(describeReviewError({ code: '28000' }, 403), 'Ta session a expiré : reconnecte-toi');
@@ -389,14 +390,15 @@ describe('resolveMachineStatus (etat a droite du nom)', () => {
 
     it('trois etats signales, avec la ligne de provenance', () => {
         assert.deepEqual(resolveMachineStatus(machine('empty', 34), [], null, NOW),
-            { state: 'empty', label: 'Vide', tone: 'empty', fresh: true, at: NOW - 34 * 60000, detail: 'Signalée vide il y a 34 min' });
-        assert.equal(resolveMachineStatus(machine('broken', 180), [], null, NOW).detail, 'Signalée en panne il y a 3 h');
+            { state: 'empty', label: 'Vide', tone: 'empty', fresh: true, at: NOW - 34 * 60000, age: 'il y a 34 min', detail: 'Signalé vide il y a 34 min' });
+        assert.equal(resolveMachineStatus(machine('broken', 180), [], null, NOW).detail, 'Signalé en panne il y a 3 h');
         assert.equal(resolveMachineStatus(machine('broken', 180), [], null, NOW).fresh, false);
-        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).label, 'Fonctionne');
-        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).detail, 'Vue en marche il y a 5 min');
+        // EPIC-T10 : « En service » (plus « Fonctionne »)
+        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).label, 'En service');
+        assert.equal(resolveMachineStatus(machine('working', 5), [], null, NOW).age, 'il y a 5 min');
     });
 
-    it('« Fonctionne » deduit d\'un produit vu dispo plus recent que tout signal machine', () => {
+    it('« En service » deduit d\'un produit vu dispo plus recent que tout signal machine', () => {
         assert.equal(resolveMachineStatus(null, [product('available', 12)], null, NOW).state, 'working');
         assert.equal(resolveMachineStatus(machine('empty', 60), [product('available', 12)], null, NOW).state, 'working');
         // Plus ancien que le « vide » : la machine reste vide
@@ -410,6 +412,7 @@ describe('resolveMachineStatus (etat a droite du nom)', () => {
         assert.equal(s.label, "Pas d'info");
         assert.equal(s.tone, 'unknown');
         assert.equal(s.detail, 'Vérifié il y a 10 min');
+        assert.equal(s.age, 'Vérifié il y a 10 min');
         assert.equal(resolveMachineStatus(null, [], null, NOW).detail, 'Pas encore vérifié');
         assert.equal(resolveMachineStatus({ state: 'empty', created_at: 'n/a' }, [], null, NOW).state, 'unknown');
     });
@@ -421,8 +424,8 @@ describe('describeFicheHero (bandeau d\u2019etat + compte des produits)', () => 
     const s = (tone) => ({ tone });
 
     it('le bandeau dit l\u2019etat de la machine ; le compte « N sur M dispo » va dans la liste', () => {
-        assert.deepEqual(describeFicheHero(machine('working', 'Fonctionne'), [s('available'), s('absent'), s('available'), s('unknown')]),
-            { tone: 'working', kpi: 'Fonctionne', count: '2 sur 4 dispo' });
+        assert.deepEqual(describeFicheHero(machine('working', 'En service'), [s('available'), s('absent'), s('available'), s('unknown')]),
+            { tone: 'working', kpi: 'En service', count: '2 sur 4 dispo' });
         assert.deepEqual(describeFicheHero(machine('empty', 'Vide'), [s('absent'), s('absent')]),
             { tone: 'empty', kpi: 'Vide', count: '0 sur 2 dispo' });
     });
@@ -447,25 +450,66 @@ describe('resolveProductStatus (dispo ou pas, par aliment)', () => {
 
     it('de 2 h a 24 h : meme mot, adouci ; au-dela ou sans signal : « Pas d\'info »', () => {
         assert.deepEqual(resolveProductStatus(onSale, row('available', 180), null, NOW), { label: 'Dispo', tone: 'available', fresh: false, detail: 'vu il y a 3 h' });
-        assert.deepEqual(resolveProductStatus(onSale, row('available', 25 * 60), null, NOW), { label: "Pas d'info", tone: 'unknown', fresh: false, detail: '' });
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 25 * 60), null, NOW), { label: "Pas d'info", tone: 'unknown', fresh: false, detail: 'aucun signal depuis 24 h' });
         assert.equal(resolveProductStatus(onSale, null, null, NOW).label, "Pas d'info");
         assert.equal(resolveProductStatus(null, { state: 'available', created_at: 'n/a' }, null, NOW).label, "Pas d'info");
         // Le mot « catalogue » a disparu de la lecture
         assert.ok(!/catalogue/i.test(JSON.stringify(resolveProductStatus(onSale, null, null, NOW))));
     });
 
-    it('machine vide / en panne plus recente que le produit : Pas dispo, et pourquoi', () => {
+    it('distributeur vide / en panne plus recent que le produit : Pas dispo, age du signal (la cause va dans le liseré)', () => {
         const empty = resolveMachineStatus({ state: 'empty', created_at: at(20) }, [], null, NOW);
-        assert.deepEqual(resolveProductStatus(onSale, row('available', 90), empty, NOW), { label: 'Pas dispo', tone: 'absent', fresh: true, detail: 'Machine vide' });
-        assert.equal(resolveProductStatus(onSale, null, empty, NOW).detail, 'Machine vide');
+        assert.deepEqual(resolveProductStatus(onSale, row('available', 90), empty, NOW), { label: 'Pas dispo', tone: 'absent', fresh: true, detail: 'il y a 20 min' });
+        assert.equal(resolveProductStatus(onSale, null, empty, NOW).detail, 'il y a 20 min');
         const broken = resolveMachineStatus({ state: 'broken', created_at: at(20) }, [], null, NOW);
-        assert.equal(resolveProductStatus(onSale, null, broken, NOW).detail, 'Machine en panne');
+        assert.equal(resolveProductStatus(onSale, null, broken, NOW).label, 'Pas dispo');
         // Vu dispo APRES le « vide » : la machine a ete remplie
         assert.equal(resolveProductStatus(onSale, row('available', 5), empty, NOW).label, 'Dispo');
     });
 
-    it('produit marque « Non disponible » en edition : Pas dispo, sans age', () => {
-        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: '' });
+    it('produit marque « Non disponible » en edition : Pas dispo, « indiqué sur la fiche »', () => {
+        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'indiqué sur la fiche' });
+    });
+});
+
+// EPIC-T10 : fiche v3, les produits d'abord
+describe('fiche v3 : ordre des cartes, liseré, pictos (EPIC-T10)', () => {
+    const NOW = Date.parse('2026-09-25T12:00:00Z');
+    const at = (m) => new Date(NOW - m * 60000).toISOString();
+
+    it('ordre : Dispo, puis Pas d\'info, puis Pas dispo', () => {
+        const tones = ['absent', 'unknown', 'available', 'absent', 'available'];
+        const sorted = tones.map((tone, i) => ({ tone, i }))
+            .sort((a, b) => productToneRank(a.tone) - productToneRank(b.tone) || a.i - b.i)
+            .map(x => x.tone);
+        assert.deepEqual(sorted, ['available', 'available', 'unknown', 'absent', 'absent']);
+    });
+
+    it('liseré : dit une seule fois que le distributeur est vide ou en panne, jamais « machine »', () => {
+        const empty = resolveMachineStatus({ state: 'empty', created_at: at(34) }, [], null, NOW);
+        assert.equal(describeMachineNotice(empty), 'Distributeur signalé vide il y a 34 min : les produits sont probablement épuisés.');
+        const broken = resolveMachineStatus({ state: 'broken', created_at: at(120) }, [], null, NOW);
+        assert.equal(describeMachineNotice(broken), 'Distributeur signalé en panne il y a 2 h.');
+        assert.equal(describeMachineNotice(resolveMachineStatus({ state: 'working', created_at: at(5) }, [], null, NOW)), '');
+        assert.equal(describeMachineNotice(resolveMachineStatus(null, [], null, NOW)), '');
+        assert.equal(describeMachineNotice(null), '');
+    });
+
+    it('picto d\'apres le nom : mots-cles sans accents, du plus precis au plus general', () => {
+        assert.equal(productIconKey('Pommes de terre (2 kg)'), 'potato');
+        assert.equal(productIconKey('Pommes Golden'), 'fruit');
+        assert.equal(productIconKey('Carottes (1 kg)'), 'carrot');
+        assert.equal(productIconKey('Salades (lot de 2)'), 'salad');
+        assert.equal(productIconKey('Panier légumes saison'), 'basket');
+        assert.equal(productIconKey('Œufs fermiers x6'), 'egg');
+        assert.equal(productIconKey('oeufs bio'), 'egg');
+        assert.equal(productIconKey('Lait cru'), 'milk');
+        assert.equal(productIconKey('Fromage de brebis'), 'cheese');
+        assert.equal(productIconKey('Baguette tradition'), 'bread');
+        assert.equal(productIconKey('Pizza 4 fromages'), 'pizza');
+        assert.equal(productIconKey('Gâteau basque'), 'generic');   // « eau » n'est pas en debut de mot
+        assert.equal(productIconKey(''), 'generic');
+        assert.equal(productIconKey(null), 'generic');
     });
 });
 
@@ -590,7 +634,7 @@ describe('accents des libelles UI (audit UX-16)', () => {
 
     it('les libelles de la fiche et de la nav portent leurs accents', () => {
         const html = sources[0][1];
-        for (const s of ['Itinéraire', 'Activité', 'Réglages des notifications', 'Signaler un problème', 'État de la machine']) {
+        for (const s of ['Itinéraire', 'Activité', 'Réglages des notifications', 'Signaler un problème', 'Le distributeur, là maintenant']) {
             assert.ok(html.includes(s), `"${s}" attendu dans index.html`);
         }
     });
@@ -599,6 +643,25 @@ describe('accents des libelles UI (audit UX-16)', () => {
 // ============================================
 // AUCUN TERRITOIRE EN DUR (CLAUDE.md, audit UX-15)
 // ============================================
+
+// EPIC-T10 : le mot « machine » n'apparait dans aucun texte de la fiche
+describe('fiche : jamais le mot « machine » (EPIC-T10)', () => {
+    it('ni dans le HTML de la fiche (textes visibles et placeholders), ni dans les messages de la fiche', () => {
+        const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+        const start = html.indexOf('id="dist-modal-overlay"');
+        const end = html.indexOf('MODAL CHAT', start);
+        const fiche = html.slice(start, end).replace(/<!--[\s\S]*?-->/g, '');
+        const texts = fiche.replace(/<[^>]+>/g, ' ');
+        const placeholders = [...fiche.matchAll(/(?:placeholder|aria-label|title)="([^"]*)"/g)].map(m => m[1]).join(' ');
+        assert.ok(!/machine/i.test(texts), 'texte visible de la fiche');
+        assert.ok(!/machine/i.test(placeholders), 'placeholders / aria-label de la fiche');
+        const messages = [
+            describeSignalError({ code: 'P0002' }), describeReviewError({ code: '23505' }), describeReviewError({ code: '23503' }),
+            describeMachineNotice({ state: 'empty', at: 1, age: 'il y a 1 min' }), describeMachineNotice({ state: 'broken', at: 1, age: 'il y a 1 min' })
+        ];
+        for (const m of messages) assert.ok(!/machine/i.test(m), m);
+    });
+});
 
 describe('aucun territoire en dur dans index.html et manifest.json', () => {
     const root = new URL('../../', import.meta.url);

@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=40">
+    <link rel="stylesheet" href="css/overlays.css?v=41">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -279,12 +279,22 @@
                 </svg>
             </button>
 
-            <!-- Bandeau d'etat (EPIC-T4, inspire de l'app EuroMillions) : couleur de l'etat
-                 de la machine, info cle en tres grand. Photo eventuelle en fond assombri.
-                 Rempli par js/availability.js (renderFicheStatus) et gmaps-ui.js (photo). -->
-            <div class="dist-hero is-unknown" id="dist-hero">
-                <img class="dist-hero-photo" id="dist-hero-photo" alt="" hidden>
-                <div class="dist-hero-content">
+            <!-- En-tete (EPIC-T10) : icones Favori / Partager a cote de la croix -->
+            <div class="dist-modal-top-actions">
+                <button class="dist-icon-btn" id="dist-action-favorite" aria-label="Ajouter aux favoris" aria-pressed="false">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span class="sr-only" id="dist-action-favorite-label">Favori</span>
+                </button>
+                <button class="dist-icon-btn" id="dist-action-share" aria-label="Partager le distributeur">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="dist-modal-header">
                 <!-- Tag « Démo » frere du h2 (jamais enfant : textContent = nom l'effacerait) ; distributors.is_demo -->
                 <div class="dist-modal-title">
                     <div class="dist-modal-name-wrap">
@@ -292,84 +302,38 @@
                         <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
                     </div>
                 </div>
-                <!-- EPIC-T5 : le bandeau ne dit qu'une chose, en tres grand : la machine marche-t-elle ? -->
-                <p class="dist-hero-kpi" id="dist-hero-kpi" aria-label="État de la machine">Pas d'info</p>
-                <!-- UNE ligne : d'ou vient l'etat (« Signalée vide il y a 34 min », sinon « Vérifié il y a X ») -->
-                <div class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></div>
+                <!-- EPIC-T10 : l'etat du distributeur en une petite ligne (mini-feu + mot + age),
+                     rempli par js/availability.js (renderFicheStatus). Plus de bandeau. -->
+                <div class="dist-status" id="dist-status" data-state="unknown">
+                    <span class="dist-feu" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="dist-status-word" id="dist-status-word">Pas d'info</span>
+                    <span class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></span>
+                    <button type="button" class="dist-status-update" id="dist-status-update" aria-expanded="false" aria-controls="dist-machine-choices" hidden>Mettre à jour</button>
                 </div>
-            </div>
-
-            <div class="dist-modal-header">
-                <!-- EPIC-T9 : machine enregistree seulement sur ce telephone (inconnue de la base) -->
-                <div class="dist-login-invite dist-local-only" id="dist-local-only" hidden>
-                    <p><strong>Cette machine n'est enregistrée que sur ton téléphone.</strong> Publie-la pour que les autres la voient et pour recevoir signaux et avis.</p>
-                    <button type="button" class="dist-login-invite-btn" id="dist-local-publish">Publier cette machine</button>
-                </div>
-                <!-- EPIC-T5 : informer est un privilege de compte. Connecte : les trois etats en
-                     tuiles, l'etat actuel colore, un tap envoie. Visiteur : l'encadre de connexion. -->
+                <!-- Connecte : « Mettre à jour » deplie les trois etats ; un tap envoie. -->
                 <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
-                    <p class="machine-choices-title" id="dist-machine-choices-title">La machine, là maintenant :</p>
+                    <p class="machine-choices-title" id="dist-machine-choices-title">Le distributeur, là maintenant :</p>
                     <div class="machine-choices-row">
-                        <button type="button" class="machine-choice is-working" data-machine="working">Fonctionne</button>
-                        <button type="button" class="machine-choice is-empty" data-machine="empty">Vide</button>
-                        <button type="button" class="machine-choice is-broken" data-machine="broken">En panne</button>
+                        <button type="button" class="machine-choice is-working" data-machine="working"><i aria-hidden="true"></i>En service</button>
+                        <button type="button" class="machine-choice is-empty" data-machine="empty"><i aria-hidden="true"></i>Vide</button>
+                        <button type="button" class="machine-choice is-broken" data-machine="broken"><i aria-hidden="true"></i>En panne</button>
                     </div>
                 </div>
-                <div class="dist-login-invite" id="dist-login-invite" hidden>
-                    <p><strong>Tu es devant la machine ?</strong> Connecte-toi pour dire si elle marche et ce qu'il reste.</p>
-                    <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
-                </div>
-                <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
-                <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
                 <div class="dist-modal-meta">
-                    <span class="dist-modal-rating" id="dist-modal-rating"></span>
-                    <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
-                    <span class="meta-separator">·</span>
                     <span class="dist-modal-type" id="dist-modal-type"></span>
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-pricerange" id="dist-modal-pricerange"></span>
+                    <span class="meta-separator">·</span>
+                    <span class="dist-modal-rating" id="dist-modal-rating"></span>
+                    <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
                 </div>
-            </div>
-
-            <!-- Actions de la fiche -->
-            <div class="dist-modal-actions">
-                <button class="dist-action-btn" id="dist-action-directions" aria-label="Itinéraire">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                    </svg>
-                    <span>Itinéraire</span>
-                </button>
-                <button class="dist-action-btn" id="dist-action-favorite" aria-label="Ajouter aux favoris">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                    <span id="dist-action-favorite-label">Favori</span>
-                </button>
-                <button class="dist-action-btn" id="dist-action-edit" aria-label="Modifier ce distributeur" style="display:none">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 20h9"/>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                    </svg>
-                    <span>Modifier</span>
-                </button>
-                <button class="dist-action-btn" id="dist-action-add-photo" aria-label="Ajouter une photo">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                    <span>Photo</span>
-                </button>
-                <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
-                <button class="dist-action-btn" id="dist-action-share" aria-label="Partager le distributeur">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="18" cy="5" r="3"/>
-                        <circle cx="6" cy="12" r="3"/>
-                        <circle cx="18" cy="19" r="3"/>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
-                    <span>Partager</span>
-                </button>
+                <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
+                <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
+                <!-- EPIC-T9 : distributeur enregistre seulement sur ce telephone (inconnu de la base) -->
+                <div class="dist-login-invite dist-local-only" id="dist-local-only" hidden>
+                    <p><strong>Ce distributeur n'est enregistré que sur ton téléphone.</strong> Publie-le pour que les autres le voient et pour recevoir signaux et avis.</p>
+                    <button type="button" class="dist-login-invite-btn" id="dist-local-publish">Publier ce distributeur</button>
+                </div>
             </div>
 
             <!-- Onglets -->
@@ -383,12 +347,31 @@
             <div class="dist-modal-content">
                 <!-- Onglet Produits -->
                 <div class="dist-tab-pane active" data-tab-pane="produits">
-                    <!-- EPIC-T2 : le signal se fait sur l'aliment (toucher une ligne) -->
+                    <!-- EPIC-T10 : les produits d'abord, en cartes teintees ; on signale sur la carte -->
                     <div class="products-section-head" id="dist-products-head">
                         <h3 class="products-section-title" id="dist-products-title">Il reste quoi ? <span class="products-count" id="dist-products-count"></span></h3>
-                        <p class="products-hint" id="dist-products-hint">Touche un produit : <strong class="hint-yes">Il y en a</strong> ou <strong class="hint-no">Plus rien</strong></p>
+                        <p class="products-hint" id="dist-products-hint">Touche un produit : <strong class="hint-yes">Dispo</strong> ou <strong class="hint-no">Pas dispo</strong></p>
                     </div>
+                    <!-- Distributeur vide / en panne : dit une seule fois, au-dessus des cartes -->
+                    <p class="products-notice" id="dist-products-notice" hidden></p>
                     <div id="dist-products-list"></div>
+                    <!-- EPIC-T5 / T10 : informer, donner son avis, ajouter une photo = privileges de compte -->
+                    <div class="dist-login-invite dist-invite-card" id="dist-login-invite" role="region" aria-labelledby="dist-login-invite-title" hidden>
+                        <span class="dist-invite-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                        </span>
+                        <div class="dist-invite-text">
+                            <p class="dist-invite-title" id="dist-login-invite-title">Tu es devant le distributeur ?</p>
+                            <p>Connecte-toi pour signaler ce qu'il reste, donner ton avis et ajouter des photos.</p>
+                        </div>
+                        <div class="dist-invite-preview" aria-label="Ce que tu pourras faire">
+                            <span class="dist-invite-chip"><span class="dist-feu is-all" aria-hidden="true"><i></i><i></i><i></i></span>État</span>
+                            <span class="dist-invite-chip">Dispo / Pas dispo</span>
+                            <span class="dist-invite-chip">Avis</span>
+                            <span class="dist-invite-chip">Photos</span>
+                        </div>
+                        <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
+                    </div>
                     <!-- Section ajout produit (seulement en mode edit favoris) -->
                     <div id="dist-products-add-section" style="display:none; margin-top: 1rem;">
                         <label class="dist-pricerange-edit">
@@ -430,7 +413,7 @@
                             <button type="button" class="review-star" data-rating="5" aria-pressed="false" aria-label="5 étoiles">★</button>
                         </div>
                         <label class="sr-only" for="dist-review-body">Ton commentaire (facultatif)</label>
-                        <textarea id="dist-review-body" class="review-body-input" maxlength="500" rows="3" placeholder="Qu'as-tu pensé de cette machine ? (facultatif)"></textarea>
+                        <textarea id="dist-review-body" class="review-body-input" maxlength="500" rows="3" placeholder="Qu'as-tu pensé de ce distributeur ? (facultatif)"></textarea>
                         <div class="review-form-footer">
                             <span class="review-chars" id="dist-review-chars">0 / 500</span>
                             <div class="review-actions">
@@ -440,12 +423,12 @@
                         </div>
                     </div>
                     <div class="dist-login-invite" id="dist-review-invite" hidden>
-                        <p><strong>Tu connais cette machine ?</strong> Connecte-toi pour donner ton avis.</p>
+                        <p><strong>Tu connais ce distributeur ?</strong> Connecte-toi pour donner ton avis.</p>
                         <button type="button" class="dist-login-invite-btn" id="dist-review-invite-btn">Se connecter</button>
                     </div>
                     <p class="reviews-summary" id="dist-reviews-summary" hidden></p>
                     <ul class="reviews-list" id="dist-reviews-list"></ul>
-                    <p class="reviews-empty" id="dist-reviews-empty" hidden>Pas encore d'avis sur cette machine.</p>
+                    <p class="reviews-empty" id="dist-reviews-empty" hidden>Pas encore d'avis sur ce distributeur.</p>
                     <button type="button" class="btn-secondary-clean reviews-more" id="dist-reviews-more" hidden>Voir plus d'avis</button>
                 </div>
 
@@ -466,14 +449,40 @@
                     <!-- Fiche fictive (distributors.is_demo) : dit clairement que rien n'est reel ici -->
                     <div class="dist-apropos-row" id="dist-apropos-demo-row" style="display:none">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                        <span>Fiche de démonstration : machine fictive, données inventées</span>
+                        <span>Fiche de démonstration : distributeur fictif, données inventées</span>
                     </div>
-                    <!-- Photos de la machine (la 1re sert aussi de fond au bandeau d'etat) -->
+                    <!-- Photos du distributeur -->
                     <div class="dist-apropos-photos" id="dist-modal-photo" hidden>
                         <h4 class="dist-apropos-photos-title">Photos</h4>
                         <div id="dist-modal-photos-gallery" class="photos-gallery"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Pied de fiche (EPIC-T10) : bouton de trajet en principal ; Photo et Modifier
+                 seulement en connecte (applyFicheAuthState). -->
+            <div class="dist-modal-actions">
+                <button class="dist-action-btn primary" id="dist-action-directions" aria-label="Itinéraire">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                    </svg>
+                    <span>Itinéraire</span>
+                </button>
+                <button class="dist-action-btn" id="dist-action-add-photo" aria-label="Ajouter une photo" style="display:none">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    <span>Photo</span>
+                </button>
+                <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
+                <button class="dist-action-btn" id="dist-action-edit" aria-label="Modifier ce distributeur" style="display:none">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                    </svg>
+                    <span>Modifier</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1001,27 +1010,27 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=59",
-            "./js/state.js": "./js/state.js?v=59",
-            "./js/config.js": "./js/config.js?v=59",
-            "./js/utils.js": "./js/utils.js?v=59",
-            "./js/auth.js": "./js/auth.js?v=59",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=59",
-            "./js/map.js": "./js/map.js?v=59",
-            "./js/navigation.js": "./js/navigation.js?v=59",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=59",
-            "./js/distributor.js": "./js/distributor.js?v=59",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=59",
-            "./js/chat.js": "./js/chat.js?v=59",
-            "./js/activity.js": "./js/activity.js?v=59",
-            "./js/notifications.js": "./js/notifications.js?v=59",
-            "./js/availability.js": "./js/availability.js?v=59",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=59",
-            "./js/events.js": "./js/events.js?v=59",
-            "./js/stats.js": "./js/stats.js?v=59",
-            "./js/history.js": "./js/history.js?v=59",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=59",
-            "./js/reviews.js": "./js/reviews.js?v=59"
+            "./js/app.js": "./js/app.js?v=60",
+            "./js/state.js": "./js/state.js?v=60",
+            "./js/config.js": "./js/config.js?v=60",
+            "./js/utils.js": "./js/utils.js?v=60",
+            "./js/auth.js": "./js/auth.js?v=60",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=60",
+            "./js/map.js": "./js/map.js?v=60",
+            "./js/navigation.js": "./js/navigation.js?v=60",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=60",
+            "./js/distributor.js": "./js/distributor.js?v=60",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=60",
+            "./js/chat.js": "./js/chat.js?v=60",
+            "./js/activity.js": "./js/activity.js?v=60",
+            "./js/notifications.js": "./js/notifications.js?v=60",
+            "./js/availability.js": "./js/availability.js?v=60",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=60",
+            "./js/events.js": "./js/events.js?v=60",
+            "./js/stats.js": "./js/stats.js?v=60",
+            "./js/history.js": "./js/history.js?v=60",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=60",
+            "./js/reviews.js": "./js/reviews.js?v=60"
         }
     }
     </script>

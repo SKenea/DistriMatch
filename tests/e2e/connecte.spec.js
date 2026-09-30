@@ -46,17 +46,18 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
 
     test('connecte : les controles pour informer apparaissent (vraie session reconnue)', async ({ page, context }) => {
         await openAsTestAccount(page, context);
-        await expect(page.locator('#dist-machine-choices')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('#dist-status-update')).toBeVisible({ timeout: 15000 });   // « Mettre à jour » (EPIC-T10)
         await expect(page.locator('#dist-login-invite')).toBeHidden();
         await expect(page.locator('#dist-action-edit')).toBeVisible();
         await expect(page.locator('#dist-action-add-photo')).toBeVisible();
     });
 
-    test('« Fonctionne » : la vraie base enregistre le signal du compte, le bandeau suit', async ({ page, context }) => {
+    test('« En service » : la vraie base enregistre le signal du compte, la ligne d\u2019etat suit', async ({ page, context }) => {
         await openAsTestAccount(page, context);
+        await page.click('#dist-status-update');
         await page.click('#dist-machine-choices .machine-choice[data-machine="working"]');
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci', { timeout: 15000 });
-        await expect(page.locator('#dist-hero-kpi')).toHaveText('Fonctionne');
+        await expect(page.locator('#dist-status-word')).toHaveText('En service');
         const rows = await testAccountSignals(DEMO_ID);
         expect(rows.some(r => r.state === 'working' && r.source === 'user' && r.product_id === null)).toBe(true);
     });
@@ -79,11 +80,12 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         expect(await testAccountReviews(DEMO_ID)).toEqual([]);
     });
 
-    test('« Il y en a » sur un aliment : enregistre en base, la ligne passe en « Dispo »', async ({ page, context }) => {
+    test('« Dispo » sur un aliment : enregistre en base, la carte passe en « Dispo »', async ({ page, context }) => {
         await openAsTestAccount(page, context);
-        const row = page.locator('#dist-products-list .product-row').first();
-        const productId = Number(await row.getAttribute('data-product-id'));
-        await row.locator('button.product-row-main').click();
+        const productId = Number(await page.locator('#dist-products-list .product-row').first().getAttribute('data-product-id'));
+        // La carte peut changer de place une fois « Dispo » (tri) : on la suit par son id
+        const row = page.locator(`#dist-products-list .product-row[data-product-id="${productId}"]`);
+        if (await row.locator('.product-choices').isHidden()) await row.locator('button.product-row-main').click();
         await row.locator('.product-choice[data-state="available"]').click();
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci', { timeout: 15000 });
         await expect(row.locator('.product-pill')).toHaveText('Dispo');

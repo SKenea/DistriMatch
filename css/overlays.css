@@ -715,48 +715,6 @@
     background: var(--light);
 }
 
-/* ===== Bandeau d'etat (EPIC-T4, inspire de l'app EuroMillions) =====
-   Aplat de la couleur de l'etat (pas de degrade : le contraste reste mesurable),
-   texte blanc >= 4,5:1, info cle en tres grand. Photo eventuelle en fond assombri. */
-.dist-hero {
-    position: relative;
-    overflow: hidden;
-    padding: 3.75rem 1.25rem 1.25rem;
-    color: #fff;
-    background-color: #334155;   /* Pas d'info : ardoise (le rouge dirait « panne ») */
-}
-.dist-hero.is-working { background-color: #15803d; }
-.dist-hero.is-empty { background-color: #c2410c; }
-.dist-hero.is-broken { background-color: #b91c1c; }
-.dist-hero-photo {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0.22;
-    pointer-events: none;
-}
-.dist-hero-photo[hidden] { display: none; }
-.dist-hero-content { position: relative; }
-.dist-hero h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.2;
-    color: #fff;
-    overflow-wrap: anywhere;
-}
-.dist-hero .demo-tag { color: #fff; border-color: rgba(255, 255, 255, 0.85); background: transparent; }
-.dist-hero-kpi {
-    margin: 0.6rem 0 0.2rem;
-    font-size: 2.4rem;
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-    color: #FDE68A;              /* le « 130 MILLIONS » jaune de la reference */
-}
-#dist-hero .dist-modal-verified { margin: 0; color: #fff; font-weight: 600; font-style: normal; }
 
 /* Galerie photos dans « À propos » */
 .dist-apropos-photos { padding-top: 0.75rem; }
@@ -1323,71 +1281,324 @@
     100% { background: transparent; }
 }
 
-.product-item-clean.product-row {
-    display: block;
-    padding: 0;
-    margin-bottom: 0.5rem;
-    background: var(--white);
-    border: 1.5px solid var(--light-gray);
-    border-left: 5px solid var(--light-gray);
-    border-radius: 14px;
+
+
+.products-add-first { margin-top: 0.75rem; min-height: 44px; }
+
+/* ==========================================
+   FICHE V3 (EPIC-T10) : les produits d'abord, l'etat en discret
+   Maquette : docs/maquettes/2026-09-30-v3/vitrine-b-teintee.html
+   ========================================== */
+
+/* En-tete : Favori / Partager en icones, a gauche de la croix */
+.dist-modal-top-actions {
+    position: absolute;
+    top: 8px;
+    right: 52px;
+    display: flex;
+    gap: 2px;
+    z-index: 2;
 }
-.product-row.is-available { border-left-color: var(--success); }
-.product-row.is-absent { border-left-color: #991B1B; }
-.product-row-main {
-    width: 100%;
-    min-height: 56px;
+.dist-icon-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--dark);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.dist-icon-btn:hover { background: var(--light); }
+.dist-icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dist-icon-btn.favorited { color: #BE123C; }
+.dist-icon-btn.favorited svg { fill: currentColor; }
+.dist-icon-btn.pulsing { animation: heart-pulse 200ms ease-out; }
+.dist-modal-close { box-shadow: none; width: 44px; height: 44px; top: 8px; right: 8px; background: transparent; }
+.dist-modal-header { padding: 3.6rem 1.25rem 0.25rem; }
+.dist-modal-header h2 { font-size: 1.35rem; font-weight: 800; margin: 0; color: var(--dark); }
+
+/* Ligne d'etat : mini-feu tricolore + mot + age, 14-15 px (jamais un bandeau) */
+.dist-status {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.55rem 0.875rem;
+    flex-wrap: wrap;
+    column-gap: 0.4rem;
+    min-height: 32px;
+    margin: 0.2rem 0 0.1rem;
+    font-size: 0.9rem;
+    color: var(--gray);
+}
+.dist-feu {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 999px;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    flex: none;
+}
+.dist-feu i { width: 9px; height: 9px; border-radius: 50%; background: #CBD5E1; display: block; }
+.dist-status[data-state="working"] .dist-feu i:nth-child(1),
+.dist-feu.is-all i:nth-child(1) { background: #16A34A; }
+.dist-status[data-state="empty"] .dist-feu i:nth-child(2),
+.dist-feu.is-all i:nth-child(2) { background: #EA580C; }
+.dist-status[data-state="broken"] .dist-feu i:nth-child(3),
+.dist-feu.is-all i:nth-child(3) { background: #DC2626; }
+.dist-status.is-soft .dist-feu i { opacity: 0.5; }
+.dist-status-word { font-weight: 700; color: #475569; }
+.dist-status[data-state="working"] .dist-status-word { color: #166534; }
+.dist-status[data-state="empty"] .dist-status-word { color: #9A3412; }
+.dist-status[data-state="broken"] .dist-status-word { color: #991B1B; }
+.dist-status.is-soft .dist-status-word { color: #4B5563; }
+.dist-status .dist-modal-verified,
+.dist-status .dist-modal-verified.is-fresh { display: inline; margin: 0; font-size: inherit; font-weight: 400; font-style: normal; color: var(--gray); }
+.dist-status .dist-modal-verified:not(:empty)::before { content: "· "; }
+.dist-status-update {
+    min-height: 44px;
+    padding: 0 0.35rem;
+    border: none;
+    background: none;
+    color: var(--dark);
+    font: inherit;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.dist-status-update[hidden] { display: none; }
+.dist-status-update[aria-expanded="true"] { font-weight: 700; }
+.dist-modal-meta { margin-top: 0.15rem; }
+
+/* Trois etats derriere « Mettre à jour » : tuiles sobres, pastille de couleur */
+.machine-choices-title { font-size: 0.9rem; }
+.machine-choice {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-width: 1px;
+    border-radius: 12px;
+    color: var(--dark);
+    font-size: 0.9rem;
+}
+.machine-choice i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.machine-choice.is-working, .machine-choice.is-empty, .machine-choice.is-broken { color: var(--dark); }
+.machine-choice.is-working i { background: #16A34A; }
+.machine-choice.is-empty i { background: #EA580C; }
+.machine-choice.is-broken i { background: #DC2626; }
+.machine-choice.is-current,
+.machine-choice.is-working.is-current,
+.machine-choice.is-empty.is-current,
+.machine-choice.is-broken.is-current { background: var(--white); color: var(--dark); border: 2px solid var(--dark); }
+
+/* « Il reste quoi ? » */
+.products-section-title { font-size: 1.1rem; }
+.products-count { font-size: 0.9rem; }
+.products-hint { font-size: 0.875rem; color: var(--gray); }
+.products-hint .hint-yes { color: #166534; }
+.products-hint .hint-no { color: #4B5563; }
+
+/* Distributeur vide / en panne : dit une seule fois, au-dessus des cartes */
+.products-notice {
+    margin: 0 0 0.75rem;
+    padding: 2px 0 2px 10px;
+    border-left: 2px solid #EA580C;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: var(--dark);
+}
+.products-notice.is-broken { border-left-color: #DC2626; }
+.products-notice[hidden] { display: none; }
+
+/* Cartes produit teintees (maquette B) : une seule carte pour tous les etats,
+   seule la teinte change ; nom toujours en noir, ligne d'age toujours la. */
+#dist-products-list.products-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.product-item-clean.product-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 0;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    min-width: 0;
+}
+.product-row.is-available { background: #F0FDF4; border-color: #BBF7D0; }
+.product-row.is-available.is-soft { background: #F8FDF9; border-color: #DCFCE7; }
+.product-row.is-absent { background: #F3F4F6; border-color: #E5E7EB; }
+.product-row.is-unknown { background: #FFFFFF; border-color: #E5E7EB; }
+.product-row-main {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
     border: none;
     background: none;
     font: inherit;
     color: inherit;
     text-align: left;
 }
-button.product-row-main { cursor: pointer; border-radius: var(--radius-sm); }
+button.product-row-main { cursor: pointer; border-radius: 14px; }
 button.product-row-main:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-.product-row-text { display: flex; flex-direction: column; min-width: 0; }
-.product-seen { font-size: 0.8125rem; color: var(--gray); }
-.product-seen:empty { display: none; }
+.product-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.product-icon {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: #FFFFFF;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    color: #374151;
+}
+.product-icon svg { width: 22px; height: 22px; }
+.product-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.product-row .product-name-clean { font-size: 0.97rem; font-weight: 700; line-height: 1.2; color: #111827; overflow-wrap: anywhere; }
+.product-seen { font-size: 0.8rem; color: #4B5563; }
 
 .product-pill {
-    flex: 0 0 auto;
-    padding: 0.35rem 0.8rem;
-    border: 1.5px solid var(--light-gray);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 9px 2px 8px;
     border-radius: 999px;
-    background: var(--white);
-    color: var(--gray);
-    font-size: 0.8125rem;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    border: 1px solid transparent;
+    font-size: 0.78rem;
+    font-weight: 600;
     white-space: nowrap;
 }
-.product-pill.is-unknown { border-style: dashed; color: var(--text-muted); font-weight: 600; }
-.product-pill.is-available { border-color: rgba(22, 101, 52, 0.35); color: #166534; }
-.product-pill.is-absent { border-color: rgba(153, 27, 27, 0.3); color: #991B1B; }
-.product-pill.is-available.is-fresh { background: rgba(22, 163, 74, 0.12); border-color: transparent; }
-.product-pill.is-absent.is-fresh { background: rgba(214, 40, 40, 0.10); border-color: transparent; }
+.product-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.product-pill.is-available { background: #166534; color: #FFFFFF; }
+.product-row.is-soft .product-pill.is-available { background: #DCFCE7; color: #166534; }
+.product-pill.is-absent { background: #4B5563; color: #FFFFFF; }
+.product-pill.is-unknown { background: #FFFFFF; color: #475569; border-color: #CBD5E1; }
+.product-pill.is-unknown::before { background: transparent; border: 1px solid #94A3B8; }
 
-.product-choices { display: flex; gap: 0.5rem; padding: 0 0.875rem 0.75rem; }
+/* Signaler sur la carte : deux boutons avec les mots de l'affichage */
+.product-choices { display: flex; gap: 6px; padding: 0 12px 12px; }
 .product-choices[hidden] { display: none; }
 .product-choice {
     flex: 1;
-    min-height: 48px;
-    border: 1px solid var(--light-gray);
-    border-radius: var(--radius-sm);
-    background: var(--white);
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 2px;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    background: #FFFFFF;
     font: inherit;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    white-space: nowrap;
     cursor: pointer;
 }
-.product-choice.is-yes { color: #166534; border-color: rgba(22, 101, 52, 0.4); }
-.product-choice.is-no { color: #991B1B; border-color: rgba(153, 27, 27, 0.35); }
+.product-choice.is-yes { color: #166534; }
+.product-choice.is-no { color: #4B5563; }
 .product-choice:disabled { opacity: 0.5; cursor: wait; }
+.product-choice:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-.products-add-first { margin-top: 0.75rem; min-height: 44px; }
+/* Sans produit */
+.products-empty-state { padding: 1.25rem 1rem; border: 1.5px dashed #CBD5E1; border-radius: 14px; text-align: center; }
+.products-empty-title { margin: 0 0 0.25rem; font-weight: 800; color: var(--dark); }
+.products-empty-text { margin: 0; font-size: 0.9rem; color: var(--gray); }
+
+/* Invitation visiteur : le seul appel a l'action fort de la fiche */
+.dist-login-invite.dist-invite-card {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    column-gap: 12px;
+    row-gap: 10px;
+    align-items: start;
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #FFF7F7 0%, #FFFFFF 100%);
+    border: 1px solid #F5D0D0;
+}
+.dist-login-invite.dist-invite-card[hidden] { display: none; }
+.dist-invite-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #C81E1E;
+    color: #FFFFFF;
+}
+.dist-invite-icon svg { width: 22px; height: 22px; }
+.dist-invite-text p { margin: 0; font-size: 0.875rem; line-height: 1.35; color: #374151; }
+.dist-invite-text .dist-invite-title { margin: 0 0 2px; font-size: 1rem; font-weight: 800; color: #111827; }
+.dist-invite-preview { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.dist-invite-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px 4px 7px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    color: #374151;
+    white-space: nowrap;
+}
+.dist-invite-chip .dist-feu { padding: 2px 4px; }
+.dist-invite-chip .dist-feu i { width: 7px; height: 7px; }
+.dist-invite-card .dist-login-invite-btn {
+    grid-column: 1 / -1;
+    min-height: 46px;
+    border-radius: 12px;
+    background: #C81E1E;
+    font-size: 1rem;
+    font-weight: 700;
+}
+.dist-invite-card .dist-login-invite-btn:hover { background: #A51818; }
+
+/* Le contenu occupe la hauteur restante : sur une fiche courte, le pied reste en bas */
+.dist-modal { display: flex; flex-direction: column; }
+.dist-modal > .dist-modal-content { flex: 1 0 auto; }
+
+/* Pied de fiche colle en bas : Itineraire en principal, Photo / Modifier (connecte) */
+.dist-modal-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--white);
+    border-top: 1px solid var(--light-gray);
+    border-bottom: none;
+}
+.dist-modal-actions .dist-action-btn {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 48px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 12px;
+    color: var(--dark);
+    font-size: 0.9rem;
+}
+.dist-modal-actions .dist-action-btn svg { width: 20px; height: 20px; }
+.dist-modal-actions .dist-action-btn.primary {
+    flex: 1;
+    background: #111827;
+    border-color: #111827;
+    color: #FFFFFF;
+    font-size: 1rem;
+}
+.dist-modal-actions .dist-action-btn.primary:hover { background: #1F2937; }
