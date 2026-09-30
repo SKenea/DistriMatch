@@ -300,6 +300,44 @@ async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
 // verrou, 2 clics rapides lancent 2 confirmAddDistributorImpl() en parallele,
 // le check anti-doublon des 50m lisant AppState.distributors AVANT le 1er push
 // (race condition) -> N lignes contenu identique, ids differents.
+// Envoie une machine (et ses produits) a la base. Retour : { ok, error }.
+// Deja presente (meme id, 23505) = deja publiee : ok. Reutilise par la fiche
+// d'une machine locale (« Publier cette machine », EPIC-T9).
+export async function publishDistributor(distributor) {
+    if (!supabaseClient) return { ok: false, error: { message: 'Service indisponible' } };
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const { error } = await supabaseClient.from('distributors').insert({
+            id: distributor.id,
+            name: distributor.name,
+            type: distributor.type,
+            emoji: distributor.emoji || '🏪',
+            lat: distributor.lat,
+            lng: distributor.lng,
+            address: distributor.address || 'Adresse a compléter',
+            city: distributor.city || 'A vérifier',
+            rating: 0,
+            review_count: 0,
+            status: 'verified',
+            price_range: distributor.priceRange || '€€',
+            is_user_added: true,
+            added_by: session?.user?.id || null
+        });
+        if (error && error.code !== '23505') throw error;
+        if (!error && (distributor.products || []).length > 0) {
+            const { error: prodError } = await supabaseClient.from('products').insert(
+                distributor.products.map(p => ({ distributor_id: distributor.id, name: p.name, available: p.available !== false }))
+            );
+            if (prodError) console.warn('[DistriMatch] Erreur ajout produits:', prodError.message);
+        }
+        console.log('[DistriMatch] Distributeur publie sur Supabase:', distributor.id);
+        return { ok: true, error: null };
+    } catch (e) {
+        console.warn('[DistriMatch] Publication refusee :', e?.code, e?.message || e);
+        return { ok: false, error: e };
+    }
+}
+
 export async function confirmAddDistributor() {
     if (AddMode.submitting) return;
     AddMode.submitting = true;
@@ -381,49 +419,16 @@ async function confirmAddDistributorImpl() {
         addedBy: 'user'
     };
 
-    if (supabaseClient) {
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const userId = session?.user?.id || null;
-            const { error } = await supabaseClient.from('distributors').insert({
-                id: distId,
-                name: name,
-                type: type,
-                emoji: typeInfo?.emoji || '🏪',
-                lat: AddMode.lat,
-                lng: AddMode.lng,
-                address: address || 'Adresse a compléter',
-                city: 'A vérifier',
-                rating: 5.0,
-                review_count: 0,
-                status: 'verified',
-                price_range: priceRange,
-                is_user_added: true,
-                added_by: userId
-            });
-            if (error) throw error;
-            console.log('[DistriMatch] Distributeur ajoute sur Supabase:', distId);
-
-            if (products.length > 0) {
-                const productRows = products.map(p => ({
-                    distributor_id: distId,
-                    name: p.name,
-                    available: true
-                }));
-                const { error: prodError } = await supabaseClient.from('products').insert(productRows);
-                if (prodError) {
-                    console.warn('[DistriMatch] Erreur ajout produits:', prodError.message);
-                } else {
-                    console.log('[DistriMatch] Produits ajoutes:', products.length);
-                }
-            }
-
-            if (AddMode.photos && AddMode.photos.length > 0) {
-                await uploadDistributorPhotos(distId, AddMode.photos);
-            }
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur ajout Supabase:', e.message);
+    // EPIC-T9 : un echec d'envoi n'est plus avale. La machine reste sur le
+    // telephone, marquee « locale », publiable plus tard depuis sa fiche.
+    const published = await publishDistributor(newDistributor);
+    if (published.ok) {
+        if (AddMode.photos && AddMode.photos.length > 0) {
+            await uploadDistributorPhotos(distId, AddMode.photos);
         }
+    } else {
+        newDistributor.isLocalOnly = true;
+        showToast('Enregistrée sur ton téléphone seulement : publie-la depuis sa fiche quand le réseau revient', 'warning');
     }
 
     AddMode.photos = null;

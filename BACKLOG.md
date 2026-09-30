@@ -27,16 +27,16 @@ photo et mesure y sont refuses par la base (cle etrangere). Tres probablement au
 la vraie cause du « Signal non envoye » du 2026-09-25 (OK en navigation privee, qui
 n'a pas de donnees locales). Origine : a l'ajout d'une machine, un echec d'envoi vers
 la base etait avale en silence et la machine gardee en local.
-Correctif valide par Stephane le 2026-09-30. Hors perimetre : fusion de doublons
+Correctif valide par Stephane le 2026-09-30, livre le meme jour. Hors perimetre : fusion de doublons
 deja presents dans la base (aucun aujourd'hui).
 
-- [ ] T9-US1 Nettoyage automatique des doublons locaux
+- [x] T9-US1 Nettoyage automatique des doublons locaux
   - Acceptance : au chargement (donnees venues de la base seulement), une machine
     locale absente de la base qui porte le meme nom (casse, accents et espaces
     ignores) qu'une machine de la base a moins de 100 m est retiree du telephone
     (localStorage) et de la carte ; la vraie fiche reste. `findLocalDuplicates` pure.
 
-- [ ] T9-US2 Les vraies machines locales sont signalees et publiables
+- [x] T9-US2 Les vraies machines locales sont signalees et publiables
   - Acceptance : fiche marquee « Cette machine n'est enregistree que sur ton
     telephone » ; avis, signaux, photo et modifier masques tant qu'elle n'est pas
     publiee ; bouton « Publier cette machine » (connecte ; visiteur -> connexion) qui
@@ -44,7 +44,7 @@ deja presents dans la base (aucun aujourd'hui).
     d'une machine, un echec d'envoi est dit (« Enregistree sur ton telephone
     seulement ») au lieu d'etre avale.
 
-- [ ] T9-US3 Un message clair plutot qu'un code
+- [x] T9-US3 Un message clair plutot qu'un code
   - Acceptance : avis refuse pour machine inconnue (23503) et signal refuse pour
     machine inconnue (P0002) -> « Cette machine n'est pas encore sur le serveur ».
 

@@ -19,7 +19,8 @@ import {
     saveConversations, loadConversations,
     saveNotificationPrefs, loadNotificationPrefs,
     saveNotificationQueue, loadNotificationQueue,
-    loadUserDistributors, saveUserDistributor, getLevelInfo, mapDistributorRow
+    loadUserDistributors, saveUserDistributor, getLevelInfo, mapDistributorRow,
+    findLocalDuplicates, removeUserDistributors
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -157,7 +158,18 @@ async function loadDistributors() {
         }
     }
 
-    const userDistributors = loadUserDistributors();
+    let userDistributors = loadUserDistributors();
+    // EPIC-T9 : quand la base a repondu, une copie locale d'une machine deja
+    // publiee (meme nom, a moins de 100 m, id different) est retiree du
+    // telephone ; les machines vraiment locales sont reperees (isLocalOnly).
+    if (supabaseData && userDistributors.length > 0) {
+        const duplicateIds = findLocalDuplicates(userDistributors, AppState.distributors);
+        if (duplicateIds.length > 0) {
+            removeUserDistributors(duplicateIds);
+            userDistributors = userDistributors.filter((d) => !duplicateIds.includes(d.id));
+            console.log('[DistriMatch] Doublons locaux retires (deja dans la base):', duplicateIds.length);
+        }
+    }
     if (userDistributors.length > 0) {
         // Dedup par id sur 2 fronts :
         //  1. un distributeur local deja sync sur Supabase revient via le fetch
@@ -171,6 +183,7 @@ async function loadDistributors() {
             seenIds.add(d.id);
             return true;
         });
+        if (supabaseData) newUserDistributors.forEach((d) => { d.isLocalOnly = true; });
         AppState.distributors = [...AppState.distributors, ...newUserDistributors];
         console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote + internes ignores)');
     }

@@ -63,6 +63,12 @@ export function renderRatingHeader(distributor) {
 // Fire-and-forget : l'appelant ne l'await jamais.
 export function loadReviewsForDistributor(distributor) {
     state = freshState(distributor?.id || null);
+    // Machine seulement locale (EPIC-T9) : inconnue de la base, pas d'avis possibles
+    if (distributor?.isLocalOnly) {
+        state.loaded = true;
+        renderReviews();
+        return;
+    }
     renderReviews();
     if (!supabaseClient || !distributor) return;
     fetchPage();
@@ -149,11 +155,12 @@ function updateFormState() {
 export function renderReviews() {
     const distributor = currentDistributor();
     const authed = isAuthenticated();
+    const localOnly = !!distributor?.isLocalOnly;
 
     const mineBox = document.getElementById('dist-review-mine');
     const invite = document.getElementById('dist-review-invite');
-    if (mineBox) mineBox.hidden = !authed;
-    if (invite) invite.hidden = authed;
+    if (mineBox) mineBox.hidden = !authed || localOnly;
+    if (invite) invite.hidden = authed || localOnly;
     const title = document.getElementById('dist-review-mine-title');
     if (title) title.textContent = state.mine ? 'Ton avis' : 'Donne ton avis';
     const submit = document.getElementById('dist-review-submit');
@@ -185,7 +192,12 @@ export function renderReviews() {
     }
 
     const empty = document.getElementById('dist-reviews-empty');
-    if (empty) empty.hidden = !(state.loaded && state.total === 0);
+    if (empty) {
+        empty.textContent = localOnly
+            ? 'Publie d\'abord cette machine pour recevoir des avis.'
+            : 'Pas encore d\'avis sur cette machine.';
+        empty.hidden = !(state.loaded && state.total === 0);
+    }
     const more = document.getElementById('dist-reviews-more');
     if (more) more.hidden = !(state.loaded && state.items.length < state.total);
 }

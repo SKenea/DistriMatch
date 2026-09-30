@@ -18,7 +18,7 @@ import {
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
-    describeRating, validateReview, describeReviewError,
+    describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
 
@@ -291,7 +291,7 @@ describe('describeSignalError / isBusinessSignalError (signal non envoye)', () =
         assert.equal(describeSignalError({ code: '42501' }, 403), 'Ce compte ne peut plus envoyer de signaux');
         assert.equal(describeSignalError({ code: '28000', message: 'Connexion requise pour signaler' }, 403), 'Ta session a expiré : reconnecte-toi');
         assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401), 'Ta session a expiré : reconnecte-toi');
-        assert.equal(describeSignalError({ code: 'P0002' }, 404), 'Machine inconnue du serveur : signal non envoyé');
+        assert.equal(describeSignalError({ code: 'P0002' }, 404), "Cette machine n'est pas encore sur le serveur : signal non envoyé");
         assert.equal(describeSignalError(new TypeError('Failed to fetch'), 0), 'Pas de réseau : signal non envoyé');
         assert.equal(describeSignalError({ code: 'PGRST301', message: 'JWT expired' }, 401, false), 'Pas de réseau : signal non envoyé');
     });
@@ -341,12 +341,43 @@ describe('validateReview (avant envoi)', () => {
 describe('describeReviewError (avis refuse, la raison)', () => {
     it('chaque refus de la base a son message', () => {
         assert.match(describeReviewError({ code: '23505' }, 409), /déjà donné ton avis/);
+        assert.equal(describeReviewError({ code: '23503' }, 409), "Cette machine n'est pas encore sur le serveur : avis non publié");
         assert.equal(describeReviewError({ code: 'P0001' }, 400), "Trop d'avis depuis ce compte, réessaie dans une heure");
         assert.equal(describeReviewError({ code: '42501', message: "Ce compte ne peut plus publier d'avis" }, 403), "Ce compte ne peut plus publier d'avis");
         assert.equal(describeReviewError({ code: '28000' }, 403), 'Ta session a expiré : reconnecte-toi');
         assert.equal(describeReviewError({ code: 'PGRST301' }, 401), 'Ta session a expiré : reconnecte-toi');
         assert.equal(describeReviewError(new TypeError('Failed to fetch'), 0), 'Pas de réseau : avis non publié');
         assert.equal(describeReviewError({ code: '42501', message: 'permission denied for table reviews' }, 403), 'Avis non publié, réessaie plus tard (code 42501)');
+    });
+});
+
+// EPIC-T9 : copies locales d'une machine deja dans la base
+describe('findLocalDuplicates / normalizeName (doublons locaux)', () => {
+    const remote = [
+        { id: 'user-1776102020333', name: 'Gaztainbidea', lat: 43.3500, lng: -1.4500 },
+        { id: 'dist-007', name: 'Légumes Bio Cambo', lat: 43.3600, lng: -1.4000 }
+    ];
+    const at = (lat, lng, dMeters) => ({ lat: lat + dMeters / 111320, lng });
+
+    it('normalizeName ignore casse, accents et espaces', () => {
+        assert.equal(normalizeName('  Gaztainbidéa   '), 'gaztainbidea');
+        assert.equal(normalizeName('Légumes  Bio CAMBO'), 'legumes bio cambo');
+        assert.equal(normalizeName(null), '');
+    });
+
+    it('copie locale du meme nom a moins de 100 m, id different : doublon', () => {
+        const local = [{ id: 'user-999', name: 'gaztainbidea ', ...at(43.35, -1.45, 40) }];
+        assert.deepEqual(findLocalDuplicates(local, remote), ['user-999']);
+        const accents = [{ id: 'user-998', name: 'Legumes bio cambo', ...at(43.36, -1.40, 90) }];
+        assert.deepEqual(findLocalDuplicates(accents, remote), ['user-998']);
+    });
+
+    it('pas un doublon : trop loin, autre nom, ou meme id que dans la base', () => {
+        assert.deepEqual(findLocalDuplicates([{ id: 'user-1', name: 'Gaztainbidea', ...at(43.35, -1.45, 150) }], remote), []);
+        assert.deepEqual(findLocalDuplicates([{ id: 'user-2', name: 'Autre machine', ...at(43.35, -1.45, 5) }], remote), []);
+        assert.deepEqual(findLocalDuplicates([{ id: 'user-1776102020333', name: 'Gaztainbidea', lat: 43.35, lng: -1.45 }], remote), []);
+        assert.deepEqual(findLocalDuplicates([{ id: 'user-3', name: 'Gaztainbidea', lat: null, lng: null }], remote), []);
+        assert.deepEqual(findLocalDuplicates(undefined, undefined), []);
     });
 });
 

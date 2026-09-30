@@ -173,7 +173,7 @@ export function describeSignalError(error, status = 0, online = true) {
         return 'Pas de réseau : signal non envoyé';
     }
     if (error?.code === 'P0001') return 'Trop de signaux depuis ce compte, réessaie dans une heure';
-    if (error?.code === 'P0002') return 'Machine inconnue du serveur : signal non envoyé';
+    if (error?.code === 'P0002') return "Cette machine n'est pas encore sur le serveur : signal non envoyé";
     if (error?.code === '42501') return 'Ce compte ne peut plus envoyer de signaux';
     if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';
     const code = error?.code || status || '?';
@@ -305,6 +305,41 @@ export function loadUserDistributors() {
         console.error('Erreur chargement distributeurs utilisateur:', e);
         return [];
     }
+}
+
+// Retire des machines ajoutees localement (doublons d'une machine de la base,
+// ou machines publiees depuis). EPIC-T9.
+export function removeUserDistributors(ids) {
+    if (!ids || ids.length === 0) return;
+    const keep = loadUserDistributors().filter((d) => !ids.includes(d.id));
+    try {
+        localStorage.setItem(USER_DISTRIBUTORS_KEY, JSON.stringify(keep));
+    } catch (e) {
+        console.error('Erreur mise a jour distributeurs utilisateur:', e);
+    }
+}
+
+// Nom compare sans casse, accents ni espaces superflus (« Gaztainbidéa  » = « gaztainbidea »)
+export function normalizeName(name) {
+    return String(name || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Machines ajoutees localement qui doublonnent une machine de la base : meme
+// nom (normalise) a moins de radiusM metres, et absentes de la base par leur id
+// (sinon la fusion par id s'en charge deja). EPIC-T9 : une copie locale d'une
+// machine deja publiee (id different, position un peu decalee) ouvrait une fiche
+// que la base ne connait pas (avis / signal refuses, code 23503). Retour : ids.
+export function findLocalDuplicates(localList = [], remoteList = [], radiusM = 100) {
+    const remoteIds = new Set(remoteList.map((d) => d.id));
+    return localList
+        .filter((local) => !remoteIds.has(local.id))
+        .filter((local) => remoteList.some((remote) =>
+            normalizeName(remote.name) === normalizeName(local.name)
+            && Number.isFinite(Number(local.lat)) && Number.isFinite(Number(remote.lat))
+            && calculateDistance(Number(local.lat), Number(local.lng), Number(remote.lat), Number(remote.lng)) * 1000 < radiusM))
+        .map((local) => local.id);
 }
 
 export function saveUserDistributor(distributor) {
@@ -711,6 +746,7 @@ export function describeReviewError(error, status = 0, online = true) {
         return 'Pas de réseau : avis non publié';
     }
     if (error?.code === '23505') return 'Tu as déjà donné ton avis sur cette machine : tu peux le modifier';
+    if (error?.code === '23503') return "Cette machine n'est pas encore sur le serveur : avis non publié";
     if (error?.code === 'P0001') return "Trop d'avis depuis ce compte, réessaie dans une heure";
     if (error?.code === '42501' && /publier/i.test(message)) return "Ce compte ne peut plus publier d'avis";
     if (error?.code === '28000' || status === 401) return 'Ta session a expiré : reconnecte-toi';
