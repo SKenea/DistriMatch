@@ -19,6 +19,53 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T12 Modifier une fiche sans bouton, au toucher (Stephane, 2026-10-01)
+Objectif : un membre connecte modifie la fiche directement sur les produits, sans
+bouton « Modifier » ni mode edition. Valeur : fluide, simple, intuitif, a une main
+devant le distributeur. Maquette retenue : `docs/maquettes/2026-10-01-edition/1-toucher.html`
+(PR #149, benchmark NN/g, WCAG 2.5.1 / 2.5.7, Rappels, Keep, Gmail, Waze).
+Hors perimetre : carte, side panel, etat du distributeur (pastille « Mettre à
+jour » inchangee), chatbot (inactif), schema Supabase (RLS 005 / 013 inchangees).
+
+- [x] T12-US1 En tant que membre connecte, je veux signaler la dispo en touchant l'etiquette
+  - Acceptance : toucher l'etiquette d'une carte deplie sur la carte « Dispo / Pas
+    dispo » avec la question « Toujours dispo ? » / « Toujours pas dispo ? » / « Là,
+    maintenant ? » (reponse actuelle marquee) ; un toucher envoie (RPC
+    `confirm_availability`), la carte se referme « vu à l'instant » ; retoucher
+    l'etiquette, Echap ou toucher ailleurs referme sans rien envoyer ; plus de
+    boutons affiches d'office sur les cartes sans info recente.
+
+- [x] T12-US2 En tant que membre connecte, je veux renommer et retirer un produit sur place
+  - Acceptance : toucher le nom -> champ en place (Entree / perte du focus =
+    enregistre, Echap = annule, erreur de la base dite et nom rétabli) ; retirer =
+    nom vide valide ou appui long / clic droit -> menu « Renommer / Retirer » ;
+    toast « X retiré · Annuler » 7 s ; la suppression en base n'a lieu qu'a la fin
+    du delai (Annuler ne touche pas la base) ; echec -> produit rétabli + message.
+
+- [x] T12-US3 En tant que membre connecte, je veux ajouter des produits a la suite
+  - Acceptance : carte en pointillé « + Ajouter un produit » en fin de grille (« Ajoute
+    le premier produit » sur une fiche vide) ; toucher -> champ ; Entree ajoute (insert
+    `products`, picto d'apres le nom, « Pas d'info ») et garde un champ vide pour
+    enchainer ; doublon (meme nom) refuse avec message ; echec de la base dit.
+
+- [x] T12-US4 En tant que membre connecte, je veux changer le niveau de prix en le touchant
+  - Acceptance : toucher « €€ » dans l'en-tete ouvre € / €€ / €€€ sur place ; un
+    choix met a jour `distributors.price_range` (013) ; erreur dite et valeur rétablie.
+
+- [x] T12-US5 En tant que visiteur, je veux savoir que modifier demande un compte
+  - Acceptance : en visiteur, rien n'est modifiable ; toucher une etiquette, la carte
+    d'ajout ou le prix fait defiler jusqu'a l'invitation « Tu es devant le
+    distributeur ? » et la met en avant. Distributeur seulement local : rien de
+    modifiable tant qu'il n'est pas publie (inchange).
+
+- [x] T12-TS Plus de mode edition ; une seule notion de dispo ; tests et doc
+  - Acceptance : plus de bouton « Modifier » ni de mode edition (champs, puces
+    « Disponible / Non disponible », corbeilles, formulaire d'ajout, select de prix) ;
+    `products.available` n'est plus lu pour l'affichage (la dispo = le signal) ;
+    indice de premier usage « Touche l'étiquette pour la changer » sur la 1re carte,
+    efface apres la 1re action reussie (localStorage) ; tests des 4 niveaux et
+    `CLAUDE.md` a jour ; captures iPhone montrees a Stephane avant fusion.
+
 ### EPIC-T11 Fiche : des zones et des boutons qu'on distingue (Stephane, 2026-09-30)
 Objectif : voir d'un coup d'oeil ou commence chaque zone de la fiche, et reconnaitre
 un bouton et son importance. Retour de Stephane sur la fiche v3 : « c'est mieux, par

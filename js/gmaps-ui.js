@@ -5,16 +5,15 @@
 
 import { AppState, supabaseClient } from './state.js';
 import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
-import { toggleSubscription, loadDistributorPhotos, renderProductsList } from './distributor.js';
+import { toggleSubscription, loadDistributorPhotos } from './distributor.js';
 import { uploadDistributorPhotos, publishDistributor } from './add-distributor.js';
-import { openConversation } from './chat.js';
-import { FEATURES } from './config.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
 import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
+import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -221,6 +220,7 @@ export function initDistModal() {
     // « Il reste quoi ? » se dit sur les aliments et les boutons d'etat de la
     // machine (EPIC-T2), reserves aux comptes connectes (EPIC-T5)
     initFicheSignals();
+    initFicheEdit();   // EPIC-T12 : modifier sans bouton (renommer, retirer, ajouter, prix)
     initReviews();
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
@@ -246,26 +246,6 @@ export function initDistModal() {
             void btn?.offsetWidth;
             btn?.classList.add('pulsing');
             btn?.addEventListener('animationend', () => btn.classList.remove('pulsing'), { once: true });
-        }
-    });
-
-    // Bouton stylo "Modifier" : visible sur toute fiche. Identifie ->
-    // mode edition. Non identifie -> modale d'explication invitant a se
-    // connecter via la page Compte (point d'entree unique de la connexion).
-    document.getElementById('dist-action-edit')?.addEventListener('click', () => {
-        const d = AppState.currentDistributor;
-        if (!d) return;
-        if (isAuthenticated()) {
-            openDistributorModal(d.id, true, true);
-        } else {
-            showEditAuthGate();
-        }
-    });
-
-    // Bouton Discuter avec le bot (mode edit)
-    document.getElementById('dist-open-chat')?.addEventListener('click', () => {
-        if (AppState.currentDistributor) {
-            openConversation(AppState.currentDistributor.id);
         }
     });
 
@@ -378,17 +358,17 @@ export function openModalFromUrlParam() {
     }
 }
 
-export function openDistributorModal(id, editMode = false, canEdit = false) {
+// EPIC-T12 : plus de mode edition ; on modifie la fiche directement (fiche-edit.js).
+// Les anciens parametres (editMode, canEdit) sont ignores.
+export function openDistributorModal(id) {
     const distributor = AppState.distributors.find(d => d.id === id);
     if (!distributor) return;
 
     AppState.currentDistributor = distributor;
-    AppState.modalEditMode = editMode;
-    AppState.modalCanEdit = canEdit;
-    // Mesure (008) : une ouverture de fiche = un evenement. Le passage en mode
-    // edition re-rend la meme fiche : pas recompte.
-    // (une machine seulement locale est inconnue de la base : pas de mesure)
-    if (!editMode && !distributor.isLocalOnly) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
+    AppState.modalEditMode = false;
+    // Mesure (008) : une ouverture de fiche = un evenement
+    // (un distributeur seulement local est inconnu de la base : pas de mesure)
+    if (!distributor.isLocalOnly) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
     modalOpenSource = 'organic';
 
     const typeConfig = AppState.typeConfig[distributor.type] || {};
@@ -409,9 +389,11 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const PRICE_LEVELS = ['€', '€€', '€€€'];
     const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : '€€';
     const prEl = document.getElementById('dist-modal-pricerange');
-    if (prEl) prEl.textContent = priceRange;
-    const prSelect = document.getElementById('dist-edit-pricerange');
-    if (prSelect) prSelect.value = priceRange;
+    if (prEl) {
+        prEl.textContent = priceRange;
+        prEl.setAttribute('aria-expanded', 'false');
+    }
+    document.getElementById('dist-price-picker')?.remove();
 
     // A propos
     document.getElementById('dist-apropos-address').textContent = distributor.address || 'Adresse inconnue';
@@ -422,20 +404,14 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     const demoRow = document.getElementById('dist-apropos-demo-row');
     if (demoRow) demoRow.style.display = distributor.isDemo ? 'flex' : 'none';
 
-    // Produits : mode edit (boutons CRUD) ou readonly
-    renderProductsList(distributor, 'dist-products-list', { readonly: !editMode, canInform: canInformOn(distributor) });
+    // Produits : cartes teintees ; modifiables au toucher par un membre (EPIC-T12)
+    renderFicheProducts();
     applyFicheAuthState();
     // Signaux de dispo (UC11) : etat de chaque carte produit + ligne d'etat du
     // distributeur. Fire-and-forget, jamais await : Supabase absent = rien.
     loadAvailabilityForDistributor(distributor.id);
     // Avis (EPIC-T8) : liste + mon avis, fire-and-forget
-    if (!editMode) loadReviewsForDistributor(distributor);
-
-    // En mode edit, afficher la section "+ Ajouter produit" + "Discuter"
-    const addSection = document.getElementById('dist-products-add-section');
-    if (addSection) addSection.style.display = editMode ? 'block' : 'none';
-    const chatSection = document.getElementById('dist-chat-section');
-    if (chatSection) chatSection.style.display = (FEATURES.chat && editMode) ? 'block' : 'none';
+    loadReviewsForDistributor(distributor);
 
     // Photos : galerie dans l'onglet « À propos » (EPIC-T10 : plus de bandeau).
     showDistributorPhotos([]);
@@ -446,8 +422,7 @@ export function openDistributorModal(id, editMode = false, canEdit = false) {
     // Boutons
     updateFavoriteButton();
 
-    // Stylo « Modifier » et « Photo » : privileges de compte (EPIC-T5), poses
-    // par applyFicheAuthState() ci-dessus.
+    // « Photo » : privilege de compte (EPIC-T5), pose par applyFicheAuthState().
 
     // Ouvrir l'onglet Produits par defaut
     switchDistTab('produits');
@@ -659,14 +634,11 @@ function showEditAuthGate() {
 // Modifier. Visiteur : l'invitation « Tu es devant le distributeur ? » a la place.
 // Un distributeur seulement local (EPIC-T9) est inconnu de la base : ni signal,
 // ni avis, ni photo, ni modification tant qu'il n'est pas publie.
-function canInformOn(distributor) {
-    return isAuthenticated() && !distributor?.isLocalOnly;
-}
 
 function applyFicheAuthState() {
     const authed = isAuthenticated();
     const localOnly = !!AppState.currentDistributor?.isLocalOnly;
-    const canUpdate = authed && !localOnly && !AppState.modalEditMode;
+    const canUpdate = authed && !localOnly;
     const statusUpdate = document.getElementById('dist-status-update');
     if (statusUpdate) {
         statusUpdate.hidden = !canUpdate;
@@ -676,15 +648,13 @@ function applyFicheAuthState() {
     const machineChoices = document.getElementById('dist-machine-choices');
     if (machineChoices && (!canUpdate || statusUpdate?.getAttribute('aria-expanded') !== 'true')) machineChoices.hidden = true;
     const invite = document.getElementById('dist-login-invite');
-    if (invite) invite.hidden = authed || localOnly || !!AppState.modalEditMode;
+    if (invite) invite.hidden = authed || localOnly;
     const localBanner = document.getElementById('dist-local-only');
     if (localBanner) localBanner.hidden = !localOnly;
     const publishBtn = document.getElementById('dist-local-publish');
     if (publishBtn) publishBtn.textContent = authed ? 'Publier ce distributeur' : 'Me connecter pour le publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
     if (photoBtn) photoBtn.style.display = (authed && !localOnly) ? '' : 'none';
-    const editBtn = document.getElementById('dist-action-edit');
-    if (editBtn) editBtn.style.display = (authed && !AppState.modalEditMode && !localOnly) ? '' : 'none';
 }
 
 // « Publier ce distributeur » : l'envoie a la base (connexion exigee, UC1), puis
@@ -722,11 +692,8 @@ export function refreshFicheForAuth() {
     const overlay = document.getElementById('dist-modal-overlay');
     const d = AppState.currentDistributor;
     if (!d || !overlay?.classList.contains('active')) return;
-    if (!AppState.modalEditMode) {
-        renderProductsList(d, 'dist-products-list', { readonly: true, canInform: canInformOn(d) });
-    }
+    renderFicheProducts();
     applyFicheAuthState();
-    renderFicheStatus();
     refreshReviewsForAuth();
 }
 
@@ -764,76 +731,4 @@ function updateFavoriteButton() {
         btn.setAttribute('aria-pressed', String(isFav));   // etat accessible (audit UX-19)
     }
     if (label) label.textContent = 'Favori';   // un seul mot, l'etat est porte par le coeur plein et aria-pressed
-}
-
-// ============================================
-// FORMULAIRE AJOUT PRODUIT (mode edit)
-// ============================================
-
-export function toggleDistAddProductForm() {
-    const form = document.getElementById('dist-add-product-form');
-    if (!form) return;
-    const showing = form.style.display !== 'none';
-    form.style.display = showing ? 'none' : 'flex';
-    if (!showing) {
-        document.getElementById('dist-add-product-name').value = '';
-        document.getElementById('dist-add-product-name').focus();
-    }
-}
-
-export async function submitDistAddProduct() {
-    if (!(await requireAuth())) return;
-
-    const name = document.getElementById('dist-add-product-name').value.trim();
-
-    if (!name || !AppState.currentDistributor) return;
-
-    const product = { name, available: true };
-
-    if (supabaseClient) {
-        try {
-            const { data, error } = await supabaseClient.from('products').insert({
-                distributor_id: AppState.currentDistributor.id,
-                name: name,
-                available: true
-            }).select('id').single();
-            if (error) throw error;
-            product.dbId = data.id;
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur ajout produit:', e.message);
-        }
-    }
-
-    AppState.currentDistributor.products.push(product);
-    renderProductsList(AppState.currentDistributor, 'dist-products-list', { readonly: false });
-
-    document.getElementById('dist-add-product-name').value = '';
-    document.getElementById('dist-add-product-form').style.display = 'none';
-
-    showToast(`${escapeHTML(name)} ajouté !`, 'success');
-}
-
-// Maj du niveau de prix du distributeur (select en mode edition).
-export async function updateDistributorPriceRange(value) {
-    const PRICE_LEVELS = ['€', '€€', '€€€'];
-    if (!PRICE_LEVELS.includes(value)) return;
-    if (!(await requireAuth())) return;
-
-    const d = AppState.currentDistributor;
-    if (!d) return;
-    d.priceRange = value;
-
-    if (supabaseClient) {
-        try {
-            await supabaseClient.from('distributors')
-                .update({ price_range: value }).eq('id', d.id);
-            console.log('[DistriMatch] Niveau de prix modifie:', value);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur maj niveau de prix:', e.message);
-        }
-    }
-
-    const prEl = document.getElementById('dist-modal-pricerange');
-    if (prEl) prEl.textContent = value;
-    showToast('Niveau de prix mis à jour', 'success');
 }

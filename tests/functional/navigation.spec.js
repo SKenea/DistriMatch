@@ -478,7 +478,7 @@ test.describe('23. Bouton retour', () => {
 
     test('aliment deplie dans la fiche -> retour ferme la fiche, l\u2019app reste', async ({ page }) => {
         await openSignalableFiche(page);
-        await page.locator('#dist-products-list button.product-row-main').first().click();
+        await page.locator('#dist-products-list .product-status-btn:not([data-guest])').first().click();
         await page.goBack({ waitUntil: 'commit' }).catch(() => {});
         await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
         expect(await page.evaluate(() => !!window.AppState)).toBe(true);

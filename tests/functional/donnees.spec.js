@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { captureEvents, setupApp, openDistModal, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, kpiFixture, routeKpi } from './helpers.js';
+import { captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, routeEditWrites, kpiFixture, routeKpi } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -149,25 +149,26 @@ test.describe('15. Confirmation maison', () => {
         expect(nativeDialog).toBe(false);
     });
 
-    test('Supprimer un produit : modale par-dessus la fiche en edition, Echap annule et garde le produit', async ({ page }) => {
+    // EPIC-T12 : retirer un produit ne passe plus par une confirmation, mais par « Annuler »
+    test('Retirer un produit : pas de fenetre de confirmation, un toast « Annuler » qui le rétablit', async ({ page }) => {
+        await routeSignals(page);
+        await routeEditWrites(page);
+        await loginForTest(page);
         await page.evaluate(() => {
-            const d = window.AppState.distributors.find(x => (x.products || []).length > 0) || window.AppState.distributors[0];
-            window.openDistributorModal(d.id, true, true);
+            const ok = (p) => p && Number.isInteger(Number(p.id));
+            const d = window.AppState.distributors.find(x => !x.isLocalOnly && (x.products || []).some(ok));
+            window.openDistributorModal(d.id);
         });
         await page.waitForSelector('#dist-modal-overlay.active');
         const before = await page.evaluate(() => window.AppState.currentDistributor.products.length);
-        expect(before).toBeGreaterThan(0);
-
-        await page.click('#dist-products-list .product-btn-delete');
-        const modal = page.locator('#confirm-modal');
-        await expect(modal).toHaveClass(/active/);
-        const firstName = await page.evaluate(() => window.AppState.currentDistributor.products[0].name);
-        await expect(page.locator('#confirm-message')).toContainText(firstName);
-
-        await page.keyboard.press('Escape');
-        await expect(modal).not.toHaveClass(/active/);
-        const after = await page.evaluate(() => window.AppState.currentDistributor.products.length);
-        expect(after).toBe(before);
+        const row = page.locator('#dist-products-list .product-row[data-editable]').first();
+        await row.click({ button: 'right' });
+        await page.click('.product-menu [data-menu="remove"]');
+        await expect(page.locator('#confirm-modal')).not.toHaveClass(/active/);
+        await expect(page.locator('#toast-container .toast-action')).toContainText('retiré');
+        expect(await page.evaluate(() => window.AppState.currentDistributor.products.length)).toBe(before - 1);
+        await page.click('#toast-container .toast-action-btn');
+        expect(await page.evaluate(() => window.AppState.currentDistributor.products.length)).toBe(before);
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
     });
 });
@@ -194,10 +195,16 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         }
     });
 
-    test('le passage en mode edition ne recompte pas la fiche', async ({ page }) => {
+    // EPIC-T12 : modifier la fiche (renommer...) la re-rend sans la rouvrir : pas recomptee
+    test('modifier la fiche au toucher ne recompte pas son ouverture', async ({ page }) => {
         const events = await captureEvents(page);
-        await openDistModal(page);
-        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id, true, true));
+        await routeSignals(page);
+        await routeEditWrites(page);
+        await openSignalableFiche(page);
+        await page.locator('#dist-products-list .product-name-btn').first().click();
+        await page.locator('.product-name-input').fill('Nom de mesure');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Nom de mesure' })).toHaveCount(1);
         await page.waitForTimeout(300);
         expect(events.filter(e => e.type === 'fiche_ouverte')).toHaveLength(1);
     });

@@ -68,17 +68,18 @@ test.describe('10. Politique d\'authentification', () => {
         expect(modal).not.toBeNull();
     });
 
-    test('UC2 / UC3 : sans compte, ni Modifier ni Photo ; connecte, les deux apparaissent sans recharger', async ({ page }) => {
+    test('UC2 / UC3 : sans compte, rien a modifier ni Photo ; connecte, tout apparait sans recharger', async ({ page }) => {
         await openDistModal(page);
-        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-action-edit')).toHaveCount(0);   // EPIC-T12 : plus de bouton « Modifier »
+        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         await loginForTest(page);
-        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        await expect(page.locator('#dist-products-list .product-name-btn').first()).toBeVisible();
         await expect(page.locator('#dist-action-add-photo')).toBeVisible();
         await expect(page.locator('#dist-login-invite')).toBeHidden();
         // Deconnexion : retour a la lecture seule
         await page.evaluate(() => window.__testLogout());
-        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
         await expect(page.locator('#dist-login-invite')).toBeVisible();
     });
 

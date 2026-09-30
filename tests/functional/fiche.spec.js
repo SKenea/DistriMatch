@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { BASE_URL, EVENTS_ROUTE, captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, minutesAgoIso, RHYTHM_ROUTE, kpiFixture, routeKpi, collectTextIssues, demoDistributorsFixture, routeDistributors } from './helpers.js';
+import { BASE_URL, EVENTS_ROUTE, captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeEditWrites, routeSignals, minutesAgoIso, RHYTHM_ROUTE, kpiFixture, routeKpi, collectTextIssues, demoDistributorsFixture, routeDistributors } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -89,134 +89,173 @@ test.describe('4. Modal distributeur', () => {
 });
 
 // ============================================
-// 5bis. MODIFICATION DEPUIS FAVORIS (stylo)
+// 5bis. MODIFIER AU TOUCHER, SANS BOUTON (EPIC-T12)
 // ============================================
+// Aucune vraie ecriture : products / distributors interceptes (routeEditWrites).
 
-test.describe('5bis. Modification via stylo', () => {
-    async function openFirstFavoriteCard(page) {
-        await page.evaluate(() => {
-            const id = window.AppState.distributors[0].id;
-            window.AppState.subscriptions = [id];
-        });
-        await page.click('.bottom-nav [data-tab="favorites"]');
-        await page.waitForSelector('#subscriptions-view.view-active');
-        await page.waitForSelector('#subscriptions-list .subscription-card');
-        await page.click('#subscriptions-list .subscription-card');
-        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 3000 });
+test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
+    async function openEditable(page, { products } = {}) {
+        await routeSignals(page);
+        const log = await routeEditWrites(page);
+        await loginForTest(page);
+        const id = await page.evaluate((prods) => {
+            const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
+            const d = window.AppState.distributors.find(x => !x.isLocalOnly && (x.products || []).some(ok));
+            d.products = prods ?? d.products.filter(ok).slice(0, 3);
+            return d.id;
+        }, products ?? null);
+        await page.evaluate(distId => window.openDistributorModal(distId), id);
+        await page.waitForSelector('#dist-modal-overlay.active');
+        return { id, log };
     }
 
-    test('connecte : carte favori ouvre la fiche en LECTURE avec stylo visible', async ({ page }) => {
+    test('plus de bouton « Modifier » ni de mode edition, depuis Favoris comme ailleurs', async ({ page }) => {
         await loginForTest(page);
-        await openFirstFavoriteCard(page);
-
-        const state = await page.evaluate(() => ({
-            edit: window.AppState.modalEditMode,
-            canEdit: window.AppState.modalCanEdit,
-            addHidden: getComputedStyle(document.getElementById('dist-products-add-section')).display === 'none',
-        }));
-        expect(state.edit).toBe(false);
-        expect(state.canEdit).toBe(true);
-        expect(state.addHidden).toBe(true);
-        await expect(page.locator('#dist-action-edit')).toBeVisible();
-    });
-
-    test('visiteur : ni Modifier ni Photo, un encadre invite a se connecter', async ({ page }) => {
-        await openFirstFavoriteCard(page);
-        await expect(page.locator('#dist-action-edit')).toBeHidden();
-        await expect(page.locator('#dist-action-add-photo')).toBeHidden();
-        await expect(page.locator('#dist-login-invite')).toBeVisible();
-        await expect(page.locator('#dist-machine-choices')).toBeHidden();
-    });
-
-    test('visiteur : « Se connecter » de l\u2019encadre ouvre la modale email, fiche toujours ouverte', async ({ page }) => {
-        // Auth comme en prod (sinon requireAuth() est contourne sur localhost)
-        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
-        await openFirstFavoriteCard(page);
-        await page.click('#dist-login-invite-btn');
-        await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
-        const r = await page.evaluate(() => ({
-            emailModal: !!document.querySelector('.auth-modal'),
-            modalStillOpen: document.getElementById('dist-modal-overlay').classList.contains('active'),
-            accountNotOpened: !document.getElementById('account-view').classList.contains('view-active'),
-        }));
-        expect(r.emailModal).toBe(true);
-        expect(r.modalStillOpen).toBe(true);
-        expect(r.accountNotOpened).toBe(true);
-    });
-
-    test('mode edition affiche produits CRUD + ajout, stylo masque, chat inactif', async ({ page }) => {
-        await openFirstFavoriteCard(page);
-        // Auth contournee pour isoler le rendu edition
-        await page.evaluate(() => {
-            const id = window.AppState.currentDistributor.id;
-            window.openDistributorModal(id, true, true);
-        });
-        const r = await page.evaluate(() => ({
-            edit: window.AppState.modalEditMode,
-            addVisible: getComputedStyle(document.getElementById('dist-products-add-section')).display !== 'none',
-            chatVisible: getComputedStyle(document.getElementById('dist-chat-section')).display !== 'none',
-            styloHidden: getComputedStyle(document.getElementById('dist-action-edit')).display === 'none',
-        }));
-        expect(r.edit).toBe(true);
-        expect(r.addVisible).toBe(true);
-        expect(r.chatVisible).toBe(false);   // chat inactif (FEATURES.chat)
-        expect(r.styloHidden).toBe(true);
-    });
-
-    test('niveau de prix affiche + select edition, aucun prix produit', async ({ page }) => {
-        await openFirstFavoriteCard(page);
-        await page.evaluate(() => {
-            const id = window.AppState.currentDistributor.id;
-            window.openDistributorModal(id, true, true);
-        });
-        const r = await page.evaluate(() => ({
-            headerPrice: document.getElementById('dist-modal-pricerange').textContent,
-            selectVal: document.getElementById('dist-edit-pricerange').value,
-            priceCleanCount: document.querySelectorAll('#dist-products-list .product-price-clean').length,
-            priceInputCount: document.querySelectorAll('#dist-products-list .product-edit-price').length,
-            addPriceInput: document.getElementById('dist-add-product-price'),
-        }));
-        expect(['€', '€€', '€€€']).toContain(r.headerPrice);
-        expect(r.selectVal).toBe(r.headerPrice);
-        expect(r.priceCleanCount).toBe(0);
-        expect(r.priceInputCount).toBe(0);
-        expect(r.addPriceInput).toBeNull();
-    });
-
-    // Retour terrain 2026-09-25 (T1-US1) : une fiche se complete d'ou qu'on l'ouvre
-    test('connecte, hors Favoris (carte, liste, deep link) -> stylo visible, il ouvre l\u2019edition', async ({ page }) => {
-        await loginForTest(page);
-        await page.evaluate(() => {
-            const id = window.AppState.distributors[0].id;
-            window.openDistributorModal(id); // comme side panel / carte / deep link
-        });
+        await page.evaluate(() => { window.AppState.subscriptions = [window.AppState.distributors[0].id]; });
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-list .subscription-card');
+        await page.click('#subscriptions-list .subscription-card');
         await page.waitForSelector('#dist-modal-overlay.active');
-        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        await expect(page.locator('#dist-action-edit')).toHaveCount(0);
+        await expect(page.locator('#dist-products-add-section')).toHaveCount(0);
         expect(await page.evaluate(() => window.AppState.modalEditMode)).toBe(false);
-        await page.click('#dist-action-edit');
-        await expect.poll(() => page.evaluate(() => window.AppState.modalEditMode)).toBe(true);
+        await expect(page.locator('#dist-product-add')).toBeVisible();
     });
 
-    test("machine sans produit : « Ajouter les produits » pour un connecte seulement, il ouvre l'edition", async ({ page }) => {
-        const id = await page.evaluate(() => {
-            const d = window.AppState.distributors[0];
-            d.products = [];
-            return d.id;
-        });
-        await page.evaluate((distId) => window.openDistributorModal(distId), id);
-        await page.waitForSelector('#dist-modal-overlay.active');
+    test('renommer : toucher le nom, Entree enregistre (PATCH), Echap annule', async ({ page }) => {
+        const { log } = await openEditable(page);
+        const first = page.locator('#dist-products-list .product-row[data-editable]').first();
+        const pid = await first.getAttribute('data-product-id');
+        await first.locator('.product-name-btn').click();
+        await page.locator('.product-name-input').fill('Nom renommé');
+        await page.keyboard.press('Enter');
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`)).toHaveText('Nom renommé');
+        await expect(page.locator('#toast-container .toast-action')).toContainText('Renommé en « Nom renommé »');
+        expect(log).toEqual([expect.objectContaining({ table: 'products', method: 'PATCH', query: `?id=eq.${pid}`, body: { name: 'Nom renommé' } })]);
+        // Echap : rien n'est envoye
+        await page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`).click();
+        await page.locator('.product-name-input').fill('Autre');
+        await page.keyboard.press('Escape');
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`)).toHaveText('Nom renommé');
+        expect(log).toHaveLength(1);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);   // Echap ne ferme pas la fiche
+    });
+
+    test('retirer : nom vide -> toast « Annuler » ; Annuler rétablit et rien n\u2019est supprime en base', async ({ page }) => {
+        const { log } = await openEditable(page);
+        const first = page.locator('#dist-products-list .product-row[data-editable]').first();
+        const pid = await first.getAttribute('data-product-id');
+        const name = await first.locator('.product-name-btn').textContent();
+        await first.locator('.product-name-btn').click();
+        await page.locator('.product-name-input').fill('');
+        await expect(page.locator('.product-name-help')).toHaveClass(/is-remove/);
+        await page.keyboard.press('Enter');
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
+        await expect(page.locator('#toast-container .toast-action')).toContainText(`${name} retiré`);
+        await page.click('#toast-container .toast-action-btn');
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(1);
+        await page.waitForTimeout(500);
+        expect(log.filter(l => l.method === 'DELETE')).toEqual([]);
+    });
+
+    test('retirer par appui long (clic droit) -> menu ; la suppression part a la fin du delai (7 s)', async ({ page }) => {
+        const { log } = await openEditable(page);
+        const second = page.locator('#dist-products-list .product-row[data-editable]').nth(1);
+        const pid = await second.getAttribute('data-product-id');
+        await second.click({ button: 'right' });
+        await expect(page.locator('.product-menu [role="menuitem"]')).toHaveText(['Renommer', 'Retirer']);
+        await page.click('.product-menu [data-menu="remove"]');
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
+        expect(log.filter(l => l.method === 'DELETE')).toEqual([]);   // pas tout de suite
+        await expect.poll(() => log.filter(l => l.method === 'DELETE').length, { timeout: 10000 }).toBe(1);
+        expect(log.find(l => l.method === 'DELETE').query).toBe(`?id=eq.${pid}`);
+    });
+
+    test('ajouter : carte « + Ajouter un produit » -> champ ; Entree ajoute et on enchaine ; doublon refuse', async ({ page }) => {
+        const { log } = await openEditable(page);
+        await page.click('#dist-product-add');
+        await page.locator('.product-add-input').fill('Oeufs fermiers');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Oeufs fermiers' })).toHaveCount(1);
+        await expect(page.locator('.product-add-input')).toBeFocused();   // pret pour le suivant
+        await page.keyboard.type('Miel de fleurs');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Miel de fleurs' })).toHaveCount(1);
+        const posts = log.filter(l => l.method === 'POST');
+        expect(posts.map(l => l.body.name)).toEqual(['Oeufs fermiers', 'Miel de fleurs']);
+        expect(posts[0].body.available).toBe(true);
+        // Doublon : message, rien d'envoye
+        await page.keyboard.type('oeufs FERMIERS');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('#toast-container .toast.error')).toContainText('déjà dans la liste');
+        expect(log.filter(l => l.method === 'POST')).toHaveLength(2);
+        // La nouvelle carte est signalable (id de la base) et « Pas d'info »
+        const added = page.locator('#dist-products-list .product-row', { hasText: 'Oeufs fermiers' });
+        await expect(added.locator('.product-pill')).toHaveText("Pas d'info");
+        await expect(added.locator('.product-status-btn')).toBeVisible();
+    });
+
+    test('ajout refuse par la base : message, pas de carte fantome', async ({ page }) => {
+        await routeSignals(page);
+        await routeEditWrites(page, { fail: { table: 'products', method: 'POST', status: 403, code: '42501' } });
+        await openSignalableFiche(page);
+        await page.click('#dist-product-add');
+        await page.locator('.product-add-input').fill('Produit refusé');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('#toast-container .toast.error')).toContainText('Produit non ajouté');
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Produit refusé' })).toHaveCount(0);
+    });
+
+    test('prix : toucher « €€ » -> € / €€ / €€€ sur place ; un choix enregistre (PATCH distributors)', async ({ page }) => {
+        const { id, log } = await openEditable(page);
+        await page.click('#dist-modal-pricerange');
+        await expect(page.locator('#dist-price-picker [role="radio"]')).toHaveText(['€', '€€', '€€€']);
+        await page.click('#dist-price-picker [data-price="€€€"]');
+        await expect(page.locator('#dist-modal-pricerange')).toHaveText('€€€');
+        await expect(page.locator('#dist-price-picker')).toHaveCount(0);
+        expect(log).toEqual([expect.objectContaining({ table: 'distributors', method: 'PATCH', query: `?id=eq.${id}`, body: { price_range: '€€€' } })]);
+    });
+
+    test('visiteur : etiquette, « + Ajouter » et prix menent a l\u2019invitation, rien n\u2019est envoye', async ({ page }) => {
+        await routeSignals(page);
+        const log = await routeEditWrites(page);
+        await openSignalableFiche(page, { login: false });
+        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
+        await page.locator('#dist-products-list .product-status-btn[data-guest]').first().click();
+        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
+        await expect(page.locator('#dist-products-list .product-choices')).toHaveCount(0);
+        await page.evaluate(() => document.getElementById('dist-login-invite').classList.remove('is-highlighted'));
+        await page.click('#dist-product-add');
+        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
+        await expect(page.locator('.product-add-input')).toHaveCount(0);
+        await page.click('#dist-modal-pricerange');
+        await expect(page.locator('#dist-price-picker')).toHaveCount(0);
+        expect(log).toEqual([]);
+    });
+
+    test('distributeur sans produit : « Ajoute le premier produit »', async ({ page }) => {
+        await openEditable(page, { products: [] });
         await expect(page.locator('#dist-products-list')).toContainText('Aucun produit référencé');
-        await expect(page.locator('#dist-products-add-first')).toHaveCount(0);
-        await loginForTest(page);
-        await page.click('#dist-products-add-first');
-        await expect.poll(() => page.evaluate(() => window.AppState.modalEditMode)).toBe(true);
+        await expect(page.locator('#dist-product-add')).toContainText('Ajoute le premier produit');
+    });
+
+    test('indice de premier usage sur la 1re carte, efface apres la 1re action reussie', async ({ page }) => {
+        await page.evaluate(() => localStorage.removeItem('distrimatch_edit_hint_seen'));
+        const { log } = await openEditable(page);
+        await expect(page.locator('.fiche-edit-hint')).toHaveCount(1);
+        await expect(page.locator('.fiche-edit-hint')).toHaveText("Touche l'étiquette pour la changer");
+        await page.click('#dist-modal-pricerange');
+        await page.click('#dist-price-picker [data-price="€"]');
+        await expect(page.locator('.fiche-edit-hint')).toHaveCount(0);
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_edit_hint_seen'))).toBe('1');
+        expect(log).toHaveLength(1);
     });
 });
 
 // EPIC-T2 (2026-09-25) : plus de fenetre « Il reste quoi ? » ni de gros bouton
 // rouge ; on signale sur l'aliment (toucher la ligne) et sur la puce machine.
 test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
-    test("connecte : sans info recente, « Dispo / Pas dispo » deja visibles sur la carte ; un tap envoie ; la carte passe en « Dispo, vu à l'instant »", async ({ page }) => {
+    test("connecte : toucher l'etiquette deplie « Là, maintenant ? » Dispo / Pas dispo ; un tap envoie ; la carte passe en « Dispo, vu à l'instant »", async ({ page }) => {
         const payloads = [];
         await page.route(RPC_ROUTE, route => {
             payloads.push(route.request().postDataJSON());
@@ -228,10 +267,12 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-products-title')).toHaveText(/^Il reste quoi \?/);
 
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
-        const main = row.locator('button.product-row-main');
-        // Pas d'info : les deux boutons sont deja la (EPIC-T10)
-        await expect(row).toHaveClass(/needs-check/);
+        const main = row.locator('.product-status-btn');
+        // EPIC-T12 : rien d'affiche d'office ; l'etiquette est le controle
+        await expect(row.locator('.product-choices')).toBeHidden();
+        await main.click();
         await expect(main).toHaveAttribute('aria-expanded', 'true');
+        await expect(row.locator('.product-choices-q')).toHaveText('Là, maintenant ?');
         await expect(row.locator('.product-choice')).toHaveText(['Dispo', 'Pas dispo']);
         await row.locator('.product-choice[data-state="available"]').click();
 
@@ -243,9 +284,12 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(row.locator('.product-pill')).toHaveText('Dispo');
         await expect(row.locator('.product-pill')).toHaveClass(/is-fresh/);
         await expect(row.locator('.product-seen')).toHaveText("vu à l'instant");
-        // Info fraiche : la carte se replie ; toucher la carte la redeplie
+        // Retoucher l'etiquette redeplie, avec la question adaptee ; Echap referme
         await main.click();
         await expect(main).toHaveAttribute('aria-expanded', 'true');
+        await expect(row.locator('.product-choices-q')).toHaveText('Toujours dispo ?');
+        await page.keyboard.press('Escape');
+        await expect(main).toHaveAttribute('aria-expanded', 'false');
         // La fiche reste ouverte, la ligne d'etat deduit que le distributeur est en service
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
         await expect(page.locator('#dist-status-word')).toHaveText('En service');
@@ -307,7 +351,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await openSignalableFiche(page, { login: false });
         await expect(page.locator('#dist-status-update')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
-        await expect(page.locator('#dist-products-list button.product-row-main')).toHaveCount(0);
+        await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
         await expect(page.locator('#dist-products-hint')).toBeHidden();
         await expect(page.locator('#dist-login-invite')).toBeVisible();
         await expect(page.locator('#dist-login-invite')).toContainText('Tu es devant le distributeur ?');
@@ -315,7 +359,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await loginForTest(page);
         await expect(page.locator('#dist-status-update')).toBeVisible();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();   // replie derriere « Mettre à jour »
-        await expect(page.locator('#dist-products-list button.product-row-main').first()).toBeVisible();
+        await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])').first()).toBeVisible();
         // Sans info recente, les boutons sont deja sur les cartes : pas de consigne en plus
         await expect(page.locator('#dist-products-hint')).toBeHidden();
         await expect(page.locator('#dist-login-invite')).toBeHidden();
@@ -410,7 +454,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`);
         await signalFirstProduct(page, 'available');
         await expect(page.locator('#toast-container .toast.error')).toContainText('réessaie plus tard (code 503)');
-        await expect(row.locator('button.product-row-main')).toHaveAttribute('aria-expanded', 'true');
+        await expect(row.locator('.product-status-btn')).toHaveAttribute('aria-expanded', 'true');
         await expect(row.locator('.product-pill')).toHaveText("Pas d'info");
     });
 });
@@ -619,11 +663,10 @@ test.describe('26. Une chose depliee a la fois', () => {
         await loginForTest(page);
         await page.evaluate(id => window.openDistributorModal(id), d.id);
         await page.waitForSelector('#dist-modal-overlay.active');
-        await expect(page.locator('#dist-products-list button.product-row-main[aria-expanded="true"]')).toHaveCount(0);
-        await expect(page.locator('#dist-products-hint')).toBeVisible();
+        await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])[aria-expanded="true"]')).toHaveCount(0);
         await page.click('#dist-status-update');
         await expect(page.locator('#dist-machine-choices')).toBeVisible();
-        const mains = page.locator('#dist-products-list button.product-row-main');
+        const mains = page.locator('#dist-products-list .product-status-btn:not([data-guest])');
         await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'false');
         await mains.nth(0).click();
         await expect(mains.nth(0)).toHaveAttribute('aria-expanded', 'true');
