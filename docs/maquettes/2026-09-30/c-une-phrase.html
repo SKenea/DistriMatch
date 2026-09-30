@@ -1,0 +1,501 @@
+<title>Fiche en une phrase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<style>
+:root {
+  --paper: #FFFFFF;
+  --ink: #141414;
+  --ink-2: #3B3B3B;
+  --muted: #625A52;
+  --hair: #E6E2DC;
+  --hair-strong: #CFC8BF;
+  --ok: #166534;       --ok-soft: #3D7355;
+  --empty: #9A3412;    --empty-soft: #9C5A3C;
+  --broken: #991B1B;   --broken-soft: #A04545;
+  --unknown: #475569;
+  --brand: #D62828;
+  --focus: #1D4ED8;
+  --scrim: rgba(20, 20, 20, 0.42);
+  --tool-bg: #1E293B;  --tool-ink: #F1F5F9;  --tool-muted: #CBD5E1;  --tool-line: #475569;  --tool-on: #FACC15;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- Outil de revue (volontairement hors design) ---------- */
+.tool { background: var(--tool-bg); color: var(--tool-ink); font-size: 14px; }
+.tool-inner { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+.tool-toggle { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: none; border: 0; color: var(--tool-ink); padding: 8px 0; text-align: left; }
+.tool-toggle b { font-weight: 700; letter-spacing: .02em; }
+.tool-toggle span { color: var(--tool-muted); font-size: 13px; }
+.tool-toggle:focus-visible { outline-color: var(--tool-on); }
+.tool-body { padding: 4px 0 14px; display: grid; gap: 12px; }
+.tool-group { border: 0; margin: 0; padding: 0; }
+.tool-group legend { color: var(--tool-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; padding: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { min-height: 44px; padding: 0 12px; border-radius: 4px; border: 1px dashed var(--tool-line); background: transparent; color: var(--tool-ink); font-size: 14px; }
+.seg button[aria-pressed="true"] { border: 1px solid var(--tool-on); color: var(--tool-on); font-weight: 700; }
+.seg button:focus-visible { outline-color: var(--tool-on); }
+
+/* ---------- Fiche ---------- */
+.page { max-width: 480px; margin: 0 auto; padding: 0 20px 132px; }
+.top { display: flex; align-items: center; gap: 8px; min-height: 60px; border-bottom: 1px solid var(--hair); }
+.back { width: 44px; height: 44px; margin-left: -12px; border: 0; background: none; display: grid; place-items: center; border-radius: 50%; }
+.back svg { width: 22px; height: 22px; }
+.top-name { font-size: 16px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { font-size: 12px; font-weight: 600; color: var(--muted); border: 1px solid var(--hair-strong); border-radius: 3px; padding: 1px 6px; letter-spacing: .02em; }
+.fav-mark { font-size: 13px; color: var(--brand); font-weight: 600; }
+
+.lede { padding: 36px 0 8px; }
+.phrase { margin: 0; font-size: clamp(34px, 10vw, 42px); line-height: 1.06; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+.phrase .k { font-style: normal; }
+.phrase-2 { margin: 14px 0 0; font-size: clamp(22px, 6.2vw, 26px); line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; color: var(--ink-2); }
+.phrase-2 strong { color: var(--ink); font-weight: 700; }
+.fresh { margin: 18px 0 0; font-size: 15px; font-weight: 600; }
+.c-ok { color: var(--ok); } .c-ok.soft { color: var(--ok-soft); }
+.c-empty { color: var(--empty); } .c-empty.soft { color: var(--empty-soft); }
+.c-broken { color: var(--broken); } .c-broken.soft { color: var(--broken-soft); }
+.c-unknown { color: var(--unknown); }
+.soft { font-weight: 500; }
+
+.add-products { margin-top: 22px; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 1.5px solid var(--ink); background: var(--paper); font-weight: 600; font-size: 16px; }
+
+.lists { margin-top: 36px; display: grid; gap: 32px; }
+.list h2 { margin: 0 0 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; display: flex; justify-content: space-between; }
+.list h2 .n { color: var(--muted); font-weight: 600; }
+.list ul { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 13px 0; border-top: 1px solid var(--hair); }
+.list li:last-child { border-bottom: 1px solid var(--hair); }
+.p-name { font-size: 19px; font-weight: 500; }
+.p-when { font-size: 14px; color: var(--muted); text-align: right; white-space: nowrap; }
+.list.is-no .p-name, .list.is-unknown .p-name { color: var(--ink-2); }
+.just { color: var(--ok); font-weight: 600; }
+
+.invite { margin-top: 44px; padding: 20px 0 0; border-top: 2px solid var(--ink); }
+.invite p { margin: 0 0 14px; font-size: 18px; line-height: 1.35; font-weight: 600; }
+.btn-login { min-height: 48px; padding: 0 22px; border-radius: 10px; border: 0; background: var(--ink); color: var(--paper); font-weight: 700; font-size: 16px; }
+
+.about { margin-top: 48px; font-size: 15px; color: var(--muted); }
+.about h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-2); }
+.about p { margin: 0 0 4px; }
+.link-btn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; font-size: 15px; }
+
+/* ---------- Barre basse ---------- */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 1px solid var(--hair); z-index: 20;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); }
+.dock-inner { max-width: 480px; margin: 0 auto; padding: 0 20px; display: flex; gap: 10px; }
+.btn-main { flex: 1; min-height: 54px; border-radius: 12px; border: 0; background: var(--ink); color: var(--paper); font-size: 17px; font-weight: 700; }
+.btn-more { min-width: 88px; min-height: 54px; border-radius: 12px; border: 1.5px solid var(--ink); background: var(--paper); font-size: 16px; font-weight: 600; }
+
+/* ---------- Tiroir ---------- */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; background: var(--paper); border-radius: 18px 18px 0 0;
+  max-height: 88vh; overflow-y: auto; animation: up .22s ease-out; }
+.sheet-inner { max-width: 480px; margin: 0 auto; padding: 10px 20px calc(20px + env(safe-area-inset-bottom)); }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--hair-strong); margin: 0 auto 14px; }
+.sheet h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.sheet .sub { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.sheet h3 { margin: 26px 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-2); }
+.machine-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.opt { min-height: 52px; border-radius: 10px; border: 1.5px solid var(--hair-strong); background: var(--paper); font-weight: 600; font-size: 16px; padding: 0 6px; }
+.opt[aria-pressed="true"] { border-color: currentColor; box-shadow: inset 0 0 0 1px currentColor; font-weight: 800; }
+.opt.o-ok[aria-pressed="true"] { color: var(--ok); }
+.opt.o-empty[aria-pressed="true"] { color: var(--empty); }
+.opt.o-broken[aria-pressed="true"] { color: var(--broken); }
+.prod-row { padding: 12px 0; border-top: 1px solid var(--hair); }
+.prod-row:last-child { border-bottom: 1px solid var(--hair); }
+.prod-row .pr-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 8px; }
+.prod-row .pr-name { font-size: 17px; font-weight: 600; }
+.prod-row .pr-now { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.done { margin-top: 22px; width: 100%; min-height: 52px; border-radius: 12px; border: 0; background: var(--ink); color: var(--paper); font-weight: 700; font-size: 17px; }
+.close-x { float: right; width: 44px; height: 44px; margin: -6px -10px 0 0; border: 0; background: none; font-size: 26px; line-height: 1; border-radius: 50%; }
+.actions { list-style: none; margin: 16px 0 0; padding: 0; }
+.actions li + li { border-top: 1px solid var(--hair); }
+.act { width: 100%; min-height: 56px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: none; border: 0; padding: 0; text-align: left; font-size: 18px; font-weight: 500; }
+.act small { font-size: 14px; color: var(--muted); font-weight: 500; }
+.act[aria-pressed="true"] small { color: var(--brand); font-weight: 700; }
+
+.toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 40;
+  width: max-content; max-width: calc(100% - 32px); background: var(--ink); color: var(--paper); padding: 12px 16px; border-radius: 10px; font-size: 15px; font-weight: 600; }
+.toast.on-top { bottom: auto; top: calc(16px + env(safe-area-inset-top)); }
+@keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+</style>
+
+<div class="tool" aria-label="Outil de revue de la maquette">
+  <div class="tool-inner">
+    <button class="tool-toggle" id="toolToggle" aria-expanded="false" aria-controls="toolBody">
+      <b>Réglages de la maquette</b><span id="toolSummary"></span>
+    </button>
+    <div class="tool-body" id="toolBody" hidden>
+      <fieldset class="tool-group"><legend>État de la machine</legend>
+        <div class="seg" data-key="scenario">
+          <button data-v="working">Fonctionne</button><button data-v="empty">Vide</button><button data-v="broken">En panne</button><button data-v="none">Pas d'info</button>
+        </div></fieldset>
+      <fieldset class="tool-group"><legend>Mode</legend>
+        <div class="seg" data-key="connected"><button data-v="0">Visiteur</button><button data-v="1">Connecté</button></div></fieldset>
+      <fieldset class="tool-group"><legend>Fiche</legend>
+        <div class="seg" data-key="fiche"><button data-v="full">Avec produits</button><button data-v="bare">Sans produit</button></div></fieldset>
+    </div>
+  </div>
+</div>
+
+<main class="page">
+  <header class="top">
+    <button class="back" aria-label="Retour à la carte" data-toast="Maquette : retour à la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h1 class="top-name" id="name"></h1>
+    <span class="fav-mark" id="favMark" hidden>♥ Favori</span>
+    <span class="tag" id="demoTag">Démo</span>
+  </header>
+
+  <section class="lede" aria-live="polite">
+    <p class="phrase" id="phrase"></p>
+    <p class="phrase-2" id="phrase2"></p>
+    <p class="fresh" id="fresh"></p>
+    <button class="add-products" id="addProducts" hidden>Ajouter les produits</button>
+  </section>
+
+  <div class="lists" id="lists"></div>
+
+  <section class="invite" id="invite">
+    <p id="inviteText">Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste</p>
+    <button class="btn-login" data-login>Se connecter</button>
+  </section>
+
+  <section class="about" aria-labelledby="aboutTitle">
+    <h2 id="aboutTitle">À propos</h2>
+    <p id="aboutType"></p>
+    <p id="aboutAddr"></p>
+    <p id="aboutReviews"></p>
+    <button class="link-btn" id="reviewsBtn" data-toast="Maquette : ouvrirait les avis"></button>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Actions de la fiche">
+  <div class="dock-inner">
+    <button class="btn-main" id="mainBtn"></button>
+    <button class="btn-more" id="moreBtn" aria-haspopup="dialog">Plus</button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-inner" id="sheetInner"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+var FICHES = {
+  full: { name: 'Légumes Bio Cambo', demo: true, type: 'Produits agricoles', price: '€€',
+    address: 'Route des Thermes, 64250 Cambo-les-Bains', rating: '4,7', reviews: 91, dist: '2,3 km',
+    products: [
+      { id: 'panier', name: 'Panier légumes saison', short: 'panier de légumes' },
+      { id: 'pdt', name: 'Pommes de terre (2 kg)', short: 'pommes de terre' },
+      { id: 'carottes', name: 'Carottes (1 kg)', short: 'carottes' },
+      { id: 'salades', name: 'Salades (lot de 2)', short: 'salades' }
+    ] },
+  bare: { name: 'Gaztainbidea', demo: false, type: 'Terroir local', price: '€',
+    address: 'impasse Gaztainbidea', rating: null, reviews: 0, dist: '450 m', products: [] }
+};
+var SCENARIOS = {
+  working: { machine: { state: 'working', age: 12 },
+    signals: { panier: { s: 'yes', age: 12 }, pdt: { s: 'yes', age: 12 }, carottes: { s: 'no', age: 40 } } },
+  empty: { machine: { state: 'empty', age: 34 },
+    signals: { panier: { s: 'yes', age: 150 }, pdt: { s: 'yes', age: 150 }, carottes: { s: 'no', age: 200 } } },
+  broken: { machine: { state: 'broken', age: 120 },
+    signals: { panier: { s: 'yes', age: 300 }, pdt: { s: 'yes', age: 300 } } },
+  none: { machine: { state: 'working', age: 5760 }, signals: {} }
+};
+var LABELS = { scenario: { working: 'Fonctionne', empty: 'Vide', broken: 'En panne', none: "Pas d'info" },
+  connected: { '0': 'Visiteur', '1': 'Connecté' }, fiche: { full: 'Avec produits', bare: 'Sans produit' } };
+
+var ui = { scenario: 'working', connected: '0', fiche: 'full' };
+var S = { fav: false, machine: null, signals: null };
+var sheetMode = null, lastFocus = null, toastTimer = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function fiche() { return FICHES[ui.fiche]; }
+function isConnected() { return ui.connected === '1'; }
+
+function loadScenario() {
+  var sc = SCENARIOS[ui.scenario];
+  S.machine = { state: sc.machine.state, age: sc.machine.age };
+  S.signals = JSON.parse(JSON.stringify(sc.signals));
+}
+
+function fmtAge(min) {
+  if (min < 1) return "à l'instant";
+  if (min < 60) return 'il y a ' + min + ' min';
+  if (min < 1440) return 'il y a ' + Math.round(min / 60) + ' h';
+  return 'il y a ' + Math.round(min / 1440) + ' j';
+}
+
+function machineView() {
+  var m = S.machine;
+  if (m.age > 1440) return { key: 'unknown', cls: 'c-unknown', line: 'Vérifié ' + fmtAge(m.age) };
+  var soft = m.age >= 120 ? ' soft' : '';
+  if (m.state === 'working') return { key: 'working', cls: 'c-ok' + soft, line: 'Vue en marche ' + fmtAge(m.age) };
+  if (m.state === 'empty') return { key: 'empty', cls: 'c-empty' + soft, line: 'Signalée vide ' + fmtAge(m.age) };
+  return { key: 'broken', cls: 'c-broken' + soft, line: 'Signalée en panne ' + fmtAge(m.age) };
+}
+
+function productView(p) {
+  var m = S.machine, sig = S.signals[p.id];
+  var machineDown = m.age <= 1440 && (m.state === 'empty' || m.state === 'broken');
+  if (machineDown && (!sig || m.age <= sig.age)) {
+    return { status: 'no', age: m.age, detail: (m.state === 'empty' ? 'Machine vide' : 'Machine en panne') };
+  }
+  if (!sig || sig.age > 1440) return { status: 'unknown', age: null, detail: '' };
+  return { status: sig.s, age: sig.age, detail: 'vu ' + fmtAge(sig.age) };
+}
+
+function joinFr(arr) {
+  if (arr.length < 2) return arr.join('');
+  return arr.slice(0, -1).join(', ') + ' et ' + arr[arr.length - 1];
+}
+
+function render() {
+  var f = fiche(), mv = machineView(), connected = isConnected();
+  var subj = f.products.length ? 'Elle' : esc(f.name);
+  var views = f.products.map(function (p) { return { p: p, v: productView(p) }; });
+  var yes = views.filter(function (x) { return x.v.status === 'yes'; });
+  var no = views.filter(function (x) { return x.v.status === 'no'; });
+  var unk = views.filter(function (x) { return x.v.status === 'unknown'; });
+
+  $('name').textContent = f.name;
+  $('demoTag').hidden = !f.demo;
+  $('favMark').hidden = !S.fav;
+
+  var k = '<em class="k ' + mv.cls + '">';
+  var p1;
+  if (mv.key === 'working') p1 = subj + ' ' + k + 'fonctionne</em>.';
+  else if (mv.key === 'empty') p1 = subj + ' est ' + k + 'vide</em>.';
+  else if (mv.key === 'broken') p1 = subj + ' est ' + k + 'en panne</em>.';
+  else p1 = k + 'On ne sait pas</em> si ' + (f.products.length ? 'elle' : esc(f.name)) + ' fonctionne.';
+  $('phrase').innerHTML = p1;
+
+  var p2;
+  if (!f.products.length) {
+    p2 = "Aucun produit n'est encore référencé.";
+  } else if (yes.length) {
+    var n = yes.length, t = f.products.length;
+    p2 = '<strong>' + n + ' produit' + (n > 1 ? 's' : '') + ' sur ' + t + ' disponible' + (n > 1 ? 's' : '') + '</strong> : ' +
+      esc(joinFr(yes.map(function (x) { return x.p.short; }))) + '.';
+  } else if (mv.key === 'empty') {
+    p2 = "Rien à prendre pour l'instant.";
+  } else if (mv.key === 'broken') {
+    p2 = 'Rien à prendre, mieux vaut repasser plus tard.';
+  } else if (mv.key === 'unknown') {
+    p2 = 'Aucune info récente sur les produits.';
+  } else if (no.length) {
+    p2 = "Mais plus rien n'est disponible.";
+  } else {
+    p2 = "Personne n'a encore dit ce qu'il reste.";
+  }
+  $('phrase2').innerHTML = p2;
+
+  var fresh = $('fresh');
+  fresh.className = 'fresh ' + mv.cls;
+  fresh.textContent = mv.line;
+
+  $('addProducts').hidden = !(connected && !f.products.length);
+
+  var html = '';
+  html += listHTML('Disponible', 'is-yes', 'c-ok', yes);
+  html += listHTML('Plus rien', 'is-no', 'c-broken', no);
+  html += listHTML("Pas d'info", 'is-unknown', 'c-unknown', unk);
+  $('lists').innerHTML = html;
+  $('lists').hidden = !f.products.length;
+
+  $('invite').hidden = connected;
+  $('inviteText').textContent = f.products.length
+    ? "Tu es devant la machine ? Connecte-toi pour dire si elle marche et ce qu'il reste"
+    : 'Tu es devant la machine ? Connecte-toi pour dire si elle marche';
+
+  $('aboutType').textContent = f.type + ' · ' + f.price;
+  $('aboutAddr').textContent = f.address + ' · à ' + f.dist;
+  $('aboutReviews').textContent = f.rating ? f.rating + ' ★ · ' + f.reviews + ' avis' : "Pas encore d'avis";
+  $('reviewsBtn').textContent = f.rating ? 'Lire les avis' : 'Donner le premier avis';
+
+  var main = $('mainBtn');
+  main.textContent = connected ? 'Je suis devant, je signale' : 'Itinéraire';
+  main.setAttribute('aria-haspopup', connected ? 'dialog' : 'false');
+
+  syncTool();
+  if (sheetMode) renderSheet(false);
+}
+
+function listHTML(title, cls, color, items) {
+  if (!items.length) return '';
+  var rows = items.map(function (x) {
+    var v = x.v, when = '';
+    if (v.age !== null) {
+      var tone = v.age < 1 ? 'just' : (v.age < 120 ? color : color + ' soft');
+      when = '<span class="p-when ' + tone + '">' + esc(v.detail) +
+        (v.detail.indexOf('Machine') === 0 ? ' · ' + esc(fmtAge(v.age)) : '') + '</span>';
+    }
+    return '<li><span class="p-name">' + esc(x.p.name) + '</span>' + when + '</li>';
+  }).join('');
+  return '<section class="list ' + cls + '"><h2><span class="' + color + '">' + title + '</span><span class="n">' + items.length +
+    '</span></h2><ul>' + rows + '</ul></section>';
+}
+
+/* ---------- Tiroir ---------- */
+function openSheet(mode) {
+  lastFocus = document.activeElement;
+  sheetMode = mode;
+  renderSheet(true);
+  $('scrim').hidden = false;
+  $('sheet').hidden = false;
+  var first = $('sheet').querySelector('button');
+  if (first) first.focus();
+}
+function closeSheet() {
+  sheetMode = null;
+  $('scrim').hidden = true;
+  $('sheet').hidden = true;
+  if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+}
+
+function renderSheet(fresh) {
+  var f = fiche(), keepId = null;
+  if (!fresh && document.activeElement && document.activeElement.dataset) keepId = document.activeElement.dataset.fid;
+  var h = '<div class="grab" aria-hidden="true"></div><button class="close-x" data-close aria-label="Fermer">×</button>';
+  if (sheetMode === 'signal') {
+    var m = S.machine, cur = m.age <= 1440 ? m.state : null;
+    h += '<h2 id="sheetTitle">Qu\'est-ce que tu vois ?</h2><p class="sub">Un tap suffit. Ça part tout de suite.</p>';
+    h += '<h3>La machine</h3><div class="machine-btns">' +
+      optBtn('m-working', 'o-ok', 'Fonctionne', cur === 'working', 'machine', 'working') +
+      optBtn('m-empty', 'o-empty', 'Vide', cur === 'empty', 'machine', 'empty') +
+      optBtn('m-broken', 'o-broken', 'En panne', cur === 'broken', 'machine', 'broken') + '</div>';
+    if (f.products.length) {
+      h += '<h3>Les produits</h3>';
+      f.products.forEach(function (p) {
+        var v = productView(p), sig = S.signals[p.id];
+        var mine = sig && sig.age < 1 ? sig.s : null;
+        var now = v.status === 'yes' ? 'Dispo' : (v.status === 'no' ? 'Pas dispo' : "Pas d'info");
+        h += '<div class="prod-row" role="group" aria-label="' + esc(p.name) + '"><div class="pr-head"><span class="pr-name">' + esc(p.name) +
+          '</span><span class="pr-now">Affiché : ' + now + '</span></div><div class="pair">' +
+          optBtn('p-' + p.id + '-yes', 'o-ok', 'Il y en a', mine === 'yes', 'product', p.id + ':yes') +
+          optBtn('p-' + p.id + '-no', 'o-broken', 'Plus rien', mine === 'no', 'product', p.id + ':no') + '</div></div>';
+      });
+    }
+    h += '<button class="done" data-close>Terminé</button>';
+  } else {
+    var c = isConnected();
+    h += '<h2 id="sheetTitle">' + esc(f.name) + '</h2><p class="sub">' + esc(f.address) + ' · à ' + esc(f.dist) + '</p><ul class="actions">' +
+      actBtn('Itinéraire', 'à ' + f.dist, 'data-toast="Maquette : ouvrirait l\'itinéraire"') +
+      '<li><button class="act" data-fav data-fid="fav" aria-pressed="' + S.fav + '">' + (S.fav ? 'Retirer des favoris' : 'Ajouter aux favoris') +
+        '<small>' + (S.fav ? '♥ Favori' : '♡') + '</small></button></li>' +
+      actBtn('Partager', '', 'data-toast="Lien de la fiche copié"') +
+      actBtn('Avis', f.rating ? f.rating + ' ★ · ' + f.reviews + ' avis' : "Pas encore d'avis", 'data-toast="Maquette : ouvrirait les avis"') +
+      (c ? actBtn('Ajouter une photo', '', 'data-toast="Maquette : ouvrirait l\'appareil photo"') +
+           actBtn('Modifier la fiche', '', 'data-toast="Maquette : ouvrirait l\'édition"')
+         : actBtn('Se connecter', 'pour signaler, photo, modifier', 'data-login')) +
+      '</ul>';
+  }
+  $('sheetInner').innerHTML = h;
+  if (keepId) {
+    var el = $('sheetInner').querySelector('[data-fid="' + keepId + '"]');
+    if (el) el.focus();
+  }
+}
+function optBtn(fid, cls, label, pressed, kind, val) {
+  return '<button class="opt ' + cls + '" data-fid="' + fid + '" data-sig="' + kind + '" data-val="' + val + '" aria-pressed="' + pressed + '">' + label + '</button>';
+}
+function actBtn(label, meta, attr) {
+  return '<li><button class="act" data-fid="' + esc(label) + '" ' + attr + '>' + esc(label) + '<small>' + esc(meta) + '</small></button></li>';
+}
+
+function applySignal(kind, val) {
+  if (kind === 'machine') {
+    S.machine = { state: val, age: 0 };
+  } else {
+    var parts = val.split(':');
+    S.signals[parts[0]] = { s: parts[1], age: 0 };
+  }
+  render();
+  toast('Merci ! Ton signal aide les suivants');
+}
+
+function toast(msg) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('on-top', !!sheetMode);
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+}
+
+/* ---------- Outil ---------- */
+function syncTool() {
+  document.querySelectorAll('.seg').forEach(function (seg) {
+    var key = seg.dataset.key;
+    seg.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === ui[key])); });
+  });
+  $('toolSummary').textContent = LABELS.scenario[ui.scenario] + ' · ' + LABELS.connected[ui.connected] + ' · ' + LABELS.fiche[ui.fiche];
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button');
+  if (e.target === $('scrim')) { closeSheet(); return; }
+  if (!b) return;
+  if (b.id === 'toolToggle') {
+    var open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(open));
+    $('toolBody').hidden = !open;
+    return;
+  }
+  var seg = b.closest('.seg');
+  if (seg) {
+    ui[seg.dataset.key] = b.dataset.v;
+    if (seg.dataset.key !== 'connected') loadScenario();
+    render();
+    return;
+  }
+  if (b.id === 'mainBtn') {
+    if (isConnected()) openSheet('signal'); else toast("Maquette : ouvrirait l'itinéraire");
+    return;
+  }
+  if (b.id === 'moreBtn') { openSheet('actions'); return; }
+  if (b.hasAttribute('data-close')) { closeSheet(); return; }
+  if (b.dataset.sig) { applySignal(b.dataset.sig, b.dataset.val); return; }
+  if (b.hasAttribute('data-fav')) {
+    S.fav = !S.fav;
+    render();
+    toast(S.fav ? 'Ajoutée à tes favoris : tu seras prévenu si elle change' : 'Retirée de tes favoris');
+    return;
+  }
+  if (b.hasAttribute('data-login')) {
+    ui.connected = '1';
+    if (sheetMode) closeSheet();
+    render();
+    toast('Connecté (maquette)');
+    return;
+  }
+  if (b.id === 'addProducts') { toast("Maquette : ouvrirait l'ajout de produits"); return; }
+  if (b.dataset.toast) toast(b.dataset.toast);
+});
+
+document.addEventListener('keydown', function (e) {
+  if (!sheetMode) return;
+  if (e.key === 'Escape') { closeSheet(); return; }
+  if (e.key !== 'Tab') return;
+  var f = $('sheet').querySelectorAll('button');
+  if (!f.length) return;
+  var first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+loadScenario();
+render();
+</script>
