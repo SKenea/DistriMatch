@@ -38,7 +38,9 @@ export const PROD_HOSTNAMES = ['skenea.github.io', 'distrimatch.pages.dev'];
 // chat : chatbot par distributeur. Inactif depuis 2026-09-20 (decision produit :
 // un favori notifie via le centre de notifications, cf. js/favorites-watch.js).
 // Le code de js/chat.js est conserve : repasser a true suffit a le reactiver.
-export const FEATURES = { chat: false };
+// photos : desactivees en V1 (EPIC-T14, Stephane 2026-10-01) : ni bouton Photo, ni
+// galerie, ni vignettes, ni photo a l'ajout d'un distributeur. true = tout revient.
+export const FEATURES = { chat: false, photos: false };
 
 // ============================================
 // HELPERS

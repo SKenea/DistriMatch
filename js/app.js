@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // toute la suite de l'init (carte + cablage des listeners morts). Les
     // vignettes n'apparaissent que dans le panneau lateral, rendu paresseusement
     // au clic : sur reseau OK elles sont deja chargees a l'ouverture.
-    loadPhotoThumbnails().catch(() => {});
+    if (FEATURES.photos) loadPhotoThumbnails().catch(() => {});   // EPIC-T14 : photos inactives en V1
 
     // Re-calculer les distances maintenant que userLocation EST set.
     // Necessaire car loadDistributors() tourne en parallele de l'overlay

@@ -15,6 +15,7 @@ import {
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
 import { requireAuth } from './auth.js';
+import { FEATURES } from './config.js';
 
 // ============================================
 // MODE AJOUT
@@ -92,7 +93,7 @@ function getAddPopupContent() {
                 </div>
                 <div id="add-products-list"></div>
             </div>
-            <div class="photo-upload-section">
+            ${FEATURES.photos ? `<div class="photo-upload-section">
                 <label class="photo-upload-label" for="new-dist-photos">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -103,7 +104,7 @@ function getAddPopupContent() {
                 </label>
                 <input type="file" id="new-dist-photos" accept="image/*" capture="environment" multiple style="display:none" onchange="previewAddPhotos(this)">
                 <div id="photo-preview-container" class="photo-preview-container"></div>
-            </div>
+            </div>` : ''}
             <div class="popup-actions">
                 <button class="btn-cancel" onclick="cancelAddDistributor()">Annuler</button>
                 <button id="btn-confirm-add" class="btn-confirm" onclick="confirmAddDistributor()">Ajouter</button>
@@ -375,8 +376,8 @@ async function confirmAddDistributorImpl() {
         return;
     }
 
-    // Photo obligatoire pour ajouter un distributeur
-    if (!AddMode.photos || AddMode.photos.length === 0) {
+    // Photo obligatoire pour ajouter un distributeur (si les photos sont actives, EPIC-T14)
+    if (FEATURES.photos && (!AddMode.photos || AddMode.photos.length === 0)) {
         showToast('Au moins une photo est obligatoire pour ajouter un distributeur', 'error');
         return;
     }
@@ -423,7 +424,7 @@ async function confirmAddDistributorImpl() {
     // telephone, marquee « locale », publiable plus tard depuis sa fiche.
     const published = await publishDistributor(newDistributor);
     if (published.ok) {
-        if (AddMode.photos && AddMode.photos.length > 0) {
+        if (FEATURES.photos && AddMode.photos && AddMode.photos.length > 0) {
             await uploadDistributorPhotos(distId, AddMode.photos);
         }
     } else {

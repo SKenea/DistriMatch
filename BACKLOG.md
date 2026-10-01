@@ -19,6 +19,21 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T14 Itineraire dans « À propos », photos desactivees en V1 (Stephane, 2026-10-01)
+Objectif : une fiche plus simple pour la premiere version. Rien n'est efface de la base
+(2 photos existantes), le code photo reste derriere `FEATURES.photos` (config.js).
+
+- [x] T14-US1 En tant que visiteur, je veux l'itineraire dans « À propos »
+  - Acceptance : bouton principal « Itinéraire » sous l'adresse et la distance de
+    l'onglet « À propos » ; plus de barre collee en bas de la fiche.
+
+- [x] T14-US2 En tant que membre, je ne vois plus de fonction photo (V1)
+  - Acceptance : `FEATURES.photos = false` : ni bouton Photo, ni galerie « Photos »
+    dans « À propos », ni vignettes photo dans la liste (picto du type a la place),
+    ni rubrique photo dans l'ajout d'un distributeur (qui ne l'exige plus) ;
+    invitation : « Connecte-toi pour signaler ce qu'il reste et donner ton avis »,
+    sans l'etiquette « Photos » ; `FEATURES.photos = true` remet tout.
+
 ### EPIC-T13 Ajouter un produit par liste, selon le type de distributeur (Stephane, 2026-10-01)
 Objectif : ajouter en un toucher les produits courants, avec des noms identiques d'un
 distributeur a l'autre. Maquette validee : `docs/maquettes/2026-10-01-edition/4-ajout-liste.html`

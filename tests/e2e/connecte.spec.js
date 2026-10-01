@@ -50,7 +50,7 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         await expect(page.locator('#dist-login-invite')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-name-btn').first()).toBeVisible();   // modifier au toucher (EPIC-T12)
         await expect(page.locator('#dist-product-add')).toBeVisible();
-        await expect(page.locator('#dist-action-add-photo')).toBeVisible();
+        await expect(page.locator('#dist-action-add-photo')).toBeHidden();   // EPIC-T14 : photos inactives en V1
     });
 
     test('« En service » : la vraie base enregistre le signal du compte, la ligne d\u2019etat suit', async ({ page, context }) => {
