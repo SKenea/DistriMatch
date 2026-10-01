@@ -20,6 +20,7 @@ import {
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     productToneRank, describeMachineNotice, productIconKey,
+    describeSignalQuestion, cleanProductName, isDuplicateProductName,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
 
@@ -467,8 +468,34 @@ describe('resolveProductStatus (dispo ou pas, par aliment)', () => {
         assert.equal(resolveProductStatus(onSale, row('available', 5), empty, NOW).label, 'Dispo');
     });
 
-    it('produit marque « Non disponible » en edition : Pas dispo, « indiqué sur la fiche »', () => {
-        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'indiqué sur la fiche' });
+    it('EPIC-T12 : une seule notion de dispo, le signal (products.available n\'est plus lu)', () => {
+        assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Dispo', tone: 'available', fresh: true, detail: 'vu il y a 5 min' });
+        assert.equal(resolveProductStatus({ available: false }, null, null, NOW).label, "Pas d'info");
+    });
+});
+
+// EPIC-T12 : modifier sans bouton
+describe('edition au toucher : question, nom, doublon (EPIC-T12)', () => {
+    it('question adaptee a ce qui est affiche (facon « Toujours là ? » de Waze)', () => {
+        assert.equal(describeSignalQuestion('available'), 'Toujours dispo ?');
+        assert.equal(describeSignalQuestion('absent'), 'Toujours pas dispo ?');
+        assert.equal(describeSignalQuestion('unknown'), 'Là, maintenant ?');
+        assert.equal(describeSignalQuestion(undefined), 'Là, maintenant ?');
+    });
+
+    it('nom saisi : espaces reduits, 60 caracteres au plus, vide = vide', () => {
+        assert.equal(cleanProductName('  Oeufs   fermiers  '), 'Oeufs fermiers');
+        assert.equal(cleanProductName('x'.repeat(80)).length, 60);
+        assert.equal(cleanProductName('   '), '');
+        assert.equal(cleanProductName(null), '');
+    });
+
+    it('doublon : meme nom sans casse ni accents, sauf le produit lui-meme', () => {
+        const products = [{ id: 1, name: 'Pommes de terre' }, { id: 2, name: 'Œufs' }];
+        assert.equal(isDuplicateProductName('pommes de TERRE', products), true);
+        assert.equal(isDuplicateProductName('Pommes de terre', products, 1), false);
+        assert.equal(isDuplicateProductName('Carottes', products), false);
+        assert.equal(isDuplicateProductName('', products), false);
     });
 });
 

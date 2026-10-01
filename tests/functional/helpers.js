@@ -90,12 +90,12 @@ export async function openSignalableFiche(page, { login = true } = {}) {
     return first;
 }
 
-// Signale le premier aliment depuis sa carte (EPIC-T10) : toucher la carte si
-// ses boutons ne sont pas deja visibles (info recente), puis « Dispo » /
-// « Pas dispo » (data-state available / absent).
+// Signale le premier aliment depuis sa carte (EPIC-T12) : toucher son
+// etiquette pour deplier « Dispo / Pas dispo », puis la reponse (data-state
+// available / absent).
 export async function signalFirstProduct(page, state = 'available') {
-    const row = page.locator('#dist-products-list .product-row').filter({ has: page.locator('button.product-row-main') }).first();
-    if (await row.locator('.product-choices').isHidden()) await row.locator('button.product-row-main').click();
+    const row = page.locator('#dist-products-list .product-row').filter({ has: page.locator('.product-status-btn:not([data-guest])') }).first();
+    if (await row.locator('.product-choices').isHidden()) await row.locator('.product-status-btn').click();
     await row.locator(`.product-choice[data-state="${state}"]`).click();
 }
 
@@ -304,4 +304,24 @@ export async function routeDistributors(page, rows) {
         route.request().method() === 'GET'
             ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) })
             : route.fallback());
+}
+
+// EPIC-T12 : ecritures de la modification au toucher interceptees (aucune vraie
+// ecriture). POST products -> { id }, PATCH / DELETE -> 204. Retourne le journal.
+export async function routeEditWrites(page, { insertId = 99001, fail = null } = {}) {
+    const log = [];
+    const handler = (table) => async (route) => {
+        const req = route.request();
+        const method = req.method();
+        if (method === 'GET') return route.continue();
+        log.push({ table, method, query: new URL(req.url()).search, body: req.postDataJSON?.() ?? null });
+        if (fail && fail.method === method && fail.table === table) {
+            return route.fulfill({ status: fail.status || 403, contentType: 'application/json', body: JSON.stringify({ code: fail.code || '42501', message: 'refus simule' }) });
+        }
+        if (method === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: insertId + log.length }) });
+        return route.fulfill({ status: 204, body: '' });
+    };
+    await page.route(url => url.pathname.endsWith('/rest/v1/products'), handler('products'));
+    await page.route(url => url.pathname.endsWith('/rest/v1/distributors'), handler('distributors'));
+    return log;
 }

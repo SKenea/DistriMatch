@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=42">
+    <link rel="stylesheet" href="css/overlays.css?v=43">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -322,7 +322,8 @@
                 <div class="dist-modal-meta">
                     <span class="dist-modal-type" id="dist-modal-type"></span>
                     <span class="meta-separator">·</span>
-                    <span class="dist-modal-pricerange" id="dist-modal-pricerange"></span>
+                    <!-- EPIC-T12 : toucher « €€ » change le niveau de prix (membre connecte) -->
+                    <button type="button" class="dist-modal-pricerange" id="dist-modal-pricerange" aria-label="Niveau de prix" aria-expanded="false"></button>
                     <span class="meta-separator">·</span>
                     <span class="dist-modal-rating" id="dist-modal-rating"></span>
                     <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
@@ -353,7 +354,6 @@
                     <!-- EPIC-T10 : les produits d'abord, en cartes teintees ; on signale sur la carte -->
                     <div class="products-section-head" id="dist-products-head">
                         <h3 class="products-section-title" id="dist-products-title">Il reste quoi ? <span class="products-count" id="dist-products-count"></span></h3>
-                        <p class="products-hint" id="dist-products-hint">Touche un produit : <strong class="hint-yes">Dispo</strong> ou <strong class="hint-no">Pas dispo</strong></p>
                     </div>
                     <!-- Distributeur vide / en panne : dit une seule fois, au-dessus des cartes -->
                     <p class="products-notice" id="dist-products-notice" hidden></p>
@@ -374,31 +374,6 @@
                             <span class="dist-invite-chip">Photos</span>
                         </div>
                         <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
-                    </div>
-                    <!-- Section ajout produit (seulement en mode edit favoris) -->
-                    <div id="dist-products-add-section" style="display:none; margin-top: 1rem;">
-                        <label class="dist-pricerange-edit">
-                            Niveau de prix
-                            <select id="dist-edit-pricerange" onchange="updateDistributorPriceRange(this.value)" aria-label="Niveau de prix du distributeur">
-                                <option value="€">€</option>
-                                <option value="€€">€€</option>
-                                <option value="€€€">€€€</option>
-                            </select>
-                        </label>
-                        <button class="btn-add-product" onclick="toggleDistAddProductForm()">+ Ajouter un produit</button>
-                        <div id="dist-add-product-form" class="add-product-form" style="display:none; margin-top: 0.5rem;">
-                            <input type="text" id="dist-add-product-name" placeholder="Nom du produit">
-                            <button class="btn-confirm-small" onclick="submitDistAddProduct()">OK</button>
-                        </div>
-                    </div>
-                    <!-- Section chat avec le bot (seulement en mode edit favoris) -->
-                    <div id="dist-chat-section" style="display:none; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--light);">
-                        <button class="btn-primary-clean" id="dist-open-chat" style="width: 100%;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                            Discuter avec le bot
-                        </button>
                     </div>
                 </div>
 
@@ -479,13 +454,6 @@
                     <span>Photo</span>
                 </button>
                 <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
-                <button class="dist-action-btn" id="dist-action-edit" aria-label="Modifier ce distributeur" style="display:none">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 20h9"/>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                    </svg>
-                    <span>Modifier</span>
-                </button>
             </div>
         </div>
     </div>
@@ -1013,27 +981,28 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=61",
-            "./js/state.js": "./js/state.js?v=61",
-            "./js/config.js": "./js/config.js?v=61",
-            "./js/utils.js": "./js/utils.js?v=61",
-            "./js/auth.js": "./js/auth.js?v=61",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=61",
-            "./js/map.js": "./js/map.js?v=61",
-            "./js/navigation.js": "./js/navigation.js?v=61",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=61",
-            "./js/distributor.js": "./js/distributor.js?v=61",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=61",
-            "./js/chat.js": "./js/chat.js?v=61",
-            "./js/activity.js": "./js/activity.js?v=61",
-            "./js/notifications.js": "./js/notifications.js?v=61",
-            "./js/availability.js": "./js/availability.js?v=61",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=61",
-            "./js/events.js": "./js/events.js?v=61",
-            "./js/stats.js": "./js/stats.js?v=61",
-            "./js/history.js": "./js/history.js?v=61",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=61",
-            "./js/reviews.js": "./js/reviews.js?v=61"
+            "./js/app.js": "./js/app.js?v=62",
+            "./js/state.js": "./js/state.js?v=62",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=62",
+            "./js/config.js": "./js/config.js?v=62",
+            "./js/utils.js": "./js/utils.js?v=62",
+            "./js/auth.js": "./js/auth.js?v=62",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=62",
+            "./js/map.js": "./js/map.js?v=62",
+            "./js/navigation.js": "./js/navigation.js?v=62",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=62",
+            "./js/distributor.js": "./js/distributor.js?v=62",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=62",
+            "./js/chat.js": "./js/chat.js?v=62",
+            "./js/activity.js": "./js/activity.js?v=62",
+            "./js/notifications.js": "./js/notifications.js?v=62",
+            "./js/availability.js": "./js/availability.js?v=62",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=62",
+            "./js/events.js": "./js/events.js?v=62",
+            "./js/stats.js": "./js/stats.js?v=62",
+            "./js/history.js": "./js/history.js?v=62",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=62",
+            "./js/reviews.js": "./js/reviews.js?v=62"
         }
     }
     </script>

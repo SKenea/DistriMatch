@@ -75,6 +75,49 @@ export function showToast(message, type = 'default') {
     }, 3000);
 }
 
+// Toast avec une action (« Annuler », EPIC-T12) : reste `duration` ms, et tant
+// qu'il a le focus ou le survol (lecteurs d'ecran, WCAG 2.2.1). onAction une
+// seule fois ; onExpire quand il disparait sans action. Retour : { dismiss }.
+export function showActionToast(message, { actionLabel = 'Annuler', onAction = null, onExpire = null, duration = 7000, type = 'default' } = {}) {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        onExpire?.();
+        return { dismiss() {} };
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type} toast-action`;
+    const text = document.createElement('span');
+    text.textContent = message;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action-btn';
+    btn.textContent = actionLabel;
+    toast.append(text, btn);
+    container.appendChild(toast);
+
+    let done = false;
+    let timer = null;
+    function close(acted) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+        if (acted) onAction?.();
+        else onExpire?.();
+    }
+    function arm() {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            if (toast.matches(':hover') || toast.contains(document.activeElement)) arm();
+            else close(false);
+        }, duration);
+    }
+    btn.addEventListener('click', () => close(true));
+    arm();
+    return { dismiss: () => close(false) };
+}
+
 export function getTimeSlot() {
     const hour = new Date().getHours();
     if (hour >= 6 && hour < 11) return 'morning';
@@ -659,8 +702,9 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
     };
 }
 
-// Statut d'un produit de la fiche.
-//   product   : { available } (available === false : marque « Non disponible » en edition)
+// Statut d'un produit de la fiche. EPIC-T12 : une seule notion de dispo, le
+// signal ; products.available (ancien mode edition) n'est plus lu.
+//   product   : le produit (non lu pour l'instant, garde pour la signature)
 //   signalRow : son dernier signal (product_availability) ou null
 //   machine   : resultat de resolveMachineStatus (ou null)
 // Une machine vide / en panne plus recente que le signal du produit l'emporte :
@@ -670,9 +714,6 @@ export function resolveMachineStatus(statusRow, productRows = [], lastVerified =
 export const NO_SIGNAL_DETAIL = 'aucun signal depuis 24 h';
 
 export function resolveProductStatus(product, signalRow, machine = null, now = Date.now()) {
-    if (product && product.available === false) {
-        return { label: 'Pas dispo', tone: 'absent', fresh: false, detail: 'indiqué sur la fiche' };
-    }
     const ts = rowTime(signalRow);
     const hasSignal = signalRow && (signalRow.state === 'available' || signalRow.state === 'absent') && isRecent(ts, now);
     const machineDown = machine && (machine.state === 'empty' || machine.state === 'broken') && machine.at !== null;
@@ -693,6 +734,27 @@ export function resolveProductStatus(product, signalRow, machine = null, now = D
         };
     }
     return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: NO_SIGNAL_DETAIL };
+}
+
+// Question du choix « Dispo / Pas dispo » deplie sur la carte (EPIC-T12, facon
+// « Toujours là ? » de Waze) : elle depend de ce qui est affiche.
+export function describeSignalQuestion(tone) {
+    if (tone === 'available') return 'Toujours dispo ?';
+    if (tone === 'absent') return 'Toujours pas dispo ?';
+    return 'Là, maintenant ?';
+}
+
+// Nom de produit saisi sur la fiche (EPIC-T12) : espaces reduits, 60 caracteres
+// au plus. Doublon = meme nom normalise qu'un autre produit de la fiche.
+export const PRODUCT_NAME_MAX = 60;
+
+export function cleanProductName(raw) {
+    return String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, PRODUCT_NAME_MAX);
+}
+
+export function isDuplicateProductName(name, products = [], exceptId = null) {
+    const n = normalizeName(name);
+    return !!n && products.some(p => p && p.id !== exceptId && normalizeName(p.name) === n);
 }
 
 // Ordre des cartes produit (EPIC-T10) : Dispo, puis Pas d'info, puis Pas dispo.

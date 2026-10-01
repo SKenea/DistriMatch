@@ -60,8 +60,9 @@ test.describe('33. Machines seulement locales', () => {
         await expect(page.locator('#dist-local-publish')).toHaveText('Publier ce distributeur');
         await expect(page.locator('#dist-status-update')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
-        await expect(page.locator('#dist-products-list button.product-row-main')).toHaveCount(0);
-        await expect(page.locator('#dist-action-edit')).toBeHidden();
+        await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
+        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
+        await expect(page.locator('#dist-product-add')).toHaveCount(0);
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         await page.click('.dist-tab[data-tab="avis"]');
         await expect(page.locator('#dist-reviews-empty')).toHaveText("Publie d'abord ce distributeur pour recevoir des avis.");
@@ -92,7 +93,7 @@ test.describe('33. Machines seulement locales', () => {
         expect(posted.products).toEqual([{ distributor_id: 'user-local-only', name: 'Produit test', available: true }]);
         await expect(page.locator('#dist-local-only')).toBeHidden();
         await expect(page.locator('#dist-status-update')).toBeVisible();
-        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        await expect(page.locator('#dist-product-add')).toBeVisible();
         expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).length, LOCAL_KEY)).toBe(0);
     });
 

@@ -6,7 +6,7 @@ import { AppState, Conversations, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, formatDistance, showToast,
     updateImplicitProfile, saveToLocalStorage,
-    resolveProductStatus, productIconKey
+    resolveProductStatus, productIconKey, describeSignalQuestion
 } from './utils.js';
 import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
@@ -15,7 +15,6 @@ import { generateWelcomeMessage } from './chat.js';
 import { FEATURES } from './config.js';
 import { checkFavoriteUpdates } from './favorites-watch.js';
 import { requireAuth } from './auth.js';
-import { confirmDialog } from './confirm-dialog.js';
 
 // ============================================
 // PAGE DISTRIBUTEUR
@@ -90,56 +89,41 @@ export async function loadPhotoThumbnails() {
 // CRUD PRODUITS
 // ============================================
 
-export function renderProductsList(distributor, targetId = 'products-list', options = {}) {
+// Liste des produits de la fiche (EPIC-T10 / T12) : cartes teintees, toujours en
+// lecture ; plus de mode edition. options :
+//   canInform : membre connecte sur un distributeur publie -> etiquette touchable
+//               (signal), nom touchable (renommer), carte « + Ajouter un produit »
+//   guest     : visiteur -> memes zones touchables, qui menent a l'invitation
+//               a se connecter (js/fiche-edit.js)
+export function renderProductsList(distributor, targetId = 'dist-products-list', options = {}) {
     const productsList = document.getElementById(targetId);
-    // Lecture seule par defaut sur la modal Google Maps
-    const readonly = options.readonly !== undefined
-        ? options.readonly
-        : (targetId === 'dist-products-list');
-    // EPIC-T5 : informer (toucher un aliment, ajouter des produits) est un
-    // privilege de compte ; l'appelant dit si l'utilisateur est connecte.
     const canInform = options.canInform === true;
+    const guest = !canInform && options.guest === true;
     if (!distributor || !productsList) return;
-
-    // Memorise le conteneur courant pour que les CRUD (toggle/delete/edit)
-    // re-render dans la bonne liste (sinon fige sur 'products-list').
     AppState.productsListTarget = targetId;
+    productsList.classList.add('products-grid');
 
-    productsList.classList.toggle('products-grid', readonly && (distributor.products || []).length > 0);
-
-    if (!distributor.products || distributor.products.length === 0) {
-        // En lecture, un distributeur sans produit invite a les ajouter (connexion
-        // exigee au clic : on passe par le stylo « Modifier », UC2).
-        productsList.innerHTML = `
-            <div class="products-empty-state">
+    const products = distributor.products || [];
+    const empty = products.length === 0
+        ? `<div class="products-empty-state">
                 <p class="products-empty-title">Aucun produit référencé</p>
                 <p class="products-empty-text">Personne n'a encore dit ce que vend ce distributeur.</p>
-                ${readonly && canInform ? '<button type="button" class="products-add-first" id="dist-products-add-first"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter les produits</button>' : ''}
-            </div>`;
-        return;
-    }
+            </div>`
+        : '';
+    const addCard = (canInform || guest) ? renderAddCard(products.length === 0, guest) : '';
+    productsList.innerHTML = empty
+        + products.map((prod, index) => renderProductRow(prod, index, { canInform, guest })).join('')
+        + addCard;
+}
 
-    productsList.innerHTML = distributor.products.map((p, index) => {
-        if (readonly) return renderProductRow(p, index, canInform);
-        // Mode edition : nom editable + dispo + supprimer (pas de prix).
-        return `
-        <div class="product-item-clean ${p.available ? 'available' : 'unavailable'}" data-index="${index}" data-product-id="${escapeHTML(String(p.id ?? ''))}">
-            <div class="product-info-clean">
-                <input class="product-edit-name" type="text" value="${escapeHTML(p.name)}"
-                    onchange="updateProductField(${index}, 'name', this.value)" aria-label="Nom du produit">
-            </div>
-            <div class="product-actions-clean">
-                <button class="product-availability-chip ${p.available ? 'is-available' : 'is-unavailable'}" onclick="toggleProductAvailability(${index})" aria-label="${p.available ? 'Disponible — toucher pour marquer non disponible' : 'Non disponible — toucher pour marquer disponible'}" title="${p.available ? 'Toucher pour marquer non disponible' : 'Toucher pour marquer disponible'}">
-                    ${p.available ? 'Disponible' : 'Non disponible'}
-                </button>
-                <button class="product-btn-delete" onclick="deleteProduct(${index})" aria-label="Supprimer le produit" title="Supprimer ce produit">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                </button>
-            </div>
-        </div>`;
-    }).join('');
+// Carte en pointillé de fin de grille (EPIC-T12, facon Rappels / Keep) : un
+// toucher la transforme en champ (js/fiche-edit.js). Visiteur : mene a la connexion.
+export function renderAddCard(first = false, guest = false) {
+    const label = first ? 'Ajoute le premier produit' : 'Ajouter un produit';
+    return `<button type="button" class="product-add-card${first ? ' is-first' : ''}" id="dist-product-add"${guest ? ' data-guest="1"' : ''}>
+            <span class="product-add-plus" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span class="product-add-label">${label}</span>
+        </button>`;
 }
 
 // Un produit est signalable s'il a un id Supabase (les produits purement
@@ -176,33 +160,49 @@ export function renderProductIcon(name) {
     return `<span class="product-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></span>`;
 }
 
-// Carte produit de la fiche en lecture (EPIC-T10, maquette « carte teintée ») :
-// picto + etiquette en haut, nom (toujours en noir), ligne d'age. Toute la carte
-// prend la teinte de l'etat (classe is-available / is-absent / is-unknown).
-// Connecte : toucher la carte deplie « Dispo / Pas dispo » (js/availability.js
-// envoie le signal ; deja deplie si l'info a plus de 2 h ou n'existe pas).
-// Visiteur : lecture seule. Statut initial sans signal ; availability.js le
-// met a jour au chargement.
-export function renderProductRow(p, index, canInform = false) {
+// Carte produit de la fiche (EPIC-T10 / T12, maquette « carte teintée ») : picto +
+// etiquette en haut, nom (toujours en noir), ligne d'age ; toute la carte prend la
+// teinte de l'etat (classe is-available / is-absent / is-unknown).
+// Connecte (EPIC-T12, sans bouton « Modifier ») :
+//   - l'etiquette EST le controle : la toucher deplie sur la carte « Dispo / Pas
+//     dispo » (js/availability.js envoie le signal) ;
+//   - le nom est touchable : il devient un champ (js/fiche-edit.js : renommer,
+//     nom vide = retirer) ; appui long sur la carte = menu Renommer / Retirer.
+// Visiteur : l'etiquette mene a l'invitation a se connecter. Statut initial sans
+// signal ; availability.js le met a jour au chargement.
+const CHEVRON = '<svg class="product-status-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+export function renderProductRow(p, index, { canInform = false, guest = false } = {}) {
     const status = resolveProductStatus(p, null);
     const id = escapeHTML(String(p.id ?? ''));
     const name = escapeHTML(p.name);
+    const signalable = canInform && isSignalableProduct(p);
     const pill = `<span class="product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}">${escapeHTML(status.label)}</span>`;
-    const top = `<span class="product-card-top">${renderProductIcon(p.name)}${pill}</span>`;
-    const text = `<span class="product-row-text"><span class="product-name-clean">${name}</span><span class="product-seen">${escapeHTML(status.detail)}</span></span>`;
-    if (!canInform || !isSignalableProduct(p)) {
-        return `
-        <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
-            <div class="product-row-main">${top}${text}</div>
-        </div>`;
+    let status_ = pill;
+    if (signalable) {
+        status_ = `<button type="button" class="product-status-btn" aria-expanded="false" aria-controls="product-choices-${id}" aria-label="${name} : ${escapeHTML(status.label)}. Signaler">${pill}${CHEVRON}</button>`;
+    } else if (guest) {
+        status_ = `<button type="button" class="product-status-btn" data-guest="1" aria-label="${name} : ${escapeHTML(status.label)}. Connecte-toi pour signaler">${pill}</button>`;
     }
+    const nameEl = canInform
+        ? `<button type="button" class="product-name-btn product-name-clean" aria-label="Renommer ${name}">${name}</button>`
+        : `<span class="product-name-clean">${name}</span>`;
+    const choices = signalable
+        ? `<div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : signaler" hidden>
+                <p class="product-choices-q">${escapeHTML(describeSignalQuestion(status.tone))}</p>
+                <div class="product-choices-row">
+                    <button type="button" class="product-choice is-yes" data-state="available">Dispo</button>
+                    <button type="button" class="product-choice is-no" data-state="absent">Pas dispo</button>
+                </div>
+            </div>`
+        : '';
     return `
-        <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}">
-            <button type="button" class="product-row-main" aria-expanded="false" aria-controls="product-choices-${id}">${top}${text}</button>
-            <div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : signaler" hidden>
-                <button type="button" class="product-choice is-yes" data-state="available">Dispo</button>
-                <button type="button" class="product-choice is-no" data-state="absent">Pas dispo</button>
+        <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}"${canInform ? ' data-editable="1"' : ''}>
+            <div class="product-row-main">
+                <span class="product-card-top">${renderProductIcon(p.name)}${status_}</span>
+                <span class="product-row-text">${nameEl}<span class="product-seen">${escapeHTML(status.detail)}</span></span>
             </div>
+            ${choices}
         </div>`;
 }
 
@@ -247,112 +247,6 @@ export async function submitDetailProduct() {
     document.getElementById('bs-add-product-form').style.display = 'none';
 
     showToast(`${escapeHTML(name)} ajouté !`, 'success');
-}
-
-// Edition directe du nom d'un produit (au change/blur). Plus de prix.
-export async function updateProductField(index, field, rawValue) {
-    if (field !== 'name') return;
-    if (!(await requireAuth())) return;
-
-    const distributor = AppState.currentDistributor;
-    if (!distributor) return;
-    const product = distributor.products[index];
-    if (!product) return;
-
-    const oldName = product.name;
-    const newName = String(rawValue).trim();
-    if (!newName || newName === product.name) {
-        renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
-        return;
-    }
-
-    if (supabaseClient) {
-        try {
-            if (product.dbId) {
-                await supabaseClient.from('products')
-                    .update({ name: newName }).eq('id', product.dbId);
-            } else {
-                await supabaseClient.from('products')
-                    .update({ name: newName })
-                    .eq('distributor_id', distributor.id).eq('name', oldName);
-            }
-            console.log('[DistriMatch] Produit modifie sur Supabase:', newName);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur modification produit:', e.message);
-        }
-    }
-
-    product.name = newName;
-    showToast('Produit modifié', 'success');
-}
-
-export async function toggleProductAvailability(index) {
-    if (!(await requireAuth())) return;
-
-    const distributor = AppState.currentDistributor;
-    if (!distributor) return;
-    const product = distributor.products[index];
-    if (!product) return;
-
-    const newAvailable = !product.available;
-
-    if (supabaseClient) {
-        try {
-            if (product.dbId) {
-                await supabaseClient.from('products')
-                    .update({ available: newAvailable })
-                    .eq('id', product.dbId);
-            } else {
-                await supabaseClient.from('products')
-                    .update({ available: newAvailable })
-                    .eq('distributor_id', distributor.id)
-                    .eq('name', product.name);
-            }
-            console.log('[DistriMatch] Disponibilite modifiee:', product.name, newAvailable);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur toggle disponibilite:', e.message);
-        }
-    }
-
-    product.available = newAvailable;
-    renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
-    showToast(newAvailable ? 'Produit disponible' : 'Produit indisponible', 'default');
-}
-
-export async function deleteProduct(index) {
-    const distributor = AppState.currentDistributor;
-    if (!distributor) return;
-    const product = distributor.products[index];
-    if (!product) return;
-
-    const ok = await confirmDialog({
-        title: 'Supprimer ce produit ?',
-        message: `« ${product.name} » sera retiré de la fiche pour tout le monde.`,
-        confirmLabel: 'Supprimer'
-    });
-    if (!ok) return;
-
-    if (!(await requireAuth())) return;
-
-    if (supabaseClient) {
-        try {
-            if (product.dbId) {
-                await supabaseClient.from('products').delete().eq('id', product.dbId);
-            } else {
-                await supabaseClient.from('products')
-                    .delete()
-                    .eq('distributor_id', distributor.id)
-                    .eq('name', product.name);
-            }
-            console.log('[DistriMatch] Produit supprime sur Supabase:', product.name);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur suppression produit:', e.message);
-        }
-    }
-
-    distributor.products.splice(index, 1);
-    renderProductsList(distributor, AppState.productsListTarget, { readonly: false });
-    showToast('Produit supprimé', 'default');
 }
 
 // ============================================

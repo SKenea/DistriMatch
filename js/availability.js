@@ -5,9 +5,9 @@
  * qu'il reste, produit par produit, ou s'il est en service, vide ou en panne.
  * Fiche v3 (EPIC-T10) : l'etat tient en une petite ligne sous le nom (mini-feu
  * + mot + age, « Mettre à jour » deplie les trois etats) ; les produits sont des
- * cartes teintees triees Dispo -> Pas d'info -> Pas dispo ; toucher une carte
- * deplie « Dispo / Pas dispo » (deja deplie si l'info a plus de 2 h ou n'existe
- * pas). Un tap = un signal.
+ * cartes teintees triees Dispo -> Pas d'info -> Pas dispo. EPIC-T12 (sans
+ * bouton) : l'etiquette de la carte est le controle ; la toucher deplie sur la
+ * carte « Toujours dispo ? » Dispo / Pas dispo. Un tap = un signal.
  *
  * Signal = privilege de compte (EPIC-T5 / T6, migration 014). Ce module ne
  * bloque jamais l'init : lecture en fire-and-forget, envoi sur clic.
@@ -17,8 +17,9 @@ import { AppState, supabaseClient } from './state.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
-    describeFicheHero, describeMachineNotice, productToneRank
+    describeFicheHero, describeMachineNotice, productToneRank, describeSignalQuestion
 } from './utils.js';
+import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
 import { isAuthenticated, promptReconnect } from './auth.js';
@@ -108,7 +109,7 @@ export function renderFicheStatus() {
     // Liseré unique quand le distributeur est vide / en panne (plus repete par carte)
     const notice = document.getElementById('dist-products-notice');
     if (notice) {
-        const text = AppState.modalEditMode || !(distributor.products || []).length ? '' : describeMachineNotice(machine);
+        const text = !(distributor.products || []).length ? '' : describeMachineNotice(machine);
         notice.textContent = text;
         notice.hidden = !text;
         notice.className = `products-notice is-${machine.state}`;
@@ -135,24 +136,30 @@ export function renderFicheStatus() {
         }
         const seen = row.querySelector('.product-seen');
         if (seen) seen.textContent = status.detail;
-        // Info ancienne (> 2 h) ou absente : les deux boutons sont deja visibles
-        row.classList.toggle('needs-check', !status.fresh);
+        // Question adaptee a ce qui est affiche (« Toujours dispo ? »...) et
+        // reponse actuelle marquee ; libelle accessible de l'etiquette a jour
+        const question = row.querySelector('.product-choices-q');
+        if (question) question.textContent = describeSignalQuestion(status.tone);
+        row.querySelectorAll('.product-choice').forEach(c => {
+            const current = (c.dataset.state === 'available' && status.tone === 'available')
+                || (c.dataset.state === 'absent' && status.tone === 'absent');
+            c.classList.toggle('is-current', current);
+            c.setAttribute('aria-pressed', String(current));
+        });
+        const statusBtn = row.querySelector('.product-status-btn:not([data-guest])');
+        const name = row.querySelector('.product-name-clean')?.textContent || '';
+        if (statusBtn) statusBtn.setAttribute('aria-label', `${name} : ${status.label}. Signaler`);
         syncChoices(row);
         ranked.push({ row, rank: productToneRank(status.tone), index: Number(row.dataset.index ?? index) });
     });
-    // Ordre des cartes : Dispo, puis Pas d'info, puis Pas dispo (stable)
-    if (list && !AppState.modalEditMode) {
+    // Ordre des cartes : Dispo, puis Pas d'info, puis Pas dispo (stable) ; la
+    // carte « + Ajouter un produit » reste en dernier.
+    if (list) {
         ranked.sort((a, b) => a.rank - b.rank || a.index - b.index)
             .forEach(({ row }) => list.appendChild(row));
+        const addCard = list.querySelector('#dist-product-add, .product-add-form');
+        if (addCard) list.appendChild(addCard);
     }
-
-    // En-tete « Il reste quoi ? » : seulement en lecture ; la consigne seulement
-    // s'il y a au moins un produit qu'on peut signaler.
-    const head = document.getElementById('dist-products-head');
-    if (head) head.hidden = !!AppState.modalEditMode;
-    const hint = document.getElementById('dist-products-hint');
-    // (inutile quand toutes les cartes montrent deja « Dispo / Pas dispo »)
-    if (hint) hint.hidden = !document.querySelector('#dist-products-list .product-row:not(.needs-check) button.product-row-main');
 
     // Rythme infere (couche 2) : une phrase seulement quand les signaux la justifient.
     const rhythmEl = document.getElementById('dist-modal-rhythm');
@@ -167,15 +174,16 @@ export function renderFicheStatus() {
 // SIGNALER : toucher un aliment, ou la puce machine
 // ============================================
 
-// Boutons « Dispo / Pas dispo » d'une carte : visibles si le membre l'a depliee
-// (data-open, toucher) ou si son info a plus de 2 h / n'existe pas (needs-check).
+// « Dispo / Pas dispo » d'une carte : visibles seulement quand le membre a
+// touche l'etiquette (data-open) ; plus rien d'affiche d'office (EPIC-T12).
 function syncChoices(row) {
-    const btn = row.querySelector('button.product-row-main');
+    const btn = row.querySelector('.product-status-btn:not([data-guest])');
     const choices = row.querySelector('.product-choices');
     if (!btn || !choices) return;
-    const open = row.dataset.open === '1' || row.classList.contains('needs-check');
+    const open = row.dataset.open === '1';
     choices.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
+    row.classList.toggle('is-open', open);
 }
 
 function collapseAll(exceptRow = null) {
@@ -187,13 +195,13 @@ function collapseAll(exceptRow = null) {
     collapseMachineChoices();
 }
 
+export function collapseProductChoices() {
+    collapseAll();
+}
+
 function toggleProductRow(btn) {
     const row = btn.closest('.product-row');
     if (!row) return;
-    if (row.classList.contains('needs-check')) {
-        row.querySelector('.product-choice')?.focus();
-        return;
-    }
     const open = row.dataset.open !== '1';
     collapseAll(row);
     if (open) row.dataset.open = '1';
@@ -227,20 +235,28 @@ export function initFicheSignals() {
     if (list && !list.dataset.signalsWired) {
         list.dataset.signalsWired = '1';
         list.addEventListener('click', (e) => {
-            // Machine sans produit : on passe par le stylo « Modifier » de la
-            // fiche, qui garde la verification de connexion (UC2).
-            if (e.target.closest('#dist-products-add-first')) {
-                document.getElementById('dist-action-edit')?.click();
-                return;
-            }
             const choice = e.target.closest('.product-choice');
             if (choice) {
                 const row = choice.closest('.product-row');
                 sendSignal({ productId: row?.dataset.productId, state: choice.dataset.state });
                 return;
             }
-            const main = e.target.closest('button.product-row-main');
-            if (main) toggleProductRow(main);
+            // L'etiquette est le controle (EPIC-T12) ; visiteur : js/fiche-edit.js
+            const statusBtn = e.target.closest('.product-status-btn:not([data-guest])');
+            if (statusBtn) toggleProductRow(statusBtn);
+        });
+        // Echap ou toucher ailleurs referme sans rien envoyer
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const open = document.querySelector('#dist-products-list .product-row[data-open="1"]');
+            if (!open) return;
+            e.stopPropagation();
+            collapseAll();
+            open.querySelector('.product-status-btn')?.focus();
+        }, true);
+        document.addEventListener('pointerdown', (e) => {
+            const open = document.querySelector('#dist-products-list .product-row[data-open="1"]');
+            if (open && !open.contains(e.target)) collapseAll();
         });
     }
 
@@ -281,7 +297,7 @@ export function focusSignalFromQr() {
         pulse(invite);
         return;
     }
-    const signalable = document.querySelector('#dist-products-list button.product-row-main');
+    const signalable = document.querySelector('#dist-products-list .product-status-btn:not([data-guest])');
     if (!signalable) {
         openMachineChoices();
         const machineChoices = document.getElementById('dist-machine-choices');
@@ -353,6 +369,7 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
             // La RPC a rafraichi last_verified cote serveur : on aligne la memoire
             distributor.lastVerified = now;
             showToast('Merci ! Ton signal aide les suivants', 'success');
+            markFicheEditUsed();   // l'indice de premier usage a servi
             if (signalLoggedFor !== distributor.id) {
                 signalLoggedFor = distributor.id;
                 logEvent('signal_envoye', { distributorId: distributor.id });   // mesure (008)

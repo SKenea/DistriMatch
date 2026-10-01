@@ -66,7 +66,7 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
 
         await openSignalableFiche(page);
         violations.push(...await collectSmallTargets(page, 'fiche'));
-        await page.locator('#dist-products-list button.product-row-main').first().click();
+        await page.locator('#dist-products-list .product-status-btn:not([data-guest])').first().click();
         violations.push(...await collectSmallTargets(page, 'il-reste-quoi'));
         violations.push(...await collectSmallTargets(page, 'etat-machine'));
         await page.click('#dist-modal-close');
@@ -151,7 +151,7 @@ test.describe('21. Lisibilite mobile (polices, contrastes)', () => {
         await openSignalableFiche(page);
         await page.waitForTimeout(800);
         issues.push(...await collectTextIssues(page, 'fiche'));
-        await page.locator('#dist-products-list button.product-row-main').first().click();
+        await page.locator('#dist-products-list .product-status-btn:not([data-guest])').first().click();
         issues.push(...await collectTextIssues(page, 'signal-aliment'));
         issues.push(...await collectTextIssues(page, 'signal-machine'));
         expect(issues, issues.join('\n')).toEqual([]);

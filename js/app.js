@@ -40,7 +40,6 @@ import {
 import {
     renderProductsList,
     toggleAddProductForm, submitDetailProduct,
-    updateProductField, toggleProductAvailability, deleteProduct,
     toggleSubscription, displaySubscriptions,
     loadPhotoThumbnails
 } from './distributor.js';
@@ -74,7 +73,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, toggleDistAddProductForm, submitDistAddProduct, updateDistributorPriceRange, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -318,15 +317,9 @@ registerViewCallback('notifications', openNotificationsView);
 // Carte popups — showDetails redirige vers le bottom sheet
 window.showDetails = openDistributorModal;
 window.openDistributorModal = openDistributorModal;
-window.toggleDistAddProductForm = toggleDistAddProductForm;
-window.submitDistAddProduct = submitDistAddProduct;
-window.updateDistributorPriceRange = updateDistributorPriceRange;
 window.openConversation = openConversation;
 
 // Page distributeur
-window.toggleProductAvailability = toggleProductAvailability;
-window.updateProductField = updateProductField;
-window.deleteProduct = deleteProduct;
 window.renderProductsList = renderProductsList;
 window.toggleAddProductForm = toggleAddProductForm;
 window.submitDetailProduct = submitDetailProduct;

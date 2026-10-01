@@ -32,21 +32,17 @@ const html = `<!DOCTYPE html>
                 <span id="dist-modal-rating"></span>
                 <span id="dist-modal-reviews"></span>
                 <span id="dist-modal-type"></span>
+                <div class="dist-modal-meta"><button type="button" id="dist-modal-pricerange"></button></div>
             </div>
             <div class="dist-modal-actions">
                 <button id="dist-action-directions"></button>
                 <button id="dist-action-favorite"><span id="dist-action-favorite-label">Favori</span></button>
-                <button id="dist-action-edit" style="display:none"></button>
             </div>
             <button class="dist-tab active" data-tab="produits"></button>
             <button class="dist-tab" data-tab="avis"></button>
             <button class="dist-tab" data-tab="apropos"></button>
             <div class="dist-tab-pane active" data-tab-pane="produits">
                 <div id="dist-products-list"></div>
-                <div id="dist-products-add-section" style="display:none"></div>
-                <div id="dist-chat-section" style="display:none">
-                    <button id="dist-open-chat"></button>
-                </div>
             </div>
             <div class="dist-tab-pane" data-tab-pane="avis">
                 <div id="dist-review-mine" hidden>
@@ -353,22 +349,36 @@ describe('openDistributorModal', () => {
         assert.equal(AppState.currentDistributor, before);
     });
 
-    // EPIC-T5 : Modifier est un privilege de compte, d'ou que la fiche soit ouverte
-    it('visiteur : pas de stylo « Modifier » (ni depuis Favoris, ni ailleurs)', () => {
+    // EPIC-T12 : plus de bouton « Modifier » ni de mode edition ; on modifie au toucher
+    it('plus de bouton « Modifier » ni de mode edition, meme connecte', () => {
+        window.__testLogin();
+        openDistributorModal('dist-test', true, true);   // anciens parametres ignores
+        assert.equal(document.getElementById('dist-action-edit'), null);
+        assert.equal(document.getElementById('dist-products-add-section'), null);
+        assert.equal(AppState.modalEditMode, false);
         window.__testLogout();
-        openDistributorModal('dist-test', false, true);
-        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
-        openDistributorModal('dist-test', false, false);
-        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
     });
 
-    it('connecte : stylo visible en lecture, masque en edition', () => {
+    it('connecte : etiquette, nom et « + Ajouter un produit » touchables ; prix touchable', () => {
         window.__testLogin();
-        openDistributorModal('dist-test', false, false);
-        assert.notEqual(document.getElementById('dist-action-edit').style.display, 'none');
-        openDistributorModal('dist-test', true, false);
-        assert.equal(document.getElementById('dist-action-edit').style.display, 'none');
+        AppState.distributors[0].products = [{ id: 11, name: 'Pizza', available: true }];
+        openDistributorModal('dist-test');
+        const list = document.getElementById('dist-products-list');
+        assert.ok(list.querySelector('.product-status-btn:not([data-guest])'));
+        assert.ok(list.querySelector('.product-name-btn'));
+        assert.equal(list.querySelector('#dist-product-add').dataset.guest, undefined);
+        assert.equal(document.getElementById('dist-modal-pricerange').tagName, 'BUTTON');
         window.__testLogout();
+    });
+
+    it('visiteur : les memes zones menent a la connexion (data-guest), nom non modifiable', () => {
+        window.__testLogout();
+        AppState.distributors[0].products = [{ id: 11, name: 'Pizza', available: true }];
+        openDistributorModal('dist-test');
+        const list = document.getElementById('dist-products-list');
+        assert.equal(list.querySelector('.product-status-btn').dataset.guest, '1');
+        assert.equal(list.querySelector('.product-name-btn'), null);
+        assert.equal(list.querySelector('#dist-product-add').dataset.guest, '1');
     });
 });
 
@@ -481,8 +491,8 @@ describe('renderProductsList', () => {
         assert.ok(list.querySelector('.products-empty-state'));
     });
 
-    // EPIC-T2 : en lecture, trois mots seulement ; marque « Non disponible » -> Pas dispo
-    it('lecture : « Pas d\'info » sans signal, « Pas dispo » si marque non disponible, jamais « catalogue »', () => {
+    // EPIC-T2 / T12 : trois mots seulement ; la dispo = le signal (available n'est plus lu)
+    it('lecture : « Pas d\'info » sans signal (meme marque non disponible), jamais « catalogue »', () => {
         const dist = {
             products: [
                 { id: 1, name: 'Baguette', price: 5, available: true },
@@ -493,8 +503,7 @@ describe('renderProductsList', () => {
         const rows = document.getElementById('dist-products-list').querySelectorAll('.product-row');
         assert.equal(rows[0].querySelector('.product-pill').textContent, "Pas d'info");
         assert.ok(rows[0].classList.contains('is-unknown'));
-        assert.equal(rows[1].querySelector('.product-pill').textContent, 'Pas dispo');
-        assert.equal(rows[1].querySelector('.product-seen').textContent, 'indiqué sur la fiche');
+        assert.equal(rows[1].querySelector('.product-pill').textContent, "Pas d'info");
         // EPIC-T10 : ligne d'age toujours presente
         assert.equal(rows[0].querySelector('.product-seen').textContent, 'aucun signal depuis 24 h');
         assert.ok(!/catalogue/i.test(document.getElementById('dist-products-list').textContent));
@@ -508,77 +517,61 @@ describe('renderProductsList', () => {
         assert.equal(list.querySelectorAll('.product-row .product-card-top .product-icon svg').length, 2);
         assert.ok(!/machine/i.test(list.textContent));
         renderProductsList({ products: [] }, 'dist-products-list', { canInform: true });
-        assert.ok(!list.classList.contains('products-grid'), 'pas de grille sans produit');
         assert.match(list.textContent, /Aucun produit référencé/);
         assert.match(list.textContent, /ce distributeur/);
         assert.ok(!/machine/i.test(list.textContent));
     });
 
-    it('lecture : la carte est un bouton qui deplie « Dispo / Pas dispo », AUCUN prix', () => {
+    // EPIC-T12 : l'etiquette est le controle
+    it('connecte : l\'etiquette deplie « Toujours dispo ? » Dispo / Pas dispo ; AUCUN prix', () => {
         renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
-        const main = list.querySelector('button.product-row-main');
-        assert.ok(main, 'ligne touchable');
-        assert.equal(main.getAttribute('aria-expanded'), 'false');
-        assert.equal(main.getAttribute('aria-controls'), 'product-choices-7');
+        const status = list.querySelector('.product-status-btn');
+        assert.ok(status, 'etiquette touchable');
+        assert.equal(status.getAttribute('aria-expanded'), 'false');
+        assert.equal(status.getAttribute('aria-controls'), 'product-choices-7');
         const choices = list.querySelector('#product-choices-7');
         assert.ok(choices.hidden, 'choix replies par defaut');
+        assert.equal(choices.querySelector('.product-choices-q').textContent, 'Là, maintenant ?');
         assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.dataset.state), ['available', 'absent']);
         assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.textContent.trim()), ['Dispo', 'Pas dispo']);
-        assert.ok(list.querySelector('.product-name-clean').textContent.includes('Test'));
+        assert.equal(list.querySelector('.product-name-btn').textContent, 'Test');
+        assert.equal(list.querySelector('button.product-row-main'), null, 'la carte entiere n\'est plus un bouton');
     });
 
-    it('lecture : un produit sans id Supabase (local) n\'est pas touchable', () => {
-        renderProductsList({ products: [{ name: 'Local', available: true }] }, 'dist-products-list');
+    it('connecte : un produit sans id Supabase (local) n\'a pas d\'etiquette touchable', () => {
+        renderProductsList({ products: [{ name: 'Local', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
-        assert.equal(list.querySelector('button.product-row-main'), null);
+        assert.equal(list.querySelector('.product-status-btn'), null);
         assert.equal(list.querySelector('.product-choices'), null);
         assert.ok(list.querySelector('.product-pill'));
     });
 
-    // EPIC-T5 : informer est un privilege de compte
-    it('visiteur : lignes en lecture seule, pas de « Ajouter les produits »', () => {
-        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
-        assert.equal(document.querySelector('#dist-products-list button.product-row-main'), null);
-        renderProductsList({ products: [] }, 'dist-products-list');
-        assert.equal(document.getElementById('dist-products-add-first'), null);
-    });
-
-    it('lecture connecte, machine sans produit : bouton « Ajouter les produits »', () => {
-        renderProductsList({ products: [] }, 'dist-products-list', { canInform: true });
-        const btn = document.getElementById('dist-products-add-first');
-        assert.ok(btn);
-        assert.equal(btn.textContent, 'Ajouter les produits');
-        renderProductsList({ products: [] }, 'dist-products-list', { readonly: false });
-        assert.equal(document.getElementById('dist-products-add-first'), null, 'pas en edition');
-    });
-
-    it('edition : nom editable, pas de champ prix, pas de crayon', () => {
-        renderProductsList({ products: [{ name: 'Pizza', available: true }] }, 'dist-products-list', { readonly: false });
+    it('carte « + Ajouter un produit » en fin de grille ; « Ajoute le premier produit » sans produit', () => {
+        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
-        assert.ok(list.querySelector('.product-edit-name'), 'input nom present');
-        assert.equal(list.querySelector('.product-edit-price'), null, 'pas d\'input prix');
-        assert.equal(list.querySelector('.product-btn-edit'), null, 'pas de crayon');
-        assert.ok(list.querySelector('.product-btn-delete svg'), 'corbeille (svg) supprimer');
-        const chip = list.querySelector('.product-availability-chip');
-        assert.ok(chip, 'pastille etat presente');
-        assert.ok(chip.classList.contains('is-available'), 'etat disponible');
-        // EPIC-T2 : le catalogue dit son nom, sans confusion avec la dispo du moment
-        assert.equal(chip.textContent.trim(), 'Disponible');
+        assert.equal(list.lastElementChild.id, 'dist-product-add');
+        assert.match(list.lastElementChild.textContent, /Ajouter un produit/);
+        renderProductsList({ products: [] }, 'dist-products-list', { canInform: true });
+        assert.match(document.getElementById('dist-product-add').textContent, /Ajoute le premier produit/);
+        assert.ok(document.getElementById('dist-product-add').classList.contains('is-first'));
     });
 
-    it('edition : « Non disponible » si available=false', () => {
-        renderProductsList({ products: [{ name: 'X', available: false }] }, 'dist-products-list', { readonly: false });
-        const chip = document.getElementById('dist-products-list').querySelector('.product-availability-chip');
-        assert.ok(chip.classList.contains('is-unavailable'));
-        assert.equal(chip.textContent.trim(), 'Non disponible');
+    it('distributeur seulement local (ni canInform ni guest) : rien de touchable', () => {
+        renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
+        const list = document.getElementById('dist-products-list');
+        assert.equal(list.querySelector('.product-status-btn'), null);
+        assert.equal(list.querySelector('.product-name-btn'), null);
+        assert.equal(list.querySelector('#dist-product-add'), null);
     });
 
-    it('utilise le target par defaut (products-list)', () => {
-        renderProductsList({ products: [{ name: 'A', price: 1, available: true }] });
-        const list = document.getElementById('products-list');
-        assert.equal(list.querySelectorAll('.product-item-clean').length, 1);
+    it('plus de rendu « edition » (champs, puces Disponible, corbeilles)', () => {
+        renderProductsList({ products: [{ id: 1, name: 'Pizza', available: false }] }, 'dist-products-list', { readonly: false, canInform: true });
+        const list = document.getElementById('dist-products-list');
+        assert.equal(list.querySelector('.product-edit-name'), null);
+        assert.equal(list.querySelector('.product-availability-chip'), null);
+        assert.equal(list.querySelector('.product-btn-delete'), null);
     });
 });
 

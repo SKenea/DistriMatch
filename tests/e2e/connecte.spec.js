@@ -48,7 +48,8 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         await openAsTestAccount(page, context);
         await expect(page.locator('#dist-status-update')).toBeVisible({ timeout: 15000 });   // « Mettre à jour » (EPIC-T10)
         await expect(page.locator('#dist-login-invite')).toBeHidden();
-        await expect(page.locator('#dist-action-edit')).toBeVisible();
+        await expect(page.locator('#dist-products-list .product-name-btn').first()).toBeVisible();   // modifier au toucher (EPIC-T12)
+        await expect(page.locator('#dist-product-add')).toBeVisible();
         await expect(page.locator('#dist-action-add-photo')).toBeVisible();
     });
 
@@ -85,7 +86,7 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         const productId = Number(await page.locator('#dist-products-list .product-row').first().getAttribute('data-product-id'));
         // La carte peut changer de place une fois « Dispo » (tri) : on la suit par son id
         const row = page.locator(`#dist-products-list .product-row[data-product-id="${productId}"]`);
-        if (await row.locator('.product-choices').isHidden()) await row.locator('button.product-row-main').click();
+        if (await row.locator('.product-choices').isHidden()) await row.locator('.product-status-btn').click();
         await row.locator('.product-choice[data-state="available"]').click();
         await expect(page.locator('#toast-container .toast.success')).toContainText('Merci', { timeout: 15000 });
         await expect(row.locator('.product-pill')).toHaveText('Dispo');
