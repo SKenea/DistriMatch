@@ -1939,3 +1939,97 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 #dist-products-list.products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .product-add-form, .product-add-card { min-width: 0; }
 .toast.toast-action { width: max-content; max-width: min(420px, calc(100vw - 32px)); }
+
+/* ==========================================
+   AJOUTER PAR LISTE (EPIC-T13) : 4 produits courants + « Autre… » avec suggestions
+   Maquette : docs/maquettes/2026-10-01-edition/4-ajout-liste.html
+   ========================================== */
+.product-add-panel {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 2px solid #111827;
+    border-radius: 16px;
+    background: #FFFFFF;
+    min-width: 0;
+}
+.add-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.add-panel-title { margin: 0; font-size: 1rem; font-weight: 800; color: #111827; }
+.add-panel-close {
+    min-height: 44px;
+    padding: 0 4px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.9rem;
+    color: #374151;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.add-panel-sub { margin: 0; font-size: 0.82rem; color: #4B5563; }
+.add-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.add-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 6px 10px 6px 6px;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 12px;
+    background: #F9FAFB;
+    font: inherit;
+    text-align: left;
+    color: #111827;
+    cursor: pointer;
+    min-width: 0;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+.add-chip:hover { background: #F3F4F6; border-color: #9CA3AF; }
+.add-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.add-chip:active { transform: translateY(1px); }
+.add-chip-icon .product-icon { width: 34px; height: 34px; }
+.add-chip-name { flex: 1; min-width: 0; font-size: 0.9rem; font-weight: 700; overflow-wrap: break-word; hyphens: auto; }
+.add-chip-plus { font-size: 1.25rem; font-weight: 600; color: #374151; }
+.add-other { display: flex; align-items: center; gap: 8px; }
+.add-other .product-add-input {
+    flex: 1;
+    min-height: 48px;
+    padding: 0 12px;
+    border: 1.5px solid #9CA3AF;
+    border-radius: 12px;
+    background: #FFFFFF;
+}
+.add-other .product-add-input:focus { border-color: #111827; outline: 2px solid #2563EB; outline-offset: 1px; }
+.add-suggestions {
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.1);
+}
+.add-suggestions[hidden] { display: none; }
+.add-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #111827;
+    cursor: pointer;
+}
+.add-suggestion:hover, .add-suggestion[aria-selected="true"] { background: #EEF2FF; outline: 2px solid #4F46E5; outline-offset: -2px; }
+.add-suggestion .product-icon { width: 30px; height: 30px; }
+.add-panel-help { margin: 0; font-size: 0.78rem; color: #4B5563; }
+/* Pastilles plus compactes : un nom comme « Charcuterie » tient sur une ligne */
+.add-chip { gap: 6px; padding: 6px 8px 6px 6px; }
+.add-chip-icon .product-icon { width: 30px; height: 30px; }
+.add-chip-icon .product-icon svg { width: 18px; height: 18px; }
+.add-chip-name { font-size: 0.88rem; }
+.add-chip-plus { font-size: 1.1rem; }

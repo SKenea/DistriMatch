@@ -9,8 +9,9 @@
  *   - retirer : nom vide valide, ou appui long / clic droit -> menu « Renommer /
  *     Retirer » ; toast « Annuler » 7 s, la suppression en base n'a lieu qu'a
  *     la fin du delai ;
- *   - ajouter : carte « + Ajouter un produit » en fin de grille -> champ,
- *     Entree ajoute et garde un champ vide pour enchainer ;
+ *   - ajouter (EPIC-T13) : carte « + Ajouter un produit » -> panneau sur place :
+ *     4 produits courants du type en pastilles (un toucher ajoute), puis un champ
+ *     « Autre… » avec suggestions ; le panneau reste ouvert pour enchainer ;
  *   - prix : toucher « €€ » -> € / €€ / €€€ sur place.
  * Le signal Dispo / Pas dispo (toucher l'etiquette) est dans availability.js.
  * Visiteur : ces memes zones menent a l'invitation a se connecter (UC2 : modifier
@@ -19,7 +20,8 @@
 
 import { AppState, supabaseClient } from './state.js';
 import {
-    showToast, showActionToast, escapeHTML, cleanProductName, isDuplicateProductName
+    showToast, showActionToast, escapeHTML, cleanProductName, isDuplicateProductName,
+    suggestProducts, searchProductSuggestions
 } from './utils.js';
 import { isAuthenticated } from './auth.js';
 import { renderProductsList, renderProductIcon } from './distributor.js';
@@ -227,48 +229,120 @@ async function deleteProductForGood(d, product, index) {
 }
 
 // ============================================
-// AJOUTER (carte « + Ajouter un produit », on enchaine)
+// AJOUTER : panneau « 4 produits courants + Autre… » (EPIC-T13)
 // ============================================
 
-function openAddForm() {
+function closeAddPanel() {
+    if (document.getElementById('dist-add-panel')) renderFicheProducts();
+}
+
+function suggestionIcon(name) {
+    return `<span class="add-chip-icon">${renderProductIcon(name)}</span>`;
+}
+
+// focus : 'input' (on tapait), 'chip' (on touchait une pastille) ou null
+function openAddForm(focus = 'input') {
+    const d = AppState.currentDistributor;
     const card = document.getElementById('dist-product-add');
-    if (!card) return;
+    if (!d || !card) return;
     closeRowMenu();
     collapseProductChoices();
-    const form = document.createElement('div');
-    form.className = `product-add-form${card.classList.contains('is-first') ? ' is-first' : ''}`;
-    form.innerHTML = `<span class="product-add-icon">${renderProductIcon('')}</span>
-        <input type="text" class="product-add-input" maxlength="60" enterkeyhint="send"
-            placeholder="Nom du produit" aria-label="Nom du produit à ajouter">`;
-    card.replaceWith(form);
-    const input = form.querySelector('input');
-    const icon = form.querySelector('.product-add-icon');
-    input.focus();
-
+    const chips = suggestProducts(d.type, d.products);
+    const typeLabel = AppState.typeConfig?.[d.type]?.label || '';
+    const panel = document.createElement('div');
+    panel.id = 'dist-add-panel';
+    panel.className = 'product-add-panel';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-labelledby', 'dist-add-panel-title');
+    panel.innerHTML = `
+        <div class="add-panel-head">
+            <p class="add-panel-title" id="dist-add-panel-title">Ajouter un produit</p>
+            <button type="button" class="add-panel-close" data-add-close>Fermer</button>
+        </div>
+        ${chips.length ? `<p class="add-panel-sub">Les plus courants${typeLabel ? ` · ${escapeHTML(typeLabel)}` : ''}</p>
+        <div class="add-chips">${chips.map(name => `<button type="button" class="add-chip" data-add-name="${escapeHTML(name)}" aria-label="Ajouter ${escapeHTML(name)}">${suggestionIcon(name)}<span class="add-chip-name">${escapeHTML(name)}</span><span class="add-chip-plus" aria-hidden="true">+</span></button>`).join('')}</div>` : ''}
+        <div class="add-other">
+            <span class="product-add-icon">${renderProductIcon('')}</span>
+            <input type="text" class="product-add-input" maxlength="60" enterkeyhint="send" autocomplete="off"
+                placeholder="${chips.length ? 'Autre…' : 'Nom du produit'}" aria-label="Nom du produit à ajouter"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dist-add-suggestions">
+        </div>
+        <ul class="add-suggestions" id="dist-add-suggestions" role="listbox" aria-label="Suggestions" hidden></ul>
+        <p class="add-panel-help">Écris un nom, puis Entrée</p>`;
+    card.replaceWith(panel);
+    const input = panel.querySelector('.product-add-input');
+    const icon = panel.querySelector('.product-add-icon');
+    const list = panel.querySelector('.add-suggestions');
+    let active = -1;
     let busy = false;
-    input.addEventListener('input', () => { icon.innerHTML = renderProductIcon(input.value); });
-    input.addEventListener('keydown', async (e) => {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
-            renderFicheProducts();
-            return;
-        }
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
+
+    if (focus === 'chip' && panel.querySelector('.add-chip')) panel.querySelector('.add-chip').focus();
+    else if (focus) input.focus();
+
+    async function add(name, nextFocus) {
         if (busy) return;
         busy = true;
-        const added = await addProduct(input.value);
+        const added = await addProduct(name);
         busy = false;
-        if (added) openAddForm();   // un champ vide pour enchainer
+        if (added) openAddForm(nextFocus);   // la liste propose les suivants ; on enchaine
+    }
+
+    function renderSuggestions() {
+        const items = searchProductSuggestions(input.value, d.type, d.products);
+        active = -1;
+        list.innerHTML = items.map((name, k) =>
+            `<li role="option" id="dist-add-opt-${k}" class="add-suggestion" data-add-name="${escapeHTML(name)}" aria-selected="false">${suggestionIcon(name)}<span>${escapeHTML(name)}</span></li>`
+        ).join('');
+        list.hidden = items.length === 0;
+        input.setAttribute('aria-expanded', String(items.length > 0));
+        input.removeAttribute('aria-activedescendant');
+    }
+
+    function moveActive(step) {
+        const options = [...list.querySelectorAll('[role="option"]')];
+        if (!options.length) return;
+        active = (active + step + options.length) % options.length;
+        options.forEach((o, k) => o.setAttribute('aria-selected', String(k === active)));
+        input.setAttribute('aria-activedescendant', options[active].id);
+    }
+
+    panel.addEventListener('click', (e) => {
+        if (e.target.closest('[data-add-close]')) {
+            closeAddPanel();
+            return;
+        }
+        const chip = e.target.closest('.add-chip');
+        if (chip) {
+            add(chip.dataset.addName, 'chip');
+            return;
+        }
+        const option = e.target.closest('.add-suggestion');
+        if (option) add(option.dataset.addName, 'input');
     });
-    input.addEventListener('blur', () => {
-        // Perte du focus : un nom saisi est ajoute, un champ vide se referme
-        setTimeout(async () => {
-            if (!form.isConnected || busy) return;
-            if (input.value.trim()) await addProduct(input.value);
-            else renderFicheProducts();
-        }, 0);
+    input.addEventListener('input', () => {
+        icon.innerHTML = renderProductIcon(input.value);
+        renderSuggestions();
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); return; }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const option = list.querySelectorAll('[role="option"]')[active];
+            add(option ? option.dataset.addName : input.value, 'input');
+        }
+    });
+    panel.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (!list.hidden) {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            return;
+        }
+        closeAddPanel();
+        document.getElementById('dist-product-add')?.focus();
     });
 }
 
@@ -497,6 +571,7 @@ export function initFicheEdit() {
         });
         document.addEventListener('pointerdown', (e) => {
             if (!e.target.closest('.product-menu')) closeRowMenu();
+            if (!e.target.closest('#dist-add-panel, #toast-container')) closeAddPanel();
             if (!e.target.closest('#dist-price-picker, #dist-modal-pricerange')) closePricePicker();
         });
     }

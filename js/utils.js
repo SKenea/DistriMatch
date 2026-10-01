@@ -366,7 +366,8 @@ export function removeUserDistributors(ids) {
 export function normalizeName(name) {
     return String(name || '')
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase().replace(/\s+/g, ' ').trim();
+        .toLowerCase().replace(/\u0153/g, 'oe').replace(/\u00e6/g, 'ae')   // \u00ab \u0152ufs \u00bb = \u00ab oeufs \u00bb
+        .replace(/\s+/g, ' ').trim();
 }
 
 // Machines ajoutees localement qui doublonnent une machine de la base : meme
@@ -757,6 +758,64 @@ export function isDuplicateProductName(name, products = [], exceptId = null) {
     return !!n && products.some(p => p && p.id !== exceptId && normalizeName(p.name) === n);
 }
 
+// Produits courants par type de distributeur (EPIC-T13), du plus frequent au moins
+// frequent : les 4 premiers absents de la fiche sont proposes en pastilles, le reste
+// sert aux suggestions du champ « Autre… ». Aucun produit regional (pas de
+// territoire en dur, cf. CLAUDE.md) ; type sans liste = pas de pastilles.
+export const PRODUCT_SUGGESTIONS = {
+    agricultural: ['Pommes de terre', 'Carottes', 'Salades', 'Œufs', 'Panier de légumes', 'Tomates', 'Oignons', 'Pommes', 'Courgettes', 'Fruits de saison', 'Poireaux', 'Fraises'],
+    terroir: ['Fromage', 'Miel', 'Confiture', 'Charcuterie', 'Œufs', 'Jus de fruits', 'Pâté', 'Yaourts', 'Vin', 'Cidre'],
+    bakery: ['Baguette', 'Pain de campagne', 'Croissants', 'Pains au chocolat', 'Pain complet', 'Brioche', 'Chouquettes', 'Pain aux céréales'],
+    cheese: ['Fromage de vache', 'Fromage de chèvre', 'Fromage de brebis', 'Fromage blanc', 'Tomme', 'Yaourts', 'Beurre', 'Lait'],
+    dairy: ['Lait', 'Yaourts', 'Beurre', 'Fromage blanc', 'Crème', 'Fromage de vache', 'Fromage de chèvre', 'Fromage de brebis'],
+    pizza: ['Margherita', 'Reine', '4 fromages', 'Chorizo', 'Végétarienne', 'Calzone'],
+    meat: ['Steaks hachés', 'Saucisses', 'Poulet', 'Côtes de porc', 'Merguez', 'Rôti', 'Jambon', 'Pâté'],
+    fries: ['Frites', 'Grande frite', 'Sauce', 'Nuggets', 'Boisson'],
+    meals: ['Lasagnes', 'Hachis parmentier', 'Gratin dauphinois', 'Couscous', 'Chili con carne', 'Salade composée'],
+    ice: ['Sac de glaçons (2 kg)', 'Sac de glaçons (5 kg)', 'Glace pilée'],
+    general: ['Œufs', 'Lait', 'Pain', 'Fromage', 'Jus de fruits', 'Miel']
+};
+
+// Nom compare pour savoir si un produit est deja sur la fiche : sans casse ni
+// accents, sans la precision entre parentheses (« Pommes de terre (2 kg) » =
+// « Pommes de terre », mais pas « Pommes »).
+function productKey(name) {
+    return normalizeName(String(name || '').replace(/\([^)]*\)/g, ' '))
+        .split(' ').map(w => w.replace(/[sx]$/, '')).join(' ');   // « Oeuf » = « Œufs »
+}
+
+function notOnFiche(existing) {
+    const keys = new Set((existing || []).map(p => productKey(p && p.name)));
+    return (name) => !keys.has(productKey(name));
+}
+
+// Pastilles d'ajout : les `limit` premiers produits courants du type, absents de la fiche.
+export function suggestProducts(type, existing = [], limit = 4) {
+    return (PRODUCT_SUGGESTIONS[type] || []).filter(notOnFiche(existing)).slice(0, limit);
+}
+
+// Suggestions du champ « Autre… » : correspondance au debut d'un mot, sans casse ni
+// accents ; la liste du type d'abord, puis les autres ; sans doublon ni produit
+// deja sur la fiche.
+export function searchProductSuggestions(query, type, existing = [], limit = 5) {
+    const q = normalizeName(query);
+    if (!q) return [];
+    const absent = notOnFiche(existing);
+    const pool = [...(PRODUCT_SUGGESTIONS[type] || []), ...Object.values(PRODUCT_SUGGESTIONS).flat()];
+    const seen = new Set();
+    const out = [];
+    for (const name of pool) {
+        const key = productKey(name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!absent(name)) continue;
+        if (!(` ${normalizeName(name)}`).includes(` ${q}`)) continue;
+        out.push(name);
+        if (out.length >= limit) break;
+    }
+    return out;
+}
+
 // Ordre des cartes produit (EPIC-T10) : Dispo, puis Pas d'info, puis Pas dispo.
 const PRODUCT_TONE_RANK = { available: 0, unknown: 1, absent: 2 };
 
@@ -781,7 +840,7 @@ const PRODUCT_ICON_RULES = [
     ['potato', ['pomme de terre', 'pommes de terre', 'patate']],
     ['carrot', ['carotte']],
     ['salad', ['salade', 'laitue', 'mache', 'epinard']],
-    ['basket', ['panier', 'legume', 'soupe']],
+    ['basket', ['panier', 'legume', 'soupe', 'tomate', 'oignon', 'courgette', 'poireau', 'haricot', 'chou']],
     ['egg', ['oeuf', 'œuf']],
     ['milk', ['lait', 'yaourt', 'yogourt', 'creme', 'beurre']],
     ['pizza', ['pizza']],

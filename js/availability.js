@@ -157,7 +157,7 @@ export function renderFicheStatus() {
     if (list) {
         ranked.sort((a, b) => a.rank - b.rank || a.index - b.index)
             .forEach(({ row }) => list.appendChild(row));
-        const addCard = list.querySelector('#dist-product-add, .product-add-form');
+        const addCard = list.querySelector('#dist-product-add, #dist-add-panel');
         if (addCard) list.appendChild(addCard);
     }
 

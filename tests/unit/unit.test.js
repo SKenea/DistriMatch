@@ -21,6 +21,7 @@ import {
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     productToneRank, describeMachineNotice, productIconKey,
     describeSignalQuestion, cleanProductName, isDuplicateProductName,
+    suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
 
@@ -365,6 +366,7 @@ describe('findLocalDuplicates / normalizeName (doublons locaux)', () => {
         assert.equal(normalizeName('  Gaztainbidéa   '), 'gaztainbidea');
         assert.equal(normalizeName('Légumes  Bio CAMBO'), 'legumes bio cambo');
         assert.equal(normalizeName(null), '');
+        assert.equal(normalizeName('Œufs'), 'oeufs');   // EPIC-T13
     });
 
     it('copie locale du meme nom a moins de 100 m, id different : doublon', () => {
@@ -471,6 +473,42 @@ describe('resolveProductStatus (dispo ou pas, par aliment)', () => {
     it('EPIC-T12 : une seule notion de dispo, le signal (products.available n\'est plus lu)', () => {
         assert.deepEqual(resolveProductStatus({ available: false }, row('available', 5), null, NOW), { label: 'Dispo', tone: 'available', fresh: true, detail: 'vu il y a 5 min' });
         assert.equal(resolveProductStatus({ available: false }, null, null, NOW).label, "Pas d'info");
+    });
+});
+
+// EPIC-T13 : ajouter par liste, selon le type de distributeur
+describe('ajouter par liste : pastilles et suggestions (EPIC-T13)', () => {
+    it('pastilles : les 4 premiers produits du type absents de la fiche ; type sans liste = rien', () => {
+        assert.deepEqual(suggestProducts('agricultural', []), ['Pommes de terre', 'Carottes', 'Salades', 'Œufs']);
+        const fiche = [{ name: 'Pommes de terre (2 kg)' }, { name: 'carottes' }, { name: 'Salades (lot de 2)' }, { name: 'Panier de légumes' }];
+        assert.deepEqual(suggestProducts('agricultural', fiche), ['Œufs', 'Tomates', 'Oignons', 'Pommes']);
+        assert.deepEqual(suggestProducts('other', fiche), []);
+        assert.deepEqual(suggestProducts(undefined, null), []);
+        assert.equal(suggestProducts('bakery', [], 2).length, 2);
+        // singulier / pluriel et Œ : « Oeuf » sur la fiche = « Œufs » deja la
+        assert.ok(!suggestProducts('general', [{ name: 'Oeuf' }]).includes('Œufs'));
+        assert.ok(suggestProducts('agricultural', [{ name: 'Pomme' }], 12).includes('Pommes de terre'));
+    });
+
+    it('suggestions : debut de mot, sans casse ni accents, la liste du type d\'abord', () => {
+        assert.deepEqual(searchProductSuggestions('fro', 'dairy', []).slice(0, 2), ['Fromage blanc', 'Fromage de vache']);
+        assert.equal(searchProductSuggestions('fro', 'terroir', [])[0], 'Fromage');
+        assert.deepEqual(searchProductSuggestions('oeuf', 'agricultural', []), ['Œufs']);
+        assert.deepEqual(searchProductSuggestions('CHEVRE', 'meat', []), ['Fromage de chèvre']);
+        assert.deepEqual(searchProductSuggestions('', 'meat', []), []);
+        assert.ok(searchProductSuggestions('o', 'agricultural', []).length <= 5);
+    });
+
+    it('suggestions : jamais un produit deja sur la fiche, jamais deux fois le meme', () => {
+        const fiche = [{ name: 'Œufs' }];
+        assert.ok(!searchProductSuggestions('oe', 'general', fiche).includes('Œufs'));
+        const all = searchProductSuggestions('fr', 'agricultural', [], 50);
+        assert.equal(new Set(all).size, all.length);
+    });
+
+    it('aucun produit regional ni le mot « machine » dans les listes', () => {
+        const names = Object.values(PRODUCT_SUGGESTIONS).flat().join(' | ');
+        assert.ok(!/machine|basque|axoa|piperade|ttoro|gâteau basque/i.test(names));
     });
 });
 
