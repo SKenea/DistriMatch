@@ -24,16 +24,16 @@ Retour : toucher le nom pour le modifier ne convient pas. Decision : un seul men
 l'etiquette (fleche) : Dispo / Pas dispo (etat actuel coche ; « Actuellement : Pas
 d'info » en tete si besoin), separateur, Renommer, Retirer (membre connecte).
 
-- [ ] T16-US1 En tant que membre connecte, je signale et je modifie depuis le menu de l'etiquette
+- [x] T16-US1 En tant que membre connecte, je signale et je modifie depuis le menu de l'etiquette
   - Acceptance : toucher l'etiquette ouvre un menu deroulant (role menu) : Dispo, Pas
     dispo (etat actuel coche), separateur, Renommer, Retirer (rouge) ; un choix d'etat
     envoie le signal ; « Pas d'info » n'est pas un choix (en tete « Actuellement : Pas
     d'info » si c'est l'etat) ; Echap / toucher ailleurs ferme.
-- [ ] T16-US2 En tant que membre connecte, je renomme et je retire sans piege
+- [x] T16-US2 En tant que membre connecte, je renomme et je retire sans piege
   - Acceptance : Renommer -> le nom devient un champ (suggestions des listes, Entree =
     enregistre, Echap = annule, vide = annule) ; Retirer -> toast « Annuler » 7 s (DELETE
     differe) ; plus de nom touchable, plus de retrait par nom vide, plus d'appui long.
-- [ ] T16-TS Tests et doc a jour, captures avant fusion.
+- [x] T16-TS Tests et doc a jour, captures avant fusion.
 
 ### EPIC-T15 Les vrais distributeurs d'OpenStreetMap, Cote Basque (Stephane, 2026-10-01)
 Cadrage de US-5 tranche par Stephane : zone Cote Basque, fiches de demo gardees pour
