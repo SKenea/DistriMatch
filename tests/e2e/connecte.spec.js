@@ -48,7 +48,7 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         await openAsTestAccount(page, context);
         await expect(page.locator('#dist-status-update')).toBeVisible({ timeout: 15000 });   // « Mettre à jour » (EPIC-T10)
         await expect(page.locator('#dist-login-invite')).toBeHidden();
-        await expect(page.locator('#dist-products-list .product-name-btn').first()).toBeVisible();   // modifier au toucher (EPIC-T12)
+        await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])').first()).toBeVisible();   // menu de l'etiquette (EPIC-T16)
         await expect(page.locator('#dist-product-add')).toBeVisible();
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();   // EPIC-T14 : photos inactives en V1
     });

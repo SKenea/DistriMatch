@@ -4,11 +4,12 @@
  * Maquette retenue : docs/maquettes/2026-10-01-edition/1-toucher.html (benchmark
  * NN/g, WCAG 2.5.1 / 2.5.7, Rappels, Keep, Gmail, Waze). Plus de bouton
  * « Modifier » ni de mode edition : un membre connecte agit sur les produits.
- *   - renommer : toucher le nom -> champ en place (Entree / perte du focus =
- *     enregistre, Echap = annule) ;
- *   - retirer : nom vide valide, ou appui long / clic droit -> menu « Renommer /
- *     Retirer » ; toast « Annuler » 7 s, la suppression en base n'a lieu qu'a
- *     la fin du delai ;
+ *   - menu de l'etiquette (EPIC-T16) : Dispo / Pas dispo (availability.js),
+ *     puis Renommer et Retirer ; le nom n'est jamais un champ par lui-meme ;
+ *   - renommer : le nom devient un champ avec les suggestions des listes (Entree =
+ *     enregistre, Echap ou vide = annule) ;
+ *   - retirer : toast « Annuler » 7 s, la suppression en base n'a lieu qu'a la fin
+ *     du delai ;
  *   - ajouter (EPIC-T13) : carte « + Ajouter un produit » -> panneau sur place :
  *     4 produits courants du type en pastilles (un toucher ajoute), puis un champ
  *     « Autre… » avec suggestions ; le panneau reste ouvert pour enchainer ;
@@ -104,36 +105,55 @@ function productOf(row) {
 }
 
 function startRename(row) {
-    const { product } = productOf(row);
-    const nameBtn = row.querySelector('.product-name-btn');
-    if (!product || !nameBtn) return;
-    closeRowMenu();
+    const { d, product } = productOf(row);
+    const nameEl = row.querySelector('.product-name-clean');
+    if (!product || !nameEl) return;
     collapseProductChoices();
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'product-name-input';
+    const wrap = document.createElement('span');
+    wrap.className = 'product-rename';
+    wrap.innerHTML = `<input type="text" class="product-name-input" maxlength="60" enterkeyhint="done" autocomplete="off"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-label="Nouveau nom de ${escapeHTML(product.name)}">
+        <ul class="add-suggestions rename-suggestions" role="listbox" aria-label="Suggestions" hidden></ul>
+        <span class="product-name-help">Entrée pour valider · Échap pour annuler</span>`;
+    nameEl.replaceWith(wrap);
+    const input = wrap.querySelector('input');
+    const list = wrap.querySelector('.rename-suggestions');
     input.value = product.name;
-    input.maxLength = 60;
-    input.enterKeyHint = 'done';
-    input.setAttribute('aria-label', `Nom du produit (vide = retirer ${product.name})`);
-    const help = document.createElement('span');
-    help.className = 'product-name-help';
-    help.textContent = 'Entrée pour valider · vide pour retirer';
-    nameBtn.replaceWith(input);
-    input.after(help);
     input.focus();
     input.select();
 
     let done = false;
-    function finish(save) {
+    let active = -1;
+    function finish(save, value = input.value) {
         if (done) return;
         done = true;
-        if (save) commitRename(row.dataset.productId, input.value);
-        else renderFicheProducts();
+        if (save && cleanProductName(value)) commitRename(row.dataset.productId, value);
+        else renderFicheProducts();   // vide ou Echap : on annule (EPIC-T16 : plus de retrait par nom vide)
     }
-    input.addEventListener('input', () => help.classList.toggle('is-remove', !input.value.trim()));
+    function renderSuggestions() {
+        const others = (d.products || []).filter(x => x !== product);
+        const items = input.value.trim() && input.value !== product.name ? searchProductSuggestions(input.value, d.type, others) : [];
+        active = -1;
+        list.innerHTML = items.map((n, k) => `<li role="option" id="rename-opt-${k}" class="add-suggestion" data-name="${escapeHTML(n)}" aria-selected="false">${escapeHTML(n)}</li>`).join('');
+        list.hidden = items.length === 0;
+        input.setAttribute('aria-expanded', String(items.length > 0));
+    }
+    input.addEventListener('input', renderSuggestions);
+    list.addEventListener('pointerdown', (e) => {
+        const option = e.target.closest('[data-name]');
+        if (!option) return;
+        e.preventDefault();   // garder le focus : pas de « blur » avant le choix
+        finish(true, option.dataset.name);
+    });
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        const options = [...list.querySelectorAll('[role="option"]')];
+        if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && options.length) {
+            e.preventDefault();
+            active = (active + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+            options.forEach((o, k) => o.setAttribute('aria-selected', String(k === active)));
+            input.setAttribute('aria-activedescendant', options[active].id);
+        }
+        if (e.key === 'Enter') { e.preventDefault(); finish(true, options[active]?.dataset.name || input.value); }
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
     });
     input.addEventListener('blur', () => finish(true));
@@ -144,11 +164,7 @@ async function commitRename(productId, raw) {
     const product = (d?.products || []).find(p => String(p.id) === String(productId));
     if (!product) return;
     const name = cleanProductName(raw);
-    if (!name) {
-        removeProduct(productId);
-        return;
-    }
-    if (name === product.name) {
+    if (!name || name === product.name) {
         renderFicheProducts();
         return;
     }
@@ -245,7 +261,6 @@ function openAddForm(focus = 'input') {
     const d = AppState.currentDistributor;
     const card = document.getElementById('dist-product-add');
     if (!d || !card) return;
-    closeRowMenu();
     collapseProductChoices();
     const chips = suggestProducts(d.type, d.products);
     const typeLabel = AppState.typeConfig?.[d.type]?.label || '';
@@ -381,97 +396,6 @@ async function addProduct(raw) {
 }
 
 // ============================================
-// APPUI LONG / CLIC DROIT : menu Renommer / Retirer (raccourci, jamais la seule voie)
-// ============================================
-
-function closeRowMenu() {
-    document.querySelectorAll('#dist-products-list .product-menu').forEach(m => m.remove());
-}
-
-function openRowMenu(row) {
-    closeRowMenu();
-    collapseProductChoices();
-    const { product } = productOf(row);
-    if (!product) return;
-    const menu = document.createElement('div');
-    menu.className = 'product-menu';
-    menu.setAttribute('role', 'menu');
-    menu.setAttribute('aria-label', `Actions pour ${product.name}`);
-    menu.innerHTML = `
-        <button type="button" role="menuitem" data-menu="rename">Renommer</button>
-        <button type="button" role="menuitem" class="is-danger" data-menu="remove">Retirer</button>`;
-    row.appendChild(menu);
-    menu.querySelector('button')?.focus();
-    menu.addEventListener('click', (e) => {
-        const item = e.target.closest('[data-menu]');
-        if (!item) return;
-        closeRowMenu();
-        if (item.dataset.menu === 'rename') startRename(row);
-        else removeProduct(row.dataset.productId);
-    });
-    menu.addEventListener('keydown', (e) => {
-        const items = [...menu.querySelectorAll('[role="menuitem"]')];
-        const i = items.indexOf(document.activeElement);
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
-        }
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
-            closeRowMenu();
-            row.querySelector('.product-name-btn')?.focus();
-        }
-    });
-}
-
-function wireLongPress(list) {
-    let timer = null;
-    let start = null;
-    let pressedRow = null;
-    function cancel() {
-        clearTimeout(timer);
-        timer = null;
-        pressedRow?.classList.remove('is-pressing');
-        pressedRow = null;
-    }
-    list.addEventListener('pointerdown', (e) => {
-        const row = e.target.closest('.product-row[data-editable]');
-        if (!row || e.button > 0 || e.target.closest('input, .product-menu, .product-choices')) return;
-        start = { x: e.clientX, y: e.clientY };
-        pressedRow = row;
-        timer = setTimeout(() => {
-            row.classList.remove('is-pressing');
-            row.dataset.longPressed = '1';   // le « click » qui suit ne doit rien faire
-            try { navigator.vibrate?.(10); } catch (err) { /* pas de vibreur */ }
-            openRowMenu(row);
-            timer = null;
-        }, LONG_PRESS_MS);
-        row.classList.add('is-pressing');
-    });
-    list.addEventListener('pointermove', (e) => {
-        if (timer && start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_TOLERANCE_PX) cancel();
-    });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => list.addEventListener(t, () => { if (timer) cancel(); }));
-    list.addEventListener('contextmenu', (e) => {
-        const row = e.target.closest('.product-row[data-editable]');
-        if (!row || e.target.closest('input')) return;
-        e.preventDefault();
-        cancel();
-        openRowMenu(row);
-    });
-    // Clavier : Maj+F10 ou la touche Menu sur un element de la carte
-    list.addEventListener('keydown', (e) => {
-        const row = e.target.closest('.product-row[data-editable]');
-        if (!row || e.target.closest('input')) return;
-        if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
-            e.preventDefault();
-            openRowMenu(row);
-        }
-    });
-}
-
-// ============================================
 // PRIX : toucher « €€ » -> € / €€ / €€€ sur place
 // ============================================
 
@@ -551,26 +475,32 @@ export function initFicheEdit() {
     const list = document.getElementById('dist-products-list');
     if (list && !list.dataset.editWired) {
         list.dataset.editWired = '1';
-        wireLongPress(list);
         list.addEventListener('click', (e) => {
             const row = e.target.closest('.product-row');
-            if (row?.dataset.longPressed) {
-                delete row.dataset.longPressed;
-                e.preventDefault();
-                return;
-            }
             if (e.target.closest('[data-guest]')) {
                 inviteGuest();
                 return;
             }
-            if (e.target.closest('.product-name-btn')) {
-                startRename(row);
+            // Menu de l'etiquette (EPIC-T16) : Renommer / Retirer
+            const action = e.target.closest('.product-menu-action');
+            if (action && row) {
+                collapseProductChoices();
+                if (action.dataset.action === 'rename') startRename(row);
+                else removeProduct(row.dataset.productId);
                 return;
             }
             if (e.target.closest('#dist-product-add')) openAddForm();
         });
+        // Clavier dans le menu : fleches haut / bas
+        list.addEventListener('keydown', (e) => {
+            const menu = e.target.closest('.product-choices');
+            if (!menu || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+            const items = [...menu.querySelectorAll('button')];
+            const k = items.indexOf(document.activeElement);
+            e.preventDefault();
+            items[(k + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+        });
         document.addEventListener('pointerdown', (e) => {
-            if (!e.target.closest('.product-menu')) closeRowMenu();
             if (!e.target.closest('#dist-add-panel, #toast-container')) closeAddPanel();
             if (!e.target.closest('#dist-price-picker, #dist-modal-pricerange')) closePricePicker();
         });

@@ -20,7 +20,7 @@ import {
     timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     productToneRank, describeMachineNotice, productIconKey,
-    describeSignalQuestion, cleanProductName, isDuplicateProductName,
+    describeMenuHeader, cleanProductName, isDuplicateProductName,
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
     mapDistributorRow, diffFavoriteSignals
 } from '../../js/utils.js';
@@ -514,11 +514,11 @@ describe('ajouter par liste : pastilles et suggestions (EPIC-T13)', () => {
 
 // EPIC-T12 : modifier sans bouton
 describe('edition au toucher : question, nom, doublon (EPIC-T12)', () => {
-    it('question adaptee a ce qui est affiche (facon « Toujours là ? » de Waze)', () => {
-        assert.equal(describeSignalQuestion('available'), 'Toujours dispo ?');
-        assert.equal(describeSignalQuestion('absent'), 'Toujours pas dispo ?');
-        assert.equal(describeSignalQuestion('unknown'), 'Là, maintenant ?');
-        assert.equal(describeSignalQuestion(undefined), 'Là, maintenant ?');
+    it('en-tete du menu (EPIC-T16) : « Actuellement : Pas d\'info » seulement sans etat', () => {
+        assert.equal(describeMenuHeader('available'), '');
+        assert.equal(describeMenuHeader('absent'), '');
+        assert.equal(describeMenuHeader('unknown'), "Actuellement : Pas d'info");
+        assert.equal(describeMenuHeader(undefined), "Actuellement : Pas d'info");
     });
 
     it('nom saisi : espaces reduits, 60 caracteres au plus, vide = vide', () => {

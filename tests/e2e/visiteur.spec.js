@@ -62,7 +62,7 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
         await expect(page.locator('#dist-action-edit')).toHaveCount(0);
-        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
+        await expect(page.locator('#dist-products-list .product-choices')).toHaveCount(0);
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         expect(await page.evaluate(() => typeof window.__testLogin)).toBe('undefined');      // pas d'acces de test en ligne
     });

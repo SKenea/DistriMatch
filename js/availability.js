@@ -17,7 +17,7 @@ import { AppState, supabaseClient } from './state.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
-    describeFicheHero, describeMachineNotice, productToneRank, describeSignalQuestion
+    describeFicheHero, describeMachineNotice, productToneRank, describeMenuHeader
 } from './utils.js';
 import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
@@ -136,19 +136,22 @@ export function renderFicheStatus() {
         }
         const seen = row.querySelector('.product-seen');
         if (seen) seen.textContent = status.detail;
-        // Question adaptee a ce qui est affiche (« Toujours dispo ? »...) et
-        // reponse actuelle marquee ; libelle accessible de l'etiquette a jour
-        const question = row.querySelector('.product-choices-q');
-        if (question) question.textContent = describeSignalQuestion(status.tone);
+        // Menu de l'etiquette (EPIC-T16) : etat actuel coche ; « Actuellement : Pas
+        // d'info » en tete quand c'est l'etat ; libelle accessible de l'etiquette a jour
+        const header = row.querySelector('.product-choices-q');
+        if (header) {
+            header.textContent = describeMenuHeader(status.tone);
+            header.hidden = !header.textContent;
+        }
         row.querySelectorAll('.product-choice').forEach(c => {
             const current = (c.dataset.state === 'available' && status.tone === 'available')
                 || (c.dataset.state === 'absent' && status.tone === 'absent');
             c.classList.toggle('is-current', current);
-            c.setAttribute('aria-pressed', String(current));
+            c.setAttribute('aria-checked', String(current));
         });
         const statusBtn = row.querySelector('.product-status-btn:not([data-guest])');
         const name = row.querySelector('.product-name-clean')?.textContent || '';
-        if (statusBtn) statusBtn.setAttribute('aria-label', `${name} : ${status.label}. Signaler`);
+        if (statusBtn) statusBtn.setAttribute('aria-label', `${name} : ${status.label}. Menu`);
         syncChoices(row);
         ranked.push({ row, rank: productToneRank(status.tone), index: Number(row.dataset.index ?? index) });
     });
@@ -207,7 +210,7 @@ function toggleProductRow(btn) {
     if (open) row.dataset.open = '1';
     else delete row.dataset.open;
     syncChoices(row);
-    if (open) row.querySelector('.product-choice')?.focus();
+    if (open) row.querySelector('.product-choice, .product-menu-action')?.focus();
 }
 
 // « Mettre à jour » (connecte) deplie / replie les trois etats du distributeur
