@@ -560,7 +560,7 @@ test.describe('28. Favori et menu avatar', () => {
 
     test('menu avatar : chaque item fait au moins 44 px de haut', async ({ page }) => {
         await page.click('#profile-avatar-btn');
-        const heights = await page.$$eval('#profile-menu .profile-menu-item', els => els.map(e => e.getBoundingClientRect().height));
+        const heights = await page.$$eval('#profile-menu .profile-menu-item:not([hidden])', els => els.map(e => e.getBoundingClientRect().height));
         expect(heights.length).toBeGreaterThan(0);
         for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
     });

@@ -107,7 +107,9 @@ export function renderFicheStatus() {
     if (detail) {
         // Etat connu : « il y a 12 min » ; sinon « Vérifié il y a X » /
         // « Pas encore vérifié » (regle de fraicheur de la fiche). Le « · » est en CSS.
-        detail.textContent = machine.age;
+        // EPIC-T18 : l'etat vient d'un signal de l'exploitant -> on le dit
+        const byOwner = loaded.status?.source === 'owner' && loaded.status.state === machine.state && machine.state !== 'unknown';
+        detail.textContent = byOwner ? `Info de l'exploitant · ${machine.age}` : machine.age;
         const tone = machine.state === 'unknown' ? getFreshness(distributor.lastVerified).state : machine.tone;
         detail.className = `dist-modal-verified is-${tone}${machine.fresh ? ' is-fresh' : ''}`;
     }
@@ -141,7 +143,13 @@ export function renderFicheStatus() {
             pill.className = `product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}`;
         }
         const seen = row.querySelector('.product-seen');
-        if (seen) seen.textContent = status.detail;
+        if (seen) {
+            // EPIC-T18 : signal de l'exploitant affiche tel quel -> « Info de l'exploitant · il y a 1 h »
+            const signal = loaded.products[row.dataset.productId];
+            const byOwner = signal?.source === 'owner' && /^vu /.test(status.detail);
+            seen.textContent = byOwner ? `Info de l'exploitant · ${status.detail.replace(/^vu /, '')}` : status.detail;
+            seen.classList.toggle('is-owner', byOwner);
+        }
         // Menu de l'etiquette (EPIC-T16) : etat actuel coche ; « Actuellement : Pas
         // d'info » en tete quand c'est l'etat ; libelle accessible de l'etiquette a jour
         const header = row.querySelector('.product-choices-q');

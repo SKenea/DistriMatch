@@ -15,6 +15,7 @@ import { checkNearbyForFiche, loadAvailabilityForDistributor, initFicheSignals, 
 import { logEvent, rememberEntrySource } from './events.js';
 import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
 import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
+import { initOperators, renderOperatorSection } from './operators.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -223,6 +224,7 @@ export function initDistModal() {
     initFicheSignals();
     initFicheEdit();   // EPIC-T12 : modifier sans bouton (renommer, retirer, ajouter, prix)
     initReviews();
+    initOperators();   // EPIC-T18 : « C'est ton distributeur ? », tag Exploitant
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
     // Distributeur seulement local : « Publier ce distributeur » (EPIC-T9)
@@ -406,6 +408,7 @@ export function openDistributorModal(id) {
         : (city || 'Adresse inconnue');
     document.getElementById('dist-apropos-distance').textContent = distance || 'Distance non disponible';
     renderFicheHours(distributor);
+    renderOperatorSection(distributor);
     // « Ajouté par la communauté » ne s'affiche pas pour une fiche fictive : la demo prime
     const addedRow = document.getElementById('dist-apropos-added-row');
     if (addedRow) addedRow.style.display = (distributor.isUserAdded && !distributor.isDemo) ? 'flex' : 'none';

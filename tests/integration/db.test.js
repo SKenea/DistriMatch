@@ -322,6 +322,94 @@ describe('base : avis (016)', { skip: SKIP }, () => {
     });
 });
 
+// EPIC-T18 (020) : exploitants, demandes, page admin, priorite des signaux
+describe('base : exploitants (020)', { skip: SKIP }, () => {
+    const REQUEST = `insert into operator_requests (distributor_id, company, contact) values ('${DEMO}', 'Societe itest', '06 00 00 00 00')`;
+    // v_uid devient admin dans la transaction (annulee), avant de passer en role connecte
+    const MAKE_ADMIN = `insert into app_admins (user_id) values (${USER}) on conflict do nothing;`;
+
+    it('un membre demande le statut : auteur force, une seule demande en attente par fiche', async () => {
+        const p = await probe(`${AS_USER} ${REQUEST}; reset role; select (user_id = ${USER})::text || '/' || status into r from operator_requests where distributor_id = '${DEMO}' and user_id = ${USER}`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true/pending');
+        const twice = await probe(`${AS_USER} ${REQUEST}; ${REQUEST}`);
+        assert.equal(twice.code, '23505');
+    });
+
+    it('un visiteur ne demande rien ; un compte bloque non plus', async () => {
+        const anon = await probe(`${AS_ANON} ${REQUEST}`);
+        assert.equal(anon.code, '42501');
+        const banned = await probe(`insert into signal_bans (user_id, reason) values (${USER}, 'itest'); ${AS_USER} ${REQUEST}`);
+        assert.equal(banned.code, '42501');
+    });
+
+    it('un membre non admin n’accede a rien d’admin', async () => {
+        for (const call of ['admin_operator_requests()', 'admin_operators()', "admin_decide_operator_request(1, true)", `admin_revoke_operator('${DEMO}', ${USER})`]) {
+            const p = await probe(`${AS_USER} perform ${call}`);
+            assert.equal(p.code, '42501', call);
+        }
+        const p = await probe(`${AS_USER} r := is_admin()::text`);
+        assert.equal(p.result, 'false');
+    });
+
+    it('admin : liste, valide -> exploitant ; ses signaux deviennent « owner » ; retrait possible', async () => {
+        const p = await probe(`${MAKE_ADMIN} ${AS_USER} ${REQUEST};
+            select id into v_req from admin_operator_requests() where distributor_id = '${DEMO}' limit 1;
+            perform admin_decide_operator_request(v_req, true);
+            r := json_build_object(
+                'admin', is_admin(),
+                'mine', (select count(*) from my_operated_distributors() m where m = '${DEMO}'),
+                'signal', ${signal('working')},
+                'listed', (select count(*) from admin_operators() where distributor_id = '${DEMO}')
+            )::text;
+            perform admin_revoke_operator('${DEMO}', ${USER});
+            r := r || '|' || (select count(*) from my_operated_distributors())::text`, 'v_req bigint;');
+        assert.ok(p.reachedEnd, p.message);
+        const [json, after] = p.result.split('|');
+        const res = JSON.parse(json);
+        assert.equal(res.admin, true);
+        assert.equal(res.mine, 1);
+        assert.equal(res.signal.inserted, 1);
+        assert.equal(res.listed, 1);
+        assert.equal(after, '0');
+        const src = await probe(`${MAKE_ADMIN}
+            insert into distributor_operators (distributor_id, user_id) values ('${DEMO}', ${USER});
+            ${AS_USER} perform ${signal('broken')};
+            select source || '/' || (weight = 1)::text into r from availability_signals where distributor_id = '${DEMO}' and user_id = ${USER} order by created_at desc limit 1`);
+        assert.equal(src.result, 'owner/true');
+    });
+
+    it('priorite : exploitant contredit a moins de 30 min l’emporte ; au-dela, le plus recent', async () => {
+        const at = (min, state, source) => `insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, user_id, created_at)
+            values ('${DEMO}', v_product, '${state}', '${source}', 0.8, '${DEVICE}', null, now() - interval '${min} minutes')`;
+        const read = `select state || '/' || source into r from product_availability where product_id = v_product`;
+        const pre = `select id into v_product from products where distributor_id = '${DEMO}' order by id limit 1; delete from availability_signals where product_id = v_product;`;
+        const near = await probe(`${pre} ${at(20, 'available', 'owner')}; ${at(5, 'absent', 'user')}; ${read}`, 'v_product bigint;');
+        assert.equal(near.result, 'available/owner');
+        const far = await probe(`${pre} ${at(60, 'available', 'owner')}; ${at(5, 'absent', 'user')}; ${read}`, 'v_product bigint;');
+        assert.equal(far.result, 'absent/user');
+        const same = await probe(`${pre} ${at(20, 'available', 'owner')}; ${at(5, 'available', 'user')}; ${read}`, 'v_product bigint;');
+        assert.equal(same.result, 'available/user');
+        const machine = await probe(`delete from availability_signals where distributor_id = '${DEMO}' and product_id is null;
+            insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, created_at) values
+              ('${DEMO}', null, 'working', 'owner', 1, '${DEVICE}', now() - interval '10 minutes'),
+              ('${DEMO}', null, 'empty', 'user', 0.8, '${DEVICE}', now() - interval '2 minutes');
+            select state || '/' || source into r from distributor_status where distributor_id = '${DEMO}'`);
+        assert.equal(machine.result, 'working/owner');
+    });
+
+    it('lecture API : le badge (distributor_id) oui, l’identite de l’exploitant non', async () => {
+        const ok = await probe(`${AS_ANON} select count(*)::text into r from distributor_operators`);
+        assert.ok(ok.reachedEnd, ok.message);
+        const ko = await probe(`${AS_ANON} perform user_id from distributor_operators`);
+        assert.equal(ko.code, '42501');
+        const reqs = await probe(`${AS_ANON} perform id from operator_requests`);
+        assert.equal(reqs.code, '42501');
+        const admins = await probe(`${AS_USER} perform user_id from app_admins`);
+        assert.equal(admins.code, '42501');
+    });
+});
+
 describe('base : lectures anonymes', { skip: SKIP }, () => {
     it('un visiteur lit les fiches, les produits et les vues de signaux', async () => {
         const p = await probe(`${AS_ANON}
@@ -345,8 +433,9 @@ describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
             (select count(*) from availability_signals where device_hash like 'itest-%') as signaux,
             (select count(*) from distributors where id like 'itest-%') as fiches,
             (select count(*) from signal_bans where reason = 'itest') as bans,
-            (select count(*) from reviews where body = 'itest avis') as avis`);
-        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0 });
+            (select count(*) from reviews where body = 'itest avis') as avis,
+            (select count(*) from operator_requests where company = 'Societe itest') as demandes`);
+        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0, demandes: 0 });
     });
 });
 

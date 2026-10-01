@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=47">
+    <link rel="stylesheet" href="css/overlays.css?v=48">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -126,6 +126,7 @@
                 <div class="profile-menu" id="profile-menu" role="menu" hidden>
                     <button class="profile-menu-item" role="menuitem" data-action="profile">Mon profil</button>
                     <button class="profile-menu-item" role="menuitem" data-action="account">Compte</button>
+                    <button class="profile-menu-item" role="menuitem" data-action="admin" id="menu-admin" hidden>Admin</button>
                     <div class="profile-menu-sep"></div>
                     <button class="profile-menu-item profile-menu-auth" role="menuitem" id="menu-auth-action">Connexion</button>
                 </div>
@@ -300,6 +301,7 @@
                     <div class="dist-modal-name-wrap">
                         <h2 id="dist-modal-name">Nom du distributeur</h2>
                         <span class="demo-tag" id="dist-modal-demo" hidden>Démo</span>
+                        <span class="operator-tag" id="dist-modal-operator" hidden>Exploitant vérifié</span>
                     </div>
                 </div>
                 <!-- EPIC-T10 : l'etat du distributeur en une petite ligne (mini-feu + mot + age),
@@ -448,6 +450,8 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>Ajouté par la communauté</span>
                     </div>
+                    <!-- EPIC-T18 : « C'est ton distributeur ? » -> demande de statut d'exploitant (js/operators.js) -->
+                    <div class="dist-operator" id="dist-operator" hidden></div>
                     <!-- Fiche importee d'OpenStreetMap (EPIC-T15) : attribution ODbL obligatoire -->
                     <div class="dist-apropos-row" id="dist-apropos-osm-row" style="display:none">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>
@@ -666,6 +670,27 @@
     <!-- ============================================
          PAGE TABLEAU DE BORD DU PILOTE (vues kpi_*, js/stats.js)
          ============================================ -->
+    <!-- EPIC-T18 : page admin (comptes app_admins seulement ; la base verifie les droits) -->
+    <div id="admin-view" class="view-page view-hidden" inert>
+        <div class="page-header-inner">
+            <button class="back-btn" id="back-from-admin" aria-label="Retour">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Admin</h2>
+        </div>
+        <div class="account-page admin-page">
+            <p class="admin-status" id="admin-status" role="status" hidden></p>
+            <div id="admin-content" hidden>
+                <h3 class="account-section-label">Demandes d’exploitant <span id="admin-requests-count"></span></h3>
+                <div class="admin-list" id="admin-requests"></div>
+                <h3 class="account-section-label">Exploitants</h3>
+                <div class="account-card admin-list" id="admin-operators"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="stats-view" class="view-page view-hidden" inert>
         <div class="page-header-inner">
             <button class="back-btn" id="back-from-stats" aria-label="Retour">
@@ -992,28 +1017,30 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=68",
-            "./js/state.js": "./js/state.js?v=68",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=68",
-            "./js/config.js": "./js/config.js?v=68",
-            "./js/utils.js": "./js/utils.js?v=68",
-            "./js/auth.js": "./js/auth.js?v=68",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=68",
-            "./js/map.js": "./js/map.js?v=68",
-            "./js/navigation.js": "./js/navigation.js?v=68",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=68",
-            "./js/distributor.js": "./js/distributor.js?v=68",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=68",
-            "./js/chat.js": "./js/chat.js?v=68",
-            "./js/activity.js": "./js/activity.js?v=68",
-            "./js/notifications.js": "./js/notifications.js?v=68",
-            "./js/availability.js": "./js/availability.js?v=68",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=68",
-            "./js/events.js": "./js/events.js?v=68",
-            "./js/stats.js": "./js/stats.js?v=68",
-            "./js/history.js": "./js/history.js?v=68",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=68",
-            "./js/reviews.js": "./js/reviews.js?v=68"
+            "./js/app.js": "./js/app.js?v=69",
+            "./js/state.js": "./js/state.js?v=69",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=69",
+            "./js/config.js": "./js/config.js?v=69",
+            "./js/utils.js": "./js/utils.js?v=69",
+            "./js/auth.js": "./js/auth.js?v=69",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=69",
+            "./js/map.js": "./js/map.js?v=69",
+            "./js/navigation.js": "./js/navigation.js?v=69",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=69",
+            "./js/distributor.js": "./js/distributor.js?v=69",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=69",
+            "./js/chat.js": "./js/chat.js?v=69",
+            "./js/activity.js": "./js/activity.js?v=69",
+            "./js/notifications.js": "./js/notifications.js?v=69",
+            "./js/availability.js": "./js/availability.js?v=69",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=69",
+            "./js/events.js": "./js/events.js?v=69",
+            "./js/stats.js": "./js/stats.js?v=69",
+            "./js/history.js": "./js/history.js?v=69",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=69",
+            "./js/reviews.js": "./js/reviews.js?v=69",
+            "./js/operators.js": "./js/operators.js?v=69",
+            "./js/admin.js": "./js/admin.js?v=69"
         }
     }
     </script>

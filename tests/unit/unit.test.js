@@ -23,7 +23,8 @@ import {
     describeMenuHeader, cleanProductName, isDuplicateProductName,
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
     mapDistributorRow, diffFavoriteSignals,
-    describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge
+    describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
+    validateOperatorRequest, describeOperatorRequestError
 } from '../../js/utils.js';
 
 import {
@@ -1578,5 +1579,30 @@ describe('coup de pouce sur place (EPIC-T17)', () => {
         assert.equal(d.tz, 'Europe/Paris');
         assert.equal(d.openingHours, '24/7');
         assert.equal(mapDistributorRow({ id: 'y' }).openingHours, null);
+    });
+});
+
+// ============================================
+// EPIC-T18 : demande de statut d'exploitant
+// ============================================
+describe('demande de statut d\'exploitant (EPIC-T18)', () => {
+    it('champs : memes bornes que la base', () => {
+        assert.equal(validateOperatorRequest({ company: 'Ferme Etxe', contact: '06 12 34 56 78' }), '');
+        assert.match(validateOperatorRequest({ company: ' ', contact: '06 12 34 56 78' }), /société/);
+        assert.match(validateOperatorRequest({ company: 'Ferme', contact: '123' }), /téléphone ou un SIRET/);
+        assert.match(validateOperatorRequest({ company: 'x'.repeat(101), contact: '06 12 34 56 78' }), /100 caractères/);
+        assert.match(validateOperatorRequest(), /société/);
+    });
+
+    it('erreurs de la base dites en clair', () => {
+        assert.match(describeOperatorRequestError({ code: '28000' }), /reconnecte-toi/);
+        assert.match(describeOperatorRequestError({ code: '42501' }), /ne peut pas/);
+        assert.match(describeOperatorRequestError({ code: 'P0001' }), /demain/);
+        assert.match(describeOperatorRequestError({ code: '23514' }), /Vérifie/);
+        assert.match(describeOperatorRequestError(null), /réessaie/);
+    });
+
+    it('mapDistributorRow : pas d\'exploitant par defaut (pose au chargement)', () => {
+        assert.equal(mapDistributorRow({ id: 'x' }).hasOperator, false);
     });
 });

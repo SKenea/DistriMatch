@@ -79,6 +79,7 @@ import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuth
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
+import { initAdmin, loadAdmin } from './admin.js';
 
 // ============================================
 // SUPABASE
@@ -109,9 +110,10 @@ function initSupabase() {
 async function loadDistributorsFromSupabase() {
     if (!supabaseClient) return null;
     try {
-        const [{ data, error }, ratingsRes] = await Promise.all([
+        const [{ data, error }, ratingsRes, operatorsRes] = await Promise.all([
             supabaseClient.from('distributors').select('*, products(id, name, price, available)'),
-            supabaseClient.from('distributor_ratings').select('distributor_id, avis, moyenne')
+            supabaseClient.from('distributor_ratings').select('distributor_id, avis, moyenne'),
+            supabaseClient.from('distributor_operators').select('distributor_id')
         ]);
         if (error) throw error;
         if (!data || data.length === 0) return null;
@@ -126,6 +128,11 @@ async function loadDistributorsFromSupabase() {
                 d.reviewCount = r ? Number(r.avis) || 0 : 0;
                 d.rating = r ? Number(r.moyenne) || 0 : 0;
             }
+        }
+        // EPIC-T18 : tag « Exploitant vérifié » (020). Table indisponible : pas de tag.
+        if (!operatorsRes?.error && Array.isArray(operatorsRes?.data)) {
+            const operated = new Set(operatorsRes.data.map(o => o.distributor_id));
+            for (const d of distributors) d.hasOperator = operated.has(d.id);
         }
         return distributors;
     } catch (e) {
@@ -307,6 +314,7 @@ registerViewCallback('favorites', displaySubscriptions);
 registerViewCallback('profile', () => { updateProfileStats(); refreshAuthUI(); });
 registerViewCallback('account', () => refreshAuthUI());
 registerViewCallback('stats', loadStats);
+registerViewCallback('admin', loadAdmin);
 registerViewCallback('activity', displayActivityFeed);
 registerViewCallback('notifications', openNotificationsView);
 
@@ -593,6 +601,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-subscriptions')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-account')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-admin')?.addEventListener('click', goBackToMap);
+    initAdmin();   // EPIC-T18 : page admin (demandes d'exploitant)
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notif-settings')?.addEventListener('click', () => switchView('account'));
@@ -623,7 +633,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     profileMenu?.querySelectorAll('[data-action]').forEach(item => {
         item.addEventListener('click', () => {
-            switchView(item.dataset.action); // 'profile' | 'account'
+            switchView(item.dataset.action); // 'profile' | 'account' | 'admin'
             closeProfileMenu();
         });
     });

@@ -955,6 +955,8 @@ export function mapDistributorRow(d) {
         // Fuseau du distributeur (008) et horaires au format OSM (019, EPIC-T17)
         tz: d.tz || null,
         openingHours: d.opening_hours || null,
+        // Exploitant verifie (020, EPIC-T18) : pose au chargement depuis distributor_operators
+        hasOperator: false,
         products: (d.products || []).map(p => ({
             id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
             name: p.name,
@@ -1204,4 +1206,26 @@ export function describeNearbyNudge({ staleProducts = 0, productCount = 0, machi
     if (productCount === 0) return 'Tu es sur place : ajoute les produits que tu vois.';
     if (machineStale) return 'Tu es sur place : dis-nous s’il est en service avec « Mettre à jour ».';
     return '';
+}
+
+// ============================================
+// DEMANDE DE STATUT D'EXPLOITANT (EPIC-T18)
+// ============================================
+// Memes bornes que la base (020) : societe 2..100, contact 6..100 caracteres.
+export function validateOperatorRequest({ company = '', contact = '' } = {}) {
+    const c = String(company).trim();
+    const k = String(contact).trim();
+    if (c.length < 2) return 'Indique le nom de ta société.';
+    if (k.length < 6) return 'Indique un téléphone ou un SIRET pour que l’on puisse vérifier.';
+    if (c.length > 100 || k.length > 100) return '100 caractères au plus par champ.';
+    return '';
+}
+
+export function describeOperatorRequestError(error) {
+    const code = error?.code;
+    if (code === '28000' || code === 'PGRST301' || error?.status === 401) return 'Ta session a expiré : reconnecte-toi.';
+    if (code === '42501') return 'Ce compte ne peut pas envoyer de demande.';
+    if (code === 'P0001') return 'Trop de demandes aujourd’hui : réessaie demain.';
+    if (code === '23514') return 'Vérifie les deux champs (2 à 100 caractères pour la société, 6 à 100 pour le contact).';
+    return 'Demande non envoyée, réessaie plus tard.';
 }
