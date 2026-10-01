@@ -2089,3 +2089,34 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choice.is-current.is-no .dd-check { color: #374151; }
 .dd-sep { width: 100%; height: 1px; margin: 4px 0; border: none; background: #E5E7EB; }
 .product-choices .product-menu-action.is-danger { color: #B91C1C; }
+
+/* ==========================================
+   HORAIRES ET COUP DE POUCE SUR PLACE (EPIC-T17)
+   ========================================== */
+.dist-modal-hours { display: flex; align-items: center; gap: 6px; margin: 0.35rem 0 0; font-size: 0.875rem; font-weight: 600; color: #4B5563; }
+.dist-modal-hours[hidden] { display: none; }
+.dist-modal-hours svg { flex: none; }
+.dist-modal-hours.is-open { color: #166534; }
+.dist-modal-hours.is-closed { color: #991B1B; }
+
+.products-nudge {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 0.75rem;
+    padding: 10px 12px;
+    border: 1px solid #BFDBFE;
+    border-radius: 12px;
+    background: #EFF6FF;
+    color: #1E3A8A;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+.products-nudge[hidden] { display: none; }
+.products-nudge svg { flex: none; margin-top: 1px; color: #2563EB; }
+/* Ce qui date : anneau bleu sur l'etiquette, la carte d'ajout, « Mettre à jour » */
+.product-row.needs-check .product-status-btn .product-pill { box-shadow: 0 0 0 2px #2563EB; }
+.product-row.needs-check .product-status-chevron { color: #2563EB; }
+.product-add-card.needs-check { border-color: #2563EB; }
+.dist-status-update.needs-check { border-color: #2563EB; box-shadow: 0 0 0 2px #BFDBFE; }

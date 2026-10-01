@@ -4,14 +4,14 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness } from './utils.js';
+import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness, describeOpeningHours } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos } from './distributor.js';
 import { uploadDistributorPhotos, publishDistributor } from './add-distributor.js';
 import { requireAuth, isAuthenticated } from './auth.js';
 import { FEATURES } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
-import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
+import { checkNearbyForFiche, loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
 import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
@@ -405,6 +405,7 @@ export function openDistributorModal(id) {
         ? (city && !address.toLowerCase().includes(city.toLowerCase()) ? `${address}, ${city}` : address)
         : (city || 'Adresse inconnue');
     document.getElementById('dist-apropos-distance').textContent = distance || 'Distance non disponible';
+    renderFicheHours(distributor);
     // « Ajouté par la communauté » ne s'affiche pas pour une fiche fictive : la demo prime
     const addedRow = document.getElementById('dist-apropos-added-row');
     if (addedRow) addedRow.style.display = (distributor.isUserAdded && !distributor.isDemo) ? 'flex' : 'none';
@@ -667,6 +668,26 @@ function applyFicheAuthState() {
     if (publishBtn) publishBtn.textContent = authed ? 'Publier ce distributeur' : 'Me connecter pour le publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
     if (photoBtn) photoBtn.style.display = (FEATURES.photos && authed && !localOnly) ? '' : 'none';
+    // Coup de pouce sur place (EPIC-T17) : relit la position, membre connecte seulement
+    checkNearbyForFiche(AppState.currentDistributor);
+}
+
+// Horaires (EPIC-T17, format OSM, fuseau du distributeur) : « Ouvert 24 h/24 »
+// sous le nom, la semaine dans « À propos » ; format non compris = texte brut
+// dans « À propos » seulement ; sans horaires, rien.
+function renderFicheHours(distributor) {
+    const hours = describeOpeningHours(distributor.openingHours, new Date(), distributor.tz);
+    const line = document.getElementById('dist-modal-hours');
+    if (line) {
+        line.hidden = !hours.label;
+        line.className = `dist-modal-hours${hours.state ? ` is-${hours.state}` : ''}`;
+        const text = document.getElementById('dist-modal-hours-text');
+        if (text) text.textContent = hours.label;
+    }
+    const row = document.getElementById('dist-apropos-hours-row');
+    if (row) row.style.display = hours.week ? 'flex' : 'none';
+    const week = document.getElementById('dist-apropos-hours');
+    if (week) week.textContent = hours.week;
 }
 
 // « Publier ce distributeur » : l'envoie a la base (connexion exigee, UC1), puis

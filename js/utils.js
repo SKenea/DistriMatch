@@ -952,6 +952,9 @@ export function mapDistributorRow(d) {
         isDemo: d.is_demo === true,
         // Provenance (018) : 'user' (membre), 'osm' (import OpenStreetMap), 'demo'
         source: d.source || (d.is_demo === true ? 'demo' : 'user'),
+        // Fuseau du distributeur (008) et horaires au format OSM (019, EPIC-T17)
+        tz: d.tz || null,
+        openingHours: d.opening_hours || null,
         products: (d.products || []).map(p => ({
             id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
             name: p.name,
@@ -1036,4 +1039,169 @@ export function diffFavoriteSignals(previous, current, options = {}) {
     candidates.sort((a, b) => a.rank - b.rank || b.at - a.at);
     const { rank, ...event } = candidates[0];
     return { event, snapshot };
+}
+
+// ============================================
+// HORAIRES D'OUVERTURE (EPIC-T17, format OpenStreetMap)
+// ============================================
+// Formats compris : « 24/7 » et des regles « jours heures » separees par « ; »
+// (« Mo-Fr 08:00-19:00; Sa 09:00-12:00,14:00-18:00; Su off »), sans jours = tous
+// les jours, une plage qui passe minuit (« 22:00-02:00 ») deborde sur le
+// lendemain. Les regles de jours feries (PH / SH) sont ignorees (on ne connait
+// pas le calendrier). Tout autre format : null (l'app montre le texte brut).
+
+const OH_DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const OH_DAY_LABELS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+
+function ohMinutes(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+    if (!m) return null;
+    const value = Number(m[1]) * 60 + Number(m[2]);
+    return Number(m[1]) <= 24 && Number(m[2]) < 60 && value <= 1440 ? value : null;
+}
+
+// Semaine lundi -> dimanche : pour chaque jour, les plages [debut, fin] en
+// minutes (fin > 1440 = deborde sur le lendemain). null si format inconnu.
+export function parseOpeningHours(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return null;
+    if (text === '24/7') return OH_DAYS.map(() => [[0, 1440]]);
+    const week = OH_DAYS.map(() => []);
+    for (const rule of text.split(';').map(r => r.trim()).filter(Boolean)) {
+        if (/\b(PH|SH)\b/.test(rule)) continue;
+        const m = /^(?:([A-Za-z,\- ]+?)\s+)?(off|closed|24\/7|[\d:,\- ]+)$/.exec(rule);
+        if (!m) return null;
+        let days = [0, 1, 2, 3, 4, 5, 6];
+        if (m[1]) {
+            days = [];
+            for (const part of m[1].replace(/\s/g, '').split(',')) {
+                const [a, b] = part.split('-');
+                const start = OH_DAYS.indexOf(a);
+                const end = b === undefined ? start : OH_DAYS.indexOf(b);
+                if (start < 0 || end < 0) return null;
+                for (let i = start; ; i = (i + 1) % 7) {
+                    days.push(i);
+                    if (i === end) break;
+                }
+            }
+        }
+        let ranges = [];
+        if (m[2] === '24/7') ranges = [[0, 1440]];
+        else if (m[2] !== 'off' && m[2] !== 'closed') {
+            for (const span of m[2].replace(/\s/g, '').split(',')) {
+                const [a, b] = span.split('-');
+                const start = ohMinutes(a);
+                let end = ohMinutes(b);
+                if (start === null || end === null || start === end) return null;
+                if (end < start) end += 1440;
+                ranges.push([start, end]);
+            }
+        }
+        // Une regle plus loin remplace les jours qu'elle cite (semantique OSM)
+        for (const d of days) week[d] = ranges;
+    }
+    return week;
+}
+
+// Jour (0 = lundi) et minute courants dans le fuseau du distributeur ; fuseau
+// absent ou inconnu : heure du telephone.
+function ohLocalNow(now, tz) {
+    try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: tz || undefined, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).formatToParts(now);
+        const get = (type) => parts.find(x => x.type === type)?.value;
+        const day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(get('weekday'));
+        return { day, minute: Number(get('hour')) * 60 + Number(get('minute')) };
+    } catch (e) {
+        return { day: (now.getDay() + 6) % 7, minute: now.getHours() * 60 + now.getMinutes() };
+    }
+}
+
+function ohClock(minute) {
+    const m = ((minute % 1440) + 1440) % 1440;
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
+function ohRangesText(ranges) {
+    if (!ranges.length) return 'fermé';
+    if (ranges.length === 1 && ranges[0][0] === 0 && ranges[0][1] === 1440) return '24 h/24';
+    return ranges.map(([a, b]) => `${ohClock(a)}–${ohClock(b)}`).join(', ');
+}
+
+function capitalizeFirst(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Ce que la fiche affiche : { state: 'open' | 'closed' | null, label, week }.
+// label : « Ouvert 24 h/24 », « Ouvert · ferme à 20:00 », « Fermé · ouvre à
+// 08:00 » / « demain à » / « lun. à ». week : la semaine en clair pour « À
+// propos » (texte brut si le format n'est pas compris). Rien sans horaires.
+export function describeOpeningHours(raw, now = new Date(), tz = null) {
+    const text = String(raw || '').trim();
+    if (!text) return { state: null, label: '', week: '' };
+    const week = parseOpeningHours(text);
+    if (!week) return { state: null, label: '', week: text };
+
+    const always = week.every(r => r.length === 1 && r[0][0] === 0 && r[0][1] >= 1440);
+    const weekText = always ? 'Tous les jours, 24 h/24' : (() => {
+        const groups = [];
+        week.forEach((ranges, d) => {
+            const key = JSON.stringify(ranges);
+            const last = groups[groups.length - 1];
+            if (last && last.key === key) last.end = d;
+            else groups.push({ key, start: d, end: d, ranges });
+        });
+        if (groups.length === 1) return `Tous les jours : ${ohRangesText(groups[0].ranges)}`;
+        return groups.map(g => {
+            const days = g.start === g.end ? OH_DAY_LABELS[g.start] : `${OH_DAY_LABELS[g.start]}–${OH_DAY_LABELS[g.end]}`;
+            return `${capitalizeFirst(days)} : ${ohRangesText(g.ranges)}`;
+        }).join(' · ');
+    })();
+    if (always) return { state: 'open', label: 'Ouvert 24 h/24', week: weekText };
+
+    const { day, minute } = ohLocalNow(now, tz);
+    // Plages en cours : celles du jour, et celles de la veille qui debordent
+    const current = [
+        ...week[day].map(([a, b]) => [a, b]),
+        ...week[(day + 6) % 7].filter(([, b]) => b > 1440).map(([a, b]) => [a - 1440, b - 1440])
+    ].find(([a, b]) => minute >= a && minute < b);
+    if (current) return { state: 'open', label: `Ouvert · ferme à ${ohClock(current[1])}`, week: weekText };
+
+    for (let offset = 0; offset < 7; offset++) {
+        const d = (day + offset) % 7;
+        const next = week[d].map(([a]) => a).filter(a => offset > 0 || a > minute).sort((x, y) => x - y)[0];
+        if (next === undefined) continue;
+        const when = offset === 0 ? '' : offset === 1 ? 'demain ' : `${OH_DAY_LABELS[d]} `;
+        return { state: 'closed', label: `Fermé · ouvre ${when}à ${ohClock(next)}`, week: weekText };
+    }
+    return { state: 'closed', label: 'Fermé', week: weekText };
+}
+
+// ============================================
+// COUP DE POUCE SUR PLACE (EPIC-T17)
+// ============================================
+// Le membre est-il devant le distributeur ? Distance moins la marge d'erreur du
+// GPS <= 15 m ; une position trop imprecise (marge > 30 m) ne compte pas.
+export const NEARBY_RADIUS_M = 15;
+export const NEARBY_MAX_ACCURACY_M = 30;
+
+export function isNearDistributor(position, distributor, radiusM = NEARBY_RADIUS_M, maxAccuracyM = NEARBY_MAX_ACCURACY_M) {
+    if (!position || !distributor) return false;
+    if (![position.lat, position.lng, distributor.lat, distributor.lng].every(Number.isFinite)) return false;
+    const accuracy = Number.isFinite(position.accuracy) ? position.accuracy : 0;
+    if (accuracy > maxAccuracyM) return false;
+    const meters = calculateDistance(position.lat, position.lng, distributor.lat, distributor.lng) * 1000;
+    return meters - accuracy <= radiusM;
+}
+
+// Phrase du coup de pouce : ce qui date (signal de plus de 2 h ou aucun).
+// Jamais le mot « machine » (texte de la fiche).
+export function describeNearbyNudge({ staleProducts = 0, productCount = 0, machineStale = false } = {}) {
+    if (staleProducts > 0) {
+        return `Tu es sur place : ${staleProducts} produit${staleProducts > 1 ? 's' : ''} à vérifier. Touche ${staleProducts > 1 ? 'leur' : 'son'} étiquette.`;
+    }
+    if (productCount === 0) return 'Tu es sur place : ajoute les produits que tu vois.';
+    if (machineStale) return 'Tu es sur place : dis-nous s’il est en service avec « Mettre à jour ».';
+    return '';
 }

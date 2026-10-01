@@ -19,6 +19,32 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T17 Horaires et coup de pouce sur place (Stephane, 2026-10-01, lot 1 des statuts)
+Objectif : afficher si un distributeur est ouvert (horaires OpenStreetMap) et inviter le
+membre qui est devant a mettre a jour ce qui date. Lots suivants (cadres, a venir) :
+lot 2 statut Exploitant (demande depuis la fiche, validation admin ; son signal l'emporte
+sur un signal contraire a moins de 30 min d'ecart ; « Info de l'exploitant ») ; lot 3
+Membre fiable (> 30 j, >= 20 signaux, < 10 % contredits dans les 30 min, jamais bloque)
+quand il y aura assez de signaux. La gamification par points est abandonnee.
+
+- [x] T17-TS1 Colonne `distributors.opening_hours` (migration 019) et import OSM
+  - Acceptance : colonne texte (format OSM), non modifiable par l'API ; `import-osm.mjs`
+    la remplit a l'import et la met a jour sur les fiches OSM deja importees (rien d'autre
+    n'est ecrase) ; les 9 fiches OSM qui ont des horaires les recoivent.
+- [x] T17-US1 En tant que visiteur, je vois si le distributeur est ouvert
+  - Acceptance : sous la ligne type / prix / note : « Ouvert 24 h/24 », « Ouvert · ferme a
+    20:00 », « Ferme · ouvre a 08:00 / demain a / lun. a » (heure du fuseau du
+    distributeur) ; « À propos » : ligne Horaires (« Tous les jours, 24 h/24 », « Lun.–ven. :
+    08:00–19:00 · … ») ; format non reconnu -> texte brut dans « À propos », rien sous le
+    nom ; pas d'horaires -> rien.
+- [x] T17-US2 En tant que membre devant le distributeur, je suis invite a mettre a jour ce qui date
+  - Acceptance : connecte, a 15 m ou moins (distance - precision GPS <= 15 m, precision
+    <= 30 m, position relue a l'ouverture de la fiche) : phrase « Tu es sur place : N
+    produits a verifier » et cartes signalees il y a plus de 2 h (ou jamais) marquees ;
+    sans produit : invitation a ajouter ; etat du distributeur > 2 h : « Mettre a jour »
+    marque ; rien si tout est frais, si loin, ou en visiteur ; aucun envoi automatique.
+- [x] T17-TS2 Tests (unitaires, DOM, fonctionnels, base) et doc a jour, captures avant fusion.
+
 ### EPIC-T16 Un menu deroulant par produit, sous la fleche (Stephane, 2026-10-01)
 Retour : toucher le nom pour le modifier ne convient pas. Decision : un seul menu sous
 l'etiquette (fleche) : Dispo / Pas dispo (etat actuel coche ; « Actuellement : Pas
