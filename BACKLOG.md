@@ -19,6 +19,30 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T18 Statut Exploitant et page admin (Stephane, 2026-10-01, lot 2 des statuts)
+Objectif : l'exploitant d'un distributeur, qui le remplit, est la meilleure source ; sa
+parole compte plus, sans bloquer la fiche s'il ne fait rien. Hors perimetre : « Reassort
+fait », notifications de demande, Membre fiable (lot 3).
+
+- [ ] T18-TS1 Base (migration 020) : demandes, exploitants, admin, priorite
+  - Acceptance : `operator_requests` (un membre cree / lit les siennes, une en attente
+    par fiche, 5 / jour, compte bloque refuse) ; `distributor_operators` (seul
+    `distributor_id` lisible) ; `app_admins` (Stephane) + `is_admin()` ; fonctions admin
+    refusees a tout non-admin ; signal d'un exploitant = source 'owner', poids 1 ; vues :
+    le plus recent gagne sauf exploitant contredit a moins de 30 min.
+- [ ] T18-US1 En tant que membre, je demande le statut d'exploitant d'un distributeur
+  - Acceptance : « À propos » : « C'est ton distributeur ? » -> formulaire (societe,
+    telephone ou SIRET) ; envoye -> « Demande envoyée, en attente de validation » ;
+    exploitant -> « Tu es l'exploitant vérifié » ; visiteur -> connexion ; erreurs dites.
+- [ ] T18-US2 En tant qu'admin, je valide ou refuse les demandes depuis l'app
+  - Acceptance : menu avatar « Admin » (admin seulement) -> page : demandes en attente
+    (fiche, ville, societe, contact, email, date ; Valider / Refuser), exploitants
+    (Retirer, avec confirmation) ; un non-admin voit « Réservé à l'admin ».
+- [ ] T18-US3 En tant que visiteur, je vois qu'un distributeur a un exploitant et ce qu'il dit
+  - Acceptance : tag « Exploitant vérifié » pres du nom ; signal de l'exploitant affiche
+    « Info de l'exploitant · il y a 1 h » (produit et ligne d'etat).
+- [ ] T18-TS2 Tests (unitaires, DOM, base, fonctionnels) et doc a jour, captures avant fusion.
+
 ### EPIC-T17 Horaires et coup de pouce sur place (Stephane, 2026-10-01, lot 1 des statuts)
 Objectif : afficher si un distributeur est ouvert (horaires OpenStreetMap) et inviter le
 membre qui est devant a mettre a jour ce qui date. Lots suivants (cadres, a venir) :

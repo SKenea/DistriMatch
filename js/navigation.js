@@ -21,6 +21,7 @@ const VIEW_CONFIG = {
     profile:                 { id: 'profile-view',         onShow: null },
     account:                  { id: 'account-view',         onShow: null },
     stats:                   { id: 'stats-view',           onShow: null },
+    admin:                   { id: 'admin-view',           onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
     notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }
