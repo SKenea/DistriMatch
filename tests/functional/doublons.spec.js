@@ -61,7 +61,6 @@ test.describe('33. Machines seulement locales', () => {
         await expect(page.locator('#dist-status-update')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
-        await expect(page.locator('#dist-products-list .product-name-btn')).toHaveCount(0);
         await expect(page.locator('#dist-product-add')).toHaveCount(0);
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         await page.click('.dist-tab[data-tab="avis"]');

@@ -162,8 +162,8 @@ test.describe('15. Confirmation maison', () => {
         await page.waitForSelector('#dist-modal-overlay.active');
         const before = await page.evaluate(() => window.AppState.currentDistributor.products.length);
         const row = page.locator('#dist-products-list .product-row[data-editable]').first();
-        await row.click({ button: 'right' });
-        await page.click('.product-menu [data-menu="remove"]');
+        await row.locator('.product-status-btn').click();
+        await row.locator('.product-menu-action[data-action="remove"]').click();
         await expect(page.locator('#confirm-modal')).not.toHaveClass(/active/);
         await expect(page.locator('#toast-container .toast-action')).toContainText('retiré');
         expect(await page.evaluate(() => window.AppState.currentDistributor.products.length)).toBe(before - 1);
@@ -202,10 +202,11 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         await routeSignals(page);
         await routeEditWrites(page);
         await openSignalableFiche(page);
-        await page.locator('#dist-products-list .product-name-btn').first().click();
+        await page.locator('#dist-products-list .product-status-btn:not([data-guest])').first().click();
+        await page.locator('#dist-products-list .product-choices:not([hidden]) .product-menu-action[data-action="rename"]').click();
         await page.locator('.product-name-input').fill('Nom de mesure');
         await page.keyboard.press('Enter');
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Nom de mesure' })).toHaveCount(1);
+        await expect(page.locator('#dist-products-list .product-name-clean', { hasText: 'Nom de mesure' })).toHaveCount(1);
         await page.waitForTimeout(300);
         expect(events.filter(e => e.type === 'fiche_ouverte')).toHaveLength(1);
     });

@@ -128,34 +128,61 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await expect(page.locator('#dist-product-add')).toBeVisible();
     });
 
-    test('renommer : toucher le nom, Entree enregistre (PATCH), Echap annule', async ({ page }) => {
+    test('menu de l\u2019etiquette : Dispo / Pas dispo, separateur, Renommer, Retirer ; « Actuellement : Pas d\u2019info »', async ({ page }) => {
+        await openEditable(page);
+        const row = page.locator('#dist-products-list .product-row[data-editable]').first();
+        await expect(row.locator('.product-name-btn')).toHaveCount(0);   // le nom n'est plus touchable
+        await row.locator('.product-status-btn').click();
+        const menu = row.locator('.product-choices[role="menu"]');
+        await expect(menu).toBeVisible();
+        await expect(menu.locator('button')).toHaveText(['Dispo', 'Pas dispo', 'Renommer', 'Retirer']);
+        await expect(menu.locator('.dd-sep')).toHaveCount(1);
+        await expect(menu.locator('.product-choices-q')).toHaveText("Actuellement : Pas d'info");
+        await expect(menu.locator('.product-choice[aria-checked="true"]')).toHaveCount(0);
+        // clavier : fleche bas passe a l'item suivant
+        await expect(menu.locator('.product-choice').first()).toBeFocused();
+        await page.keyboard.press('ArrowDown');
+        await expect(menu.locator('.product-choice').nth(1)).toBeFocused();
+        await page.keyboard.press('Escape');
+        await expect(menu).toBeHidden();
+    });
+
+    test('renommer : menu -> Renommer, Entree enregistre (PATCH), Echap et vide annulent', async ({ page }) => {
         const { log } = await openEditable(page);
         const first = page.locator('#dist-products-list .product-row[data-editable]').first();
         const pid = await first.getAttribute('data-product-id');
-        await first.locator('.product-name-btn').click();
+        const rowOf = () => page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`);
+        async function rename() {
+            await rowOf().locator('.product-status-btn').click();
+            await rowOf().locator('.product-menu-action[data-action="rename"]').click();
+        }
+        await rename();
         await page.locator('.product-name-input').fill('Nom renommé');
         await page.keyboard.press('Enter');
-        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`)).toHaveText('Nom renommé');
+        await expect(rowOf().locator('.product-name-clean')).toHaveText('Nom renommé');
         await expect(page.locator('#toast-container .toast-action')).toContainText('Renommé en « Nom renommé »');
         expect(log).toEqual([expect.objectContaining({ table: 'products', method: 'PATCH', query: `?id=eq.${pid}`, body: { name: 'Nom renommé' } })]);
         // Echap : rien n'est envoye
-        await page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`).click();
+        await rename();
         await page.locator('.product-name-input').fill('Autre');
         await page.keyboard.press('Escape');
-        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"] .product-name-btn`)).toHaveText('Nom renommé');
-        expect(log).toHaveLength(1);
+        await expect(rowOf().locator('.product-name-clean')).toHaveText('Nom renommé');
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);   // Echap ne ferme pas la fiche
+        // Vide : annule (plus de retrait par nom vide)
+        await rename();
+        await page.locator('.product-name-input').fill('');
+        await page.keyboard.press('Enter');
+        await expect(rowOf().locator('.product-name-clean')).toHaveText('Nom renommé');
+        expect(log).toHaveLength(1);
     });
 
-    test('retirer : nom vide -> toast « Annuler » ; Annuler rétablit et rien n\u2019est supprime en base', async ({ page }) => {
+    test('retirer : menu -> Retirer, toast « Annuler » ; Annuler rétablit et rien n\u2019est supprime en base', async ({ page }) => {
         const { log } = await openEditable(page);
         const first = page.locator('#dist-products-list .product-row[data-editable]').first();
         const pid = await first.getAttribute('data-product-id');
-        const name = await first.locator('.product-name-btn').textContent();
-        await first.locator('.product-name-btn').click();
-        await page.locator('.product-name-input').fill('');
-        await expect(page.locator('.product-name-help')).toHaveClass(/is-remove/);
-        await page.keyboard.press('Enter');
+        const name = await first.locator('.product-name-clean').textContent();
+        await first.locator('.product-status-btn').click();
+        await first.locator('.product-menu-action[data-action="remove"]').click();
         await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
         await expect(page.locator('#toast-container .toast-action')).toContainText(`${name} retiré`);
         await page.click('#toast-container .toast-action-btn');
@@ -164,13 +191,15 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         expect(log.filter(l => l.method === 'DELETE')).toEqual([]);
     });
 
-    test('retirer par appui long (clic droit) -> menu ; la suppression part a la fin du delai (7 s)', async ({ page }) => {
+    test('retirer : la suppression part a la fin du delai (7 s) ; plus de menu au clic droit', async ({ page }) => {
         const { log } = await openEditable(page);
         const second = page.locator('#dist-products-list .product-row[data-editable]').nth(1);
         const pid = await second.getAttribute('data-product-id');
         await second.click({ button: 'right' });
-        await expect(page.locator('.product-menu [role="menuitem"]')).toHaveText(['Renommer', 'Retirer']);
-        await page.click('.product-menu [data-menu="remove"]');
+        await expect(second.locator('.product-choices')).toBeHidden();
+        await second.locator('.product-status-btn').click();
+        await second.locator('.product-menu-action[data-action="remove"]').click();
+        await page.mouse.move(5, 5);   // un toast survole ne s'efface pas
         await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
         expect(log.filter(l => l.method === 'DELETE')).toEqual([]);   // pas tout de suite
         await expect.poll(() => log.filter(l => l.method === 'DELETE').length, { timeout: 10000 }).toBe(1);
@@ -191,7 +220,7 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await expect(chips).toHaveText(expected.map(n => new RegExp(n)));
         expect(expected.length).toBeLessThanOrEqual(4);
         await chips.first().click();
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: expected[0] })).toHaveCount(1);
+        await expect(page.locator('#dist-products-list .product-name-clean', { hasText: expected[0] })).toHaveCount(1);
         expect(log.filter(l => l.method === 'POST').map(l => l.body.name)).toEqual([expected[0]]);
         // Le panneau reste ouvert et ne propose plus ce produit
         await expect(page.locator('#dist-add-panel')).toBeVisible();
@@ -213,7 +242,7 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await expect(input).toBeFocused();
         await page.keyboard.type('Kéfir maison');
         await page.keyboard.press('Enter');
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Kéfir maison' })).toHaveCount(1);
+        await expect(page.locator('#dist-products-list .product-name-clean', { hasText: 'Kéfir maison' })).toHaveCount(1);
         // doublon
         await page.keyboard.type('kefir MAISON');
         await page.keyboard.press('Enter');
@@ -234,7 +263,7 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await page.locator('#dist-add-panel .product-add-input').fill('Produit refusé');
         await page.keyboard.press('Enter');
         await expect(page.locator('#toast-container .toast.error')).toContainText('Produit non ajouté');
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Produit refusé' })).toHaveCount(0);
+        await expect(page.locator('#dist-products-list .product-name-clean', { hasText: 'Produit refusé' })).toHaveCount(0);
     });
 
     test('prix : toucher « €€ » -> € / €€ / €€€ sur place ; un choix enregistre (PATCH distributors)', async ({ page }) => {
@@ -303,7 +332,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(row.locator('.product-choices')).toBeHidden();
         await main.click();
         await expect(main).toHaveAttribute('aria-expanded', 'true');
-        await expect(row.locator('.product-choices-q')).toHaveText('Là, maintenant ?');
+        await expect(row.locator('.product-choices-q')).toHaveText("Actuellement : Pas d'info");
         await expect(row.locator('.product-choice')).toHaveText(['Dispo', 'Pas dispo']);
         await row.locator('.product-choice[data-state="available"]').click();
 
@@ -315,10 +344,11 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(row.locator('.product-pill')).toHaveText('Dispo');
         await expect(row.locator('.product-pill')).toHaveClass(/is-fresh/);
         await expect(row.locator('.product-seen')).toHaveText("vu à l'instant");
-        // Retoucher l'etiquette redeplie, avec la question adaptee ; Echap referme
+        // Retoucher l'etiquette rouvre le menu, Dispo coche, plus d'en-tete ; Echap referme
         await main.click();
         await expect(main).toHaveAttribute('aria-expanded', 'true');
-        await expect(row.locator('.product-choices-q')).toHaveText('Toujours dispo ?');
+        await expect(row.locator('.product-choices-q')).toBeHidden();
+        await expect(row.locator('.product-choice[data-state="available"]')).toHaveAttribute('aria-checked', 'true');
         await page.keyboard.press('Escape');
         await expect(main).toHaveAttribute('aria-expanded', 'false');
         // La fiche reste ouverte, la ligne d'etat deduit que le distributeur est en service

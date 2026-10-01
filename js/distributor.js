@@ -6,7 +6,7 @@ import { AppState, Conversations, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, formatDistance, showToast,
     updateImplicitProfile, saveToLocalStorage,
-    resolveProductStatus, productIconKey, describeSignalQuestion
+    resolveProductStatus, productIconKey, describeMenuHeader
 } from './utils.js';
 import { updateBadges, goBackToMap } from './navigation.js';
 import { updateMapMarkers } from './map.js';
@@ -160,17 +160,16 @@ export function renderProductIcon(name) {
     return `<span class="product-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></span>`;
 }
 
-// Carte produit de la fiche (EPIC-T10 / T12, maquette « carte teintée ») : picto +
-// etiquette en haut, nom (toujours en noir), ligne d'age ; toute la carte prend la
-// teinte de l'etat (classe is-available / is-absent / is-unknown).
-// Connecte (EPIC-T12, sans bouton « Modifier ») :
-//   - l'etiquette EST le controle : la toucher deplie sur la carte « Dispo / Pas
-//     dispo » (js/availability.js envoie le signal) ;
-//   - le nom est touchable : il devient un champ (js/fiche-edit.js : renommer,
-//     nom vide = retirer) ; appui long sur la carte = menu Renommer / Retirer.
+// Carte produit de la fiche (EPIC-T10 / T16, maquette « carte teintée ») : picto +
+// etiquette en haut, nom (toujours en noir, jamais un champ), ligne d'age ; toute la
+// carte prend la teinte de l'etat (classe is-available / is-absent / is-unknown).
+// Membre connecte (EPIC-T16) : l'etiquette (fleche) ouvre UN menu deroulant :
+//   Dispo / Pas dispo (etat actuel coche ; js/availability.js envoie le signal),
+//   separateur, Renommer, Retirer (js/fiche-edit.js).
 // Visiteur : l'etiquette mene a l'invitation a se connecter. Statut initial sans
 // signal ; availability.js le met a jour au chargement.
 const CHEVRON = '<svg class="product-status-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+const CHECK = '<svg class="dd-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
 
 export function renderProductRow(p, index, { canInform = false, guest = false } = {}) {
     const status = resolveProductStatus(p, null);
@@ -180,29 +179,28 @@ export function renderProductRow(p, index, { canInform = false, guest = false } 
     const pill = `<span class="product-pill is-${status.tone}${status.fresh ? ' is-fresh' : ''}">${escapeHTML(status.label)}</span>`;
     let status_ = pill;
     if (signalable) {
-        status_ = `<button type="button" class="product-status-btn" aria-expanded="false" aria-controls="product-choices-${id}" aria-label="${name} : ${escapeHTML(status.label)}. Signaler">${pill}${CHEVRON}</button>`;
+        status_ = `<button type="button" class="product-status-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="product-choices-${id || index}" aria-label="${name} : ${escapeHTML(status.label)}. Menu">${pill}${CHEVRON}</button>`;
     } else if (guest) {
         status_ = `<button type="button" class="product-status-btn" data-guest="1" aria-label="${name} : ${escapeHTML(status.label)}. Connecte-toi pour signaler">${pill}</button>`;
     }
-    const nameEl = canInform
-        ? `<button type="button" class="product-name-btn product-name-clean" aria-label="Renommer ${name}">${name}</button>`
-        : `<span class="product-name-clean">${name}</span>`;
-    const choices = signalable
-        ? `<div class="product-choices" id="product-choices-${id}" role="group" aria-label="${name} : signaler" hidden>
-                <p class="product-choices-q">${escapeHTML(describeSignalQuestion(status.tone))}</p>
-                <div class="product-choices-row">
-                    <button type="button" class="product-choice is-yes" data-state="available">Dispo</button>
-                    <button type="button" class="product-choice is-no" data-state="absent">Pas dispo</button>
-                </div>
+    const header = describeMenuHeader(status.tone);
+    const menu = signalable
+        ? `<div class="product-choices" id="product-choices-${id || index}" role="menu" aria-label="${name}" hidden>
+                <p class="product-choices-q" role="presentation"${header ? '' : ' hidden'}>${escapeHTML(header)}</p>
+                <button type="button" role="menuitemradio" aria-checked="false" class="product-choice is-yes" data-state="available"><span class="dd-dot" aria-hidden="true"></span><span class="dd-label">Dispo</span>${CHECK}</button>
+                <button type="button" role="menuitemradio" aria-checked="false" class="product-choice is-no" data-state="absent"><span class="dd-dot" aria-hidden="true"></span><span class="dd-label">Pas dispo</span>${CHECK}</button>
+                <hr class="dd-sep" role="separator">
+                <button type="button" role="menuitem" class="product-menu-action" data-action="rename">Renommer</button>
+                <button type="button" role="menuitem" class="product-menu-action is-danger" data-action="remove">Retirer</button>
             </div>`
         : '';
     return `
         <div class="product-item-clean product-row is-${status.tone}" data-index="${index}" data-product-id="${id}"${canInform ? ' data-editable="1"' : ''}>
             <div class="product-row-main">
                 <span class="product-card-top">${renderProductIcon(p.name)}${status_}</span>
-                <span class="product-row-text">${nameEl}<span class="product-seen">${escapeHTML(status.detail)}</span></span>
+                <span class="product-row-text"><span class="product-name-clean">${name}</span><span class="product-seen">${escapeHTML(status.detail)}</span></span>
             </div>
-            ${choices}
+            ${menu}
         </div>`;
 }
 

@@ -360,13 +360,13 @@ describe('openDistributorModal', () => {
         window.__testLogout();
     });
 
-    it('connecte : etiquette, nom et « + Ajouter un produit » touchables ; prix touchable', () => {
+    it('connecte : etiquette (menu) et « + Ajouter un produit » touchables ; prix touchable', () => {
         window.__testLogin();
         AppState.distributors[0].products = [{ id: 11, name: 'Pizza', available: true }];
         openDistributorModal('dist-test');
         const list = document.getElementById('dist-products-list');
         assert.ok(list.querySelector('.product-status-btn:not([data-guest])'));
-        assert.ok(list.querySelector('.product-name-btn'));
+        assert.ok(list.querySelector('.product-menu-action[data-action="rename"]'));
         assert.equal(list.querySelector('#dist-product-add').dataset.guest, undefined);
         assert.equal(document.getElementById('dist-modal-pricerange').tagName, 'BUTTON');
         window.__testLogout();
@@ -390,7 +390,7 @@ describe('openDistributorModal', () => {
         openDistributorModal('dist-test');
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-status-btn').dataset.guest, '1');
-        assert.equal(list.querySelector('.product-name-btn'), null);
+        assert.equal(list.querySelector('.product-choices'), null);
         assert.equal(list.querySelector('#dist-product-add').dataset.guest, '1');
     });
 });
@@ -536,7 +536,7 @@ describe('renderProductsList', () => {
     });
 
     // EPIC-T12 : l'etiquette est le controle
-    it('connecte : l\'etiquette deplie « Toujours dispo ? » Dispo / Pas dispo ; AUCUN prix', () => {
+    it('connecte : l\'etiquette ouvre le menu Dispo / Pas dispo / Renommer / Retirer ; AUCUN prix', () => {
         renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list', { canInform: true });
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-price-clean'), null, 'plus de prix');
@@ -546,10 +546,13 @@ describe('renderProductsList', () => {
         assert.equal(status.getAttribute('aria-controls'), 'product-choices-7');
         const choices = list.querySelector('#product-choices-7');
         assert.ok(choices.hidden, 'choix replies par defaut');
-        assert.equal(choices.querySelector('.product-choices-q').textContent, 'Là, maintenant ?');
+        assert.equal(choices.getAttribute('role'), 'menu');
+        assert.equal(choices.querySelector('.product-choices-q').textContent, "Actuellement : Pas d'info");
         assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.dataset.state), ['available', 'absent']);
         assert.deepEqual([...choices.querySelectorAll('.product-choice')].map(c => c.textContent.trim()), ['Dispo', 'Pas dispo']);
-        assert.equal(list.querySelector('.product-name-btn').textContent, 'Test');
+        assert.deepEqual([...choices.querySelectorAll('.product-menu-action')].map(c => c.dataset.action), ['rename', 'remove']);
+        assert.equal(list.querySelector('.product-name-btn'), null, 'le nom n\'est plus touchable (EPIC-T16)');
+        assert.equal(list.querySelector('.product-name-clean').textContent, 'Test');
         assert.equal(list.querySelector('button.product-row-main'), null, 'la carte entiere n\'est plus un bouton');
     });
 
@@ -575,7 +578,7 @@ describe('renderProductsList', () => {
         renderProductsList({ products: [{ id: 7, name: 'Test', available: true }] }, 'dist-products-list');
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-status-btn'), null);
-        assert.equal(list.querySelector('.product-name-btn'), null);
+        assert.equal(list.querySelector('.product-choices'), null);
         assert.equal(list.querySelector('#dist-product-add'), null);
     });
 

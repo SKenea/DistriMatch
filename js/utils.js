@@ -737,12 +737,10 @@ export function resolveProductStatus(product, signalRow, machine = null, now = D
     return { label: "Pas d'info", tone: 'unknown', fresh: false, detail: NO_SIGNAL_DETAIL };
 }
 
-// Question du choix « Dispo / Pas dispo » deplie sur la carte (EPIC-T12, facon
-// « Toujours là ? » de Waze) : elle depend de ce qui est affiche.
-export function describeSignalQuestion(tone) {
-    if (tone === 'available') return 'Toujours dispo ?';
-    if (tone === 'absent') return 'Toujours pas dispo ?';
-    return 'Là, maintenant ?';
+// En-tete du menu de l'etiquette (EPIC-T16) : « Pas d'info » n'est pas un choix
+// (c'est l'absence de signal recent) ; on le dit en tete quand c'est l'etat actuel.
+export function describeMenuHeader(tone) {
+    return tone === 'available' || tone === 'absent' ? '' : "Actuellement : Pas d'info";
 }
 
 // Nom de produit saisi sur la fiche (EPIC-T12) : espaces reduits, 60 caracteres

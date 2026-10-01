@@ -1775,21 +1775,8 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices .product-choice.is-current.is-no { background: #4B5563; color: #FFFFFF; }
 .product-choices .product-choice:active { transform: none; filter: brightness(0.95); }
 
-/* Nom touchable (membre) : il devient un champ */
-.product-name-btn {
-    position: relative;
-    display: block;
-    width: 100%;
-    min-height: 24px;
-    padding: 0;
-    border: none;
-    background: none;
-    font: inherit;
-    text-align: left;
-    cursor: text;
-}
-.product-name-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
-.product-name-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+/* Renommer (EPIC-T16, depuis le menu) : le nom devient un champ */
+.product-rename { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .product-name-input {
     width: 100%;
     min-height: 44px;
@@ -1802,41 +1789,11 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     font-weight: 700;
     color: #111827;
 }
+.product-name-input:focus { outline: 2px solid #2563EB; outline-offset: 1px; }
 .product-name-help { font-size: 0.75rem; color: #4B5563; }
-.product-name-help.is-remove { color: #B91C1C; font-weight: 700; }
+.rename-suggestions { position: absolute; left: 0; right: 0; top: 48px; z-index: 4; }
 
-/* Appui long : la carte s'enfonce ; menu leger Renommer / Retirer */
 .product-row { position: relative; }
-.product-row.is-pressing { transform: scale(0.98); transition: transform 0.4s; }
-.product-row[data-editable] { -webkit-touch-callout: none; user-select: none; }
-.product-menu {
-    position: absolute;
-    right: 8px;
-    top: 48px;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    min-width: 150px;
-    padding: 4px;
-    border: 1px solid #E5E7EB;
-    border-radius: 12px;
-    background: #FFFFFF;
-    box-shadow: 0 10px 28px rgba(17, 24, 39, 0.2);
-}
-.product-menu button {
-    min-height: 44px;
-    padding: 0 12px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    font: inherit;
-    font-weight: 700;
-    color: #111827;
-    text-align: left;
-    cursor: pointer;
-}
-.product-menu button:hover, .product-menu button:focus-visible { background: #F3F4F6; outline: none; }
-.product-menu button.is-danger { color: #B91C1C; }
 
 /* Carte « + Ajouter un produit » (pointillé) et son champ */
 .product-add-card, .product-add-form {
@@ -1932,7 +1889,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .toast-action-btn:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-    .product-row.is-pressing { transform: none; }
     .product-status-chevron { transition: none; }
 }
 /* Deux colonnes strictement egales : un champ de saisie n'elargit pas sa colonne */
@@ -2064,3 +2020,72 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 }
 .dist-apropos-actions .dist-action-btn.primary:hover { background: #1F2937; }
 .dist-apropos-actions .dist-action-btn svg { width: 20px; height: 20px; }
+
+/* ==========================================
+   MENU DEROULANT DE L'ETIQUETTE (EPIC-T16)
+   Dispo / Pas dispo (etat actuel coche) · separateur · Renommer · Retirer
+   ========================================== */
+.product-row.is-open { z-index: 5; }
+.product-choices {
+    position: absolute;
+    top: 50px;
+    left: 6px;
+    right: 6px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
+    overflow: visible;
+}
+.product-choices[hidden] { display: none; }
+.product-choices .product-choices-q {
+    margin: 0;
+    padding: 8px 10px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4B5563;
+    border-bottom: 1px solid #F3F4F6;
+}
+.product-choices .product-choice,
+.product-choices .product-menu-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #111827;
+    text-align: left;
+    text-decoration: none;
+    box-shadow: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.product-choices .product-choice + .product-choice { border-left: none; }
+.product-choices .product-choice.is-current.is-yes,
+.product-choices .product-choice.is-current.is-no { background: none; color: #111827; }
+.product-choices .product-choice:hover,
+.product-choices .product-menu-action:hover,
+.product-choices .product-choice:focus-visible,
+.product-choices .product-menu-action:focus-visible { background: #F3F4F6; outline: none; }
+.product-choices .product-choice:active,
+.product-choices .product-menu-action:active { transform: none; filter: none; background: #E5E7EB; }
+.dd-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; }
+.product-choice.is-yes .dd-dot { background: #16A34A; }
+.product-choice.is-no .dd-dot { background: #9CA3AF; }
+.dd-label { flex: 1; }
+.dd-check { width: 18px; height: 18px; flex: none; color: #166534; visibility: hidden; }
+.product-choice.is-current .dd-check { visibility: visible; }
+.product-choice.is-current.is-no .dd-check { color: #374151; }
+.dd-sep { width: 100%; height: 1px; margin: 4px 0; border: none; background: #E5E7EB; }
+.product-choices .product-menu-action.is-danger { color: #B91C1C; }
