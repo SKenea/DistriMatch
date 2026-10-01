@@ -17,7 +17,8 @@ import { AppState, supabaseClient } from './state.js';
 import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
-    describeFicheHero, describeMachineNotice, productToneRank, describeMenuHeader
+    describeFicheHero, describeMachineNotice, productToneRank, describeMenuHeader,
+    isNearDistributor, describeNearbyNudge
 } from './utils.js';
 import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
@@ -30,6 +31,10 @@ let isSending = false;
 // Mesure (008) : un « signal_envoye » par ouverture de fiche, meme si l'on
 // signale plusieurs produits (le KPI reste comparable a l'ancienne fenetre).
 let signalLoggedFor = null;
+// Coup de pouce sur place (EPIC-T17) : distributeur devant lequel se trouve le
+// membre (position relue a l'ouverture de la fiche) ; etat du distributeur frais ?
+let nearbyFor = null;
+let machineFresh = false;
 
 // ============================================
 // LECTURE : statut machine + statut de chaque produit
@@ -95,6 +100,7 @@ export function renderFicheStatus() {
         statusLine.dataset.state = machine.state;
         statusLine.classList.toggle('is-soft', machine.state !== 'unknown' && !machine.fresh);
     }
+    machineFresh = machine.fresh;
     const word = document.getElementById('dist-status-word');
     if (word) word.textContent = machine.label;
     const detail = document.getElementById('dist-modal-verified');
@@ -171,6 +177,48 @@ export function renderFicheStatus() {
         rhythmEl.textContent = phrase || '';
         rhythmEl.className = `dist-modal-rhythm${phrase ? ' is-visible' : ''}`;
     }
+    renderNearbyNudge();
+}
+
+// ============================================
+// COUP DE POUCE SUR PLACE (EPIC-T17)
+// ============================================
+// Membre connecte devant le distributeur (15 m, precision GPS comprise) : on
+// l'invite a mettre a jour ce qui date (signal de plus de 2 h ou aucun). Rien
+// n'est envoye tout seul. Appele a l'ouverture de la fiche et a la connexion.
+export function checkNearbyForFiche(distributor) {
+    nearbyFor = null;
+    renderNearbyNudge();
+    if (!distributor || distributor.isLocalOnly || !isAuthenticated() || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+        if (AppState.currentDistributor?.id !== distributor.id) return;
+        const position = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        nearbyFor = isNearDistributor(position, distributor) ? distributor.id : null;
+        renderNearbyNudge();
+    }, () => { /* position refusee ou indisponible : pas de coup de pouce */ },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+}
+
+function renderNearbyNudge() {
+    const d = AppState.currentDistributor;
+    const near = !!d && nearbyFor === d.id && isAuthenticated();
+    const rows = Array.from(document.querySelectorAll('#dist-products-list .product-row[data-product-id]'));
+    let staleProducts = 0;
+    rows.forEach(row => {
+        const check = near && !!row.querySelector('.product-status-btn:not([data-guest])')
+            && !row.querySelector('.product-pill.is-fresh');
+        row.classList.toggle('needs-check', check);
+        if (check) staleProducts++;
+    });
+    document.getElementById('dist-product-add')?.classList.toggle('needs-check', near && rows.length === 0);
+    const machineStale = near && !machineFresh;
+    document.getElementById('dist-status-update')?.classList.toggle('needs-check', machineStale);
+    const nudge = document.getElementById('dist-products-nudge');
+    if (!nudge) return;
+    const text = near ? describeNearbyNudge({ staleProducts, productCount: rows.length, machineStale }) : '';
+    const textEl = nudge.querySelector('.products-nudge-text');
+    if (textEl) textEl.textContent = text;
+    nudge.hidden = !text;
 }
 
 // ============================================

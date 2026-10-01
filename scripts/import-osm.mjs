@@ -7,7 +7,8 @@
  * last_verified null = « Pas encore vérifié »), complete la rue / ville par
  * Nominatim (1 requete / s, politique d'usage OSM), ignore une machine a moins de
  * 50 m d'une fiche reelle existante, et n'ecrase jamais une fiche deja importee
- * (rejouable sans doublon). Donnees © OpenStreetMap contributors, ODbL.
+ * (rejouable sans doublon) : seuls ses horaires (opening_hours, EPIC-T17) sont
+ * remis a jour. Donnees © OpenStreetMap contributors, ODbL.
  *
  * Usage (jeton de gestion dans .env.local, cf. scripts/supabase-sql.mjs) :
  *   node scripts/import-osm.mjs --bbox 43.25,-1.80,43.60,-1.25 --tz Europe/Paris --dry-run
@@ -110,6 +111,7 @@ async function main() {
 
     const rows = [];
     const skipped = [];
+    const hours = [];   // fiches OSM deja importees : horaires remis a jour (EPIC-T17)
     for (const el of elements) {
         const t = el.tags || {};
         const lat = el.lat ?? el.center?.lat;
@@ -120,7 +122,11 @@ async function main() {
         const mapped = mapType(/food/i.test(t.vending || '') && nameHint ? nameHint : t.vending);
         const id = `osm-${el.type}-${el.id}`;
         if (!mapped || lat === undefined) { skipped.push(`${id} (type ${t.vending})`); continue; }
-        if (known.has(id)) { skipped.push(`${id} (deja importee)`); continue; }
+        if (known.has(id)) {
+            hours.push({ id, openingHours: t.opening_hours || null });
+            skipped.push(`${id} (deja importee)`);
+            continue;
+        }
         const near = real.find(r => distanceM({ lat, lng }, r) < DUPLICATE_RADIUS_M);
         if (near) { skipped.push(`${id} (doublon de « ${near.name} »)`); continue; }
 
@@ -134,21 +140,33 @@ async function main() {
         }
         const name = capitalize(osmName) || mapped.label;
         const address = street || (city ? `Près de ${city}` : null);
-        rows.push({ id, name, type: mapped.type, emoji: mapped.emoji, address, city, lat, lng });
+        rows.push({ id, name, type: mapped.type, emoji: mapped.emoji, address, city, lat, lng, openingHours: t.opening_hours || null });
     }
 
     console.log(`${elements.length} machines OSM, ${rows.length} a importer, ${skipped.length} ignorees`);
     for (const r of rows) console.log(`  + ${r.id} | ${r.type} | ${r.name} | ${r.address || '-'} | ${r.city || '-'}`);
     for (const s of skipped) console.log(`  - ${s}`);
-    if (dryRun || rows.length === 0) return;
+    for (const h of hours) if (h.openingHours) console.log(`  ~ ${h.id} horaires : ${h.openingHours}`);
+    if (dryRun) return;
 
-    const values = rows.map(r => `(${sqlText(r.id)}, ${sqlText(r.name)}, ${sqlText(r.type)}, ${sqlText(r.emoji)}, ${sqlText(r.address)}, ${sqlText(r.city)}, ${r.lat}, ${r.lng}, null, null, 'osm', ${sqlText(tz)}, false)`).join(',\n');
-    const sql = `insert into distributors (id, name, type, emoji, address, city, lat, lng, last_verified, price_range, source, tz, is_user_added)
+    if (rows.length) {
+        const values = rows.map(r => `(${sqlText(r.id)}, ${sqlText(r.name)}, ${sqlText(r.type)}, ${sqlText(r.emoji)}, ${sqlText(r.address)}, ${sqlText(r.city)}, ${r.lat}, ${r.lng}, null, null, 'osm', ${sqlText(tz)}, false, ${sqlText(r.openingHours)})`).join(',\n');
+        const sql = `insert into distributors (id, name, type, emoji, address, city, lat, lng, last_verified, price_range, source, tz, is_user_added, opening_hours)
 values ${values}
 on conflict (id) do nothing;`;
-    const res = await runSql(sql);
-    if (!res.ok) throw new Error(`Insertion : ${res.text}`);
-    console.log(`Importees : ${rows.length}`);
+        const res = await runSql(sql);
+        if (!res.ok) throw new Error(`Insertion : ${res.text}`);
+        console.log(`Importees : ${rows.length}`);
+    }
+    // Horaires des fiches deja importees : seule colonne remise a jour, fiches OSM seulement
+    if (hours.length) {
+        const values = hours.map(h => `(${sqlText(h.id)}, ${sqlText(h.openingHours)})`).join(',\n');
+        const res = await runSql(`update distributors d set opening_hours = v.oh
+from (values ${values}) as v(id, oh)
+where d.id = v.id and d.source = 'osm' and d.opening_hours is distinct from v.oh;`);
+        if (!res.ok) throw new Error(`Horaires : ${res.text}`);
+        console.log(`Horaires verifies : ${hours.length} fiches deja importees`);
+    }
 }
 
 main().catch(e => {

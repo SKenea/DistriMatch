@@ -783,3 +783,94 @@ test.describe('31. Fiches de démonstration', () => {
         await expect(page.locator('#stats-top .demo-tag')).toHaveCount(3);
     });
 });
+
+// ============================================
+// 32. HORAIRES ET COUP DE POUCE SUR PLACE (EPIC-T17)
+// ============================================
+test.describe('32. Horaires et coup de pouce sur place', () => {
+    async function openWithHours(page, hours) {
+        await page.evaluate((h) => {
+            const d = window.AppState.distributors[0];
+            d.openingHours = h;
+            d.tz = 'Europe/Paris';
+            window.openDistributorModal(d.id);
+        }, hours);
+        await page.waitForSelector('#dist-modal-overlay.active');
+    }
+
+    test('horaires : « Ouvert 24 h/24 » sous le nom et la semaine dans « À propos » ; format inconnu = texte brut ; sans horaires, rien', async ({ page }) => {
+        await openWithHours(page, '24/7');
+        await expect(page.locator('#dist-modal-hours')).toBeVisible();
+        await expect(page.locator('#dist-modal-hours')).toHaveClass(/is-open/);
+        await expect(page.locator('#dist-modal-hours-text')).toHaveText('Ouvert 24 h/24');
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await expect(page.locator('#dist-apropos-hours')).toHaveText('Tous les jours, 24 h/24');
+        await page.click('#dist-modal-close');
+
+        await openWithHours(page, 'sunrise-sunset');
+        await expect(page.locator('#dist-modal-hours')).toBeHidden();
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await expect(page.locator('#dist-apropos-hours')).toHaveText('sunrise-sunset');
+        await page.click('#dist-modal-close');
+
+        await openWithHours(page, null);
+        await expect(page.locator('#dist-modal-hours')).toBeHidden();
+        await expect(page.locator('#dist-apropos-hours-row')).toBeHidden();
+    });
+
+    // Position emulee sur le distributeur, avant d'ouvrir la fiche (relue a l'ouverture)
+    async function standAt(page, context, { offsetLat = 0, accuracy = 5 } = {}) {
+        const d = await page.evaluate(() => {
+            const ok = (p) => p && Number.isInteger(Number(p.id));
+            const x = window.AppState.distributors.find(y => (y.products || []).some(ok));
+            return { lat: x.lat, lng: x.lng };
+        });
+        await context.setGeolocation({ latitude: d.lat + offsetLat, longitude: d.lng, accuracy });
+    }
+
+    test('membre a moins de 15 m : « N produits à vérifier », ce qui date est marqué, pas ce qui est frais ; rien n’est envoyé', async ({ page, context }) => {
+        const f = await page.evaluate(() => {
+            const ok = (p) => p && Number.isInteger(Number(p.id));
+            const d = window.AppState.distributors.find(x => (x.products || []).some(ok));
+            return { productId: Number(d.products.find(ok).id), signalable: d.products.filter(ok).length };
+        });
+        await routeSignals(page, { products: [{ product_id: f.productId, state: 'available', created_at: minutesAgoIso(5) }] });
+        let rpc = 0;
+        await page.route(RPC_ROUTE, route => { rpc++; route.abort(); });
+        await standAt(page, context);
+        await openSignalableFiche(page);
+        const nudge = page.locator('#dist-products-nudge');
+        await expect(nudge).toBeVisible();
+        const stale = f.signalable - 1;
+        if (stale > 0) await expect(nudge).toContainText(`${stale} produit`);
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`)).not.toHaveClass(/needs-check/);
+        await expect(page.locator('#dist-products-list .product-row.needs-check')).toHaveCount(stale);
+        // un « Dispo » d'il y a 5 min dit deja qu'il est en service : « Mettre à jour » n'est pas marque
+        await expect(page.locator('#dist-status-word')).toHaveText('En service');
+        await expect(page.locator('#dist-status-update')).not.toHaveClass(/needs-check/);
+        expect(rpc).toBe(0);
+    });
+
+    test('loin (25 m), position imprécise (50 m) ou visiteur : pas de coup de pouce', async ({ page, context }) => {
+        await routeSignals(page);
+        await standAt(page, context, { offsetLat: 0.000225 });   // ~25 m
+        await openSignalableFiche(page);
+        await page.waitForTimeout(800);
+        await expect(page.locator('#dist-products-nudge')).toBeHidden();
+        await expect(page.locator('#dist-products-list .product-row.needs-check')).toHaveCount(0);
+        await page.click('#dist-modal-close');
+
+        await standAt(page, context, { accuracy: 50 });
+        await openSignalableFiche(page, { login: false });
+        await page.waitForTimeout(800);
+        await expect(page.locator('#dist-products-nudge')).toBeHidden();
+        await page.click('#dist-modal-close');
+
+        await page.evaluate(() => window.__testLogout());
+        await standAt(page, context);
+        await openSignalableFiche(page, { login: false });
+        await page.waitForTimeout(800);
+        await expect(page.locator('#dist-products-nudge')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).toBeHidden();
+    });
+});

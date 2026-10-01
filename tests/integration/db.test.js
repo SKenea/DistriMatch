@@ -193,6 +193,26 @@ describe('base : fiches (010, 013)', { skip: SKIP }, () => {
         assert.equal(p.result, 'user');
     });
 
+    // EPIC-T17 (019) : les horaires viennent d'OSM, un membre n'en pose pas
+    it('un compte connecte ne pose ni ne change les horaires d’une fiche', async () => {
+        const ins = await probe(`${AS_USER}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by, opening_hours)
+            values ('itest-oh', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, '24/7');
+            select coalesce(opening_hours, 'null') into r from distributors where id = 'itest-oh'`);
+        assert.ok(ins.reachedEnd, ins.message);
+        assert.equal(ins.result, 'null');
+        const upd = await probe(`${AS_USER} update distributors set opening_hours = '24/7' where id = '${DEMO}'`);
+        assert.equal(upd.code, '42501');
+    });
+
+    it('les fiches OSM ont leurs horaires (019) et un visiteur les lit', async () => {
+        const rows = await query("select count(*)::int as n from distributors where source = 'osm' and opening_hours is not null");
+        assert.ok(rows[0].n > 0);
+        const p = await probe(`${AS_ANON} select count(*)::text into r from distributors where opening_hours is not null`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, String(rows[0].n));
+    });
+
     it('les fiches importees d’OSM existent (source « osm », id osm-..., pas encore verifiees)', async () => {
         const rows = await query("select count(*)::int as n, count(*) filter (where id not like 'osm-%')::int as bad, count(*) filter (where is_demo)::int as demo from distributors where source = 'osm'");
         assert.ok(rows[0].n > 0);

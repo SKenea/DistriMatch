@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=46">
+    <link rel="stylesheet" href="css/overlays.css?v=47">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -328,6 +328,8 @@
                     <span class="dist-modal-rating" id="dist-modal-rating"></span>
                     <span class="dist-modal-reviews" id="dist-modal-reviews">(0)</span>
                 </div>
+                <!-- Horaires OSM (EPIC-T17) : « Ouvert 24 h/24 », « Fermé · ouvre à 08:00 » -->
+                <p class="dist-modal-hours" id="dist-modal-hours" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span id="dist-modal-hours-text"></span></p>
                 <!-- Rythme infere (couche 2) : "Habituellement plein le matin", rempli par availability.js -->
                 <p class="dist-modal-rhythm" id="dist-modal-rhythm"></p>
                 <!-- EPIC-T9 : distributeur enregistre seulement sur ce telephone (inconnu de la base) -->
@@ -357,6 +359,8 @@
                     </div>
                     <!-- Distributeur vide / en panne : dit une seule fois, au-dessus des cartes -->
                     <p class="products-notice" id="dist-products-notice" hidden></p>
+                    <!-- EPIC-T17 : membre a 15 m, invitation a mettre a jour ce qui date -->
+                    <p class="products-nudge" id="dist-products-nudge" role="status" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="products-nudge-text"></span></p>
                     <div id="dist-products-list"></div>
                     <!-- EPIC-T5 / T10 : informer, donner son avis, ajouter une photo = privileges de compte -->
                     <div class="dist-login-invite dist-invite-card" id="dist-login-invite" role="region" aria-labelledby="dist-login-invite-title" hidden>
@@ -418,6 +422,10 @@
                     <div class="dist-apropos-row">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
                         <span id="dist-apropos-distance"></span>
+                    </div>
+                    <div class="dist-apropos-row" id="dist-apropos-hours-row" style="display:none">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span id="dist-apropos-hours"></span>
                     </div>
                     <!-- EPIC-T14 : l'itineraire vit dans « À propos » ; Photo inactive en V1 (FEATURES.photos) -->
                     <div class="dist-apropos-actions">
@@ -984,28 +992,28 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=67",
-            "./js/state.js": "./js/state.js?v=67",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=67",
-            "./js/config.js": "./js/config.js?v=67",
-            "./js/utils.js": "./js/utils.js?v=67",
-            "./js/auth.js": "./js/auth.js?v=67",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=67",
-            "./js/map.js": "./js/map.js?v=67",
-            "./js/navigation.js": "./js/navigation.js?v=67",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=67",
-            "./js/distributor.js": "./js/distributor.js?v=67",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=67",
-            "./js/chat.js": "./js/chat.js?v=67",
-            "./js/activity.js": "./js/activity.js?v=67",
-            "./js/notifications.js": "./js/notifications.js?v=67",
-            "./js/availability.js": "./js/availability.js?v=67",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=67",
-            "./js/events.js": "./js/events.js?v=67",
-            "./js/stats.js": "./js/stats.js?v=67",
-            "./js/history.js": "./js/history.js?v=67",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=67",
-            "./js/reviews.js": "./js/reviews.js?v=67"
+            "./js/app.js": "./js/app.js?v=68",
+            "./js/state.js": "./js/state.js?v=68",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=68",
+            "./js/config.js": "./js/config.js?v=68",
+            "./js/utils.js": "./js/utils.js?v=68",
+            "./js/auth.js": "./js/auth.js?v=68",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=68",
+            "./js/map.js": "./js/map.js?v=68",
+            "./js/navigation.js": "./js/navigation.js?v=68",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=68",
+            "./js/distributor.js": "./js/distributor.js?v=68",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=68",
+            "./js/chat.js": "./js/chat.js?v=68",
+            "./js/activity.js": "./js/activity.js?v=68",
+            "./js/notifications.js": "./js/notifications.js?v=68",
+            "./js/availability.js": "./js/availability.js?v=68",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=68",
+            "./js/events.js": "./js/events.js?v=68",
+            "./js/stats.js": "./js/stats.js?v=68",
+            "./js/history.js": "./js/history.js?v=68",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=68",
+            "./js/reviews.js": "./js/reviews.js?v=68"
         }
     }
     </script>

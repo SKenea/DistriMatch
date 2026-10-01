@@ -22,7 +22,8 @@ import {
     productToneRank, describeMachineNotice, productIconKey,
     describeMenuHeader, cleanProductName, isDuplicateProductName,
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
-    mapDistributorRow, diffFavoriteSignals
+    mapDistributorRow, diffFavoriteSignals,
+    describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge
 } from '../../js/utils.js';
 
 import {
@@ -1501,5 +1502,81 @@ describe('Conversations structure', () => {
         assert.ok(typeof Conversations.history === 'object');
         assert.ok(typeof Conversations.unreadCounts === 'object');
         assert.equal(Conversations.active, null);
+    });
+});
+
+// ============================================
+// EPIC-T17 : horaires OSM et coup de pouce sur place
+// ============================================
+describe('horaires d\'ouverture (format OSM, EPIC-T17)', () => {
+    // Jeudi 1er octobre 2026, 12:30 a Paris (10:30 UTC)
+    const THU_NOON = new Date('2026-10-01T10:30:00Z');
+    const oh = (raw, date = THU_NOON) => describeOpeningHours(raw, date, 'Europe/Paris');
+
+    it('24/7 : ouvert 24 h/24, tous les jours', () => {
+        assert.deepEqual(oh('24/7'), { state: 'open', label: 'Ouvert 24 h/24', week: 'Tous les jours, 24 h/24' });
+    });
+
+    it('ouvert : heure de fermeture ; la semaine regroupe les jours identiques', () => {
+        const r = oh('Mo-Fr 08:00-19:00; Sa 09:00-12:00');
+        assert.equal(r.label, 'Ouvert · ferme à 19:00');
+        assert.equal(r.week, 'Lun.–ven. : 08:00–19:00 · Sam. : 09:00–12:00 · Dim. : fermé');
+    });
+
+    it('ferme : ouvre plus tard dans la journee, demain, ou un autre jour', () => {
+        assert.equal(oh('Th 13:00-14:00').label, 'Fermé · ouvre à 13:00');
+        assert.equal(oh('Mo-Fr 08:00-12:00').label, 'Fermé · ouvre demain à 08:00');
+        assert.equal(oh('Sa-Su 10:00-11:00').label, 'Fermé · ouvre sam. à 10:00');
+        assert.equal(oh('Mo 08:00-09:00; Mo off').label, 'Fermé');
+    });
+
+    it('plage qui passe minuit : encore ouvert le lendemain matin', () => {
+        const friNight = new Date('2026-10-01T23:30:00Z');   // vendredi 01:30 a Paris
+        assert.equal(oh('Mo-Su 22:00-02:00', friNight).label, 'Ouvert · ferme à 02:00');
+        assert.equal(oh('Mo-Su 22:00-02:00').label, 'Fermé · ouvre à 22:00');
+    });
+
+    it('le fuseau du distributeur compte, pas celui du telephone', () => {
+        // 10:30 UTC = 12:30 a Paris (ouvert) mais 06:30 a New York (ferme)
+        assert.equal(describeOpeningHours('Mo-Su 08:00-20:00', THU_NOON, 'Europe/Paris').state, 'open');
+        assert.equal(describeOpeningHours('Mo-Su 08:00-20:00', THU_NOON, 'America/New_York').state, 'closed');
+    });
+
+    it('jours feries ignores ; format inconnu = texte brut ; rien sans horaires', () => {
+        assert.equal(oh('Mo-Fr 08:00-19:00; PH off').state, 'open');
+        assert.deepEqual(oh('sunrise-sunset'), { state: null, label: '', week: 'sunrise-sunset' });
+        assert.deepEqual(oh(null), { state: null, label: '', week: '' });
+        assert.equal(parseOpeningHours('Mo-Xx 08:00-09:00'), null);
+        assert.equal(parseOpeningHours('Mo 25:00-26:00'), null);
+    });
+});
+
+describe('coup de pouce sur place (EPIC-T17)', () => {
+    const D = { lat: 43.4929, lng: -1.4748 };
+
+    it('15 m, precision GPS comprise ; position trop imprecise ignoree', () => {
+        assert.equal(isNearDistributor({ lat: 43.4929, lng: -1.4748, accuracy: 5 }, D), true);
+        // ~22 m au nord : trop loin a 5 m pres, assez pres a 10 m pres
+        assert.equal(isNearDistributor({ lat: 43.4931, lng: -1.4748, accuracy: 5 }, D), false);
+        assert.equal(isNearDistributor({ lat: 43.4931, lng: -1.4748, accuracy: 10 }, D), true);
+        assert.equal(isNearDistributor({ lat: 43.4929, lng: -1.4748, accuracy: 31 }, D), false);
+        assert.equal(isNearDistributor(null, D), false);
+        assert.equal(isNearDistributor({ lat: 43.4929, lng: -1.4748 }, { lat: null, lng: null }), false);
+    });
+
+    it('phrase : produits a verifier, sinon ajouter, sinon etat ; rien si tout est frais', () => {
+        assert.equal(describeNearbyNudge({ staleProducts: 3, productCount: 4 }), 'Tu es sur place : 3 produits à vérifier. Touche leur étiquette.');
+        assert.equal(describeNearbyNudge({ staleProducts: 1, productCount: 4 }), 'Tu es sur place : 1 produit à vérifier. Touche son étiquette.');
+        assert.equal(describeNearbyNudge({ staleProducts: 0, productCount: 0 }), 'Tu es sur place : ajoute les produits que tu vois.');
+        assert.match(describeNearbyNudge({ staleProducts: 0, productCount: 2, machineStale: true }), /Mettre à jour/);
+        assert.equal(describeNearbyNudge({ staleProducts: 0, productCount: 2, machineStale: false }), '');
+        for (const s of [0, 1, 3]) assert.doesNotMatch(describeNearbyNudge({ staleProducts: s, machineStale: true }), /machine/i);
+    });
+
+    it('mapDistributorRow reprend le fuseau et les horaires', () => {
+        const d = mapDistributorRow({ id: 'x', tz: 'Europe/Paris', opening_hours: '24/7' });
+        assert.equal(d.tz, 'Europe/Paris');
+        assert.equal(d.openingHours, '24/7');
+        assert.equal(mapDistributorRow({ id: 'y' }).openingHours, null);
     });
 });
