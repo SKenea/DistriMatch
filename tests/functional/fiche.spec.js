@@ -171,28 +171,53 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         expect(log.find(l => l.method === 'DELETE').query).toBe(`?id=eq.${pid}`);
     });
 
-    test('ajouter : carte « + Ajouter un produit » -> champ ; Entree ajoute et on enchaine ; doublon refuse', async ({ page }) => {
+    test('ajouter : « + Ajouter » ouvre 4 produits courants du type ; un toucher ajoute, la liste propose les suivants', async ({ page }) => {
         const { log } = await openEditable(page);
+        const type = await page.evaluate(() => window.AppState.currentDistributor.type);
         await page.click('#dist-product-add');
-        await page.locator('.product-add-input').fill('Oeufs fermiers');
+        const chips = page.locator('#dist-add-panel .add-chip');
+        const expected = await page.evaluate(async () => {
+            const { suggestProducts } = await import('./js/utils.js');
+            const d = window.AppState.currentDistributor;
+            return suggestProducts(d.type, d.products);
+        });
+        test.skip(expected.length === 0, `aucune liste pour le type ${type}`);
+        await expect(chips).toHaveText(expected.map(n => new RegExp(n)));
+        expect(expected.length).toBeLessThanOrEqual(4);
+        await chips.first().click();
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: expected[0] })).toHaveCount(1);
+        expect(log.filter(l => l.method === 'POST').map(l => l.body.name)).toEqual([expected[0]]);
+        // Le panneau reste ouvert et ne propose plus ce produit
+        await expect(page.locator('#dist-add-panel')).toBeVisible();
+        await expect(page.locator('#dist-add-panel .add-chip', { hasText: expected[0] })).toHaveCount(0);
+    });
+
+    test('ajouter : « Autre… » avec suggestions (fleches + Entree), nom libre, doublon refuse ; Echap ferme', async ({ page }) => {
+        const { log } = await openEditable(page);
+        await page.evaluate(() => { window.AppState.currentDistributor.type = 'dairy'; });
+        await page.click('#dist-product-add');
+        const input = page.locator('#dist-add-panel .product-add-input');
+        await input.fill('fro');
+        await expect(page.locator('#dist-add-suggestions [role="option"]').first()).toBeVisible();
+        await page.keyboard.press('ArrowDown');
         await page.keyboard.press('Enter');
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Oeufs fermiers' })).toHaveCount(1);
-        await expect(page.locator('.product-add-input')).toBeFocused();   // pret pour le suivant
-        await page.keyboard.type('Miel de fleurs');
+        await expect.poll(() => log.filter(l => l.method === 'POST').length).toBe(1);
+        expect(log[0].body.name).toMatch(/^Fromage/);
+        // nom libre, puis on enchaine dans le meme panneau
+        await expect(input).toBeFocused();
+        await page.keyboard.type('Kéfir maison');
         await page.keyboard.press('Enter');
-        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Miel de fleurs' })).toHaveCount(1);
-        const posts = log.filter(l => l.method === 'POST');
-        expect(posts.map(l => l.body.name)).toEqual(['Oeufs fermiers', 'Miel de fleurs']);
-        expect(posts[0].body.available).toBe(true);
-        // Doublon : message, rien d'envoye
-        await page.keyboard.type('oeufs FERMIERS');
+        await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Kéfir maison' })).toHaveCount(1);
+        // doublon
+        await page.keyboard.type('kefir MAISON');
         await page.keyboard.press('Enter');
         await expect(page.locator('#toast-container .toast.error')).toContainText('déjà dans la liste');
         expect(log.filter(l => l.method === 'POST')).toHaveLength(2);
-        // La nouvelle carte est signalable (id de la base) et « Pas d'info »
-        const added = page.locator('#dist-products-list .product-row', { hasText: 'Oeufs fermiers' });
-        await expect(added.locator('.product-pill')).toHaveText("Pas d'info");
-        await expect(added.locator('.product-status-btn')).toBeVisible();
+        // Echap ferme les suggestions puis le panneau
+        await page.locator('#dist-add-panel .product-add-input').fill('');
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#dist-add-panel')).toHaveCount(0);
+        await expect(page.locator('#dist-product-add')).toBeVisible();
     });
 
     test('ajout refuse par la base : message, pas de carte fantome', async ({ page }) => {
@@ -200,7 +225,7 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await routeEditWrites(page, { fail: { table: 'products', method: 'POST', status: 403, code: '42501' } });
         await openSignalableFiche(page);
         await page.click('#dist-product-add');
-        await page.locator('.product-add-input').fill('Produit refusé');
+        await page.locator('#dist-add-panel .product-add-input').fill('Produit refusé');
         await page.keyboard.press('Enter');
         await expect(page.locator('#toast-container .toast.error')).toContainText('Produit non ajouté');
         await expect(page.locator('#dist-products-list .product-name-btn', { hasText: 'Produit refusé' })).toHaveCount(0);

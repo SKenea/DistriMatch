@@ -19,6 +19,29 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T13 Ajouter un produit par liste, selon le type de distributeur (Stephane, 2026-10-01)
+Objectif : ajouter en un toucher les produits courants, avec des noms identiques d'un
+distributeur a l'autre. Maquette validee : `docs/maquettes/2026-10-01-edition/4-ajout-liste.html`
+(PR #151). Listes generiques par type, sans produit regional, dans le code.
+
+- [x] T13-US1 En tant que membre connecte, je veux ajouter un produit courant en un toucher
+  - Acceptance : toucher « + Ajouter un produit » ouvre un panneau sur place (toute
+    la largeur) avec jusqu'a 4 produits courants du type en pastilles (picto + nom) ;
+    un toucher ajoute (insert `products`) et la liste propose les suivants ; jamais
+    un produit deja sur la fiche (nom compare sans casse, accents ni precision entre
+    parentheses) ; pas de pastilles si le type n'a pas de liste.
+
+- [x] T13-US2 En tant que membre connecte, je veux taper un autre produit avec des suggestions
+  - Acceptance : champ « Autre… » : suggestions (5 max) pendant la frappe, au debut
+    des mots, sans casse ni accents, d'abord la liste du type puis les autres ;
+    fleches + Entree ou toucher pour choisir ; Entree sans choix = nom libre ;
+    doublon refuse avec message ; le panneau reste ouvert pour enchainer ; « Fermer »,
+    Echap ou toucher ailleurs le referme.
+
+- [x] T13-TS Fonctions pures, tests et doc
+  - Acceptance : `suggestProducts` / `searchProductSuggestions` (utils.js) testees ;
+    tests fonctionnels de l'ajout mis a jour ; `CLAUDE.md` a jour ; captures avant fusion.
+
 ### EPIC-T12 Modifier une fiche sans bouton, au toucher (Stephane, 2026-10-01)
 Objectif : un membre connecte modifie la fiche directement sur les produits, sans
 bouton « Modifier » ni mode edition. Valeur : fluide, simple, intuitif, a une main
