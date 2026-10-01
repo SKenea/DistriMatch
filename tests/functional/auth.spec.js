@@ -75,7 +75,7 @@ test.describe('10. Politique d\'authentification', () => {
         await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         await loginForTest(page);
         await expect(page.locator('#dist-products-list .product-name-btn').first()).toBeVisible();
-        await expect(page.locator('#dist-action-add-photo')).toBeVisible();
+        await expect(page.locator('#dist-action-add-photo')).toBeHidden();   // EPIC-T14 : photos inactives en V1
         await expect(page.locator('#dist-login-invite')).toBeHidden();
         // Deconnexion : retour a la lecture seule
         await page.evaluate(() => window.__testLogout());

@@ -185,6 +185,7 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
         await page.evaluate(() => { window.open = () => null; });   // pas de vrai onglet Google Maps
         await openDistModal(page);
+        await page.click('.dist-tab[data-tab="apropos"]');   // EPIC-T14 : l'itineraire est dans « À propos »
         await page.click('#dist-action-directions');
 
         await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'itineraire']);

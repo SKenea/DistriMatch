@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=44">
+    <link rel="stylesheet" href="css/overlays.css?v=45">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -365,13 +365,12 @@
                         </span>
                         <div class="dist-invite-text">
                             <p class="dist-invite-title" id="dist-login-invite-title">Tu es devant le distributeur ?</p>
-                            <p>Connecte-toi pour signaler ce qu'il reste, donner ton avis et ajouter des photos.</p>
+                            <p>Connecte-toi pour signaler ce qu'il reste et donner ton avis.</p>
                         </div>
                         <div class="dist-invite-preview" aria-label="Ce que tu pourras faire">
                             <span class="dist-invite-chip"><span class="dist-feu is-all" aria-hidden="true"><i></i><i></i><i></i></span>État</span>
                             <span class="dist-invite-chip">Dispo / Pas dispo</span>
                             <span class="dist-invite-chip">Avis</span>
-                            <span class="dist-invite-chip">Photos</span>
                         </div>
                         <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
                     </div>
@@ -420,6 +419,23 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
                         <span id="dist-apropos-distance"></span>
                     </div>
+                    <!-- EPIC-T14 : l'itineraire vit dans « À propos » ; Photo inactive en V1 (FEATURES.photos) -->
+                    <div class="dist-apropos-actions">
+                    <button class="dist-action-btn primary" id="dist-action-directions" aria-label="Itinéraire">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                        </svg>
+                        <span>Itinéraire</span>
+                    </button>
+                    <button class="dist-action-btn" id="dist-action-add-photo" aria-label="Ajouter une photo" style="display:none">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <span>Photo</span>
+                    </button>
+                    <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
+                    </div>
                     <div class="dist-apropos-row" id="dist-apropos-added-row" style="display:none">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>Ajouté par la communauté</span>
@@ -437,24 +453,6 @@
                 </div>
             </div>
 
-            <!-- Pied de fiche (EPIC-T10) : bouton de trajet en principal ; Photo et Modifier
-                 seulement en connecte (applyFicheAuthState). -->
-            <div class="dist-modal-actions">
-                <button class="dist-action-btn primary" id="dist-action-directions" aria-label="Itinéraire">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-                    </svg>
-                    <span>Itinéraire</span>
-                </button>
-                <button class="dist-action-btn" id="dist-action-add-photo" aria-label="Ajouter une photo" style="display:none">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                    <span>Photo</span>
-                </button>
-                <input type="file" id="dist-add-photo-input" accept="image/*" capture="environment" multiple style="display:none">
-            </div>
         </div>
     </div>
     </div>
@@ -981,28 +979,28 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=63",
-            "./js/state.js": "./js/state.js?v=63",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=63",
-            "./js/config.js": "./js/config.js?v=63",
-            "./js/utils.js": "./js/utils.js?v=63",
-            "./js/auth.js": "./js/auth.js?v=63",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=63",
-            "./js/map.js": "./js/map.js?v=63",
-            "./js/navigation.js": "./js/navigation.js?v=63",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=63",
-            "./js/distributor.js": "./js/distributor.js?v=63",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=63",
-            "./js/chat.js": "./js/chat.js?v=63",
-            "./js/activity.js": "./js/activity.js?v=63",
-            "./js/notifications.js": "./js/notifications.js?v=63",
-            "./js/availability.js": "./js/availability.js?v=63",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=63",
-            "./js/events.js": "./js/events.js?v=63",
-            "./js/stats.js": "./js/stats.js?v=63",
-            "./js/history.js": "./js/history.js?v=63",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=63",
-            "./js/reviews.js": "./js/reviews.js?v=63"
+            "./js/app.js": "./js/app.js?v=64",
+            "./js/state.js": "./js/state.js?v=64",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=64",
+            "./js/config.js": "./js/config.js?v=64",
+            "./js/utils.js": "./js/utils.js?v=64",
+            "./js/auth.js": "./js/auth.js?v=64",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=64",
+            "./js/map.js": "./js/map.js?v=64",
+            "./js/navigation.js": "./js/navigation.js?v=64",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=64",
+            "./js/distributor.js": "./js/distributor.js?v=64",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=64",
+            "./js/chat.js": "./js/chat.js?v=64",
+            "./js/activity.js": "./js/activity.js?v=64",
+            "./js/notifications.js": "./js/notifications.js?v=64",
+            "./js/availability.js": "./js/availability.js?v=64",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=64",
+            "./js/events.js": "./js/events.js?v=64",
+            "./js/stats.js": "./js/stats.js?v=64",
+            "./js/history.js": "./js/history.js?v=64",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=64",
+            "./js/reviews.js": "./js/reviews.js?v=64"
         }
     }
     </script>

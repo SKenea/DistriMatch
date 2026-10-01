@@ -67,8 +67,14 @@ test.describe('4. Modal distributeur', () => {
         expect(active).toBe(false);
     });
 
-    test('boutons Itineraire et Favori visibles', async ({ page }) => {
+    test('Itineraire dans « À propos » (plus de pied collé en bas), Favori dans l’en-tete ; pas de photo (V1)', async ({ page }) => {
         await openDistModal(page);
+        await expect(page.locator('.dist-modal-actions')).toHaveCount(0);
+        await expect(page.locator('#dist-action-directions')).toBeHidden();
+        await page.click('.dist-tab[data-tab="apropos"]');
+        await expect(page.locator('#dist-action-directions')).toBeVisible();
+        await expect(page.locator('#dist-modal-photo')).toBeHidden();
+        await expect(page.locator('#dist-action-add-photo')).toBeHidden();
         expect(await page.$('#dist-action-directions')).not.toBeNull();
         expect(await page.$('#dist-action-favorite')).not.toBeNull();
     });
@@ -380,7 +386,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-products-hint')).toBeHidden();
         await expect(page.locator('#dist-login-invite')).toBeVisible();
         await expect(page.locator('#dist-login-invite')).toContainText('Tu es devant le distributeur ?');
-        await expect(page.locator('#dist-login-invite')).toContainText("signaler ce qu'il reste, donner ton avis et ajouter des photos");
+        await expect(page.locator('#dist-login-invite')).toContainText("signaler ce qu'il reste et donner ton avis");
         await loginForTest(page);
         await expect(page.locator('#dist-status-update')).toBeVisible();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();   // replie derriere « Mettre à jour »

@@ -8,6 +8,7 @@ import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, 
 import { toggleSubscription, loadDistributorPhotos } from './distributor.js';
 import { uploadDistributorPhotos, publishDistributor } from './add-distributor.js';
 import { requireAuth, isAuthenticated } from './auth.js';
+import { FEATURES } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
 import { loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
@@ -415,9 +416,11 @@ export function openDistributorModal(id) {
 
     // Photos : galerie dans l'onglet « À propos » (EPIC-T10 : plus de bandeau).
     showDistributorPhotos([]);
-    loadDistributorPhotos(distributor.id).then(photos => {
-        if (AppState.currentDistributor?.id === distributor.id) showDistributorPhotos(photos);
-    });
+    if (FEATURES.photos) {   // EPIC-T14 : photos inactives en V1
+        loadDistributorPhotos(distributor.id).then(photos => {
+            if (AppState.currentDistributor?.id === distributor.id) showDistributorPhotos(photos);
+        });
+    }
 
     // Boutons
     updateFavoriteButton();
@@ -654,7 +657,7 @@ function applyFicheAuthState() {
     const publishBtn = document.getElementById('dist-local-publish');
     if (publishBtn) publishBtn.textContent = authed ? 'Publier ce distributeur' : 'Me connecter pour le publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
-    if (photoBtn) photoBtn.style.display = (authed && !localOnly) ? '' : 'none';
+    if (photoBtn) photoBtn.style.display = (FEATURES.photos && authed && !localOnly) ? '' : 'none';
 }
 
 // « Publier ce distributeur » : l'envoie a la base (connexion exigee, UC1), puis
