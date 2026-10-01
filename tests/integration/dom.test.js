@@ -33,6 +33,7 @@ const html = `<!DOCTYPE html>
                 <span id="dist-modal-reviews"></span>
                 <span id="dist-modal-type"></span>
                 <div class="dist-modal-meta"><button type="button" id="dist-modal-pricerange"></button></div>
+                <div id="dist-apropos-osm-row" style="display:none"></div>
             </div>
             <div class="dist-modal-actions">
                 <button id="dist-action-directions"></button>
@@ -369,6 +370,18 @@ describe('openDistributorModal', () => {
         assert.equal(list.querySelector('#dist-product-add').dataset.guest, undefined);
         assert.equal(document.getElementById('dist-modal-pricerange').tagName, 'BUTTON');
         window.__testLogout();
+    });
+
+    // EPIC-T15 : fiche importee d'OpenStreetMap
+    it('fiche OSM : « Prix ? » si le prix est inconnu, attribution OpenStreetMap dans « À propos »', () => {
+        AppState.distributors[0].priceRange = null;
+        AppState.distributors[0].source = 'osm';
+        openDistributorModal('dist-test');
+        assert.equal(document.getElementById('dist-modal-pricerange').textContent, 'Prix ?');
+        assert.equal(document.getElementById('dist-apropos-osm-row').style.display, 'flex');
+        AppState.distributors[0].source = 'user';
+        openDistributorModal('dist-test');
+        assert.equal(document.getElementById('dist-apropos-osm-row').style.display, 'none');
     });
 
     it('visiteur : les memes zones menent a la connexion (data-guest), nom non modifiable', () => {

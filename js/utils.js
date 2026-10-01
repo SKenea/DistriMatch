@@ -952,6 +952,8 @@ export function mapDistributorRow(d) {
         priceRange: d.price_range,
         isUserAdded: d.is_user_added || false,
         isDemo: d.is_demo === true,
+        // Provenance (018) : 'user' (membre), 'osm' (import OpenStreetMap), 'demo'
+        source: d.source || (d.is_demo === true ? 'demo' : 'user'),
         products: (d.products || []).map(p => ({
             id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
             name: p.name,

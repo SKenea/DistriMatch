@@ -182,6 +182,23 @@ describe('base : fiches (010, 013)', { skip: SKIP }, () => {
         assert.ok(p.reachedEnd, p.message);
         assert.equal(p.result, 'false');
     });
+
+    // EPIC-T15 (018) : un membre ne se fait pas passer pour OpenStreetMap
+    it('une fiche ajoutee par un compte est toujours source « user », meme si elle dit « osm »', async () => {
+        const p = await probe(`${AS_USER}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by, source)
+            values ('itest-osm', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, 'osm');
+            select source into r from distributors where id = 'itest-osm'`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'user');
+    });
+
+    it('les fiches importees d’OSM existent (source « osm », id osm-..., pas encore verifiees)', async () => {
+        const rows = await query("select count(*)::int as n, count(*) filter (where id not like 'osm-%')::int as bad, count(*) filter (where is_demo)::int as demo from distributors where source = 'osm'");
+        assert.ok(rows[0].n > 0);
+        assert.equal(rows[0].bad, 0);
+        assert.equal(rows[0].demo, 0);
+    });
 });
 
 describe('base : avis (016)', { skip: SKIP }, () => {

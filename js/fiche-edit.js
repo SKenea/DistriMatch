@@ -488,7 +488,7 @@ function openPricePicker() {
         closePricePicker();
         return;
     }
-    const current = PRICE_LEVELS.includes(d.priceRange) ? d.priceRange : '€€';
+    const current = PRICE_LEVELS.includes(d.priceRange) ? d.priceRange : null;   // inconnu : rien de coche
     const picker = document.createElement('div');
     picker.id = 'dist-price-picker';
     picker.className = 'dist-price-picker';
@@ -535,7 +535,7 @@ async function setPrice(value) {
     if (error) {
         console.warn('[DistriMatch] Prix refuse :', error.code, error.message);
         d.priceRange = previous;
-        if (btn) btn.textContent = PRICE_LEVELS.includes(previous) ? previous : '€€';
+        if (btn) btn.textContent = PRICE_LEVELS.includes(previous) ? previous : 'Prix ?';
         showToast(`Prix non enregistré, réessaie plus tard (code ${error.code || '?'})`, 'error');
         return;
     }

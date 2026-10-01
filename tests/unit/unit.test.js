@@ -759,6 +759,14 @@ describe('mapDistributorRow (ligne Supabase -> distributeur, isDemo)', () => {
         assert.equal(mapDistributorRow(row({ is_demo: 'true' })).isDemo, false);
     });
 
+    // EPIC-T15 (018) : provenance de la fiche
+    it('source : osm / user / demo ; absente -> deduite de is_demo', () => {
+        assert.equal(mapDistributorRow(row({ source: 'osm' })).source, 'osm');
+        assert.equal(mapDistributorRow(row({ source: 'user' })).source, 'user');
+        assert.equal(mapDistributorRow(row({ is_demo: true })).source, 'demo');
+        assert.equal(mapDistributorRow(row()).source, 'user');
+    });
+
     it('le reste du mapping est conserve (camelCase, nombres, produits avec id)', () => {
         const d = mapDistributorRow(row({ is_demo: true }));
         assert.equal(d.rating, 4.5);
