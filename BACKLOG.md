@@ -19,6 +19,27 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T15 Les vrais distributeurs d'OpenStreetMap, Cote Basque (Stephane, 2026-10-01)
+Cadrage de US-5 tranche par Stephane : zone Cote Basque, fiches de demo gardees pour
+l'instant, import unique relancable. Comptage a blanc : 32 machines (15 food, 7 pain,
+7 pizza, 2 glacons, 1 mixte).
+
+- [x] T15-TS1 Colonne `source` (migration 018)
+  - Acceptance : `distributors.source` in ('user','osm','demo'), defaut 'user',
+    fiches demo = 'demo' ; trigger : l'API (anon / authenticated) ne peut poser que
+    'user' ; teste en integration.
+- [x] T15-TS2 Script `scripts/import-osm.mjs` (zone en parametre, rien en dur dans l'app)
+  - Acceptance : Overpass (vending alimentaires) -> fiches `osm-<node|way>-<id>`,
+    `source='osm'`, type mappe (pizza, bread -> bakery, ice_cubes -> ice, food ->
+    general...), nom OSM sinon « Distributeur de … », adresse OSM sinon rue / ville
+    par Nominatim (1 req/s), `last_verified = null`, prix inconnu ; ignore une machine
+    a moins de 50 m d'une fiche reelle existante ; rejouable sans doublon ; `--dry-run`.
+- [x] T15-US1 En tant que visiteur, je vois les vraies machines de la Cote Basque
+  - Acceptance : les 32 (moins les doublons) apparaissent sur la carte et la liste,
+    « Pas encore vérifié », sans produit (pastilles pour ajouter) ; prix inconnu
+    affiche « Prix ? » ; « À propos » d'une fiche OSM : « Données © OpenStreetMap
+    contributors (ODbL) ».
+
 ### EPIC-T14 Itineraire dans « À propos », photos desactivees en V1 (Stephane, 2026-10-01)
 Objectif : une fiche plus simple pour la premiere version. Rien n'est efface de la base
 (2 photos existantes), le code photo reste derriere `FEATURES.photos` (config.js).
@@ -657,7 +678,7 @@ Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration
   - TS-4 : meme objet `FEATURES` que le chat ; `updateImplicitProfile` et
     `addActivityItem` restent (donnees locales), seul l'affichage change.
 
-- [ ] US-5 (epic) Chantier 4 : toutes les machines connues, partout
+- [x] US-5 (epic) Chantier 4 : toutes les machines connues, partout (Cote Basque importee 2026-10-01, EPIC-T15 ; autres zones : relancer scripts/import-osm.mjs avec une autre --bbox)
   - En tant que visiteur hors Cote Basque, je veux voir des la premiere ouverture les
     distributeurs automatiques connus d'OpenStreetMap autour de moi, afin que l'app serve
     ailleurs sans attendre une saisie manuelle.

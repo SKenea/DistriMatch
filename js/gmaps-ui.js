@@ -388,7 +388,8 @@ export function openDistributorModal(id) {
     // (availability.js), appele par loadAvailabilityForDistributor ci-dessous.
     // Niveau de prix : valeur bornee a € / €€ / €€€ (defaut €€)
     const PRICE_LEVELS = ['€', '€€', '€€€'];
-    const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : '€€';
+    // Prix inconnu (fiche importee d'OpenStreetMap, EPIC-T15) : « Prix ? », un membre le choisit
+    const priceRange = PRICE_LEVELS.includes(distributor.priceRange) ? distributor.priceRange : 'Prix ?';
     const prEl = document.getElementById('dist-modal-pricerange');
     if (prEl) {
         prEl.textContent = priceRange;
@@ -397,13 +398,21 @@ export function openDistributorModal(id) {
     document.getElementById('dist-price-picker')?.remove();
 
     // A propos
-    document.getElementById('dist-apropos-address').textContent = distributor.address || 'Adresse inconnue';
+    // Rue + ville quand la ville est connue et pas deja dans l'adresse (fiches OSM : « Rue X, Ville »)
+    const city = distributor.city && !/vérifier/i.test(distributor.city) ? distributor.city : '';
+    const address = distributor.address || '';
+    document.getElementById('dist-apropos-address').textContent = address
+        ? (city && !address.toLowerCase().includes(city.toLowerCase()) ? `${address}, ${city}` : address)
+        : (city || 'Adresse inconnue');
     document.getElementById('dist-apropos-distance').textContent = distance || 'Distance non disponible';
     // « Ajouté par la communauté » ne s'affiche pas pour une fiche fictive : la demo prime
     const addedRow = document.getElementById('dist-apropos-added-row');
     if (addedRow) addedRow.style.display = (distributor.isUserAdded && !distributor.isDemo) ? 'flex' : 'none';
     const demoRow = document.getElementById('dist-apropos-demo-row');
     if (demoRow) demoRow.style.display = distributor.isDemo ? 'flex' : 'none';
+    // Fiche importee d'OpenStreetMap : attribution obligatoire (ODbL)
+    const osmRow = document.getElementById('dist-apropos-osm-row');
+    if (osmRow) osmRow.style.display = distributor.source === 'osm' ? 'flex' : 'none';
 
     // Produits : cartes teintees ; modifiables au toucher par un membre (EPIC-T12)
     renderFicheProducts();
