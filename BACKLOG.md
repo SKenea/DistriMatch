@@ -577,7 +577,7 @@ Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration
     `page.route` sur `**/rest/v1/reviews*` (liste, pagination, fiche sans avis) ; tests
     unit sur la moyenne et l'arrondi. Import map bumpee.
 
-- [ ] US-2 Une demo toujours vivante
+- [x] US-2 Une demo toujours vivante (livre 2026-10-01 : migration 017, job pg_cron `distrimatch-demo-nightly` 02:00 UTC ; verifie : 23 fiches avec signal < 24 h, 4 vrais signaux intacts. A FAIRE avant le vrai pilote : `select cron.unschedule('distrimatch-demo-nightly'); select purge_demo_data();`)
   - En tant que Stephane qui montre l'app (elus, producteurs, testeurs), je veux que la
     demo ait toujours des signaux des dernieres heures, afin que badges verts, rythmes,
     bandeaux « Signalée vide » et KPI ressemblent a un pilote actif et non a une app

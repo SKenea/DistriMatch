@@ -312,3 +312,19 @@ describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
         assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0 });
     });
 });
+
+// US-2 (017) : la demo se regenere chaque nuit, sans toucher aux vrais signaux
+describe('base : demo toujours vivante (017)', { skip: SKIP }, () => {
+    it('le job pg_cron nocturne existe, actif, et appelle seed_demo_signals', async () => {
+        const rows = await query("select schedule, command, active from cron.job where jobname = 'distrimatch-demo-nightly'");
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].schedule, '0 2 * * *');
+        assert.match(rows[0].command, /seed_demo_signals\(14\)/);
+        assert.equal(rows[0].active, true);
+    });
+
+    it('les signaux de demo ne visent que des fiches is_demo', async () => {
+        const rows = await query("select count(*)::int as n from availability_signals s join distributors d on d.id = s.distributor_id where s.device_hash like 'demo-%' and not d.is_demo");
+        assert.equal(rows[0].n, 0);
+    });
+});
