@@ -324,7 +324,7 @@ describe('base : avis (016)', { skip: SKIP }, () => {
 
 // EPIC-T18 (020) : exploitants, demandes, page admin, priorite des signaux
 describe('base : exploitants (020)', { skip: SKIP }, () => {
-    const REQUEST = `insert into operator_requests (distributor_id, company, contact) values ('${DEMO}', 'Societe itest', '06 00 00 00 00')`;
+    const REQUEST = `insert into operator_requests (distributor_id, company, relation, message) values ('${DEMO}', 'Societe itest', 'operator', 'itest')`;
     // v_uid devient admin dans la transaction (annulee), avant de passer en role connecte
     const MAKE_ADMIN = `insert into app_admins (user_id) values (${USER}) on conflict do nothing;`;
 
@@ -344,7 +344,8 @@ describe('base : exploitants (020)', { skip: SKIP }, () => {
     });
 
     it('un membre non admin n’accede a rien d’admin', async () => {
-        for (const call of ['admin_operator_requests()', 'admin_operators()', "admin_decide_operator_request(1, true)", `admin_revoke_operator('${DEMO}', ${USER})`]) {
+        for (const call of ['admin_operator_requests()', 'admin_operators()', "admin_decide_operator_request(1, true)", `admin_revoke_operator('${DEMO}', ${USER})`,
+            'admin_request_siret(1)', "admin_send_operator_code(1, 'phone')", "admin_reject_operator_request(1, 'x')"]) {
             const p = await probe(`${AS_USER} perform ${call}`);
             assert.equal(p.code, '42501', call);
         }
@@ -407,6 +408,90 @@ describe('base : exploitants (020)', { skip: SKIP }, () => {
         assert.equal(reqs.code, '42501');
         const admins = await probe(`${AS_USER} perform user_id from app_admins`);
         assert.equal(admins.code, '42501');
+    });
+});
+
+// EPIC-T20 (021) : echange direct, SIRET, code par courrier
+describe('base : verification d’un exploitant (021)', { skip: SKIP }, () => {
+    const REQUEST = `insert into operator_requests (distributor_id, company, relation, message) values ('${DEMO}', 'Societe itest', 'owner', 'itest') returning id into v_req`;
+    const MAKE_ADMIN = `insert into app_admins (user_id) values (${USER}) on conflict do nothing;`;
+    const VALID_SIRET = '41816609600069';   // SIRET public bien forme (cle valide), jamais enregistre
+
+    it('parcours complet : demande -> SIRET demande -> SIRET (cle verifiee) -> code -> 1 essai rate -> bon code -> exploitant', async () => {
+        const p = await probe(`${MAKE_ADMIN} ${AS_USER} ${REQUEST};
+            perform admin_request_siret(v_req);
+            begin perform submit_operator_siret(v_req, '41816609600068'); exception when others then v_bad := sqlstate; end;
+            perform submit_operator_siret(v_req, '418 166 096 00069');
+            v_code := admin_send_operator_code(v_req, 'mail', 'SOCIETE ITEST', '1 rue Itest 64000 Bayonne');
+            v_wrong := verify_operator_code(v_req, case when v_code = '00000' then '11111' else '00000' end);
+            v_ok := verify_operator_code(v_req, v_code);
+            r := json_build_object(
+                'bad', v_bad, 'code', v_code ~ '^[0-9]{5}$', 'wrong', v_wrong, 'ok', v_ok,
+                'status', (select status from operator_requests where id = v_req),
+                'operator', (select count(*) from my_operated_distributors() m where m = '${DEMO}'),
+                'events', (select json_agg(body order by id) from operator_request_messages where request_id = v_req and author = 'system'),
+                'admin_msg', (select count(*) from operator_request_messages where request_id = v_req and author = 'admin')
+            )::text`, 'v_req bigint; v_bad text; v_code text; v_wrong jsonb; v_ok jsonb;');
+        assert.ok(p.reachedEnd, p.message);
+        const r = JSON.parse(p.result);
+        assert.equal(r.bad, '22023', 'SIRET a cle fausse refuse');
+        assert.equal(r.code, true);
+        assert.deepEqual(r.wrong, { ok: false, reason: 'wrong', left: 4 });
+        assert.deepEqual(r.ok, { ok: true });
+        assert.equal(r.status, 'approved');
+        assert.equal(r.operator, 1);
+        assert.equal(r.admin_msg, 1);
+        assert.equal(r.events[0], 'Demande envoyée');
+        assert.ok(r.events.some(e => e.startsWith('Courrier envoyé')));
+        assert.ok(r.events.some(e => e.startsWith('Code validé')));
+    });
+
+    it('le code n’est lisible par personne via l’API ; 5 essais puis bloque ; expire au bout de 30 jours', async () => {
+        const hidden = await probe(`${AS_USER} perform code_hash from operator_requests`);
+        assert.equal(hidden.code, '42501');
+        const locked = await probe(`${MAKE_ADMIN} ${AS_USER} ${REQUEST};
+            perform admin_request_siret(v_req); perform submit_operator_siret(v_req, '${VALID_SIRET}');
+            perform admin_send_operator_code(v_req, 'phone');
+            for i in 1..5 loop v_last := verify_operator_code(v_req, '99999x'); end loop;
+            r := verify_operator_code(v_req, '12345')::text`, 'v_req bigint; v_last jsonb; i int;');
+        assert.ok(locked.reachedEnd, locked.message);
+        assert.equal(JSON.parse(locked.result).reason, 'locked');
+        const expired = await probe(`${MAKE_ADMIN} ${AS_USER} ${REQUEST};
+            perform admin_request_siret(v_req); perform submit_operator_siret(v_req, '${VALID_SIRET}');
+            v_code := admin_send_operator_code(v_req, 'phone');
+            reset role; update operator_requests set code_expires_at = now() - interval '1 minute' where id = v_req;
+            ${AS_USER} r := verify_operator_code(v_req, v_code)::text`, 'v_req bigint; v_code text;');
+        assert.ok(expired.reachedEnd, expired.message);
+        assert.equal(JSON.parse(expired.result).reason, 'expired');
+    });
+
+    it('echange direct : le demandeur ecrit et lit son fil ; un autre compte ne lit ni n’ecrit', async () => {
+        const own = await probe(`${AS_USER} ${REQUEST}; perform post_operator_message(v_req, 'Bonjour itest');
+            r := (select count(*) from operator_request_messages where request_id = v_req)::text`, 'v_req bigint;');
+        assert.ok(own.reachedEnd, own.message);
+        assert.equal(own.result, '2');   // « Demande envoyée » + le message
+        const other = await probe(`${AS_USER} ${REQUEST};
+            reset role; update operator_requests set user_id = (select id from auth.users where id <> ${USER} order by created_at limit 1) where id = v_req;
+            ${AS_USER} perform post_operator_message(v_req, 'intrus')`, 'v_req bigint;');
+        assert.equal(other.code, '42501');
+        const unseen = await probe(`${AS_USER} ${REQUEST};
+            reset role; update operator_requests set user_id = (select id from auth.users where id <> ${USER} order by created_at limit 1) where id = v_req;
+            ${AS_USER} r := (select count(*) from operator_request_messages where request_id = v_req)::text`, 'v_req bigint;');
+        assert.equal(unseen.result, '0', 'fil d’un autre compte invisible');
+        const direct = await probe(`${AS_USER} ${REQUEST}; insert into operator_request_messages (request_id, author, body) values (v_req, 'admin', 'faux')`, 'v_req bigint;');
+        assert.equal(direct.code, '42501', 'ecriture directe refusee : passer par post_operator_message');
+    });
+
+    it('le SIRET ne se donne que s’il est demande ; refus avec motif dans le fil ; une seule demande en cours', async () => {
+        const early = await probe(`${AS_USER} ${REQUEST}; perform submit_operator_siret(v_req, '${VALID_SIRET}')`, 'v_req bigint;');
+        assert.equal(early.code, 'P0001');
+        const rejected = await probe(`${MAKE_ADMIN} ${AS_USER} ${REQUEST}; perform admin_reject_operator_request(v_req, 'itest motif');
+            r := (select status || '|' || reject_reason from operator_requests where id = v_req)
+              || '|' || (select body from operator_request_messages where request_id = v_req order by id desc limit 1)`, 'v_req bigint;');
+        assert.ok(rejected.reachedEnd, rejected.message);
+        assert.equal(rejected.result, 'rejected|itest motif|Demande refusée : itest motif');
+        const twice = await probe(`${AS_USER} ${REQUEST}; ${REQUEST}`, 'v_req bigint;');
+        assert.equal(twice.code, '23505');
     });
 });
 

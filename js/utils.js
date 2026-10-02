@@ -1209,25 +1209,114 @@ export function describeNearbyNudge({ staleProducts = 0, productCount = 0, machi
 }
 
 // ============================================
-// DEMANDE DE STATUT D'EXPLOITANT (EPIC-T18)
+// DEMANDE DE STATUT D'EXPLOITANT (EPIC-T18 / T20)
 // ============================================
-// Memes bornes que la base (020) : societe 2..100, contact 6..100 caracteres.
-export function validateOperatorRequest({ company = '', contact = '' } = {}) {
+// Premier formulaire leger (021) : lien avec le distributeur, entreprise,
+// message facultatif ; le SIRET vient plus tard, dans l'echange.
+export const OPERATOR_RELATIONS = { owner: 'Propriétaire', operator: 'Exploitant', employee: 'Salarié' };
+
+export function validateOperatorRequest({ relation = '', company = '', message = '' } = {}) {
+    if (!OPERATOR_RELATIONS[relation]) return 'Choisis ton lien avec le distributeur.';
     const c = String(company).trim();
-    const k = String(contact).trim();
-    if (c.length < 2) return 'Indique le nom de ta société.';
-    if (k.length < 6) return 'Indique un téléphone ou un SIRET pour que l’on puisse vérifier.';
-    if (c.length > 100 || k.length > 100) return '100 caractères au plus par champ.';
+    if (c.length < 2) return 'Indique le nom de ton entreprise.';
+    if (c.length > 100) return '100 caractères au plus pour l’entreprise.';
+    if (String(message).trim().length > 500) return '500 caractères au plus pour le message.';
     return '';
 }
 
 export function describeOperatorRequestError(error) {
     const code = error?.code;
     if (code === '28000' || code === 'PGRST301' || error?.status === 401) return 'Ta session a expiré : reconnecte-toi.';
-    if (code === '42501') return 'Ce compte ne peut pas envoyer de demande.';
-    if (code === 'P0001') return 'Trop de demandes aujourd’hui : réessaie demain.';
-    if (code === '23514') return 'Vérifie les deux champs (2 à 100 caractères pour la société, 6 à 100 pour le contact).';
-    return 'Demande non envoyée, réessaie plus tard.';
+    if (code === '42501') return 'Ce compte ne peut pas faire cette demande.';
+    if (code === '23505') return 'Tu as déjà une demande en cours pour ce distributeur.';
+    if (code === '22023') return 'SIRET invalide : vérifie les 14 chiffres.';
+    if (code === 'P0001') return error?.message?.includes('SIRET') ? 'Le SIRET n’est pas demandé pour l’instant.' : 'Trop d’envois pour l’instant : réessaie plus tard.';
+    if (code === '23514') return 'Vérifie les champs : un est vide ou trop long.';
+    return 'Envoi impossible, réessaie plus tard.';
+}
+
+// Etats de la demande (021) -> libelle, etape de la barre (1..4 ; 0 = refusee), ton
+const OPERATOR_STATUS = {
+    pending: { label: 'Demande envoyée', step: 1, tone: 'info' },
+    siret_requested: { label: 'SIRET demandé', step: 2, tone: 'action' },
+    siret_received: { label: 'Vérification', step: 2, tone: 'info' },
+    code_sent: { label: 'Courrier envoyé', step: 3, tone: 'action' },
+    approved: { label: 'Vérifiée', step: 4, tone: 'ok' },
+    rejected: { label: 'Refusée', step: 0, tone: 'bad' }
+};
+export const OPERATOR_STEPS = ['Demande', 'Entreprise', 'Courrier', 'Vérifié'];
+
+export function describeOperatorStatus(status) {
+    return OPERATOR_STATUS[status] || { label: 'Inconnu', step: 0, tone: 'info' };
+}
+
+// SIRET : 14 chiffres, cle de Luhn ; La Poste (SIREN 356000000) : somme % 5 (comme 021)
+export function isValidSiret(raw) {
+    const s = String(raw || '').replace(/\D/g, '');
+    if (!/^\d{14}$/.test(s)) return false;
+    if (s.startsWith('356000000') && [...s].reduce((a, c) => a + Number(c), 0) % 5 === 0) return true;
+    let sum = 0;
+    for (let i = 0; i < 14; i++) {
+        let d = Number(s[i]);
+        if (i % 2 === 0) {
+            d *= 2;
+            if (d > 9) d -= 9;
+        }
+        sum += d;
+    }
+    return sum % 10 === 0;
+}
+
+export function formatSiret(raw) {
+    const s = String(raw || '').replace(/\D/g, '').slice(0, 14);
+    return [s.slice(0, 3), s.slice(3, 6), s.slice(6, 9), s.slice(9)].filter(Boolean).join(' ');
+}
+
+// Messages du fil non lus par moi : ceux des autres, apres ma derniere lecture
+export function countUnreadMessages(messages = [], readAt = null, me = 'member') {
+    const since = readAt ? new Date(readAt).getTime() : 0;
+    return messages.filter(m => m.author !== me && new Date(m.created_at).getTime() > since).length;
+}
+
+// Resultat de verify_operator_code (jsonb) -> phrase
+export function describeCodeResult(res) {
+    if (res?.ok) return '';
+    if (res?.reason === 'expired') return 'Ce code a expiré : demande un nouveau courrier dans l’échange.';
+    if (res?.reason === 'locked' || res?.left === 0) return 'Trop d’essais : l’équipe peut t’envoyer un nouveau code.';
+    if (res?.reason === 'not_sent') return 'Aucun code n’est attendu pour l’instant.';
+    const left = Number(res?.left);
+    return `Code incorrect : ${left} essai${left > 1 ? 's' : ''} restant${left > 1 ? 's' : ''}.`;
+}
+
+// Registre SIRENE (API Recherche d'entreprises) -> ce que la console affiche.
+//   result     : un element de results[] (ou null)
+//   distributor: { lat, lng } ; declared : nom d'entreprise donne par le membre
+// verdict : 'ok' (active, nom proche, etablissement a 30 km ou moins), 'check'
+// (un point a regarder), 'bad' (fermee ou introuvable).
+export function assessSirene(result, distributor = null, declared = '', siret = '') {
+    if (!result) return { verdict: 'bad', reasons: ['Introuvable dans le registre'], name: '', address: '', active: false, leaders: [], distanceKm: null, diffusible: false };
+    const etab = (result.matching_etablissements || []).find(e => e.siret === siret) || result.siege || {};
+    const name = result.nom_complet || result.nom_raison_sociale || '';
+    const active = (etab.etat_administratif || result.etat_administratif) === 'A';
+    const diffusible = !['P', 'N'].includes(etab.statut_diffusion_etablissement || result.statut_diffusion);
+    const address = diffusible ? (etab.adresse || '') : '';
+    const leaders = (result.dirigeants || []).slice(0, 3).map(d => d.type_dirigeant === 'personne morale'
+        ? (d.denomination || '')
+        : [d.prenoms, d.nom].filter(Boolean).join(' ')).filter(Boolean);
+    const lat = Number(etab.latitude);
+    const lng = Number(etab.longitude);
+    const distanceKm = distributor && Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(distributor.lat)
+        ? calculateDistance(distributor.lat, distributor.lng, lat, lng) : null;
+    const tokens = (s) => normalizeName(s).replace(/[^a-z0-9 ]/g, ' ').split(' ').filter(w => w.length > 2);
+    const official = new Set(tokens(name));
+    const nameClose = tokens(declared).some(w => official.has(w));
+    const reasons = [];
+    if (!active) reasons.push('Entreprise fermée');
+    if (!nameClose) reasons.push('Nom différent de celui déclaré');
+    if (distanceKm !== null && distanceKm > 30) reasons.push(`Établissement à ${Math.round(distanceKm)} km du distributeur`);
+    if (!diffusible) reasons.push('Adresse non diffusée : utiliser l’appel');
+    const verdict = !active ? 'bad' : reasons.length ? 'check' : 'ok';
+    return { verdict, reasons, name, address, active, leaders, distanceKm, diffusible, nameClose };
 }
 
 // ============================================

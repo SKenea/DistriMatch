@@ -30,14 +30,27 @@ formulaire « Societe + telephone ou SIRET » d'EPIC-T18.
 
 - [x] T20-TS0 Benchmark + 3 maquettes (fil de discussion / etapes guidees / mixte), cote
   membre et cote console admin, et comparatif ; Stephane choisit.
-- [ ] T20-US1 En tant que membre, je demande le statut sans SIRET et je suis ma demande
-- [ ] T20-US2 En tant que membre et admin, nous echangeons directement (fil par demande)
-- [ ] T20-US3 En tant qu'admin, je verifie le SIRET dans SIRENE et j'envoie un code par courrier
-  - Acceptance (a detailler apres choix) : SIRENE lu par l'API publique Recherche
-    d'entreprises ; code 5 chiffres valable 30 jours, 5 essais ; carte imprimable ;
-    SIRET et code visibles par l'admin seul.
-- [ ] T20-US4 En tant que membre, je tape le code recu et deviens exploitant verifie
-- [ ] T20-TS1 Base, tests et doc, captures avant fusion.
+Choix de Stephane : maquette 3 « mixte » (docs/maquettes/2026-10-02-exploitant/3-mixte.html).
+
+- [x] T20-US1 En tant que membre, je demande le statut sans SIRET et je suis ma demande
+  - Acceptance : « À propos » -> formulaire leger (lien Propriétaire / Exploitant / Salarié,
+    entreprise, message facultatif) ; page « Ma demande » : statut, barre 4 etapes (Demande ·
+    Entreprise · Courrier · Vérifié), carte « Ce qu'il te reste à faire » ; ouverte depuis
+    « À propos » (badge nouveaux messages) et depuis Compte.
+- [x] T20-US2 En tant que membre et admin, nous echangeons directement (fil par demande)
+  - Acceptance : fil de messages (membre / equipe / evenements) des deux cotes, saisie libre
+    (1000 caracteres, 30 messages / heure), non lus comptes et remis a zero a la lecture.
+- [x] T20-US3 En tant qu'admin, je verifie le SIRET dans SIRENE et j'envoie un code par courrier
+  - Acceptance : « Demander le SIRET » ; le membre saisit 14 chiffres (controle de cle) ;
+    console : registre SIRENE (API publique Recherche d'entreprises : raison sociale,
+    adresse, etat, dirigeants, distance au distributeur, verdict) ; « Envoyer le code par
+    courrier » -> code 5 chiffres genere en base (stocke chiffre, 30 jours), carte
+    imprimable a l'adresse SIRENE ; autres actions : appeler (le code est le meme), valider
+    sans code, refuser avec motif.
+- [x] T20-US4 En tant que membre, je tape le code recu et deviens exploitant verifie
+  - Acceptance : 5 cases (un seul champ one-time-code), 5 essais, expiration 30 jours ;
+    bon code -> exploitant verifie (badge), message systeme ; SIRET et code jamais publics.
+- [x] T20-TS1 Base, tests et doc, captures avant fusion.
 
 ### EPIC-T19 Etat du distributeur : menu deroulant, et visible sur la carte (Stephane, 2026-10-02)
 Objectif : changer l'etat du distributeur comme un produit (menu deroulant, plus de bouton
