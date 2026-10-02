@@ -19,6 +19,26 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T20 Verifier un exploitant : echange direct, SIRENE et code par courrier (Stephane, 2026-10-02)
+Objectif : relier une personne a une societe de facon fiable (« methode Google ») sans
+demander le SIRET d'emblee. Parcours : demande legere -> console admin -> echange direct
+(fil de messages) -> SIRET demande dans le fil -> verification SIRENE affichee a l'admin
+(nom, adresse, etat, dirigeants, distance au distributeur) -> code a 5 chiffres envoye par
+courrier a l'adresse SIRENE (jamais une adresse donnee par le membre ; appel en secours,
+au cas par cas) -> le membre tape le code -> statut Exploitant valide. Remplace le
+formulaire « Societe + telephone ou SIRET » d'EPIC-T18.
+
+- [x] T20-TS0 Benchmark + 3 maquettes (fil de discussion / etapes guidees / mixte), cote
+  membre et cote console admin, et comparatif ; Stephane choisit.
+- [ ] T20-US1 En tant que membre, je demande le statut sans SIRET et je suis ma demande
+- [ ] T20-US2 En tant que membre et admin, nous echangeons directement (fil par demande)
+- [ ] T20-US3 En tant qu'admin, je verifie le SIRET dans SIRENE et j'envoie un code par courrier
+  - Acceptance (a detailler apres choix) : SIRENE lu par l'API publique Recherche
+    d'entreprises ; code 5 chiffres valable 30 jours, 5 essais ; carte imprimable ;
+    SIRET et code visibles par l'admin seul.
+- [ ] T20-US4 En tant que membre, je tape le code recu et deviens exploitant verifie
+- [ ] T20-TS1 Base, tests et doc, captures avant fusion.
+
 ### EPIC-T19 Etat du distributeur : menu deroulant, et visible sur la carte (Stephane, 2026-10-02)
 Objectif : changer l'etat du distributeur comme un produit (menu deroulant, plus de bouton
 « Mettre à jour ») et voir l'etat + le stock sans ouvrir la fiche (pastille de la carte,
