@@ -26,19 +26,19 @@ liste laterale). Etape 1 : 3 maquettes benchmarkees ; Stephane choisit ; puis im
 
 - [x] T19-TS0 Benchmark + 3 maquettes iPhone publiees (menu : ancre / feuille du bas /
   deplie ; pastille : couleur pleine / anneau / badge chiffre) et comparatif
-- [ ] T19-US1 En tant que membre, je change l'etat du distributeur depuis un menu deroulant
+- [x] T19-US1 En tant que membre, je change l'etat du distributeur depuis un menu deroulant
   - Acceptance : toucher la ligne d'etat ouvre le menu En service / Vide / En panne (etat
     actuel coche ; « Actuellement : Pas d'info » en tete si besoin) ; un choix envoie le
     signal ; visiteur -> invitation ; plus de bouton « Mettre à jour » ; coup de pouce sur
     place et « Info de l'exploitant » conserves ; jamais « machine ».
-- [ ] T19-US2 En tant qu'utilisateur, je vois l'etat et le stock sur la pastille de la carte
+- [x] T19-US2 En tant qu'utilisateur, je vois l'etat et le stock sur la pastille de la carte
   - Acceptance : couleur du feu (vert / orange / rouge, gris sans info, adoucie > 2 h) ;
     stock lu sans chiffre (Stephane 2026-10-02 : « pas de chiffre ! ») : l'anneau se
     remplit selon la part de produits dispo ; favori = petit coeur ; resume charge avec la
     carte (deux lectures anonymes des vues de signaux, memes regles que la fiche).
-- [ ] T19-US3 En tant qu'utilisateur, je vois l'etat et le stock dans la liste laterale
+- [x] T19-US3 En tant qu'utilisateur, je vois l'etat et le stock dans la liste laterale
   - Acceptance : meme feu et « N sur M dispo » sur chaque ligne.
-- [ ] T19-TS1 Tests et doc a jour, captures avant fusion.
+- [x] T19-TS1 Tests et doc a jour, captures avant fusion.
 
 ### EPIC-T18 Statut Exploitant et page admin (Stephane, 2026-10-01, lot 2 des statuts)
 Objectif : l'exploitant d'un distributeur, qui le remplit, est la meilleure source ; sa
