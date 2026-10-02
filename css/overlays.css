@@ -2382,3 +2382,42 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices .dd-sep { margin: 3px 0; }
 .product-choices .product-choice.is-yes,
 .product-choices .product-choice.is-no { color: #1F2937; }
+
+/* Option actuelle = bouton plein de sa couleur + case cochee a droite (Stephane
+   2026-10-02) ; les autres options : case vide. Etat du distributeur et produits. */
+#dist-machine-choices .dd-check,
+.product-choices .dd-check {
+    visibility: visible;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    padding: 1px;
+    border: 2px solid #9CA3AF;
+    border-radius: 4px;
+    background: #FFFFFF;
+    color: transparent;
+}
+#dist-machine-choices .machine-choice.is-current,
+.product-choices .product-choice.is-current { color: #FFFFFF; font-weight: 600; }
+#dist-machine-choices .machine-choice.is-working.is-current,
+.product-choices .product-choice.is-yes.is-current { background: #15803D; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-empty.is-current { background: #C2410C; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-broken.is-current { background: #B91C1C; color: #FFFFFF; }
+.product-choices .product-choice.is-no.is-current { background: #4B5563; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-current:hover,
+#dist-machine-choices .machine-choice.is-current:focus-visible,
+.product-choices .product-choice.is-current:hover,
+.product-choices .product-choice.is-current:focus-visible { filter: brightness(0.92); }
+#dist-machine-choices .machine-choice.is-current:focus-visible,
+.product-choices .product-choice.is-current:focus-visible { outline: 2px solid #111827; outline-offset: 1px; }
+#dist-machine-choices .machine-choice.is-current .dd-dot,
+.product-choices .product-choice.is-current .dd-dot { background: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-current .dd-check,
+.product-choices .product-choice.is-current .dd-check { border-color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-working.is-current .dd-check,
+.product-choices .product-choice.is-yes.is-current .dd-check { color: #15803D; }
+#dist-machine-choices .machine-choice.is-empty.is-current .dd-check { color: #C2410C; }
+#dist-machine-choices .machine-choice.is-broken.is-current .dd-check { color: #B91C1C; }
+.product-choices .product-choice.is-no.is-current .dd-check { color: #4B5563; }
+#dist-machine-choices .machine-choice:not(.is-current) .dd-check,
+.product-choices .product-choice:not(.is-current) .dd-check { color: transparent; }
