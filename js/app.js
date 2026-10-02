@@ -605,6 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-profile')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-account')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-admin')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-operator-request')?.addEventListener('click', goBackToMap);
     initAdmin();   // EPIC-T18 : page admin (demandes d'exploitant)
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);

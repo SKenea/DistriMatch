@@ -24,7 +24,8 @@ import {
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
     mapDistributorRow, diffFavoriteSignals,
     describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
-    validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary
+    validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary,
+    OPERATOR_RELATIONS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, assessSirene
 } from '../../js/utils.js';
 
 import {
@@ -1586,19 +1587,23 @@ describe('coup de pouce sur place (EPIC-T17)', () => {
 // EPIC-T18 : demande de statut d'exploitant
 // ============================================
 describe('demande de statut d\'exploitant (EPIC-T18)', () => {
-    it('champs : memes bornes que la base', () => {
-        assert.equal(validateOperatorRequest({ company: 'Ferme Etxe', contact: '06 12 34 56 78' }), '');
-        assert.match(validateOperatorRequest({ company: ' ', contact: '06 12 34 56 78' }), /société/);
-        assert.match(validateOperatorRequest({ company: 'Ferme', contact: '123' }), /téléphone ou un SIRET/);
-        assert.match(validateOperatorRequest({ company: 'x'.repeat(101), contact: '06 12 34 56 78' }), /100 caractères/);
-        assert.match(validateOperatorRequest(), /société/);
+    it('formulaire leger (EPIC-T20) : lien obligatoire, entreprise 2..100, message <= 500, pas de SIRET', () => {
+        assert.equal(validateOperatorRequest({ relation: 'owner', company: 'Ferme Etxe' }), '');
+        assert.match(validateOperatorRequest({ company: 'Ferme Etxe' }), /lien/);
+        assert.match(validateOperatorRequest({ relation: 'boss', company: 'Ferme Etxe' }), /lien/);
+        assert.match(validateOperatorRequest({ relation: 'operator', company: ' ' }), /entreprise/);
+        assert.match(validateOperatorRequest({ relation: 'operator', company: 'x'.repeat(101) }), /100 caractères/);
+        assert.match(validateOperatorRequest({ relation: 'employee', company: 'Ferme', message: 'x'.repeat(501) }), /500 caractères/);
+        assert.deepEqual(Object.values(OPERATOR_RELATIONS), ['Propriétaire', 'Exploitant', 'Salarié']);
     });
 
     it('erreurs de la base dites en clair', () => {
         assert.match(describeOperatorRequestError({ code: '28000' }), /reconnecte-toi/);
         assert.match(describeOperatorRequestError({ code: '42501' }), /ne peut pas/);
-        assert.match(describeOperatorRequestError({ code: 'P0001' }), /demain/);
-        assert.match(describeOperatorRequestError({ code: '23514' }), /Vérifie/);
+        assert.match(describeOperatorRequestError({ code: '23505' }), /déjà une demande/);
+        assert.match(describeOperatorRequestError({ code: '22023' }), /SIRET invalide/);
+        assert.match(describeOperatorRequestError({ code: 'P0001', message: "Le SIRET n'est pas demande" }), /pas demandé/);
+        assert.match(describeOperatorRequestError({ code: 'P0001', message: 'Trop' }), /plus tard/);
         assert.match(describeOperatorRequestError(null), /réessaie/);
     });
 
@@ -1645,5 +1650,70 @@ describe('resume etat + stock d\'un distributeur (EPIC-T19)', () => {
         const s = describeDistributorSummary(d, null, { 2: { state: 'available', created_at: ago(5) } }, now);
         assert.equal(s.state, 'working');
         assert.equal(s.stock, '1 sur 4 dispo');
+    });
+});
+
+// ============================================
+// EPIC-T20 : verifier un exploitant
+// ============================================
+describe('verification d\'un exploitant (EPIC-T20)', () => {
+    it('etats -> libelle et etape de la barre ; refus hors barre', () => {
+        assert.deepEqual(describeOperatorStatus('pending'), { label: 'Demande envoyée', step: 1, tone: 'info' });
+        assert.equal(describeOperatorStatus('siret_requested').step, 2);
+        assert.equal(describeOperatorStatus('siret_received').label, 'Vérification');
+        assert.equal(describeOperatorStatus('code_sent').step, 3);
+        assert.equal(describeOperatorStatus('approved').step, 4);
+        assert.equal(describeOperatorStatus('rejected').step, 0);
+    });
+
+    it('SIRET : cle de Luhn (comme la base), espaces acceptes, La Poste ; affichage par blocs', () => {
+        assert.equal(isValidSiret('41816609600069'), true);
+        assert.equal(isValidSiret('418 166 096 00069'), true);
+        assert.equal(isValidSiret('41816609600068'), false);
+        assert.equal(isValidSiret('4181660960006'), false);
+        assert.equal(isValidSiret('35600000000048'), true);
+        assert.equal(formatSiret('41816609600069'), '418 166 096 00069');
+        assert.equal(formatSiret('4181'), '418 1');
+    });
+
+    it('non lus : messages des autres apres ma derniere lecture', () => {
+        const msgs = [
+            { author: 'system', created_at: '2026-10-02T10:00:00Z' },
+            { author: 'admin', created_at: '2026-10-02T11:00:00Z' },
+            { author: 'member', created_at: '2026-10-02T12:00:00Z' }
+        ];
+        assert.equal(countUnreadMessages(msgs, '2026-10-02T10:30:00Z', 'member'), 1);
+        assert.equal(countUnreadMessages(msgs, '2026-10-02T10:30:00Z', 'admin'), 1);
+        assert.equal(countUnreadMessages(msgs, null, 'admin'), 2);
+    });
+
+    it('code : phrases selon le resultat de la base', () => {
+        assert.equal(describeCodeResult({ ok: true }), '');
+        assert.equal(describeCodeResult({ ok: false, reason: 'wrong', left: 3 }), 'Code incorrect : 3 essais restants.');
+        assert.equal(describeCodeResult({ ok: false, reason: 'wrong', left: 1 }), 'Code incorrect : 1 essai restant.');
+        assert.match(describeCodeResult({ ok: false, reason: 'locked', left: 0 }), /Trop d’essais/);
+        assert.match(describeCodeResult({ ok: false, reason: 'expired' }), /expiré/);
+    });
+
+    it('registre SIRENE : coherent / a verifier / incoherent, adresse non diffusee, distance', () => {
+        const hit = {
+            nom_complet: 'EARL FERME ETXEBERRIA', etat_administratif: 'A', statut_diffusion: 'O',
+            dirigeants: [{ type_dirigeant: 'personne physique', prenoms: 'Exemple', nom: 'ETXEBERRIA' }],
+            siege: { siret: '12345678900012', adresse: '12 CHEMIN EXEMPLE 64250 CAMBO-LES-BAINS', latitude: '43.36', longitude: '-1.40', etat_administratif: 'A', statut_diffusion_etablissement: 'O' }
+        };
+        const d = { lat: 43.3592, lng: -1.4003 };
+        const ok = assessSirene(hit, d, 'Ferme Etxeberria', '12345678900012');
+        assert.equal(ok.verdict, 'ok');
+        assert.equal(ok.address, '12 CHEMIN EXEMPLE 64250 CAMBO-LES-BAINS');
+        assert.deepEqual(ok.leaders, ['Exemple ETXEBERRIA']);
+        assert.ok(ok.distanceKm < 1);
+        assert.equal(assessSirene(hit, d, 'Boulangerie Dupont', '12345678900012').verdict, 'check');
+        assert.equal(assessSirene({ ...hit, siege: { ...hit.siege, latitude: '48.86', longitude: '2.33' } }, d, 'Ferme Etxeberria', '').verdict, 'check');
+        const closed = assessSirene({ ...hit, etat_administratif: 'F', siege: { ...hit.siege, etat_administratif: 'F' } }, d, 'Ferme Etxeberria', '');
+        assert.equal(closed.verdict, 'bad');
+        const hidden = assessSirene({ ...hit, siege: { ...hit.siege, statut_diffusion_etablissement: 'P' } }, d, 'Ferme Etxeberria', '');
+        assert.equal(hidden.address, '');
+        assert.equal(hidden.diffusible, false);
+        assert.equal(assessSirene(null).verdict, 'bad');
     });
 });
