@@ -24,7 +24,7 @@ import {
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
     mapDistributorRow, diffFavoriteSignals,
     describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
-    validateOperatorRequest, describeOperatorRequestError
+    validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary
 } from '../../js/utils.js';
 
 import {
@@ -701,7 +701,7 @@ describe('accents des libelles UI (audit UX-16)', () => {
 
     it('les libelles de la fiche et de la nav portent leurs accents', () => {
         const html = sources[0][1];
-        for (const s of ['Itinéraire', 'Activité', 'Réglages des notifications', 'Signaler un problème', 'Le distributeur, là maintenant']) {
+        for (const s of ['Itinéraire', 'Activité', 'Réglages des notifications', 'Signaler un problème', 'État du distributeur']) {
             assert.ok(html.includes(s), `"${s}" attendu dans index.html`);
         }
     });
@@ -1569,7 +1569,7 @@ describe('coup de pouce sur place (EPIC-T17)', () => {
         assert.equal(describeNearbyNudge({ staleProducts: 3, productCount: 4 }), 'Tu es sur place : 3 produits à vérifier. Touche leur étiquette.');
         assert.equal(describeNearbyNudge({ staleProducts: 1, productCount: 4 }), 'Tu es sur place : 1 produit à vérifier. Touche son étiquette.');
         assert.equal(describeNearbyNudge({ staleProducts: 0, productCount: 0 }), 'Tu es sur place : ajoute les produits que tu vois.');
-        assert.match(describeNearbyNudge({ staleProducts: 0, productCount: 2, machineStale: true }), /Mettre à jour/);
+        assert.match(describeNearbyNudge({ staleProducts: 0, productCount: 2, machineStale: true }), /touche son état/);
         assert.equal(describeNearbyNudge({ staleProducts: 0, productCount: 2, machineStale: false }), '');
         for (const s of [0, 1, 3]) assert.doesNotMatch(describeNearbyNudge({ staleProducts: s, machineStale: true }), /machine/i);
     });
@@ -1604,5 +1604,46 @@ describe('demande de statut d\'exploitant (EPIC-T18)', () => {
 
     it('mapDistributorRow : pas d\'exploitant par defaut (pose au chargement)', () => {
         assert.equal(mapDistributorRow({ id: 'x' }).hasOperator, false);
+    });
+});
+
+// ============================================
+// EPIC-T19 : etat et stock pour la carte et la liste
+// ============================================
+describe('resume etat + stock d\'un distributeur (EPIC-T19)', () => {
+    const now = Date.parse('2026-10-02T12:00:00Z');
+    const ago = (min) => new Date(now - min * 60000).toISOString();
+    const d = { id: 'd', products: [{ id: 1, name: 'A' }, { id: 2, name: 'B' }, { id: 3, name: 'C' }, { id: 4, name: 'D' }] };
+
+    it('en service : anneau rempli selon la part dispo, stock en toutes lettres', () => {
+        const s = describeDistributorSummary(d, { state: 'working', created_at: ago(10) }, { 1: { state: 'available', created_at: ago(10) } }, now);
+        assert.equal(s.state, 'working');
+        assert.equal(s.label, 'En service');
+        assert.equal(s.fresh, true);
+        assert.equal(s.fill, 0.25);
+        assert.equal(s.stock, '1 sur 4 dispo');
+    });
+
+    it('vide / en panne : anneau plein ; plus de 2 h : pas frais', () => {
+        const s = describeDistributorSummary(d, { state: 'empty', created_at: ago(180) }, {}, now);
+        assert.equal(s.fill, 1);
+        assert.equal(s.fresh, false);
+        assert.equal(s.available, 0);
+    });
+
+    it('sans signal : Pas d\'info, anneau vide ; sans produit : plein, pas de stock', () => {
+        const none = describeDistributorSummary(d, null, {}, now);
+        assert.equal(none.state, 'unknown');
+        assert.equal(none.fill, 0);
+        assert.equal(none.stock, '', 'pas de « 0 sur 4 » quand on ne sait rien');
+        const empty = describeDistributorSummary({ id: 'e', products: [] }, { state: 'working', created_at: ago(5) }, {}, now);
+        assert.equal(empty.fill, 1);
+        assert.equal(empty.stock, '');
+    });
+
+    it('un « Dispo » recent suffit a dire « En service »', () => {
+        const s = describeDistributorSummary(d, null, { 2: { state: 'available', created_at: ago(5) } }, now);
+        assert.equal(s.state, 'working');
+        assert.equal(s.stock, '1 sur 4 dispo');
     });
 });

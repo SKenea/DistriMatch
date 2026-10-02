@@ -80,6 +80,7 @@ import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
 import { initAdmin, loadAdmin } from './admin.js';
+import { loadSignalSummaries } from './summaries.js';
 
 // ============================================
 // SUPABASE
@@ -498,6 +499,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // S'assurer que les distributeurs sont charges avant de continuer
     await distributorsPromise;
+    // EPIC-T19 : etat et stock de chaque distributeur (pastilles, liste), fire-and-forget
+    loadSignalSummaries();
 
     // Prefetch des vignettes photos : enrichissement NON critique, donc lance
     // sans await (fire-and-forget). Si Supabase est injoignable, l'appel peut

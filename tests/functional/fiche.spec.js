@@ -376,7 +376,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         expect(payloads.map(pl => pl.p_product_signals[0].state)).toEqual(['available', 'absent']);
     });
 
-    test('« Mettre à jour » -> « Vide » : ligne d\u2019etat orange « Vide », etat marque, un seul liseré, aliments « Pas dispo »', async ({ page }) => {
+    test('menu de l\u2019etat -> « Vide » : ligne d\u2019etat orange « Vide », etat marque, un seul liseré, aliments « Pas dispo »', async ({ page }) => {
         const payloads = [];
         await page.route(RPC_ROUTE, route => {
             payloads.push(route.request().postDataJSON());
@@ -396,7 +396,7 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-status')).toHaveAttribute('data-state', 'empty');
         await expect(page.locator('#dist-status-word')).toHaveText('Vide');
         await expect(page.locator('#dist-machine-choices')).toBeHidden();   // replie apres l'envoi
-        await expect(page.locator('#dist-machine-choices .machine-choice[data-machine="empty"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#dist-machine-choices .machine-choice[data-machine="empty"]')).toHaveAttribute('aria-checked', 'true');
         await expect(page.locator('#dist-modal-verified')).toHaveText("à l'instant");
         await expect(page.locator('#dist-products-count')).toHaveText(/^· 0 sur \d+ dispo$/);
         await expect(page.locator('#dist-products-notice')).toHaveText("Distributeur signalé vide à l'instant : les produits sont probablement épuisés.");
@@ -407,10 +407,11 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-modal [data-tab-pane="produits"]')).not.toContainText(/machine/i);
     });
 
-    test('visiteur : lecture seule (ni « Mettre à jour » ni carte touchable), invitation ; connexion -> tout apparait', async ({ page }) => {
+    test('visiteur : lecture seule (ligne d\u2019etat et cartes menent a l\u2019invitation), invitation ; connexion -> tout apparait', async ({ page }) => {
         await routeSignals(page);
         await openSignalableFiche(page, { login: false });
-        await expect(page.locator('#dist-status-update')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).toHaveAttribute('data-guest', '1');   // EPIC-T19 : la ligne mene a l'invitation
+        await expect(page.locator('#dist-status-update .dist-status-chevron')).toBeHidden();
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
         await expect(page.locator('#dist-products-hint')).toBeHidden();
@@ -418,8 +419,9 @@ test.describe('13. Signal sur l\u2019aliment et sur la machine', () => {
         await expect(page.locator('#dist-login-invite')).toContainText('Tu es devant le distributeur ?');
         await expect(page.locator('#dist-login-invite')).toContainText("signaler ce qu'il reste et donner ton avis");
         await loginForTest(page);
-        await expect(page.locator('#dist-status-update')).toBeVisible();
-        await expect(page.locator('#dist-machine-choices')).toBeHidden();   // replie derriere « Mettre à jour »
+        await expect(page.locator('#dist-status-update')).not.toHaveAttribute('data-guest', '1');
+        await expect(page.locator('#dist-status-update .dist-status-chevron')).toBeVisible();
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();   // replie tant que la ligne n'est pas touchee
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])').first()).toBeVisible();
         // Sans info recente, les boutons sont deja sur les cartes : pas de consigne en plus
         await expect(page.locator('#dist-products-hint')).toBeHidden();
@@ -845,7 +847,7 @@ test.describe('32. Horaires et coup de pouce sur place', () => {
         if (stale > 0) await expect(nudge).toContainText(`${stale} produit`);
         await expect(page.locator(`#dist-products-list .product-row[data-product-id="${f.productId}"]`)).not.toHaveClass(/needs-check/);
         await expect(page.locator('#dist-products-list .product-row.needs-check')).toHaveCount(stale);
-        // un « Dispo » d'il y a 5 min dit deja qu'il est en service : « Mettre à jour » n'est pas marque
+        // un « Dispo » d'il y a 5 min dit deja qu'il est en service : la ligne d'etat n'est pas marquee
         await expect(page.locator('#dist-status-word')).toHaveText('En service');
         await expect(page.locator('#dist-status-update')).not.toHaveClass(/needs-check/);
         expect(rpc).toBe(0);
@@ -871,6 +873,93 @@ test.describe('32. Horaires et coup de pouce sur place', () => {
         await openSignalableFiche(page, { login: false });
         await page.waitForTimeout(800);
         await expect(page.locator('#dist-products-nudge')).toBeHidden();
-        await expect(page.locator('#dist-status-update')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).toHaveAttribute('data-guest', '1');   // EPIC-T19 : la ligne mene a l'invitation
+        await expect(page.locator('#dist-status-update')).not.toHaveClass(/needs-check/);
+    });
+});
+
+// ============================================
+// 36. ETAT DU DISTRIBUTEUR : MENU ANCRE, PASTILLE, LISTE (EPIC-T19)
+// ============================================
+test.describe('36. Etat du distributeur : menu, pastille, liste', () => {
+    test('membre : la ligne d’etat ouvre le menu ancre ; « Actuellement : Pas d’info » ; fleches ; Echap ferme ; plus de « Mettre à jour »', async ({ page }) => {
+        await routeSignals(page);
+        await openSignalableFiche(page);
+        await expect(page.locator('#dist-modal')).not.toContainText('Mettre à jour');
+        const trigger = page.locator('#dist-status-update');
+        await expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+        await trigger.click();
+        const menu = page.locator('#dist-machine-choices[role="menu"]');
+        await expect(menu).toBeVisible();
+        await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+        await expect(page.locator('#dist-machine-choices-q')).toHaveText("Actuellement : Pas d'info");
+        await expect(menu.locator('[role="menuitemradio"][aria-checked="true"]')).toHaveCount(0);
+        await page.locator('#dist-machine-choices .machine-choice').first().focus();
+        await page.keyboard.press('ArrowDown');
+        await expect(page.locator('#dist-machine-choices .machine-choice[data-machine="empty"]')).toBeFocused();
+        await page.keyboard.press('Escape');
+        await expect(menu).toBeHidden();
+        await expect(trigger).toBeFocused();
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);   // Echap ne ferme pas la fiche
+    });
+
+    test('etat connu : coche sur l’etat actuel, pas d’en-tete ; toucher ailleurs ferme', async ({ page }) => {
+        await routeSignals(page, { status: [{ state: 'broken', created_at: minutesAgoIso(10) }] });
+        await openSignalableFiche(page);
+        await page.click('#dist-status-update');
+        await expect(page.locator('#dist-machine-choices .machine-choice[data-machine="broken"]')).toHaveAttribute('aria-checked', 'true');
+        await expect(page.locator('#dist-machine-choices-q')).toBeHidden();
+        await page.mouse.click(5, 700);
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
+    });
+
+    test('visiteur : toucher la ligne d’etat met l’invitation en avant, aucun menu', async ({ page }) => {
+        await routeSignals(page);
+        await openSignalableFiche(page, { login: false });
+        await page.click('#dist-status-update');
+        await expect(page.locator('#dist-machine-choices')).toBeHidden();
+        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
+    });
+
+    test('carte : anneau de la couleur de l’etat, rempli selon le stock, pointille sans info, sans chiffre ; titre accessible', async ({ page }) => {
+        const ids = await page.evaluate(() => {
+            const ok = (p) => p && Number.isInteger(Number(p.id));
+            const withProducts = window.AppState.distributors.filter(x => (x.products || []).filter(ok).length >= 2);
+            const d = withProducts[0];
+            return { id: d.id, products: d.products.filter(ok).map(p => Number(p.id)) };
+        });
+        const statusRows = [{ distributor_id: ids.id, state: 'working', source: 'user', created_at: minutesAgoIso(10) }];
+        const productRows = [{ distributor_id: ids.id, product_id: ids.products[0], state: 'available', source: 'user', created_at: minutesAgoIso(10) }];
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(statusRows) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(productRows) }));
+        await page.evaluate(async () => { const m = await import('./js/summaries.js'); await m.loadSignalSummaries(); });
+        const pin = page.locator('.leaflet-marker-icon', { has: page.locator('.distributor-pin.is-working') }).first();
+        await expect(pin).toBeVisible();
+        const title = await pin.getAttribute('title');
+        expect(title).toMatch(/: En service, 1 sur \d+ dispo$/);
+        // l'arc plein couvre une partie seulement de l'anneau (1 sur N)
+        const dash = await pin.locator('.distributor-pin-ring circle[stroke-dasharray]').getAttribute('stroke-dasharray');
+        const [arc, total] = dash.split(' ').map(Number);
+        expect(arc).toBeGreaterThan(0);
+        expect(arc).toBeLessThan(total);
+        await expect(pin).not.toContainText(/\d/);   // pas de chiffre sur la pastille
+        // sans info : pointille gris
+        await expect(page.locator('.distributor-pin.is-unknown .distributor-pin-ring circle[stroke-dasharray="5 4"]').first()).toBeVisible();
+    });
+
+    test('liste : anneau autour de la vignette et « En service · 1 sur N dispo »', async ({ page }) => {
+        const ids = await page.evaluate(() => {
+            const ok = (p) => p && Number.isInteger(Number(p.id));
+            const d = window.AppState.distributors.find(x => (x.products || []).filter(ok).length >= 2);
+            return { id: d.id, products: d.products.filter(ok).map(p => Number(p.id)), count: d.products.length };
+        });
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ distributor_id: ids.id, state: 'working', created_at: minutesAgoIso(10) }]) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ distributor_id: ids.id, product_id: ids.products[0], state: 'available', created_at: minutesAgoIso(10) }]) }));
+        await page.evaluate(async () => { const m = await import('./js/summaries.js'); await m.loadSignalSummaries(); });
+        await page.evaluate(() => window.openSidePanelForType ? window.openSidePanelForType('all') : null);
+        await page.evaluate(async () => { const g = await import('./js/gmaps-ui.js'); g.openSidePanelForType('all'); });
+        const item = page.locator(`#side-panel-list .side-panel-item[data-id="${ids.id}"]`);
+        await expect(item.locator('.side-panel-item-photo.has-ring.is-working .side-panel-ring')).toHaveCount(1);
+        await expect(item.locator('.side-panel-item-state')).toHaveText(`En service · 1 sur ${ids.count} dispo`);
     });
 });

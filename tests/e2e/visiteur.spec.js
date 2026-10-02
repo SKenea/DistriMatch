@@ -58,7 +58,7 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
         await expect(page.locator('#dist-products-title')).toHaveText(/^Il reste quoi \?/);
         await expect(page.locator('#dist-modal-demo')).toBeVisible();                       // fiche de demo signalee
         await expect(page.locator('#dist-login-invite')).toBeVisible();
-        await expect(page.locator('#dist-status-update')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).toHaveAttribute('data-guest', '1');   // EPIC-T19 : la ligne mene a l'invitation
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
         await expect(page.locator('#dist-action-edit')).toHaveCount(0);

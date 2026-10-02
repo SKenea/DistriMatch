@@ -1204,7 +1204,7 @@ export function describeNearbyNudge({ staleProducts = 0, productCount = 0, machi
         return `Tu es sur place : ${staleProducts} produit${staleProducts > 1 ? 's' : ''} à vérifier. Touche ${staleProducts > 1 ? 'leur' : 'son'} étiquette.`;
     }
     if (productCount === 0) return 'Tu es sur place : ajoute les produits que tu vois.';
-    if (machineStale) return 'Tu es sur place : dis-nous s’il est en service avec « Mettre à jour ».';
+    if (machineStale) return 'Tu es sur place : touche son état pour dire s’il est en service.';
     return '';
 }
 
@@ -1228,4 +1228,35 @@ export function describeOperatorRequestError(error) {
     if (code === 'P0001') return 'Trop de demandes aujourd’hui : réessaie demain.';
     if (code === '23514') return 'Vérifie les deux champs (2 à 100 caractères pour la société, 6 à 100 pour le contact).';
     return 'Demande non envoyée, réessaie plus tard.';
+}
+
+// ============================================
+// ETAT ET STOCK D'UN DISTRIBUTEUR, POUR LA CARTE ET LA LISTE (EPIC-T19)
+// ============================================
+// Memes regles que la fiche (resolveMachineStatus / resolveProductStatus).
+//   statusRow   : ligne de distributor_status (ou null)
+//   productRows : { [product_id]: ligne de product_availability }
+// fill (anneau) : part des produits dispo quand il est en service et a des
+// produits ; plein sinon (vide / en panne : l'etat suffit) ; 0 sans info.
+export function describeDistributorSummary(distributor, statusRow = null, productRows = {}, now = Date.now()) {
+    const rows = productRows || {};
+    const machine = resolveMachineStatus(statusRow, Object.values(rows), null, now);
+    const products = distributor?.products || [];
+    const statuses = products.map(p => resolveProductStatus(p, rows[p.id], machine, now));
+    const available = statuses.filter(s => s.tone === 'available').length;
+    const listed = products.length;
+    // Comme la fiche (describeFicheHero) : pas de « 0 sur 5 » quand on ne sait rien
+    const known = statuses.some(s => s.tone !== 'unknown');
+    let fill = 1;
+    if (machine.state === 'unknown') fill = 0;
+    else if (machine.state === 'working' && listed > 0) fill = available / listed;
+    return {
+        state: machine.state,
+        label: machine.label,
+        fresh: machine.fresh,
+        available,
+        listed,
+        fill,
+        stock: listed && known ? `${available} sur ${listed} dispo` : ''
+    };
 }
