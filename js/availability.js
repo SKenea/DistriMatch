@@ -18,7 +18,7 @@ import {
     showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
     describeFicheHero, describeMachineNotice, productToneRank, describeMenuHeader,
-    isNearDistributor, describeNearbyNudge
+    isNearDistributor, describeNearbyNudge, isPrivateFiche
 } from './utils.js';
 import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
@@ -208,7 +208,7 @@ export function renderFicheStatus() {
 export function checkNearbyForFiche(distributor) {
     nearbyFor = null;
     renderNearbyNudge();
-    if (!distributor || distributor.isLocalOnly || !isAuthenticated() || !navigator.geolocation) return;
+    if (!distributor || isPrivateFiche(distributor) || !isAuthenticated() || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
         if (AppState.currentDistributor?.id !== distributor.id) return;
         const position = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };

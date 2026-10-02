@@ -19,6 +19,31 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T21 Valider les nouvelles fiches dans la console admin (Stephane, 2026-10-02)
+Objectif : une fiche ajoutee par un membre n'est visible par tous qu'apres validation.
+Decisions : les 15 fiches OSM sont retirees de la base (types non souhaites ; script
+d'import garde, non relance) ; refus sans motif obligatoire ; fiches deja publiees
+inchangees ; 5 ajouts / jour / compte ; comptes bloques refuses.
+
+- [x] T21-TS0 Retirer les fiches OpenStreetMap de la base (15, rien de rattache)
+- [x] T21-TS1 Base (migration 022) : statut de revue des fiches
+  - Acceptance : `distributors.review_status` pending / published / rejected ; ajout par
+    l'API = pending (force) ; lecture publique = published seulement, l'auteur voit les
+    siennes, l'admin toutes ; produits suivent leur fiche ; signaux, avis, demandes
+    d'exploitant refuses sur une fiche non publiee ; fonctions admin publier (avec
+    corrections nom / type / position) / refuser (motif facultatif) ; fil de messages.
+- [x] T21-US1 En tant que membre, j'ajoute un distributeur et je suis sa validation
+  - Acceptance : apres l'ajout : « visible après validation » ; ma fiche en attente est
+    sur ma carte, marquee « En attente », sans signal / avis / exploitant ; Compte ->
+    « Mes ajouts » (En attente / Publiée / Refusée [: motif]) avec les messages de
+    l'equipe et une reponse possible.
+- [x] T21-US2 En tant qu'admin, je valide les nouvelles fiches
+  - Acceptance : console : section « Nouveaux distributeurs » ; detail : mini-carte
+    (repere deplacable), nom, type, adresse, produits, auteur, alerte doublon (nom
+    proche a moins de 100 m) ; Publier / Corriger puis publier / Refuser (motif
+    facultatif) / Ecrire au membre.
+- [x] T21-TS2 Tests et doc, captures avant fusion.
+
 ### EPIC-T20 Verifier un exploitant : echange direct, SIRENE et code par courrier (Stephane, 2026-10-02)
 Objectif : relier une personne a une societe de facon fiable (« methode Google ») sans
 demander le SIRET d'emblee. Parcours : demande legere -> console admin -> echange direct

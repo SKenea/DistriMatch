@@ -205,17 +205,16 @@ describe('base : fiches (010, 013)', { skip: SKIP }, () => {
         assert.equal(upd.code, '42501');
     });
 
-    it('les fiches OSM ont leurs horaires (019) et un visiteur les lit', async () => {
-        const rows = await query("select count(*)::int as n from distributors where source = 'osm' and opening_hours is not null");
-        assert.ok(rows[0].n > 0);
+    it('les horaires (019) se lisent sans compte', async () => {
+        const rows = await query("select count(*)::int as n from distributors where opening_hours is not null and review_status = 'published'");
         const p = await probe(`${AS_ANON} select count(*)::text into r from distributors where opening_hours is not null`);
         assert.ok(p.reachedEnd, p.message);
         assert.equal(p.result, String(rows[0].n));
     });
 
-    it('les fiches importees d’OSM existent (source « osm », id osm-..., pas encore verifiees)', async () => {
-        const rows = await query("select count(*)::int as n, count(*) filter (where id not like 'osm-%')::int as bad, count(*) filter (where is_demo)::int as demo from distributors where source = 'osm'");
-        assert.ok(rows[0].n > 0);
+    // EPIC-T21 : les fiches OSM ont ete retirees (types non souhaites) ; si un import revient, ids et provenance restent coherents
+    it('fiches d’OSM eventuelles : id osm-..., jamais de demo', async () => {
+        const rows = await query("select count(*) filter (where id not like 'osm-%')::int as bad, count(*) filter (where is_demo)::int as demo from distributors where source = 'osm'");
         assert.equal(rows[0].bad, 0);
         assert.equal(rows[0].demo, 0);
     });
@@ -492,6 +491,65 @@ describe('base : verification d’un exploitant (021)', { skip: SKIP }, () => {
         assert.equal(rejected.result, 'rejected|itest motif|Demande refusée : itest motif');
         const twice = await probe(`${AS_USER} ${REQUEST}; ${REQUEST}`, 'v_req bigint;');
         assert.equal(twice.code, '23505');
+    });
+});
+
+// EPIC-T21 (022) : une fiche ajoutee par un membre attend la validation de l'admin
+describe('base : validation des nouvelles fiches (022)', { skip: SKIP }, () => {
+    const ADD = (id = 'itest-rev') => `insert into distributors (id, name, type, lat, lng, is_user_added, added_by, review_status)
+        values ('${id}', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER}, 'published')`;
+    const MAKE_ADMIN = `insert into app_admins (user_id) values (${USER}) on conflict do nothing;`;
+    const OTHER = `(select id from auth.users where id <> ${USER} order by created_at limit 1)`;
+
+    it('un ajout par l’API est toujours « en attente » : visible par son auteur, pas par un visiteur ni ses produits', async () => {
+        const p = await probe(`${AS_USER} ${ADD()};
+            insert into products (distributor_id, name, price, available) values ('itest-rev', 'Produit itest', 0, true);
+            v_mine := (select review_status from distributors where id = 'itest-rev');
+            ${AS_ANON} r := v_mine || '|' || (select count(*) from distributors where id = 'itest-rev')::text
+                || '|' || (select count(*) from products where distributor_id = 'itest-rev')::text`, 'v_mine text;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'pending|0|0');
+    });
+
+    it('fiche en attente : ni signal, ni avis, ni demande d’exploitant', async () => {
+        const signal = await probe(`${AS_USER} ${ADD()}; perform confirm_availability('itest-rev', '${DEVICE}', '[]'::jsonb, 'working')`);
+        assert.equal(signal.code, 'P0001');
+        const review = await probe(`${AS_USER} ${ADD()}; insert into reviews (distributor_id, rating, body) values ('itest-rev', 4, 'itest avis')`);
+        assert.equal(review.code, 'P0001');
+        const claim = await probe(`${AS_USER} ${ADD()}; insert into operator_requests (distributor_id, company, relation) values ('itest-rev', 'Societe itest', 'owner')`);
+        assert.equal(claim.code, 'P0001');
+    });
+
+    it('admin : publier avec corrections (nom, position) ; refuser sans motif ; un non-admin ne peut pas', async () => {
+        const denied = await probe(`${AS_USER} ${ADD()}; perform admin_review_distributor('itest-rev', 'publish')`);
+        assert.equal(denied.code, '42501');
+        const pub = await probe(`${MAKE_ADMIN} ${AS_USER} ${ADD()};
+            perform admin_review_distributor('itest-rev', 'publish', null, 'Nom corrige itest', null, null, 43.5, -1.48);
+            ${AS_ANON} r := (select name || '|' || review_status || '|' || lat from distributors where id = 'itest-rev')`);
+        assert.ok(pub.reachedEnd, pub.message);
+        assert.equal(pub.result, 'Nom corrige itest|published|43.5');
+        const rej = await probe(`${MAKE_ADMIN} ${AS_USER} ${ADD()};
+            perform admin_review_distributor('itest-rev', 'reject');
+            r := (select review_status || '|' || coalesce(review_reason, '-') from distributors where id = 'itest-rev')
+                || '|' || (select body from distributor_review_messages where distributor_id = 'itest-rev' order by id desc limit 1)`);
+        assert.ok(rej.reachedEnd, rej.message);
+        assert.equal(rej.result, 'rejected|-|Fiche refusée');
+    });
+
+    it('liste admin des fiches en attente ; echange : l’auteur ecrit, un autre compte non', async () => {
+        const list = await probe(`${MAKE_ADMIN} ${AS_USER} ${ADD()}; perform post_review_message('itest-rev', 'Bonjour itest');
+            r := (select count(*) || '|' || max(unread) from admin_pending_distributors() where id = 'itest-rev')`);
+        assert.ok(list.reachedEnd, list.message);
+        assert.equal(list.result, '1|1');
+        const other = await probe(`${AS_USER} ${ADD()};
+            reset role; update distributors set added_by = ${OTHER} where id = 'itest-rev';
+            ${AS_USER} perform post_review_message('itest-rev', 'intrus')`);
+        assert.equal(other.code, '42501');
+    });
+
+    it('6e ajout du jour pour un compte : refuse (P0001)', async () => {
+        const p = await probe(`${AS_USER} ${ADD('itest-rev-1')}; ${ADD('itest-rev-2')}; ${ADD('itest-rev-3')}; ${ADD('itest-rev-4')}; ${ADD('itest-rev-5')}; ${ADD('itest-rev-6')}`);
+        assert.equal(p.code, 'P0001');
     });
 });
 

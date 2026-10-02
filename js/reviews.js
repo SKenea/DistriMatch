@@ -15,7 +15,7 @@
 import { AppState, supabaseClient } from './state.js';
 import {
     escapeHTML, generateStars, showToast, timeAgo,
-    describeRating, validateReview, describeReviewError, REVIEW_BODY_MAX
+    describeRating, validateReview, describeReviewError, REVIEW_BODY_MAX, isPrivateFiche
 } from './utils.js';
 import { isAuthenticated, getCurrentUser, requireAuth, promptReconnect } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -63,8 +63,8 @@ export function renderRatingHeader(distributor) {
 // Fire-and-forget : l'appelant ne l'await jamais.
 export function loadReviewsForDistributor(distributor) {
     state = freshState(distributor?.id || null);
-    // Machine seulement locale (EPIC-T9) : inconnue de la base, pas d'avis possibles
-    if (distributor?.isLocalOnly) {
+    // Fiche seulement locale (EPIC-T9) ou pas encore publiee (EPIC-T21) : pas d'avis
+    if (isPrivateFiche(distributor)) {
         state.loaded = true;
         renderReviews();
         return;
@@ -155,7 +155,7 @@ function updateFormState() {
 export function renderReviews() {
     const distributor = currentDistributor();
     const authed = isAuthenticated();
-    const localOnly = !!distributor?.isLocalOnly;
+    const localOnly = isPrivateFiche(distributor);
 
     const mineBox = document.getElementById('dist-review-mine');
     const invite = document.getElementById('dist-review-invite');
@@ -193,9 +193,9 @@ export function renderReviews() {
 
     const empty = document.getElementById('dist-reviews-empty');
     if (empty) {
-        empty.textContent = localOnly
+        empty.textContent = distributor?.isLocalOnly
             ? 'Publie d\'abord ce distributeur pour recevoir des avis.'
-            : 'Pas encore d\'avis sur ce distributeur.';
+            : localOnly ? 'Les avis s\'ouvrent quand le distributeur est publié.' : 'Pas encore d\'avis sur ce distributeur.';
         empty.hidden = !(state.loaded && state.total === 0);
     }
     const more = document.getElementById('dist-reviews-more');

@@ -80,6 +80,7 @@ import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
 import { initAdmin, loadAdmin } from './admin.js';
+import { initAdditions } from './additions.js';
 import { loadSignalSummaries } from './summaries.js';
 
 // ============================================
@@ -119,7 +120,9 @@ async function loadDistributorsFromSupabase() {
         if (error) throw error;
         if (!data || data.length === 0) return null;
 
-        const distributors = data.map(mapDistributorRow);
+        // EPIC-T21 : une fiche refusee n'est visible que dans « Mes ajouts » ; une fiche
+        // en attente n'est lue (RLS) que par son auteur et l'admin
+        const distributors = data.map(mapDistributorRow).filter(d => d.reviewStatus !== 'rejected');
         // EPIC-T8 : la note affichee vient des vrais avis (vue distributor_ratings,
         // migration 016). Vue indisponible : on garde les colonnes de la fiche.
         if (!ratingsRes.error && Array.isArray(ratingsRes.data)) {
@@ -606,6 +609,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-account')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-admin')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-operator-request')?.addEventListener('click', goBackToMap);
+    document.getElementById('back-from-my-additions')?.addEventListener('click', () => switchView('account'));
+    initAdditions();   // EPIC-T21 : « Mes ajouts »
     initAdmin();   // EPIC-T18 : page admin (demandes d'exploitant)
     document.getElementById('back-from-activity')?.addEventListener('click', goBackToMap);
     document.getElementById('back-from-notifications')?.addEventListener('click', goBackToMap);

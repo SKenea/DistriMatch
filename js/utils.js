@@ -957,6 +957,12 @@ export function mapDistributorRow(d) {
         openingHours: d.opening_hours || null,
         // Exploitant verifie (020, EPIC-T18) : pose au chargement depuis distributor_operators
         hasOperator: false,
+        // Validation par l'admin (022, EPIC-T21) : pending / published / rejected
+        reviewStatus: d.review_status || 'published',
+        reviewReason: d.review_reason || null,
+        addedById: d.added_by || null,
+        authorReadAt: d.author_read_at || null,
+        createdAt: d.created_at || null,
         products: (d.products || []).map(p => ({
             id: p.id,   // id Supabase : requis pour les signaux de dispo (UC11)
             name: p.name,
@@ -1348,4 +1354,38 @@ export function describeDistributorSummary(distributor, statusRow = null, produc
         fill,
         stock: listed && known ? `${available} sur ${listed} dispo` : ''
     };
+}
+
+// ============================================
+// VALIDATION DES NOUVELLES FICHES (EPIC-T21)
+// ============================================
+// Fiche « privee » : seulement sur ce telephone (EPIC-T9) ou pas encore publiee
+// (en attente / refusee) : ni signal, ni avis, ni exploitant, ni modification.
+export function isPrivateFiche(distributor) {
+    return !!distributor && (!!distributor.isLocalOnly || (distributor.reviewStatus || 'published') !== 'published');
+}
+
+const REVIEW_STATUS = {
+    pending: { label: 'En attente de validation', tone: 'action' },
+    published: { label: 'Publiée', tone: 'ok' },
+    rejected: { label: 'Refusée', tone: 'bad' }
+};
+
+export function describeReviewStatus(status) {
+    return REVIEW_STATUS[status] || REVIEW_STATUS.published;
+}
+
+// Doublons probables d'une fiche en attente : fiches publiees au nom proche
+// (l'un contient l'autre, une fois normalises) a moins de radiusM metres.
+export function findNearbyDuplicates(distributor, list = [], radiusM = 100) {
+    if (!distributor || !Number.isFinite(Number(distributor.lat))) return [];
+    const name = normalizeName(distributor.name);
+    return list.filter(other => other.id !== distributor.id
+        && (other.reviewStatus || 'published') === 'published'
+        && Number.isFinite(Number(other.lat))
+        && calculateDistance(Number(distributor.lat), Number(distributor.lng), Number(other.lat), Number(other.lng)) * 1000 < radiusM
+        && (() => {
+            const o = normalizeName(other.name);
+            return !!o && !!name && (o.includes(name) || name.includes(o));
+        })());
 }

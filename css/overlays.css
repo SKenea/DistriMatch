@@ -2599,3 +2599,21 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .print-card-to { margin: 10mm 0; font-size: 13pt; }
     .print-card-small { font-size: 9pt; color: #444; }
 }
+
+/* ==========================================
+   VALIDATION DES NOUVELLES FICHES (EPIC-T21)
+   ========================================== */
+.dist-review-pending { border-color: #FED7AA; background: #FFF7ED; }
+.dist-review-pending[hidden] { display: none; }
+.distributor-pin.is-pending { opacity: 0.75; }
+.distributor-pin.is-pending .distributor-pin-emoji { outline: 2px dashed #9A3412; outline-offset: 2px; }
+.addition-card { display: flex; flex-direction: column; gap: 8px; }
+.addition-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.addition-reason { margin: 0; font-size: 0.9rem; color: #991B1B; }
+.addition-thread summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }
+.addition-thread .op-composer { position: static; padding-bottom: 0; background: transparent; }
+.admin-mini-map { height: 200px; border-radius: 10px; overflow: hidden; border: 1px solid #E5E7EB; }
+.admin-select { min-height: 44px; padding: 0 10px; border: 1px solid #D1D5DB; border-radius: 10px; background: #FFFFFF; font: inherit; font-size: 16px; }
+.admin-reject-fiche { align-self: flex-start; }
+/* Une ligne de la page Compte cachee le reste (.account-row impose display:flex) */
+.account-row[hidden] { display: none; }

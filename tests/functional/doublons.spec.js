@@ -68,7 +68,7 @@ test.describe('33. Machines seulement locales', () => {
         await expect(page.locator('#dist-review-mine')).toBeHidden();
     });
 
-    test('« Publier ce distributeur » l’envoie a la base avec ses produits ; la fiche redevient normale', async ({ page, context }) => {
+    test('« Publier ce distributeur » l’envoie a la base avec ses produits ; la fiche passe en attente de validation (EPIC-T21)', async ({ page, context }) => {
         await withLocalMachines(page, context);
         const posted = { distributors: null, products: null };
         await page.route(url => url.pathname.endsWith('/rest/v1/distributors'), route => {
@@ -86,13 +86,14 @@ test.describe('33. Machines seulement locales', () => {
         await page.waitForSelector('#dist-modal-overlay.active');
         await page.click('#dist-local-publish');
 
-        await expect(page.locator('#toast-container .toast.success')).toContainText('Distributeur publié');
+        await expect(page.locator('#toast-container .toast.success')).toContainText('visible par tous après validation');
         expect(posted.distributors).toMatchObject({ id: 'user-local-only', name: 'Machine locale de test', is_user_added: true });
         expect(posted.distributors.is_demo).toBeUndefined();   // jamais envoye
         expect(posted.products).toEqual([{ distributor_id: 'user-local-only', name: 'Produit test', available: true }]);
         await expect(page.locator('#dist-local-only')).toBeHidden();
-        await expect(page.locator('#dist-status-update')).toBeVisible();
-        await expect(page.locator('#dist-product-add')).toBeVisible();
+        await expect(page.locator('#dist-review-pending')).toBeVisible();
+        await expect(page.locator('#dist-status-update')).toHaveAttribute('aria-disabled', 'true');
+        await expect(page.locator('#dist-product-add')).toHaveCount(0);
         expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)).length, LOCAL_KEY)).toBe(0);
     });
 

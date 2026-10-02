@@ -16,7 +16,7 @@
 import { AppState, supabaseClient } from './state.js';
 import {
     escapeHTML, showToast, validateOperatorRequest, describeOperatorRequestError, OPERATOR_RELATIONS,
-    OPERATOR_STEPS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult
+    OPERATOR_STEPS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, isPrivateFiche
 } from './utils.js';
 import { isAuthenticated, requireAuth, onAuthChange } from './auth.js';
 import { switchView, registerViewCallback } from './navigation.js';
@@ -96,7 +96,7 @@ export function renderOperatorSection(distributor) {
     if (tag) tag.hidden = !distributor?.hasOperator;
     const box = document.getElementById('dist-operator');
     if (!box) return;
-    if (!distributor || distributor.isLocalOnly) {
+    if (!distributor || isPrivateFiche(distributor)) {
         box.hidden = true;
         box.innerHTML = '';
         return;
