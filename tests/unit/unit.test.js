@@ -25,7 +25,8 @@ import {
     mapDistributorRow, diffFavoriteSignals,
     describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
     validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary,
-    OPERATOR_RELATIONS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, assessSirene
+    OPERATOR_RELATIONS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, assessSirene,
+    isPrivateFiche, describeReviewStatus, findNearbyDuplicates
 } from '../../js/utils.js';
 
 import {
@@ -1715,5 +1716,44 @@ describe('verification d\'un exploitant (EPIC-T20)', () => {
         assert.equal(hidden.address, '');
         assert.equal(hidden.diffusible, false);
         assert.equal(assessSirene(null).verdict, 'bad');
+    });
+});
+
+// ============================================
+// EPIC-T21 : validation des nouvelles fiches
+// ============================================
+describe('validation des nouvelles fiches (EPIC-T21)', () => {
+    it('fiche privee : seulement locale, en attente ou refusee ; publiee ou ancienne fiche : non', () => {
+        assert.equal(isPrivateFiche({ isLocalOnly: true }), true);
+        assert.equal(isPrivateFiche({ reviewStatus: 'pending' }), true);
+        assert.equal(isPrivateFiche({ reviewStatus: 'rejected' }), true);
+        assert.equal(isPrivateFiche({ reviewStatus: 'published' }), false);
+        assert.equal(isPrivateFiche({}), false);
+        assert.equal(isPrivateFiche(null), false);
+    });
+
+    it('statuts de revue en clair', () => {
+        assert.deepEqual(describeReviewStatus('pending'), { label: 'En attente de validation', tone: 'action' });
+        assert.equal(describeReviewStatus('rejected').label, 'Refusée');
+        assert.equal(describeReviewStatus(undefined).label, 'Publiée');
+    });
+
+    it('doublon probable : nom proche, publie, a moins de 100 m', () => {
+        const list = [
+            { id: 'a', name: 'Pizza Gare', lat: 43.4929, lng: -1.4748 },
+            { id: 'b', name: 'Pizza Gare', lat: 43.5100, lng: -1.4748 },                       // 1,9 km
+            { id: 'c', name: 'Boulangerie', lat: 43.4929, lng: -1.4748 },                      // autre nom
+            { id: 'd', name: 'Pizza Gare', lat: 43.4929, lng: -1.4748, reviewStatus: 'pending' }
+        ];
+        const dups = findNearbyDuplicates({ id: 'new', name: 'pizza gare bayonne', lat: 43.4931, lng: -1.4748 }, list);
+        assert.deepEqual(dups.map(d => d.id), ['a']);
+        assert.deepEqual(findNearbyDuplicates({ id: 'a', name: 'Pizza Gare', lat: 43.4929, lng: -1.4748 }, list.slice(0, 1)), []);
+        assert.deepEqual(findNearbyDuplicates(null, list), []);
+    });
+
+    it('mapDistributorRow reprend le statut de revue (publiee par defaut)', () => {
+        assert.equal(mapDistributorRow({ id: 'x', review_status: 'pending', added_by: 'u1' }).reviewStatus, 'pending');
+        assert.equal(mapDistributorRow({ id: 'x', added_by: 'u1' }).addedById, 'u1');
+        assert.equal(mapDistributorRow({ id: 'y' }).reviewStatus, 'published');
     });
 });

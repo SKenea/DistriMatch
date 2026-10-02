@@ -14,6 +14,8 @@ import { describeDistributorSummary } from './utils.js';
 
 export const SUMMARIES_EVENT = 'distrimatch:summaries';
 const raw = new Map();   // id -> { status, products: { [product_id]: row } }
+// Un chargement plus ancien qui finit apres un plus recent ne doit rien ecraser
+let loadSeq = 0;
 
 export function getDistributorSummary(distributor) {
     const r = raw.get(distributor?.id);
@@ -33,12 +35,13 @@ export function setSummaryFor(distributorId, status, products) {
 
 export async function loadSignalSummaries() {
     if (!supabaseClient) return;
+    const seq = ++loadSeq;
     try {
         const [statusRes, productsRes] = await Promise.all([
             supabaseClient.from('distributor_status').select('distributor_id, state, source, created_at'),
             supabaseClient.from('product_availability').select('distributor_id, product_id, state, source, created_at')
         ]);
-        if (statusRes.error || productsRes.error) return;
+        if (seq !== loadSeq || statusRes.error || productsRes.error) return;
         raw.clear();
         for (const row of statusRes.data || []) raw.set(row.distributor_id, { status: row, products: {} });
         for (const row of productsRes.data || []) {

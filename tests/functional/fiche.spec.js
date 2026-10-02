@@ -955,11 +955,15 @@ test.describe('36. Etat du distributeur : menu, pastille, liste', () => {
         });
         await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ distributor_id: ids.id, state: 'working', created_at: minutesAgoIso(10) }]) }));
         await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ distributor_id: ids.id, product_id: ids.products[0], state: 'available', created_at: minutesAgoIso(10) }]) }));
-        await page.evaluate(async () => { const m = await import('./js/summaries.js'); await m.loadSignalSummaries(); });
-        await page.evaluate(() => window.openSidePanelForType ? window.openSidePanelForType('all') : null);
-        await page.evaluate(async () => { const g = await import('./js/gmaps-ui.js'); g.openSidePanelForType('all'); });
+        // Le chargement du demarrage peut finir apres nos routes : on relit jusqu'a obtenir l'etat simule
         const item = page.locator(`#side-panel-list .side-panel-item[data-id="${ids.id}"]`);
+        await expect.poll(async () => {
+            await page.evaluate(async () => {
+                const m = await import('./js/summaries.js'); await m.loadSignalSummaries();
+                const g = await import('./js/gmaps-ui.js'); g.openSidePanelForType('all');
+            });
+            return item.locator('.side-panel-item-state').textContent();
+        }, { timeout: 10000 }).toBe(`En service · 1 sur ${ids.count} dispo`);
         await expect(item.locator('.side-panel-item-photo.has-ring.is-working .side-panel-ring')).toHaveCount(1);
-        await expect(item.locator('.side-panel-item-state')).toHaveText(`En service · 1 sur ${ids.count} dispo`);
     });
 });

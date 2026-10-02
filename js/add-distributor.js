@@ -424,6 +424,10 @@ async function confirmAddDistributorImpl() {
     // telephone, marquee « locale », publiable plus tard depuis sa fiche.
     const published = await publishDistributor(newDistributor);
     if (published.ok) {
+        // EPIC-T21 : la base met la fiche en attente ; l'admin la valide avant publication
+        newDistributor.reviewStatus = 'pending';
+        newDistributor.addedById = (await supabaseClient?.auth.getSession())?.data?.session?.user?.id || null;
+        showToast('Merci ! Ton distributeur sera visible par tous après validation par l’équipe.', 'success');
         if (FEATURES.photos && AddMode.photos && AddMode.photos.length > 0) {
             await uploadDistributorPhotos(distId, AddMode.photos);
         }

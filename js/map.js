@@ -118,10 +118,11 @@ export function updateMapMarkers(fitBounds = true) {
 function createDistributorIcon(d, isSubscribed) {
     const summary = getDistributorSummary(d);
     const soft = summary.state !== 'unknown' && !summary.fresh;
+    const pending = d.reviewStatus === 'pending';   // EPIC-T21 : vu par l'auteur et l'admin seulement
     const fav = isSubscribed ? '<span class="distributor-pin-fav" aria-hidden="true">♥</span>' : '';
     return L.divIcon({
         className: 'distributor-marker-container',
-        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
+        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
         popupAnchor: [0, -24]
@@ -129,6 +130,7 @@ function createDistributorIcon(d, isSubscribed) {
 }
 
 function markerTitle(d) {
+    if (d.reviewStatus === 'pending') return `${d.name} : en attente de validation`;
     const s = getDistributorSummary(d);
     return `${d.name} : ${s.label}${s.stock ? `, ${s.stock}` : ''}`;
 }

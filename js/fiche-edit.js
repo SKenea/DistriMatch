@@ -22,7 +22,7 @@
 import { AppState, supabaseClient } from './state.js';
 import {
     showToast, showActionToast, escapeHTML, cleanProductName, isDuplicateProductName,
-    suggestProducts, searchProductSuggestions
+    suggestProducts, searchProductSuggestions, isPrivateFiche
 } from './utils.js';
 import { isAuthenticated } from './auth.js';
 import { renderProductsList, renderProductIcon } from './distributor.js';
@@ -37,7 +37,7 @@ const PRICE_LEVELS = ['€', '€€', '€€€'];
 // Qui peut quoi sur la fiche ouverte : membre connecte (canInform) ou visiteur
 // (guest). Un distributeur seulement local (EPIC-T9) n'est modifiable par personne.
 export function ficheEditRights(distributor) {
-    if (!distributor || distributor.isLocalOnly) return { canInform: false, guest: false };
+    if (!distributor || isPrivateFiche(distributor)) return { canInform: false, guest: false };
     const authed = isAuthenticated();
     return { canInform: authed, guest: !authed };
 }

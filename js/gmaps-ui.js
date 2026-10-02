@@ -4,10 +4,10 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness, describeOpeningHours } from './utils.js';
+import { escapeHTML, formatDistance, calculateDistance, removeUserDistributors, showToast, getUserLocation, isLikelyDesktop, getFreshness, describeOpeningHours, isPrivateFiche } from './utils.js';
 import { toggleSubscription, loadDistributorPhotos } from './distributor.js';
 import { uploadDistributorPhotos, publishDistributor } from './add-distributor.js';
-import { requireAuth, isAuthenticated } from './auth.js';
+import { requireAuth, isAuthenticated, getCurrentUser } from './auth.js';
 import { FEATURES } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { pushLayer, popLayer } from './history.js';
@@ -57,7 +57,9 @@ function renderSidePanelItem(d, extraClass = '') {
     const fresh = getFreshness(d.lastVerified);
     // EPIC-T19 : anneau d'etat autour de la vignette + « En service · 1 sur 4 dispo »
     const summary = getDistributorSummary(d);
-    const stateLine = `<span class="side-panel-item-state-word">${escapeHTML(summary.label)}</span>${summary.stock ? ` · ${escapeHTML(summary.stock)}` : ''}`;
+    const stateLine = d.reviewStatus === 'pending'
+        ? '<span class="side-panel-item-state-word">En attente de validation</span>'
+        : `<span class="side-panel-item-state-word">${escapeHTML(summary.label)}</span>${summary.stock ? ` · ${escapeHTML(summary.stock)}` : ''}`;
     return `
         <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
             <div class="side-panel-item-photo has-ring is-${summary.state}${summary.state !== 'unknown' && !summary.fresh ? ' is-soft' : ''}">${renderStatusRing(summary, 'side-panel-ring')}${photoCell}</div>
@@ -380,7 +382,7 @@ export function openDistributorModal(id) {
     AppState.modalEditMode = false;
     // Mesure (008) : une ouverture de fiche = un evenement
     // (un distributeur seulement local est inconnu de la base : pas de mesure)
-    if (!distributor.isLocalOnly) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
+    if (!isPrivateFiche(distributor)) logEvent('fiche_ouverte', { distributorId: id, source: modalOpenSource });
     modalOpenSource = 'organic';
 
     const typeConfig = AppState.typeConfig[distributor.type] || {};
@@ -662,7 +664,9 @@ function showEditAuthGate() {
 
 function applyFicheAuthState() {
     const authed = isAuthenticated();
-    const localOnly = !!AppState.currentDistributor?.isLocalOnly;
+    const current = AppState.currentDistributor;
+    // Fiche locale (EPIC-T9) ou pas encore publiee (EPIC-T21) : rien a signaler
+    const localOnly = isPrivateFiche(current);
     const canUpdate = authed && !localOnly;
     // EPIC-T19 : la ligne d'etat est le controle ; membre -> menu, visiteur ->
     // invitation (data-guest), distributeur seulement local -> inerte
@@ -681,7 +685,17 @@ function applyFicheAuthState() {
     const invite = document.getElementById('dist-login-invite');
     if (invite) invite.hidden = authed || localOnly;
     const localBanner = document.getElementById('dist-local-only');
-    if (localBanner) localBanner.hidden = !localOnly;
+    if (localBanner) localBanner.hidden = !current?.isLocalOnly;
+    const reviewBanner = document.getElementById('dist-review-pending');
+    if (reviewBanner) {
+        const pending = !current?.isLocalOnly && current?.reviewStatus === 'pending';
+        reviewBanner.hidden = !pending;
+        const mine = pending && current.addedById && current.addedById === getCurrentUser()?.id;
+        const text = document.getElementById('dist-review-pending-text');
+        if (text) text.textContent = mine
+            ? 'Visible seulement par toi : l’équipe vérifie ce distributeur avant de le publier. Suis la validation dans Compte, « Mes ajouts ».'
+            : 'Fiche ajoutée par un membre, pas encore publiée : valide-la dans la console admin.';
+    }
     const publishBtn = document.getElementById('dist-local-publish');
     if (publishBtn) publishBtn.textContent = authed ? 'Publier ce distributeur' : 'Me connecter pour le publier';
     const photoBtn = document.getElementById('dist-action-add-photo');
@@ -728,8 +742,10 @@ async function publishCurrentLocalDistributor() {
             return;
         }
         d.isLocalOnly = false;
+        d.reviewStatus = 'pending';      // EPIC-T21 : la base le met en attente de validation
+        d.addedById = getCurrentUser()?.id || null;
         removeUserDistributors([d.id]);   // desormais dans la base
-        showToast('Distributeur publié : merci, il est visible par tous', 'success');
+        showToast('Merci ! Il sera visible par tous après validation par l’équipe.', 'success');
         openDistributorModal(d.id);
     } finally {
         isPublishing = false;

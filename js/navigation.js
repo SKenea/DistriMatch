@@ -23,6 +23,7 @@ const VIEW_CONFIG = {
     stats:                   { id: 'stats-view',           onShow: null },
     admin:                   { id: 'admin-view',           onShow: null },
     'operator-request':      { id: 'operator-request-view', onShow: null },
+    'my-additions':          { id: 'my-additions-view',    onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
     notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }
