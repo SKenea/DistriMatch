@@ -7,7 +7,8 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors, centroidOf } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf, escapeHTML } from './utils.js';
+import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 
 // ============================================
 // CARTE LEAFLET
@@ -70,6 +71,9 @@ export function initMainMap() {
     console.log('[DistriMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
 }
 
+// EPIC-T19 : etat et stock arrives (ou signal envoye) -> les pastilles suivent
+document.addEventListener(SUMMARIES_EVENT, () => updateMapMarkers(false));
+
 export function updateMapMarkers(fitBounds = true) {
     if (!mainMap || !AppState.mapInitialized) return;
 
@@ -82,7 +86,9 @@ export function updateMapMarkers(fitBounds = true) {
         const isSubscribed = AppState.subscriptions.includes(d.id);
 
         const marker = L.marker([d.lat, d.lng], {
-            icon: createDistributorIcon(d, isSubscribed)
+            icon: createDistributorIcon(d, isSubscribed),
+            title: markerTitle(d),
+            alt: markerTitle(d)
         }).addTo(mainMap);
 
         marker.distributorId = d.id;
@@ -106,19 +112,25 @@ export function updateMapMarkers(fitBounds = true) {
     }
 }
 
+// EPIC-T19 (maquette 2-feuille) : emoji sur fond blanc, anneau de la couleur
+// de l'etat qui se remplit selon le stock, pointille gris sans info, pale
+// au-dela de 2 h ; le favori est un petit coeur (la couleur dit l'etat).
 function createDistributorIcon(d, isSubscribed) {
-    // Favori = rouge brand (--primary), coherent avec le coeur "Favori"
-    // de la fiche qui devient rouge quand actif. Non favori = orange
-    // terracotta (--warning).
-    const color = isSubscribed ? '#E63946' : '#F4A261';
-
+    const summary = getDistributorSummary(d);
+    const soft = summary.state !== 'unknown' && !summary.fresh;
+    const fav = isSubscribed ? '<span class="distributor-pin-fav" aria-hidden="true">♥</span>' : '';
     return L.divIcon({
         className: 'distributor-marker-container',
-        html: `<div class="distributor-marker-icon" style="background:${color};width:36px;height:36px;">${d.emoji}</div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        popupAnchor: [0, -20]
+        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -24]
     });
+}
+
+function markerTitle(d) {
+    const s = getDistributorSummary(d);
+    return `${d.name} : ${s.label}${s.stock ? `, ${s.stock}` : ''}`;
 }
 
 export function centerMapOnUser() {

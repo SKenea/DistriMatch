@@ -58,7 +58,7 @@ test.describe('33. Machines seulement locales', () => {
         await expect(page.locator('#dist-local-only')).toBeVisible();
         await expect(page.locator('#dist-local-only')).toContainText("n'est enregistré que sur ton téléphone");
         await expect(page.locator('#dist-local-publish')).toHaveText('Publier ce distributeur');
-        await expect(page.locator('#dist-status-update')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).toHaveAttribute('aria-disabled', 'true');   // EPIC-T19 : ligne inerte
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])')).toHaveCount(0);
         await expect(page.locator('#dist-product-add')).toHaveCount(0);

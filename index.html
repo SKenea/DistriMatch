@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=48">
+    <link rel="stylesheet" href="css/overlays.css?v=51">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -304,21 +304,21 @@
                         <span class="operator-tag" id="dist-modal-operator" hidden>Exploitant vérifié</span>
                     </div>
                 </div>
-                <!-- EPIC-T10 : l'etat du distributeur en une petite ligne (mini-feu + mot + age),
-                     rempli par js/availability.js (renderFicheStatus). Plus de bandeau. -->
+                <!-- EPIC-T10 / T19 : l'etat du distributeur en une petite ligne (mini-feu + mot + age),
+                     rempli par js/availability.js (renderFicheStatus). Membre : la ligne ouvre un menu
+                     deroulant ancre (comme l'etiquette d'un produit) ; visiteur : l'invitation. -->
                 <div class="dist-status" id="dist-status" data-state="unknown">
-                    <span class="dist-feu" aria-hidden="true"><i></i><i></i><i></i></span>
-                    <span class="dist-status-word" id="dist-status-word">Pas d'info</span>
-                    <span class="dist-modal-verified" id="dist-modal-verified" aria-live="polite"></span>
-                    <button type="button" class="dist-status-update" id="dist-status-update" aria-expanded="false" aria-controls="dist-machine-choices" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Mettre à jour</button>
-                </div>
-                <!-- Connecte : « Mettre à jour » deplie les trois etats ; un tap envoie. -->
-                <div class="machine-choices" id="dist-machine-choices" role="group" aria-labelledby="dist-machine-choices-title" hidden>
-                    <p class="machine-choices-title" id="dist-machine-choices-title">Le distributeur, là maintenant :</p>
-                    <div class="machine-choices-row">
-                        <button type="button" class="machine-choice is-working" data-machine="working"><i aria-hidden="true"></i>En service</button>
-                        <button type="button" class="machine-choice is-empty" data-machine="empty"><i aria-hidden="true"></i>Vide</button>
-                        <button type="button" class="machine-choice is-broken" data-machine="broken"><i aria-hidden="true"></i>En panne</button>
+                    <button type="button" class="dist-status-trigger" id="dist-status-update" aria-haspopup="menu" aria-expanded="false" aria-controls="dist-machine-choices">
+                        <span class="dist-feu" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <span class="dist-status-word" id="dist-status-word">Pas d'info</span>
+                        <span class="dist-modal-verified" id="dist-modal-verified"></span>
+                        <svg class="dist-status-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div class="machine-choices" id="dist-machine-choices" role="menu" aria-label="État du distributeur" hidden>
+                        <p class="machine-choices-q" id="dist-machine-choices-q" role="presentation" hidden>Actuellement : Pas d'info</p>
+                        <button type="button" role="menuitemradio" aria-checked="false" class="machine-choice is-working" data-machine="working"><span class="dd-dot" aria-hidden="true"></span><span class="dd-label">En service</span><svg class="dd-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></button>
+                        <button type="button" role="menuitemradio" aria-checked="false" class="machine-choice is-empty" data-machine="empty"><span class="dd-dot" aria-hidden="true"></span><span class="dd-label">Vide</span><svg class="dd-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></button>
+                        <button type="button" role="menuitemradio" aria-checked="false" class="machine-choice is-broken" data-machine="broken"><span class="dd-dot" aria-hidden="true"></span><span class="dd-label">En panne</span><svg class="dd-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg></button>
                     </div>
                 </div>
                 <div class="dist-modal-meta">
@@ -1017,30 +1017,31 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=69",
-            "./js/state.js": "./js/state.js?v=69",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=69",
-            "./js/config.js": "./js/config.js?v=69",
-            "./js/utils.js": "./js/utils.js?v=69",
-            "./js/auth.js": "./js/auth.js?v=69",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=69",
-            "./js/map.js": "./js/map.js?v=69",
-            "./js/navigation.js": "./js/navigation.js?v=69",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=69",
-            "./js/distributor.js": "./js/distributor.js?v=69",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=69",
-            "./js/chat.js": "./js/chat.js?v=69",
-            "./js/activity.js": "./js/activity.js?v=69",
-            "./js/notifications.js": "./js/notifications.js?v=69",
-            "./js/availability.js": "./js/availability.js?v=69",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=69",
-            "./js/events.js": "./js/events.js?v=69",
-            "./js/stats.js": "./js/stats.js?v=69",
-            "./js/history.js": "./js/history.js?v=69",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=69",
-            "./js/reviews.js": "./js/reviews.js?v=69",
-            "./js/operators.js": "./js/operators.js?v=69",
-            "./js/admin.js": "./js/admin.js?v=69"
+            "./js/app.js": "./js/app.js?v=70",
+            "./js/state.js": "./js/state.js?v=70",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=70",
+            "./js/config.js": "./js/config.js?v=70",
+            "./js/utils.js": "./js/utils.js?v=70",
+            "./js/auth.js": "./js/auth.js?v=70",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=70",
+            "./js/map.js": "./js/map.js?v=70",
+            "./js/navigation.js": "./js/navigation.js?v=70",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=70",
+            "./js/distributor.js": "./js/distributor.js?v=70",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=70",
+            "./js/chat.js": "./js/chat.js?v=70",
+            "./js/activity.js": "./js/activity.js?v=70",
+            "./js/notifications.js": "./js/notifications.js?v=70",
+            "./js/availability.js": "./js/availability.js?v=70",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=70",
+            "./js/events.js": "./js/events.js?v=70",
+            "./js/stats.js": "./js/stats.js?v=70",
+            "./js/history.js": "./js/history.js?v=70",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=70",
+            "./js/reviews.js": "./js/reviews.js?v=70",
+            "./js/operators.js": "./js/operators.js?v=70",
+            "./js/admin.js": "./js/admin.js?v=70",
+            "./js/summaries.js": "./js/summaries.js?v=70"
         }
     }
     </script>

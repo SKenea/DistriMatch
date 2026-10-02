@@ -23,6 +23,7 @@ import {
 import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
+import { setSummaryFor } from './summaries.js';
 import { isAuthenticated, promptReconnect } from './auth.js';
 
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
@@ -72,6 +73,7 @@ export function loadAvailabilityForDistributor(distributorId, options = {}) {
         }
         loaded = { distributorId, products, status, rhythm: rhythmRes.data || [] };
         renderFicheStatus();
+        setSummaryFor(distributorId, status, products);   // EPIC-T19 : la pastille suit
     }).catch(() => { /* hors ligne : pas d'indication, pas d'erreur */ });
 }
 
@@ -87,12 +89,21 @@ export function renderFicheStatus() {
     if (!distributor) return;
     const machine = resolveMachineStatus(loaded.status, Object.values(loaded.products), distributor.lastVerified);
 
-    // Choix d'etat (connecte, derriere « Mettre à jour ») : l'etat actuel est marque
+    // Menu de l'etat (EPIC-T19) : etat actuel coche ; « Actuellement : Pas
+    // d'info » en tete quand c'est l'etat (ce n'est pas un choix)
     document.querySelectorAll('#dist-machine-choices .machine-choice').forEach(btn => {
         const current = btn.dataset.machine === machine.state;
         btn.classList.toggle('is-current', current);
-        btn.setAttribute('aria-pressed', String(current));
+        btn.setAttribute('aria-checked', String(current));
     });
+    const menuHeader = document.getElementById('dist-machine-choices-q');
+    if (menuHeader) menuHeader.hidden = machine.state !== 'unknown';
+    const trigger = document.getElementById('dist-status-update');
+    if (trigger) {
+        trigger.setAttribute('aria-label', trigger.dataset.guest
+            ? `État : ${machine.label}. Connecte-toi pour le signaler`
+            : `État : ${machine.label}. Changer l'état`);
+    }
 
     // Ligne d'etat (EPIC-T10) : mini-feu + mot + age, adoucie au-dela de 2 h
     const statusLine = document.getElementById('dist-status');
@@ -269,13 +280,14 @@ function toggleProductRow(btn) {
     if (open) row.querySelector('.product-choice, .product-menu-action')?.focus();
 }
 
-// « Mettre à jour » (connecte) deplie / replie les trois etats du distributeur
+// Menu deroulant de l'etat (EPIC-T19, connecte) : ancre sous la ligne d'etat
 function setMachineChoicesOpen(open) {
     const toggle = document.getElementById('dist-status-update');
     const choices = document.getElementById('dist-machine-choices');
     if (!toggle || !choices) return;
     toggle.setAttribute('aria-expanded', String(open));
     choices.hidden = !open;
+    document.getElementById('dist-status')?.classList.toggle('is-open', open);
 }
 
 function collapseMachineChoices() {
@@ -307,6 +319,13 @@ export function initFicheSignals() {
         // Echap ou toucher ailleurs referme sans rien envoyer
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
+            const toggleBtn = document.getElementById('dist-status-update');
+            if (toggleBtn?.getAttribute('aria-expanded') === 'true') {
+                e.stopPropagation();
+                collapseMachineChoices();
+                toggleBtn.focus();
+                return;
+            }
             const open = document.querySelector('#dist-products-list .product-row[data-open="1"]');
             if (!open) return;
             e.stopPropagation();
@@ -316,6 +335,8 @@ export function initFicheSignals() {
         document.addEventListener('pointerdown', (e) => {
             const open = document.querySelector('#dist-products-list .product-row[data-open="1"]');
             if (open && !open.contains(e.target)) collapseAll();
+            const status = document.getElementById('dist-status');
+            if (status?.classList.contains('is-open') && !status.contains(e.target)) collapseMachineChoices();
         });
     }
 
@@ -326,12 +347,28 @@ export function initFicheSignals() {
             const choice = e.target.closest('.machine-choice');
             if (choice) sendSignal({ machine: choice.dataset.machine });
         });
+        // Clavier dans le menu : fleches haut / bas
+        machineChoices.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            const items = [...machineChoices.querySelectorAll('.machine-choice')];
+            const k = items.indexOf(document.activeElement);
+            e.preventDefault();
+            items[(k + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+        });
     }
 
     const toggle = document.getElementById('dist-status-update');
     if (toggle && !toggle.dataset.signalsWired) {
         toggle.dataset.signalsWired = '1';
         toggle.addEventListener('click', () => {
+            // Distributeur seulement local : rien a signaler ; visiteur : l'invitation (EPIC-T5)
+            if (toggle.getAttribute('aria-disabled') === 'true') return;
+            if (toggle.dataset.guest) {
+                const invite = document.getElementById('dist-login-invite');
+                invite?.scrollIntoView({ block: 'center' });
+                pulse(invite);
+                return;
+            }
             const open = toggle.getAttribute('aria-expanded') !== 'true';
             if (open) openMachineChoices();
             else collapseMachineChoices();

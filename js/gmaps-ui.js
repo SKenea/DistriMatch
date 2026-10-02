@@ -16,6 +16,7 @@ import { logEvent, rememberEntrySource } from './events.js';
 import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
 import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
+import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -54,9 +55,12 @@ function renderSidePanelItem(d, extraClass = '') {
     // Fraicheur : l'age de la derniere verification, toujours affiche
     // (docs/STRATEGIE.md : la confiance = l'horodatage).
     const fresh = getFreshness(d.lastVerified);
+    // EPIC-T19 : anneau d'etat autour de la vignette + « En service · 1 sur 4 dispo »
+    const summary = getDistributorSummary(d);
+    const stateLine = `<span class="side-panel-item-state-word">${escapeHTML(summary.label)}</span>${summary.stock ? ` · ${escapeHTML(summary.stock)}` : ''}`;
     return `
         <div class="side-panel-item${extraClass ? ' ' + extraClass : ''}" data-id="${escapeHTML(d.id)}">
-            <div class="side-panel-item-photo">${photoCell}</div>
+            <div class="side-panel-item-photo has-ring is-${summary.state}${summary.state !== 'unknown' && !summary.fresh ? ' is-soft' : ''}">${renderStatusRing(summary, 'side-panel-ring')}${photoCell}</div>
             <div class="side-panel-item-info">
                 <div class="side-panel-item-name">${escapeHTML(d.name)}</div>
                 <div class="side-panel-item-meta">
@@ -66,6 +70,7 @@ function renderSidePanelItem(d, extraClass = '') {
                     ${distance ? `<span class="side-panel-item-distance">${distance}</span>` : ''}
                     ${d.isDemo ? '<span class="demo-tag">Démo</span>' : ''}
                 </div>
+                <div class="side-panel-item-state is-${summary.state}">${stateLine}</div>
                 <div class="side-panel-item-verified is-${fresh.state}">${escapeHTML(fresh.label)}</div>
             </div>
         </div>`;
@@ -98,6 +103,10 @@ function handleSidePanelClick(e) {
 }
 
 export function initSidePanel() {
+    // EPIC-T19 : etat et stock arrives (ou signal envoye) -> la liste ouverte suit
+    document.addEventListener(SUMMARIES_EVENT, () => {
+        if (document.getElementById('sidebar')?.classList.contains('open')) openSidePanelForFilters(currentFilter);
+    });
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
     document.getElementById('side-panel-list')?.addEventListener('click', handleSidePanelClick);
@@ -655,12 +664,18 @@ function applyFicheAuthState() {
     const authed = isAuthenticated();
     const localOnly = !!AppState.currentDistributor?.isLocalOnly;
     const canUpdate = authed && !localOnly;
+    // EPIC-T19 : la ligne d'etat est le controle ; membre -> menu, visiteur ->
+    // invitation (data-guest), distributeur seulement local -> inerte
     const statusUpdate = document.getElementById('dist-status-update');
     if (statusUpdate) {
-        statusUpdate.hidden = !canUpdate;
+        if (authed || localOnly) delete statusUpdate.dataset.guest;
+        else statusUpdate.dataset.guest = '1';
+        statusUpdate.setAttribute('aria-disabled', String(localOnly));
         if (!canUpdate) statusUpdate.setAttribute('aria-expanded', 'false');
+        statusUpdate.setAttribute('aria-haspopup', canUpdate ? 'menu' : 'false');
     }
-    // Les trois etats restent replies derriere « Mettre à jour »
+    document.getElementById('dist-status')?.classList.toggle('is-member', canUpdate);
+    // Le menu reste replie tant que la ligne n'est pas touchee
     const machineChoices = document.getElementById('dist-machine-choices');
     if (machineChoices && (!canUpdate || statusUpdate?.getAttribute('aria-expanded') !== 'true')) machineChoices.hidden = true;
     const invite = document.getElementById('dist-login-invite');

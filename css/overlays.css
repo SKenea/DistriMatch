@@ -2119,7 +2119,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-row.needs-check .product-status-btn .product-pill { box-shadow: 0 0 0 2px #2563EB; }
 .product-row.needs-check .product-status-chevron { color: #2563EB; }
 .product-add-card.needs-check { border-color: #2563EB; }
-.dist-status-update.needs-check { border-color: #2563EB; box-shadow: 0 0 0 2px #BFDBFE; }
+#dist-status-update.needs-check { box-shadow: 0 0 0 2px #2563EB; }
 
 /* ==========================================
    EXPLOITANTS ET PAGE ADMIN (EPIC-T18)
@@ -2211,3 +2211,213 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     cursor: pointer;
     flex: none;
 }
+
+/* ==========================================
+   ETAT DU DISTRIBUTEUR : MENU ANCRE, PASTILLE ET LISTE (EPIC-T19)
+   Maquettes : docs/maquettes/2026-10-02-etat/ (menu de la 1, anneau de la 2, sans chiffre)
+   ========================================== */
+.dist-status { position: relative; }
+.dist-status-trigger {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 0.4rem;
+    min-height: 44px;
+    margin-left: -6px;
+    padding: 0 8px 0 6px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.dist-status.is-member .dist-status-trigger { background: #F8FAFC; border-color: #E2E8F0; }
+.dist-status.is-member .dist-status-trigger:hover { background: #F1F5F9; }
+.dist-status-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dist-status-trigger[aria-disabled="true"] { cursor: default; }
+.dist-status-chevron { width: 16px; height: 16px; color: #374151; flex: none; transition: transform 0.15s; }
+.dist-status:not(.is-member) .dist-status-chevron { display: none; }
+.dist-status.is-open .dist-status-chevron { transform: rotate(180deg); }
+
+#dist-machine-choices {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    width: min(260px, 100%);
+    margin: 0;
+    padding: 4px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
+}
+#dist-machine-choices[hidden] { display: none; }
+#dist-machine-choices .machine-choices-q {
+    margin: 0;
+    padding: 8px 10px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #4B5563;
+    border-bottom: 1px solid #F3F4F6;
+}
+#dist-machine-choices .machine-choices-q[hidden] { display: none; }
+#dist-machine-choices .machine-choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    box-shadow: none;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+#dist-machine-choices .machine-choice.is-working { color: #166534; }
+#dist-machine-choices .machine-choice.is-empty { color: #9A3412; }
+#dist-machine-choices .machine-choice.is-broken { color: #991B1B; }
+#dist-machine-choices .machine-choice.is-current { background: none; }
+#dist-machine-choices .machine-choice:hover,
+#dist-machine-choices .machine-choice:focus-visible { background: #F3F4F6; outline: none; }
+#dist-machine-choices .machine-choice:active { background: #E5E7EB; transform: none; }
+#dist-machine-choices .machine-choice:disabled { opacity: 0.5; cursor: wait; }
+#dist-machine-choices .machine-choice.is-working .dd-dot { background: #16A34A; }
+#dist-machine-choices .machine-choice.is-empty .dd-dot { background: #EA580C; }
+#dist-machine-choices .machine-choice.is-broken .dd-dot { background: #DC2626; }
+#dist-machine-choices .machine-choice .dd-check { color: #111827; }
+#dist-machine-choices .machine-choice.is-current .dd-check { visibility: visible; }
+
+/* Pastille de la carte : emoji sur blanc + anneau d'etat */
+.distributor-pin { position: relative; width: 44px; height: 44px; display: grid; place-items: center; }
+.distributor-pin-ring { position: absolute; inset: 0; width: 44px; height: 44px; filter: drop-shadow(0 1px 2px rgba(17, 24, 39, 0.25)); }
+.distributor-pin-emoji {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    line-height: 1;
+}
+.distributor-pin.is-soft .distributor-pin-ring { opacity: 0.5; }
+.distributor-pin-fav {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #E63946;
+    border: 2px solid #FFFFFF;
+    color: #FFFFFF;
+    font-size: 10px;
+    line-height: 14px;
+    text-align: center;
+}
+
+/* Liste laterale : meme anneau autour de la vignette, ligne d'etat + stock */
+.side-panel-item-photo.has-ring { border-radius: 50%; background: #FFFFFF; overflow: visible; }
+.side-panel-item-photo.has-ring > img { border-radius: 50%; width: 52px; height: 52px; object-fit: cover; }
+.side-panel-ring { position: absolute; inset: 0; width: 64px; height: 64px; pointer-events: none; }
+.side-panel-item-photo.is-soft .side-panel-ring { opacity: 0.5; }
+.side-panel-item-state { font-size: 0.8rem; color: #374151; margin-top: 0.125rem; }
+.side-panel-item-state-word { font-weight: 700; color: #475569; }
+.side-panel-item-state.is-working .side-panel-item-state-word { color: #166534; }
+.side-panel-item-state.is-empty .side-panel-item-state-word { color: #9A3412; }
+.side-panel-item-state.is-broken .side-panel-item-state-word { color: #991B1B; }
+
+@media (prefers-reduced-motion: reduce) {
+    .dist-status-chevron { transition: none; }
+}
+
+/* Menus minimalistes (Stephane 2026-10-02) : largeur au texte, libelles neutres
+   (seul le point garde la couleur), police et ombre plus legeres ; lignes de
+   44 px conservees (cible tactile). Etat du distributeur ET produits. */
+#dist-machine-choices,
+.product-choices {
+    width: max-content;
+    min-width: 150px;
+    padding: 3px;
+    border-radius: 10px;
+    border-color: #ECEEF1;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.12);
+}
+.product-choices { right: auto; }
+#dist-machine-choices .machine-choice,
+.product-choices .product-choice,
+.product-choices .product-menu-action {
+    gap: 10px;
+    padding: 0 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1F2937;
+}
+#dist-machine-choices .machine-choice.is-working,
+#dist-machine-choices .machine-choice.is-empty,
+#dist-machine-choices .machine-choice.is-broken { color: #1F2937; }
+#dist-machine-choices .machine-choice.is-current,
+.product-choices .product-choice.is-current.is-yes,
+.product-choices .product-choice.is-current.is-no { font-weight: 600; }
+.product-choices .product-menu-action.is-danger { color: #B91C1C; }
+#dist-machine-choices .dd-dot,
+.product-choices .dd-dot { width: 8px; height: 8px; }
+#dist-machine-choices .dd-check,
+.product-choices .dd-check { width: 16px; height: 16px; margin-left: 12px; color: #374151; }
+#dist-machine-choices .machine-choices-q,
+.product-choices .product-choices-q { padding: 6px 10px 4px; font-size: 0.75rem; font-weight: 500; }
+.product-choices .dd-sep { margin: 3px 0; }
+.product-choices .product-choice.is-yes,
+.product-choices .product-choice.is-no { color: #1F2937; }
+
+/* Option actuelle = bouton plein de sa couleur + case cochee a droite (Stephane
+   2026-10-02) ; les autres options : case vide. Etat du distributeur et produits. */
+#dist-machine-choices .dd-check,
+.product-choices .dd-check {
+    visibility: visible;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    padding: 1px;
+    border: 2px solid #9CA3AF;
+    border-radius: 4px;
+    background: #FFFFFF;
+    color: transparent;
+}
+#dist-machine-choices .machine-choice.is-current,
+.product-choices .product-choice.is-current { color: #FFFFFF; font-weight: 600; }
+#dist-machine-choices .machine-choice.is-working.is-current,
+.product-choices .product-choice.is-yes.is-current { background: #15803D; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-empty.is-current { background: #C2410C; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-broken.is-current { background: #B91C1C; color: #FFFFFF; }
+.product-choices .product-choice.is-no.is-current { background: #4B5563; color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-current:hover,
+#dist-machine-choices .machine-choice.is-current:focus-visible,
+.product-choices .product-choice.is-current:hover,
+.product-choices .product-choice.is-current:focus-visible { filter: brightness(0.92); }
+#dist-machine-choices .machine-choice.is-current:focus-visible,
+.product-choices .product-choice.is-current:focus-visible { outline: 2px solid #111827; outline-offset: 1px; }
+#dist-machine-choices .machine-choice.is-current .dd-dot,
+.product-choices .product-choice.is-current .dd-dot { background: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-current .dd-check,
+.product-choices .product-choice.is-current .dd-check { border-color: #FFFFFF; }
+#dist-machine-choices .machine-choice.is-working.is-current .dd-check,
+.product-choices .product-choice.is-yes.is-current .dd-check { color: #15803D; }
+#dist-machine-choices .machine-choice.is-empty.is-current .dd-check { color: #C2410C; }
+#dist-machine-choices .machine-choice.is-broken.is-current .dd-check { color: #B91C1C; }
+.product-choices .product-choice.is-no.is-current .dd-check { color: #4B5563; }
+#dist-machine-choices .machine-choice:not(.is-current) .dd-check,
+.product-choices .product-choice:not(.is-current) .dd-check { color: transparent; }

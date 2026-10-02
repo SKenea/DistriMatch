@@ -46,7 +46,7 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
 
     test('connecte : les controles pour informer apparaissent (vraie session reconnue)', async ({ page, context }) => {
         await openAsTestAccount(page, context);
-        await expect(page.locator('#dist-status-update')).toBeVisible({ timeout: 15000 });   // « Mettre à jour » (EPIC-T10)
+        await expect(page.locator('#dist-status-update .dist-status-chevron')).toBeVisible({ timeout: 15000 });   // ligne d'etat = menu (EPIC-T19)
         await expect(page.locator('#dist-login-invite')).toBeHidden();
         await expect(page.locator('#dist-products-list .product-status-btn:not([data-guest])').first()).toBeVisible();   // menu de l'etiquette (EPIC-T16)
         await expect(page.locator('#dist-product-add')).toBeVisible();
