@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Liste dépliée et badge</title>
+<style>
+:root {
+  --bg: #FFFFFF;
+  --page: #E5E7EB;
+  --surface: #F3F4F6;
+  --track: #ECEEF1;
+  --line: #E5E7EB;
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #4B5563;
+  --muted: #6B7280;
+  --focus: #2563EB;
+  --ok: #16A34A; --ok-ink: #166534; --ok-fill: #15803D; --ok-soft: #DCFCE7; --ok-soft-line: #86EFAC;
+  --warn: #EA580C; --warn-ink: #9A3412; --warn-fill: #C2410C; --warn-soft: #FFEDD5; --warn-soft-line: #FDBA74;
+  --ko: #DC2626; --ko-ink: #991B1B; --ko-fill: #B91C1C; --ko-soft: #FEE2E2; --ko-soft-line: #FCA5A5;
+  --none: #94A3B8; --none-ink: #475569;
+  --off: #CBD5E1;
+  --star: #B45309;
+  --brand: #E63946; --brand-dark: #D62828;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4;
+  overflow-x: hidden; -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Bandeau de reglages (hors telephone) ---------- */
+.band { max-width: 980px; margin: 0 auto; padding: 20px 16px 8px; }
+.band h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+.band .intent { margin: 0 0 12px; color: var(--ink-2); font-size: 14.5px; max-width: 760px; }
+.band .intent b { color: var(--ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.controls fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.controls legend { font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.opts { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; background: #D1D5DB; border-radius: 12px; }
+.opts label { position: relative; display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.opts input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opts label:has(input:checked) { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(17,24,39,.18); }
+.opts label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+/* ---------- Telephone ---------- */
+.stage { display: flex; justify-content: center; padding: 16px 16px 40px; }
+.phone {
+  position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--surface);
+  border-radius: 40px; box-shadow: 0 0 0 10px #111827, 0 24px 60px rgba(17,24,39,.35); isolation: isolate;
+}
+@media (max-width: 430px) {
+  .stage { padding: 8px 0 0; }
+  .phone { width: 100%; border-radius: 0; box-shadow: none; }
+}
+body.shot { background: var(--surface); }
+body.shot .band { display: none; }
+body.shot .stage { padding: 0; display: block; }
+body.shot .phone { border-radius: 0; box-shadow: none; }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+/* ---------- Barre haute de l'app (carte, liste) ---------- */
+.appbar { flex: none; height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 6px; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 3; }
+.logo { font-weight: 900; font-size: 22px; color: var(--brand-dark); letter-spacing: -.02em; margin-right: auto; padding-left: 4px; }
+.icon-btn {
+  width: 44px; height: 44px; border: 0; background: transparent; border-radius: 999px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink);
+}
+.icon-btn:hover { background: var(--surface); }
+.icon-btn svg { width: 22px; height: 22px; }
+.bottomnav { flex: none; height: 64px; display: flex; background: var(--bg); border-top: 1px solid var(--line); z-index: 3; }
+.bottomnav button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; }
+.bottomnav button svg { width: 22px; height: 22px; }
+.bottomnav button[aria-current="page"] { color: var(--brand-dark); }
+
+/* ---------- Fiche ---------- */
+.fiche { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--surface); -webkit-overflow-scrolling: touch; }
+.zone-head { background: var(--bg); }
+.topbar { display: flex; justify-content: flex-end; padding: 8px 8px 0; }
+.icon-btn[aria-pressed="true"] { color: var(--brand-dark); }
+.icon-btn[aria-pressed="true"] .heart { fill: currentColor; }
+.head { padding: 0 16px 12px; }
+.title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.015em; line-height: 1.2; }
+.tag-demo { font-size: 12.5px; font-weight: 600; color: var(--ink-2); border: 1px solid #9CA3AF; border-radius: 999px; padding: 0 9px; }
+.tag-exp { display: inline-block; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #FFFFFF; background: #1E3A8A; border-radius: 999px; padding: 2px 10px; }
+
+/* Ligne d'etat = en-tete de la liste depliable */
+.state-block { margin: 6px -10px 0; border-radius: 14px; border: 1px solid transparent; transition: border-color .15s, background .15s; }
+.state-row {
+  position: relative; width: 100%; min-height: 48px; display: flex; align-items: center; gap: 7px; padding: 6px 10px;
+  border: 0; border-radius: 13px; background: transparent; text-align: left; font-size: 15px; color: var(--muted); cursor: pointer;
+}
+button.state-row:hover { background: var(--surface); }
+div.state-row { cursor: pointer; }
+.state-txt { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 5px; min-width: 0; flex: 1; }
+.state-word { font-weight: 800; }
+.state-age { color: var(--ink-3); }
+.state-age.is-exp { color: #1E40AF; font-weight: 600; }
+[data-state="working"] .state-word { color: var(--ok-ink); }
+[data-state="empty"] .state-word { color: var(--warn-ink); }
+[data-state="broken"] .state-word { color: var(--ko-ink); }
+[data-state="none"] .state-word { color: var(--none-ink); }
+.is-soft .state-word { opacity: .85; }
+.feu { display: inline-flex; gap: 4px; padding: 4px 6px; border-radius: 999px; background: #F1F5F9; border: 1px solid #E2E8F0; flex: none; }
+.feu i { width: 9px; height: 9px; border-radius: 50%; background: var(--off); display: block; }
+[data-state="working"] .feu i:nth-child(1) { background: var(--ok); }
+[data-state="empty"] .feu i:nth-child(2) { background: var(--warn); }
+[data-state="broken"] .feu i:nth-child(3) { background: var(--ko); }
+.is-soft .feu i { opacity: .5; }
+.state-chev { width: 20px; height: 20px; flex: none; color: var(--ink-3); transition: transform .2s; }
+.state-block.is-open { border-color: var(--line); background: #F9FAFB; }
+.state-block.is-open .state-row { border-radius: 13px 13px 0 0; }
+.state-block.is-open .state-chev { transform: rotate(180deg); }
+.state-block.is-nudge { box-shadow: 0 0 0 2px var(--focus); }
+.state-block.is-flash { animation: flash 1s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px rgba(22,163,74,.55); } 100% { box-shadow: 0 0 0 3px rgba(22,163,74,0); } }
+.nudge-txt { margin: 0; padding: 0 10px 8px 10px; font-size: 13px; font-weight: 600; color: #1D4ED8; }
+
+/* Options depliees, facon reglages iOS (liste a coche) */
+.state-list { border-top: 1px solid var(--line); background: var(--bg); border-radius: 0 0 13px 13px; overflow: hidden; animation: unfold .2s ease-out; }
+.list-q { margin: 0; padding: 10px 14px 4px; font-size: 13px; font-weight: 700; color: var(--ink-3); }
+.list-now { margin: 0; padding: 0 14px 6px; font-size: 13px; color: var(--none-ink); }
+.list-now b { font-weight: 800; }
+.opt {
+  position: relative; width: 100%; min-height: 50px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  border: 0; background: transparent; cursor: pointer; text-align: left; font-size: 16px; font-weight: 700;
+}
+.opt + .opt::before { content: ""; position: absolute; top: 0; left: 36px; right: 0; height: 1px; background: var(--line); }
+.opt:hover { background: var(--surface); }
+.opt:focus-visible { outline-offset: -3px; border-radius: 10px; }
+.opt i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.opt .lbl { flex: 1; }
+.opt .chk { width: 22px; height: 22px; flex: none; color: var(--focus); visibility: hidden; }
+.opt[aria-checked="true"] .chk { visibility: visible; }
+.opt[aria-checked="true"] { background: #F8FAFC; }
+.opt[data-v="working"] { color: var(--ok-ink); } .opt[data-v="working"] i { background: var(--ok); }
+.opt[data-v="empty"] { color: var(--warn-ink); } .opt[data-v="empty"] i { background: var(--warn); }
+.opt[data-v="broken"] { color: var(--ko-ink); } .opt[data-v="broken"] i { background: var(--ko); }
+.list-foot { margin: 0; padding: 8px 14px 10px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); }
+@keyframes unfold { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+.meta { margin: 4px 0 0; color: var(--muted); font-size: 14.5px; display: flex; align-items: center; flex-wrap: wrap; column-gap: 6px; }
+.meta .sep { color: #9CA3AF; }
+.meta .star { color: var(--star); }
+.meta .price { color: var(--ink); font-weight: 700; }
+
+.tabs { background: var(--bg); padding: 10px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tabs-track { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--track); }
+.tab { flex: 1; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-3); font-weight: 600; font-size: 15px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--bg); color: var(--ink); font-weight: 800; box-shadow: 0 1px 3px rgba(17,24,39,.14); }
+
+.content { padding: 2px 16px 24px; }
+.shelf-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+.shelf-head h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.count { font-size: 15px; font-weight: 700; color: var(--ink-3); }
+.notice { margin: 0 0 12px; padding: 2px 0 2px 10px; border-left: 2px solid var(--warn); color: var(--ink-2); font-size: 13.5px; line-height: 1.35; }
+.notice b { color: var(--warn-ink); }
+.notice.is-broken { border-left-color: var(--ko); }
+.notice.is-broken b { color: var(--ko-ink); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-width: 0; border-radius: 14px; border: 1px solid #E2E5EA; background: #FFFFFF; box-shadow: 0 1px 2px rgba(17,24,39,.06); }
+.card.is-in { background: #F0FDF4; border-color: #BBF7D0; }
+.card.is-out { background: #E9EBEE; border-color: #D5D9DF; box-shadow: none; }
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.art { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #FFFFFF; border: 1px solid rgba(17,24,39,.08); color: var(--ink-2); }
+.art svg { width: 22px; height: 22px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; font-size: 12.5px; font-weight: 700; padding: 0 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.pill svg { width: 10px; height: 10px; }
+.pill.ok { background: var(--ok-ink); color: #FFFFFF; } .pill.ok i { background: #FFFFFF; }
+.pill.out { background: var(--ink-3); color: #FFFFFF; } .pill.out i { background: #FFFFFF; }
+.pill.none { background: #FFFFFF; color: var(--none-ink); border-color: var(--off); } .pill.none i { border: 1px solid var(--none); }
+.pname { font-size: 15.5px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.fresh { font-size: 12.5px; color: var(--ink-3); }
+.fresh.is-exp { color: #1E40AF; }
+.ghost { min-height: 110px; border-radius: 14px; border: 1.5px dashed #9CA3AF; background: rgba(255,255,255,.5); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: var(--ink); font-weight: 700; font-size: 14.5px; }
+.ghost span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #FFFFFF; font-size: 22px; line-height: 1; }
+
+.invite { margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(180deg, #FFF5F5 0%, #FFFFFF 100%); border: 1px solid #F5D0D0; display: grid; grid-template-columns: 40px 1fr; gap: 10px 12px; }
+.invite.is-called { animation: called 1.3s ease-out; }
+@keyframes called { 0%, 40% { box-shadow: 0 0 0 4px rgba(214,40,40,.45); } 100% { box-shadow: 0 0 0 4px rgba(214,40,40,0); } }
+.invite-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-dark); color: #FFFFFF; }
+.invite-ico svg { width: 22px; height: 22px; }
+.invite h3 { margin: 0 0 2px; font-size: 16px; font-weight: 800; line-height: 1.25; }
+.invite p { margin: 0; font-size: 14px; line-height: 1.35; color: var(--ink-2); }
+.btn-brand { grid-column: 1 / -1; min-height: 46px; border-radius: 12px; border: 0; background: var(--brand-dark); color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer; }
+.btn-brand:hover { background: #B91C1C; }
+
+/* ---------- Carte ---------- */
+.mapwrap { position: relative; flex: 1; overflow: hidden; background: #F2EFE9; }
+.mapwrap > svg.osm { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.chips { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 8px; z-index: 4; overflow: hidden; }
+.chip { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; background: #FFFFFF; box-shadow: 0 2px 8px rgba(17,24,39,.18); font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #FFFFFF; }
+.user-dot { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 0 0 8px rgba(37,99,235,.18), 0 1px 4px rgba(0,0,0,.3); z-index: 1; }
+
+/* Pastille : emoji sur fond blanc, badge capsule couleur du feu au-dessus */
+.mk {
+  position: absolute; width: 56px; height: 64px; margin: -40px 0 0 -28px; padding: 0; border: 0; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 2;
+}
+.mk:focus-visible { outline-offset: 0; border-radius: 14px; }
+.mk-badge {
+  position: relative; z-index: 2; min-width: 34px; height: 22px; padding: 0 7px; border-radius: 999px; margin-bottom: -6px;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 800; letter-spacing: .01em;
+  color: #FFFFFF; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(17,24,39,.35); font-variant-numeric: tabular-nums;
+}
+.mk-badge.is-dot { min-width: 0; width: 16px; height: 16px; padding: 0; margin-bottom: -5px; }
+.mk-pin {
+  position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 50%; background: #FFFFFF; border: 3px solid var(--none);
+  display: grid; place-items: center; font-size: 21px; line-height: 1; box-shadow: 0 2px 6px rgba(17,24,39,.35);
+}
+.mk-fav { position: absolute; z-index: 3; right: 2px; bottom: 6px; width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(17,24,39,.35); }
+.mk-fav svg { width: 13px; height: 13px; color: var(--brand); }
+.mk.is-sel .mk-pin { transform: scale(1.12); box-shadow: 0 0 0 3px rgba(17,24,39,.85), 0 4px 10px rgba(17,24,39,.35); }
+.mk.is-sel { z-index: 3; }
+/* Couleurs du feu, vives (< 2 h) */
+.tone-working .mk-pin { border-color: var(--ok); }  .tone-working .mk-badge { background: var(--ok-fill); }
+.tone-empty .mk-pin { border-color: var(--warn); }  .tone-empty .mk-badge { background: var(--warn-fill); }
+.tone-broken .mk-pin { border-color: var(--ko); }   .tone-broken .mk-badge { background: var(--ko-fill); }
+.tone-none .mk-pin { border-color: var(--none); }   .tone-none .mk-badge { background: #FFFFFF; color: var(--none-ink); border-color: var(--none); }
+.tone-none .mk-badge.is-dot { background: var(--none); border-color: #FFFFFF; }
+/* Adoucies (signal de plus de 2 h) */
+.tone-working.is-soft .mk-pin { border-color: var(--ok-soft-line); }
+.tone-working.is-soft .mk-badge { background: var(--ok-soft); color: var(--ok-ink); border-color: var(--ok-soft-line); }
+.tone-empty.is-soft .mk-pin { border-color: var(--warn-soft-line); }
+.tone-empty.is-soft .mk-badge { background: var(--warn-soft); color: var(--warn-ink); border-color: var(--warn-soft-line); }
+.tone-broken.is-soft .mk-pin { border-color: var(--ko-soft-line); }
+.tone-broken.is-soft .mk-badge { background: var(--ko-soft); color: var(--ko-ink); border-color: var(--ko-soft-line); }
+.is-soft .mk-badge.is-dot { width: 14px; height: 14px; }
+.tone-none .mk-pin { opacity: .92; }
+
+.map-ctrl { position: absolute; right: 12px; bottom: 96px; display: flex; flex-direction: column; gap: 10px; z-index: 4; }
+.round { width: 48px; height: 48px; border-radius: 50%; border: 0; background: #FFFFFF; box-shadow: 0 2px 8px rgba(17,24,39,.22); display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+.round svg { width: 22px; height: 22px; }
+.fab { position: absolute; right: 10px; bottom: 18px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--brand-dark); color: #FFFFFF; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(214,40,40,.45); cursor: pointer; z-index: 4; }
+.fab svg { width: 26px; height: 26px; }
+.legend-btn { position: absolute; left: 10px; bottom: 18px; z-index: 4; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: #FFFFFF; box-shadow: 0 2px 8px rgba(17,24,39,.22); font-weight: 700; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.legend-btn .mini { display: inline-flex; gap: 3px; }
+.legend-btn .mini i { width: 8px; height: 8px; border-radius: 50%; }
+.legend { position: absolute; left: 10px; bottom: 70px; z-index: 5; width: 236px; padding: 12px 14px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 10px 28px rgba(17,24,39,.25); font-size: 13.5px; animation: unfold .18s ease-out; }
+.legend h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.legend li { display: flex; align-items: center; gap: 9px; color: var(--ink-2); }
+.legend .sw { width: 30px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: #FFFFFF; flex: none; }
+.legend .sep-l { border-top: 1px solid var(--line); padding-top: 7px; }
+
+.peek { position: absolute; left: 10px; right: 10px; bottom: 86px; z-index: 6; padding: 12px 14px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 28px rgba(17,24,39,.28); display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; animation: unfold .18s ease-out; }
+.peek h3 { margin: 0; font-size: 16.5px; font-weight: 800; line-height: 1.25; }
+.peek-meta .feu { padding: 3px 5px; gap: 3px; } .peek-meta .feu i { width: 7px; height: 7px; } .peek-meta .state-word { font-weight: 800; }
+
+.peek .peek-meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.peek.is-top { top: 60px; bottom: auto; }
+.peek .peek-go { width: 100%; grid-column: 1 / -1; margin-top: 6px; min-height: 44px; border: 0; border-radius: 12px; background: var(--ink); color: #FFFFFF; font-weight: 700; font-size: 15px; cursor: pointer; }
+
+/* ---------- Liste ---------- */
+.listwrap { flex: 1; overflow-y: auto; background: var(--bg); }
+.list-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 14px 16px 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.list-head h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.list-head span { font-size: 13.5px; color: var(--muted); }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row {
+  width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 0; align-items: center; padding: 12px 16px;
+  grid-template-areas: "thumb name cap" "thumb sub sub" "thumb state state";
+  border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer;
+}
+.row:hover { background: #F9FAFB; }
+.row:focus-visible { outline-offset: -3px; border-radius: 10px; }
+.thumb { grid-area: thumb; align-self: start; }
+.row .r-name { grid-area: name; } .row .r-sub { grid-area: sub; } .row .r-state { grid-area: state; } .row .cap { grid-area: cap; align-self: start; }
+.thumb { position: relative; width: 56px; height: 56px; border-radius: 14px; background: var(--surface); display: grid; place-items: center; font-size: 28px; }
+.thumb .mk-fav { right: -4px; bottom: -4px; }
+.r-name { display: block; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.25; overflow-wrap: anywhere; }
+.r-sub { display: block; font-size: 13.5px; color: var(--muted); margin-top: 1px; }
+.r-sub .star { color: var(--star); }
+.r-state { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 13.5px; color: var(--ink-3); flex-wrap: wrap; }
+.r-state .feu { padding: 3px 5px; gap: 3px; }
+.r-state .feu i { width: 7px; height: 7px; }
+.r-state .state-word { font-weight: 800; }
+.ms { display: inline-flex; align-items: center; gap: 6px; }
+.cap {
+  justify-self: end; white-space: nowrap; min-height: 28px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center;
+  font-size: 13px; font-weight: 800; color: #FFFFFF; font-variant-numeric: tabular-nums; border: 1.5px solid transparent;
+}
+.cap.tone-working { background: var(--ok-fill); }
+.cap.tone-empty { background: var(--warn-fill); }
+.cap.tone-broken { background: var(--ko-fill); }
+.cap.tone-none { background: #FFFFFF; color: var(--none-ink); border-color: var(--none); }
+.cap.tone-working.is-soft { background: var(--ok-soft); color: var(--ok-ink); border-color: var(--ok-soft-line); }
+.cap.tone-empty.is-soft { background: var(--warn-soft); color: var(--warn-ink); border-color: var(--warn-soft-line); }
+.cap.tone-broken.is-soft { background: var(--ko-soft); color: var(--ko-ink); border-color: var(--ko-soft-line); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 20; width: max-content; max-width: calc(100% - 32px);
+  background: var(--ink); color: #FFFFFF; padding: 12px 16px; border-radius: 12px; font-size: 14.5px; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25); animation: toastin .18s ease-out;
+}
+.fiche-screen .toast { bottom: 24px; }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<section class="band" aria-labelledby="band-title">
+  <h1 id="band-title">3. Liste dépliée + badge chiffré</h1>
+  <p class="intent">
+    <b>Fiche :</b> toucher la ligne d'état la déplie sur place, façon réglage iOS : les trois états s'affichent dessous avec une coche sur l'état actuel, et le contenu est poussé, jamais masqué.
+    <b>Carte et liste :</b> un badge « 1/4 » couleur du feu, comme le « 2/4 disponibles » des bornes de recharge, dit l'état et le stock d'un coup d'œil.
+  </p>
+  <div class="controls">
+    <fieldset><legend>Profil</legend><div class="opts">
+      <label><input type="radio" name="mode" value="visitor"> Visiteur</label>
+      <label><input type="radio" name="mode" value="member" checked> Membre</label>
+      <label><input type="radio" name="mode" value="onsite"> Membre sur place</label>
+    </div></fieldset>
+    <fieldset><legend>État du distributeur</legend><div class="opts">
+      <label><input type="radio" name="dstate" value="working" checked> En service</label>
+      <label><input type="radio" name="dstate" value="empty"> Vide</label>
+      <label><input type="radio" name="dstate" value="broken"> En panne</label>
+      <label><input type="radio" name="dstate" value="none"> Pas d'info</label>
+    </div></fieldset>
+    <fieldset><legend>Âge du signal</legend><div class="opts">
+      <label><input type="radio" name="age" value="50" checked> 50 min</label>
+      <label><input type="radio" name="age" value="180"> 3 h</label>
+    </div></fieldset>
+    <fieldset><legend>Signal de l'exploitant</legend><div class="opts">
+      <label><input type="radio" name="exp" value="0" checked> Non</label>
+      <label><input type="radio" name="exp" value="1"> Oui</label>
+    </div></fieldset>
+    <fieldset><legend>Écran</legend><div class="opts">
+      <label><input type="radio" name="screen" value="fiche" checked> Fiche</label>
+      <label><input type="radio" name="screen" value="carte"> Carte</label>
+      <label><input type="radio" name="screen" value="liste"> Liste</label>
+    </div></fieldset>
+  </div>
+</section>
+
+<div class="stage">
+  <div class="phone" id="phone">
+
+    <!-- ===== Fiche ===== -->
+    <section class="screen fiche-screen" id="scr-fiche" aria-label="Fiche distributeur">
+      <div class="fiche" id="fiche">
+        <div class="zone-head">
+          <div class="topbar">
+            <button type="button" class="icon-btn" id="fav" aria-pressed="true" aria-label="Retirer des favoris">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path class="heart" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+            </button>
+            <button type="button" class="icon-btn" aria-label="Partager">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+            </button>
+            <button type="button" class="icon-btn" id="close-fiche" aria-label="Fermer la fiche">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+          <header class="head">
+            <div class="title-row">
+              <h1 class="title">Légumes Bio Cambo</h1>
+              <span class="tag-demo">Démo</span>
+            </div>
+            <span class="tag-exp" id="tag-exp" hidden>Exploitant vérifié</span>
+            <div class="state-block" id="state-block"></div>
+            <p class="meta"><span aria-hidden="true">🥕</span><span>Produits agricoles</span><span class="sep" aria-hidden="true">·</span><span class="price">€€</span><span class="sep" aria-hidden="true">·</span><span><span class="star" aria-hidden="true">★</span> 4.7 (91)</span></p>
+          </header>
+        </div>
+        <nav class="tabs" aria-label="Sections de la fiche">
+          <div class="tabs-track" role="tablist">
+            <button type="button" class="tab" role="tab" aria-selected="true">Produits</button>
+            <button type="button" class="tab" role="tab" aria-selected="false" tabindex="-1">Avis</button>
+            <button type="button" class="tab" role="tab" aria-selected="false" tabindex="-1">À propos</button>
+          </div>
+        </nav>
+        <main class="content">
+          <div class="shelf-head"><h2 id="shelf-t">Il reste quoi ?</h2><span class="count" id="count"></span></div>
+          <p class="notice" id="notice" hidden></p>
+          <div class="grid" id="grid" aria-labelledby="shelf-t"></div>
+          <div class="invite" id="invite" role="region" aria-labelledby="invite-t" hidden>
+            <span class="invite-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+            <div>
+              <h3 id="invite-t">Tu es devant le distributeur ?</h3>
+              <p>Connecte-toi pour signaler ce qu'il reste et donner ton avis.</p>
+            </div>
+            <button type="button" class="btn-brand" id="login">Se connecter</button>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- ===== Carte ===== -->
+    <section class="screen" id="scr-carte" aria-label="Carte" hidden>
+      <div class="appbar" data-appbar></div>
+      <div class="mapwrap" id="mapwrap">
+        <svg class="osm" viewBox="0 0 390 724" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+          <rect width="390" height="724" fill="#F2EFE9"/>
+          <!-- zones urbaines -->
+          <path d="M175 230c30-18 85-14 110 6s20 70-8 90-80 18-102-4-30-74 0-92z" fill="#E4E0DA"/>
+          <path d="M95 290c25-12 60-6 72 14s4 54-20 64-58 4-68-16-8-50 16-62z" fill="#E4E0DA"/>
+          <path d="M55 420c22-10 52-4 60 16s-2 46-22 52-44 0-50-18 0-42 12-50z" fill="#E4E0DA"/>
+          <path d="M120 60c22-8 50-2 56 14s-4 36-22 40-40-2-44-16 0-32 10-38z" fill="#E4E0DA"/>
+          <!-- parcs et bois -->
+          <path d="M300 400c30-10 70 0 80 30v80c-20 20-60 22-84 6s-28-100 4-116z" fill="#CDEBB0"/>
+          <path d="M150 380c18-6 40 0 44 14s-4 30-20 32-34-4-36-18 2-24 12-28z" fill="#CDEBB0"/>
+          <path d="M60 120c16-10 40-8 50 4s6 34-10 40-38 0-44-12 0-26 4-32z" fill="#ADD19E"/>
+          <path d="M190 540c40-14 100-6 120 22s0 80-40 92-90-8-100-40 0-62 20-74z" fill="#CDEBB0"/>
+          <path d="M320 140c20-8 50-2 60 16v50c-20 10-50 8-62-6s-12-52 2-60z" fill="#ADD19E"/>
+          <!-- ocean -->
+          <path d="M0 0h46c-4 70-6 140 4 210 8 50 14 90 20 140 6 50 12 90 4 130-8 50-20 100-22 150-1 30 0 60 4 94H0z" fill="#AAD3DF"/>
+          <!-- Adour et Nive -->
+          <path d="M48 224c40 0 80 10 120 22s70 14 100 4 60-30 122-42" fill="none" stroke="#AAD3DF" stroke-width="14" stroke-linecap="round"/>
+          <path d="M238 252c6 40 2 80 14 120s30 80 36 130 0 110 10 222" fill="none" stroke="#AAD3DF" stroke-width="6" stroke-linecap="round"/>
+          <!-- autoroute -->
+          <path d="M196 0c4 80 0 150 18 220s40 120 30 200-50 160-40 304" fill="none" stroke="#E3907A" stroke-width="9"/>
+          <path d="M196 0c4 80 0 150 18 220s40 120 30 200-50 160-40 304" fill="none" stroke="#F9B29C" stroke-width="6"/>
+          <!-- routes principales -->
+          <path d="M226 300c-40 30-90 60-120 100s-30 50-40 70" fill="none" stroke="#C9C08A" stroke-width="7"/>
+          <path d="M226 300c-40 30-90 60-120 100s-30 50-40 70" fill="none" stroke="#F7FABF" stroke-width="5"/>
+          <path d="M240 290c40 30 70 120 80 200s-10 140-40 234" fill="none" stroke="#C9C08A" stroke-width="7"/>
+          <path d="M240 290c40 30 70 120 80 200s-10 140-40 234" fill="none" stroke="#F7FABF" stroke-width="5"/>
+          <path d="M150 90c30 40 60 100 76 150" fill="none" stroke="#C9C08A" stroke-width="7"/>
+          <path d="M150 90c30 40 60 100 76 150" fill="none" stroke="#F7FABF" stroke-width="5"/>
+          <!-- rues -->
+          <g fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round">
+            <path d="M110 300c30 10 60 30 70 60"/><path d="M80 340c40-10 80 0 110 20"/><path d="M200 250c30 20 60 30 90 30"/>
+            <path d="M250 330c30 0 60 10 90 30"/><path d="M60 450c30-10 60-10 90 10"/><path d="M290 180c30 0 60-10 100-30"/>
+            <path d="M120 470c40 20 60 60 70 100"/><path d="M330 300c10 40 30 70 60 90"/><path d="M100 160c30 10 60 20 80 40"/>
+          </g>
+          <!-- libelles -->
+          <g font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="700" fill="#5B6472" stroke="#F2EFE9" stroke-width="3" paint-order="stroke">
+            <text x="226" y="288">Bayonne</text>
+            <text x="96" y="372">Anglet</text>
+            <text x="74" y="502">Biarritz</text>
+            <text x="74" y="112">Tarnos</text>
+            <text x="336" y="268">Urt</text>
+            <text x="216" y="648">Cambo-les-Bains</text>
+          </g>
+          <text x="20" y="560" transform="rotate(-82 20 560)" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="12" font-style="italic" fill="#3E6E8A">Océan Atlantique</text>
+          <text x="96" y="226" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="11" font-style="italic" fill="#3E6E8A" stroke="#AAD3DF" stroke-width="0">Adour</text>
+        </svg>
+        <div class="chips" role="group" aria-label="Filtrer par type">
+          <button type="button" class="chip" aria-pressed="true">Tous</button>
+          <button type="button" class="chip" aria-pressed="false"><span aria-hidden="true">🍕</span>Pizza</button>
+          <button type="button" class="chip" aria-pressed="false"><span aria-hidden="true">🥖</span>Pain</button>
+          <button type="button" class="chip" aria-pressed="false"><span aria-hidden="true">🧀</span>Fromage</button>
+        </div>
+        <span class="user-dot" style="left:50%;top:45%" role="img" aria-label="Ta position"></span>
+        <div id="markers"></div>
+        <div class="map-ctrl">
+          <button type="button" class="round" aria-label="Zoomer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button type="button" class="round" aria-label="Dézoomer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <button type="button" class="round" aria-label="Me localiser"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+        </div>
+        <button type="button" class="legend-btn" id="legend-btn" aria-expanded="false" aria-controls="legend">
+          <span class="mini" aria-hidden="true"><i style="background:var(--ok)"></i><i style="background:var(--warn)"></i><i style="background:var(--ko)"></i><i style="background:var(--none)"></i></span>Légende
+        </button>
+        <div class="legend" id="legend" role="region" aria-label="Légende de la carte" hidden>
+          <h3>Ce que dit la pastille</h3>
+          <ul>
+            <li><span class="sw" style="background:var(--ok-fill)">3/5</span>En service · produits dispo</li>
+            <li><span class="sw" style="background:var(--warn-fill)">0/3</span>Vide</li>
+            <li><span class="sw" style="background:var(--ko-fill)">0/4</span>En panne</li>
+            <li><span class="sw" style="background:#FFFFFF;color:var(--none-ink);border:1.5px solid var(--none)">0/5</span>Pas d'info depuis 24 h</li>
+            <li><span class="sw" style="background:var(--ok-soft);color:var(--ok-ink);border:1.5px solid var(--ok-soft-line)">3/5</span>Couleur pâle : plus de 2 h</li>
+            <li class="sep-l"><span class="sw" style="background:transparent"><span class="mk-fav" style="position:static"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span></span>Favori</li>
+          </ul>
+        </div>
+        <div class="peek" id="peek" role="region" aria-live="polite" hidden></div>
+        <button type="button" class="fab" aria-label="Ajouter un distributeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <nav class="bottomnav" data-nav aria-label="Navigation principale"></nav>
+    </section>
+
+    <!-- ===== Liste ===== -->
+    <section class="screen" id="scr-liste" aria-label="Liste à proximité" hidden>
+      <div class="appbar" data-appbar></div>
+      <div class="listwrap">
+        <div class="list-head"><h2 id="list-t">À proximité</h2><span id="list-n"></span></div>
+        <ul class="rows" id="rows" aria-labelledby="list-t"></ul>
+      </div>
+      <nav class="bottomnav" data-nav aria-label="Navigation principale"></nav>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SOFT_AFTER = 120;   // minutes : au-dela, couleur adoucie
+  var GREY_AFTER = 1440;  // minutes : au-dela, Pas d'info
+  var WORD = { working: 'En service', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
+  var STATES = ['working', 'empty', 'broken'];
+  var ORDER = { in: 0, none: 1, out: 2 };
+
+  var S = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+  var ART = {
+    basket: '<svg viewBox="0 0 24 24" ' + S + '><path d="M4 10h16l-1.6 8.4A2 2 0 0 1 16.4 20H7.6a2 2 0 0 1-2-1.6z"/><path d="M8.5 10 12 4.5 15.5 10M9.5 14v2.5M14.5 14v2.5"/></svg>',
+    potato: '<svg viewBox="0 0 24 24" ' + S + '><path d="M7.5 5.5c3.2-2.1 8.8-1.2 10.7 2.6 1.9 3.9.6 8.8-3.4 10.4-4.1 1.7-9.7.7-10.9-3.8C3 11.4 4.6 7.4 7.5 5.5z"/><path d="M9.5 10h.01M14 13.5h.01M11.5 15.5h.01"/></svg>',
+    carrot: '<svg viewBox="0 0 24 24" ' + S + '><path d="M15.5 8.5c1.4 1.4 1.3 3-.1 4.4L6.2 20.1c-.9.6-2-.4-1.4-1.3L12 9.6c1.4-1.4 2.9-1.5 3.5-1.1z"/><path d="M15.5 8.5 19 5M15.5 8.5 16 3.5M15.5 8.5l5 .5M9 13.5l1.5 1.5M11.5 11l1 1"/></svg>',
+    salad: '<svg viewBox="0 0 24 24" ' + S + '><path d="M12 20c-4.8 0-8-2.8-8-6.6 0-1.8.9-3 2-3.8.2-3 2.8-5.1 6-5.1s5.8 2.1 6 5.1c1.1.8 2 2 2 3.8 0 3.8-3.2 6.6-8 6.6z"/><path d="M12 20v-9M12 15l-3-3M12 17l3-3"/></svg>'
+  };
+  var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  var CHECK = '<svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  var HEART = '<span class="mk-fav" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></span>';
+
+  // Fiche demo : produits de Legumes Bio Cambo
+  var PRODUCTS = [
+    { id: 'p1', name: 'Panier légumes saison', art: 'basket', sig: { status: 'in', age: 70 } },
+    { id: 'p2', name: 'Pommes de terre (2 kg)', art: 'potato', sig: null },
+    { id: 'p3', name: 'Carottes (1 kg)', art: 'carrot', sig: { status: 'out', age: 95 } },
+    { id: 'p4', name: 'Salades (lot de 2)', art: 'salad', sig: null }
+  ];
+
+  // Carte : 8 distributeurs (le premier suit les reglages de la fiche)
+  var DISTS = [
+    { id: 'd1', name: 'Légumes Bio Cambo', emoji: '🥕', fav: true, rating: '4.7', km: '17 km', x: 68, y: 84, fiche: true },
+    { id: 'd2', name: 'Distributeur de pain', city: 'Anglet', emoji: '🥖', fav: false, rating: '4.5', km: '1,9 km', x: 33, y: 46, state: 'empty', age: 20, inStock: 0, total: 0 },
+    { id: 'd3', name: 'Pépé Joe', city: 'Tarnos', emoji: '🍕', fav: false, rating: '4.6', km: '6,1 km', x: 40, y: 16, state: 'working', age: 180, inStock: 3, total: 5 },
+    { id: 'd4', name: 'Plats Cuisinés Bayonne', emoji: '🍽️', fav: false, rating: '4.2', km: '1,2 km', x: 59, y: 33, state: 'none', age: null, inStock: 0, total: 5 },
+    { id: 'd5', name: 'Gang of Pizza', city: 'Urt', emoji: '🍕', fav: false, rating: '4.3', km: '13 km', x: 87, y: 30, state: 'broken', age: 60, inStock: 0, total: 4 },
+    { id: 'd6', name: 'Fromagerie Ossau', emoji: '🧀', fav: true, rating: '4.8', km: '0,8 km', x: 66, y: 53, state: 'working', age: 10, inStock: 4, total: 4 },
+    { id: 'd7', name: 'Distributeur de pizzas', city: 'Biarritz', emoji: '🍕', fav: false, rating: null, km: '4,8 km', x: 22, y: 64, state: 'none', age: null, inStock: 0, total: 0 },
+    { id: 'd8', name: 'Pizza Chez Didier', emoji: '🍕', fav: false, rating: '4.1', km: '2,6 km', x: 43, y: 60, state: 'empty', age: 300, inStock: 0, total: 3 }
+  ];
+  var LIST_ORDER = ['d6', 'd4', 'd2', 'd8', 'd7', 'd3', 'd5', 'd1'];
+
+  var st = {
+    mode: 'member', screen: 'fiche', dstate: 'working', age: 50, exp: false,
+    open: false, sel: null, legend: false, fav: true
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function isMember() { return st.mode !== 'visitor'; }
+  function reduced() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  function buzz() { try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) { /* pas de vibreur */ } }
+  function formatAge(min) {
+    if (min < 1) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    if (min < 1440) return 'il y a ' + Math.floor(min / 60) + ' h';
+    return 'il y a ' + Math.floor(min / 1440) + ' j';
+  }
+  function curDist() { return { state: st.dstate, age: st.dstate === 'none' ? null : st.age }; }
+
+  // Un distributeur vide / en panne plus recent que le signal d'un produit le passe en Pas dispo
+  function resolve(p) {
+    var d = curDist(), s = p.sig;
+    if (s && (d.state === 'empty' || d.state === 'broken') && s.age > d.age) return { status: 'out', age: d.age };
+    if (!s || s.age >= GREY_AFTER) return { status: 'none', age: null };
+    return { status: s.status, age: s.age };
+  }
+  function ficheStock() {
+    var n = 0;
+    PRODUCTS.forEach(function (p) { if (resolve(p).status === 'in') n++; });
+    return { inStock: n, total: PRODUCTS.length };
+  }
+  // Ton affiche (couleur du feu) : gris au-dela de 24 h, adouci au-dela de 2 h
+  function toneOf(state, age) {
+    if (state === 'none' || age === null || age >= GREY_AFTER) return { tone: 'none', soft: false };
+    return { tone: state, soft: age >= SOFT_AFTER };
+  }
+  function distData(d) {
+    if (!d.fiche) return d;
+    var c = curDist(), s = ficheStock();
+    return { id: d.id, name: d.name, emoji: d.emoji, fav: st.fav, rating: d.rating, km: d.km, x: d.x, y: d.y, fiche: true,
+      state: c.state, age: c.age, inStock: s.inStock, total: s.total, exp: st.exp };
+  }
+
+  // ---------- Toast ----------
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  // ---------- Fiche : ligne d'etat + liste depliee ----------
+  function stateTextHTML(d) {
+    var t = toneOf(d.state, d.age);
+    var age = d.state === 'none' ? 'aucun signal depuis 24 h' : (st.exp ? 'Info de l\'exploitant · ' : '') + formatAge(d.age);
+    return '<span class="feu" aria-hidden="true"><i></i><i></i><i></i></span>'
+      + '<span class="state-txt"><span class="state-word">' + WORD[d.state] + '</span>'
+      + '<span class="state-age' + (st.exp && d.state !== 'none' ? ' is-exp' : '') + '">· ' + esc(age) + '</span></span>';
+  }
+
+  function renderState() {
+    var d = curDist();
+    var t = toneOf(d.state, d.age);
+    var block = $('state-block');
+    var stale = d.state === 'none' || d.age >= SOFT_AFTER;
+    var nudge = st.mode === 'onsite' && stale && !st.open;
+    block.dataset.state = d.state;
+    block.classList.toggle('is-soft', t.soft);
+    block.classList.toggle('is-open', st.open && isMember());
+    block.classList.toggle('is-nudge', nudge);
+    var label = 'État du distributeur : ' + WORD[d.state] + ', ' + (d.state === 'none' ? 'aucun signal depuis 24 h' : (st.exp ? 'info de l\'exploitant, ' : '') + formatAge(d.age));
+    var html;
+    if (isMember()) {
+      html = '<button type="button" class="state-row" id="state-row" aria-expanded="' + st.open + '" aria-controls="state-list"'
+        + ' aria-label="' + esc(label + '. Signaler l\'état') + '">' + stateTextHTML(d) + '<span class="state-chev">' + CHEV + '</span></button>';
+      if (nudge) html += '<p class="nudge-txt">Tu es à 15 m : c\'est toujours ça ?</p>';
+      if (st.open) html += listHTML(d);
+    } else {
+      // Visiteur : meme ligne sans chevron, la toucher met en avant l'invitation
+      html = '<div class="state-row" id="state-row" role="button" tabindex="0" aria-label="' + esc(label + '. Connecte-toi pour signaler') + '">' + stateTextHTML(d) + '</div>';
+    }
+    block.innerHTML = html;
+    $('tag-exp').hidden = !st.exp;
+  }
+
+  // Disclosure + radiogroup : la liste est du contenu en place (pas un popup), d'ou radiogroup plutot que menu
+  function listHTML(d) {
+    var head = d.state === 'none'
+      ? '<p class="list-q" id="list-q">Le distributeur, là maintenant ?</p><p class="list-now">Actuellement : <b>Pas d\'info</b></p>'
+      : '<p class="list-q" id="list-q">Le distributeur, là maintenant ?</p>';
+    var focusV = d.state === 'none' ? 'working' : d.state;
+    var opts = STATES.map(function (s) {
+      var cur = d.state === s;
+      return '<button type="button" class="opt" role="radio" data-v="' + s + '" aria-checked="' + cur + '" tabindex="' + (s === focusV ? '0' : '-1') + '">'
+        + '<i aria-hidden="true"></i><span class="lbl">' + WORD[s] + '</span>' + CHECK + '</button>';
+    }).join('');
+    return '<div class="state-list" id="state-list">' + head
+      + '<div role="radiogroup" aria-labelledby="list-q">' + opts + '</div>'
+      + '<p class="list-foot">Ton signal est daté et visible par tous.</p></div>';
+  }
+
+  function openList() {
+    st.open = true; renderState();
+    var el = $('state-block').querySelector('.opt[tabindex="0"]');
+    if (el) el.focus({ preventScroll: true });
+    buzz();
+  }
+  function closeList(restore) {
+    if (!st.open) return;
+    st.open = false; renderState();
+    if (restore) { var r = $('state-row'); if (r) r.focus({ preventScroll: true }); }
+  }
+  function choose(btn) {
+    var v = btn.dataset.v;
+    $('state-block').querySelectorAll('.opt').forEach(function (b) { b.setAttribute('aria-checked', String(b === btn)); });
+    buzz();
+    setTimeout(function () {
+      st.dstate = v; st.age = 0; st.exp = false; st.open = false;
+      syncControls();
+      renderFiche();
+      var b = $('state-block');
+      b.classList.remove('is-flash'); void b.offsetWidth; b.classList.add('is-flash');
+      var r = $('state-row'); if (r) r.focus({ preventScroll: true });
+      toast('Merci ! Ton signal aide les suivants');
+    }, reduced() ? 0 : 220);
+  }
+  function callInvite() {
+    var inv = $('invite');
+    inv.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
+    inv.classList.remove('is-called'); void inv.offsetWidth; inv.classList.add('is-called');
+  }
+
+  function renderShelf() {
+    var rows = PRODUCTS.map(function (p, i) { return { p: p, r: resolve(p), i: i }; });
+    rows.sort(function (a, b) { return (ORDER[a.r.status] - ORDER[b.r.status]) || (a.i - b.i); });
+    var member = isMember();
+    var html = rows.map(function (x) {
+      var r = x.r;
+      var cls = r.status === 'in' ? 'is-in' : r.status === 'out' ? 'is-out' : 'is-none';
+      var pc = r.status === 'in' ? 'ok' : r.status === 'out' ? 'out' : 'none';
+      var w = r.status === 'in' ? 'Dispo' : r.status === 'out' ? 'Pas dispo' : "Pas d'info";
+      var age = r.status === 'none' ? 'aucun signal depuis 24 h' : 'vu ' + formatAge(r.age);
+      return '<article class="card ' + cls + '"><div class="card-top"><div class="art" aria-hidden="true">' + ART[x.p.art] + '</div>'
+        + '<span class="pill ' + pc + '"><i></i>' + w + (member ? CHEV : '') + '</span></div>'
+        + '<div><div class="pname">' + esc(x.p.name.replace(/\((\d) (kg)\)/, '($1 $2)').replace(/ \(/, ' (')) + '</div><div class="fresh">' + esc(age) + '</div></div></article>';
+    }).join('');
+    if (member) html += '<button type="button" class="ghost"><span aria-hidden="true">+</span>Ajouter un produit</button>';
+    $('grid').innerHTML = html;
+    var s = ficheStock();
+    $('count').textContent = '· ' + s.inStock + ' sur ' + s.total + ' dispo';
+    var d = curDist(), n = $('notice');
+    if (d.state === 'empty' || d.state === 'broken') {
+      n.hidden = false;
+      n.className = 'notice' + (d.state === 'broken' ? ' is-broken' : '');
+      n.innerHTML = '<b>Distributeur signalé ' + (d.state === 'empty' ? 'vide' : 'en panne') + '</b> ' + esc(formatAge(d.age)) + ' : les produits signalés avant sont probablement épuisés.';
+    } else {
+      n.hidden = true;
+    }
+    $('invite').hidden = member;
+  }
+  function renderFiche() { renderState(); renderShelf(); }
+
+  // ---------- Carte ----------
+  function stockLabel(d) { return d.total ? d.inStock + ' sur ' + d.total + ' dispo' : 'aucun produit listé'; }
+  function stateLabel(d) {
+    if (d.state === 'none' || d.age === null) return "Pas d'info";
+    return WORD[d.state] + ' ' + formatAge(d.age);
+  }
+  function renderMarkers() {
+    $('markers').innerHTML = DISTS.map(function (raw) {
+      var d = distData(raw);
+      var t = toneOf(d.state, d.age);
+      var badge = d.total ? '<span class="mk-badge">' + d.inStock + '/' + d.total + '</span>' : '<span class="mk-badge is-dot"></span>';
+      var label = d.name + (d.city ? ' (' + d.city + ')' : '') + ' : ' + stateLabel(d) + ', ' + stockLabel(d) + (d.fav ? ', favori' : '');
+      return '<button type="button" class="mk tone-' + t.tone + (t.soft ? ' is-soft' : '') + (st.sel === d.id ? ' is-sel' : '') + '" data-id="' + d.id + '"'
+        + ' style="left:' + d.x + '%;top:' + d.y + '%" aria-label="' + esc(label) + '" aria-pressed="' + (st.sel === d.id) + '">'
+        + badge + '<span class="mk-pin" aria-hidden="true">' + d.emoji + '</span>' + (d.fav ? HEART : '') + '</button>';
+    }).join('');
+    renderPeek();
+  }
+  function metaStateHTML(d) {
+    var t = toneOf(d.state, d.age);
+    var shown = t.tone;
+    var txt = shown === 'none' ? 'aucun signal depuis 24 h' : (d.exp ? 'info de l\'exploitant · ' : 'vérifié ') + formatAge(d.age);
+    return '<span class="ms' + (t.soft ? ' is-soft' : '') + '" data-state="' + shown + '"><span class="feu" aria-hidden="true"><i></i><i></i><i></i></span>'
+      + '<span class="state-word">' + WORD[shown] + '</span></span><span>· ' + esc(txt) + '</span>';
+  }
+  function capHTML(d) {
+    if (!d.total) return '';
+    var t = toneOf(d.state, d.age);
+    return '<span class="cap tone-' + t.tone + (t.soft ? ' is-soft' : '') + '">' + d.inStock + '/' + d.total + ' dispo</span>';
+  }
+  function renderPeek() {
+    var p = $('peek');
+    if (!st.sel) { p.hidden = true; return; }
+    var d = distData(DISTS.filter(function (x) { return x.id === st.sel; })[0]);
+    p.hidden = false;
+    p.classList.toggle('is-top', d.y > 50);
+    p.innerHTML = '<h3>' + esc(d.name) + (d.city ? ' <span style="font-weight:600;color:var(--muted)">· ' + esc(d.city) + '</span>' : '') + '</h3>' + capHTML(d)
+      + '<div class="peek-meta">' + metaStateHTML(d) + '</div>'
+      + '<button type="button" class="peek-go" data-go="' + d.id + '">Voir la fiche</button>';
+  }
+
+  // ---------- Liste ----------
+  function renderList() {
+    $('list-n').textContent = DISTS.length + ' distributeurs';
+    $('rows').innerHTML = LIST_ORDER.map(function (id) {
+      var d = distData(DISTS.filter(function (x) { return x.id === id; })[0]);
+      var sub = (d.rating ? d.rating + ' <span class="star" aria-hidden="true">★</span>' : 'Pas encore d\'avis') + ' · ' + d.km + (d.city ? ' · ' + esc(d.city) : '');
+      return '<li><button type="button" class="row" data-go="' + d.id + '">'
+        + '<span class="thumb" aria-hidden="true">' + d.emoji + (d.fav ? HEART : '') + '</span>'
+        + '<span class="r-name">' + esc(d.name) + (d.fav ? '<span class="sr"> (favori)</span>' : '') + '</span>'
+        + capHTML(d)
+        + '<span class="r-sub">' + sub + '</span>'
+        + '<span class="r-state">' + metaStateHTML(d) + '</span></button></li>';
+    }).join('');
+  }
+
+  // ---------- Chrome commun ----------
+  var APPBAR = '<span class="logo">DistriMatch</span>'
+    + '<button type="button" class="icon-btn" aria-label="Rechercher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>'
+    + '<button type="button" class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg></button>'
+    + '<button type="button" class="icon-btn" aria-label="Compte"><svg viewBox="0 0 24 24" fill="none" stroke="#D62828" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>';
+  function navHTML(active) {
+    function b(key, label, icon) {
+      return '<button type="button" data-nav-to="' + key + '"' + (active === key ? ' aria-current="page"' : '') + '>' + icon + label + '</button>';
+    }
+    return b('carte', 'Carte', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>')
+      + b('liste', 'Liste', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>')
+      + b('fav', 'Favoris', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>')
+      + b('act', 'Activité', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>');
+  }
+  document.querySelectorAll('[data-appbar]').forEach(function (el) { el.innerHTML = APPBAR; });
+  document.querySelector('#scr-carte [data-nav]').innerHTML = navHTML('carte');
+  document.querySelector('#scr-liste [data-nav]').innerHTML = navHTML('liste');
+
+  function showScreen(name) {
+    st.screen = name;
+    ['fiche', 'carte', 'liste'].forEach(function (k) { $('scr-' + k).hidden = k !== name; });
+    renderAll();
+    syncControls();
+  }
+  function renderAll() {
+    renderFiche();
+    renderMarkers();
+    renderList();
+    $('legend').hidden = !st.legend;
+    $('legend-btn').setAttribute('aria-expanded', String(st.legend));
+  }
+  function syncControls() {
+    function set(name, v) {
+      var el = document.querySelector('input[name="' + name + '"][value="' + v + '"]');
+      if (el) el.checked = true;
+    }
+    set('mode', st.mode); set('screen', st.screen); set('exp', st.exp ? '1' : '0');
+    set('dstate', st.dstate);
+    if (st.age === 50 || st.age === 180) set('age', String(st.age));
+    else document.querySelectorAll('input[name="age"]').forEach(function (i) { i.checked = false; });
+  }
+
+  // ---------- Reglages ----------
+  document.querySelector('.controls').addEventListener('change', function (e) {
+    var i = e.target;
+    if (i.name === 'mode') { st.mode = i.value; st.open = false; }
+    if (i.name === 'dstate') { st.dstate = i.value; if (st.age !== 50 && st.age !== 180) st.age = 50; }
+    if (i.name === 'age') st.age = Number(i.value);
+    if (i.name === 'exp') st.exp = i.value === '1';
+    if (i.name === 'screen') { showScreen(i.value); return; }
+    syncControls();
+    renderAll();
+  });
+
+  // ---------- Interactions fiche ----------
+  var fiche = $('fiche');
+  fiche.addEventListener('click', function (e) {
+    var row = e.target.closest('#state-row');
+    if (row) {
+      if (!isMember()) { callInvite(); return; }
+      if (st.open) closeList(true); else openList();
+      return;
+    }
+    var opt = e.target.closest('.opt');
+    if (opt) { choose(opt); return; }
+    if (e.target.closest('#fav')) {
+      st.fav = !st.fav;
+      var f = $('fav');
+      f.setAttribute('aria-pressed', String(st.fav));
+      f.setAttribute('aria-label', st.fav ? 'Retirer des favoris' : 'Ajouter aux favoris');
+      toast(st.fav ? 'Ajouté aux favoris' : 'Retiré des favoris');
+      return;
+    }
+    if (e.target.closest('#close-fiche')) { showScreen('carte'); return; }
+    if (e.target.closest('#login')) { toast('Connexion (hors maquette)'); return; }
+    if (e.target.closest('.ghost')) { toast('Ajout de produit (hors maquette)'); }
+  });
+  fiche.addEventListener('keydown', function (e) {
+    var row = e.target.closest('div#state-row');
+    if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); callInvite(); return; }
+    var opt = e.target.closest('.opt');
+    if (!opt) return;
+    var opts = Array.prototype.slice.call($('state-block').querySelectorAll('.opt'));
+    var i = opts.indexOf(opt), n = -1;
+    // Fleches : deplacent le focus sans envoyer ; Entree / Espace : envoie le signal
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') n = (i + 1) % opts.length;
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') n = (i - 1 + opts.length) % opts.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = opts.length - 1;
+    if (n >= 0) {
+      e.preventDefault();
+      opts.forEach(function (o, k) { o.tabIndex = k === n ? 0 : -1; });
+      opts[n].focus();
+    }
+  });
+
+  // Echap ferme ; toucher ailleurs ferme
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (st.open) { e.preventDefault(); closeList(true); return; }
+    if (st.legend) { st.legend = false; renderAll(); $('legend-btn').focus(); return; }
+    if (st.sel) { var id = st.sel; st.sel = null; renderMarkers(); var m = document.querySelector('.mk[data-id="' + id + '"]'); if (m) m.focus(); }
+  });
+  document.addEventListener('pointerdown', function (e) {
+    if (st.open && !e.target.closest('#state-block')) closeList(false);
+    if (st.legend && !e.target.closest('#legend') && !e.target.closest('#legend-btn')) { st.legend = false; renderAll(); }
+  });
+
+  // ---------- Interactions carte / liste ----------
+  $('phone').addEventListener('click', function (e) {
+    var mk = e.target.closest('.mk');
+    if (mk) { st.sel = st.sel === mk.dataset.id ? null : mk.dataset.id; renderMarkers(); var again = document.querySelector('.mk[data-id="' + mk.dataset.id + '"]'); if (again) again.focus(); return; }
+    var go = e.target.closest('[data-go]');
+    if (go) {
+      if (go.dataset.go === 'd1') { st.sel = null; showScreen('fiche'); $('fiche').scrollTop = 0; }
+      else toast('Seule la fiche de Légumes Bio Cambo est maquettée');
+      return;
+    }
+    var nav = e.target.closest('[data-nav-to]');
+    if (nav) {
+      var to = nav.dataset.navTo;
+      if (to === 'carte' || to === 'liste') showScreen(to); else toast('Hors maquette');
+      return;
+    }
+    if (e.target.closest('#legend-btn')) { st.legend = !st.legend; renderAll(); return; }
+    if (e.target.closest('.mapwrap') && !e.target.closest('button, .peek, .legend') && st.sel) { st.sel = null; renderMarkers(); }
+  });
+
+  // ---------- Capture directe : ?shot=fiche|visiteur|carte|liste ----------
+  var shot = new URLSearchParams(location.search).get('shot');
+  if (shot) document.body.classList.add('shot');
+  if (shot === 'visiteur') { st.mode = 'visitor'; }
+  if (shot === 'carte' || shot === 'liste') { showScreen(shot); }
+  else { showScreen('fiche'); }
+  if (shot === 'fiche') { st.open = true; renderState(); }
+  syncControls();
+})();
+</script>
+</body>
+</html>
