@@ -2343,3 +2343,42 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 @media (prefers-reduced-motion: reduce) {
     .dist-status-chevron { transition: none; }
 }
+
+/* Menus minimalistes (Stephane 2026-10-02) : largeur au texte, libelles neutres
+   (seul le point garde la couleur), police et ombre plus legeres ; lignes de
+   44 px conservees (cible tactile). Etat du distributeur ET produits. */
+#dist-machine-choices,
+.product-choices {
+    width: max-content;
+    min-width: 150px;
+    padding: 3px;
+    border-radius: 10px;
+    border-color: #ECEEF1;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.12);
+}
+.product-choices { right: auto; }
+#dist-machine-choices .machine-choice,
+.product-choices .product-choice,
+.product-choices .product-menu-action {
+    gap: 10px;
+    padding: 0 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1F2937;
+}
+#dist-machine-choices .machine-choice.is-working,
+#dist-machine-choices .machine-choice.is-empty,
+#dist-machine-choices .machine-choice.is-broken { color: #1F2937; }
+#dist-machine-choices .machine-choice.is-current,
+.product-choices .product-choice.is-current.is-yes,
+.product-choices .product-choice.is-current.is-no { font-weight: 600; }
+.product-choices .product-menu-action.is-danger { color: #B91C1C; }
+#dist-machine-choices .dd-dot,
+.product-choices .dd-dot { width: 8px; height: 8px; }
+#dist-machine-choices .dd-check,
+.product-choices .dd-check { width: 16px; height: 16px; margin-left: 12px; color: #374151; }
+#dist-machine-choices .machine-choices-q,
+.product-choices .product-choices-q { padding: 6px 10px 4px; font-size: 0.75rem; font-weight: 500; }
+.product-choices .dd-sep { margin: 3px 0; }
+.product-choices .product-choice.is-yes,
+.product-choices .product-choice.is-no { color: #1F2937; }
