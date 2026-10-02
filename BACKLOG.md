@@ -19,6 +19,26 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T19 Etat du distributeur : menu deroulant, et visible sur la carte (Stephane, 2026-10-02)
+Objectif : changer l'etat du distributeur comme un produit (menu deroulant, plus de bouton
+« Mettre à jour ») et voir l'etat + le stock sans ouvrir la fiche (pastille de la carte,
+liste laterale). Etape 1 : 3 maquettes benchmarkees ; Stephane choisit ; puis implementation.
+
+- [ ] T19-TS0 Benchmark + 3 maquettes iPhone publiees (menu : ancre / feuille du bas /
+  deplie ; pastille : couleur pleine / anneau / badge chiffre) et comparatif
+- [ ] T19-US1 En tant que membre, je change l'etat du distributeur depuis un menu deroulant
+  - Acceptance : toucher la ligne d'etat ouvre le menu En service / Vide / En panne (etat
+    actuel coche ; « Actuellement : Pas d'info » en tete si besoin) ; un choix envoie le
+    signal ; visiteur -> invitation ; plus de bouton « Mettre à jour » ; coup de pouce sur
+    place et « Info de l'exploitant » conserves ; jamais « machine ».
+- [ ] T19-US2 En tant qu'utilisateur, je vois l'etat et le stock sur la pastille de la carte
+  - Acceptance : couleur du feu (vert / orange / rouge, gris sans info, adoucie > 2 h) ;
+    stock « N/M » si le distributeur a des produits ; favori garde un repere (coeur) ;
+    resume charge avec la carte (vue en base, une requete).
+- [ ] T19-US3 En tant qu'utilisateur, je vois l'etat et le stock dans la liste laterale
+  - Acceptance : meme feu et « N sur M dispo » sur chaque ligne.
+- [ ] T19-TS1 Tests et doc a jour, captures avant fusion.
+
 ### EPIC-T18 Statut Exploitant et page admin (Stephane, 2026-10-01, lot 2 des statuts)
 Objectif : l'exploitant d'un distributeur, qui le remplit, est la meilleure source ; sa
 parole compte plus, sans bloquer la fiche s'il ne fait rien. Hors perimetre : « Reassort

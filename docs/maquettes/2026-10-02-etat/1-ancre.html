@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Menu ancré</title>
+<style>
+:root {
+  --page: #E5E7EB;
+  --bg: #FFFFFF;
+  --surface: #F3F4F6;
+  --track: #ECEEF1;
+  --line: #E5E7EB;
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #4B5563;
+  --muted: #6B7280;
+  --focus: #2563EB;
+  --ok: #16A34A; --ok-ink: #166534;
+  --warn: #EA580C; --warn-ink: #9A3412;
+  --ko: #DC2626; --ko-ink: #991B1B;
+  --none: #94A3B8; --none-ink: #475569;
+  --ok-soft: #93D9A9; --warn-soft: #F7B98C; --ko-soft: #EFA0A0;
+  --off: #CBD5E1;
+  --star: #B45309;
+  --brand: #D62828;
+  --pro: #1E40AF;
+  --in-bg: #F0FDF4; --in-line: #BBF7D0;
+  --out-bg: #E9EBEE; --out-line: #D5D9DF;
+  --none-line: #E2E5EA;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 8px; }
+
+/* ---------- Bandeau de la maquette (hors telephone) ---------- */
+.page-head { max-width: 760px; margin: 0 auto; padding: 20px 16px 16px; }
+.page-head h1 { margin: 0 0 4px; font-size: 20px; font-weight: 800; }
+.page-head p { margin: 0 0 12px; color: var(--ink-2); font-size: 14px; max-width: 640px; }
+.settings { display: grid; gap: 10px; padding: 12px 14px; background: #1F2937; color: #F9FAFB; border-radius: 14px; }
+.settings fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.settings legend { float: left; width: 130px; color: #D1D5DB; font-size: 12.5px; padding: 0; }
+.settings label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid #4B5563; border-radius: 999px; cursor: pointer; font-size: 13px; }
+.settings label:has(input:checked) { background: #F9FAFB; color: #111827; border-color: #F9FAFB; font-weight: 600; }
+.settings input { accent-color: #111827; margin: 0; }
+.settings label:has(input:focus-visible) { outline: 3px solid #93C5FD; outline-offset: 2px; }
+.settings .reset { min-height: 36px; padding: 0 12px; border: 1px dashed #6B7280; border-radius: 999px; background: transparent; color: #F9FAFB; cursor: pointer; font-size: 13px; }
+@media (max-width: 520px) { .settings legend { width: 100%; } }
+
+/* ---------- Telephone ---------- */
+.stage { display: flex; justify-content: center; padding: 8px 16px 40px; }
+.phone {
+  position: relative; width: 390px; height: 844px; flex: none; overflow: hidden; background: var(--bg);
+  border-radius: 46px; box-shadow: 0 0 0 10px #111827, 0 24px 60px rgba(17,24,39,.35);
+}
+@media (max-width: 430px) {
+  .stage { padding: 0; }
+  .phone { width: 100%; border-radius: 0; box-shadow: none; }
+}
+html.shot body { background: #FFFFFF; }
+html.shot .page-head { display: none; }
+html.shot .stage { padding: 0; justify-content: flex-start; }
+html.shot .phone { border-radius: 0; box-shadow: none; }
+
+.sbar { position: absolute; top: 0; left: 0; right: 0; height: 47px; z-index: 40; display: flex; align-items: center; justify-content: space-between; padding: 6px 28px 0 34px; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--bg); }
+.sbar svg { height: 12px; }
+.home-ind { position: absolute; left: 50%; bottom: 7px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: var(--ink); z-index: 45; pointer-events: none; }
+.screen { position: absolute; top: 47px; left: 0; right: 0; bottom: 0; }
+
+/* ---------- Fiche ---------- */
+#scr-fiche { overflow-y: auto; background: var(--surface); padding-bottom: 40px; }
+.zone-head { background: var(--bg); }
+.topbar { display: flex; justify-content: flex-end; padding: 4px 8px 0; }
+.icon-btn { width: 44px; height: 44px; border: 0; background: transparent; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); }
+.icon-btn:hover { background: var(--surface); }
+.icon-btn svg { width: 22px; height: 22px; }
+.icon-btn[aria-pressed="true"] { color: #BE123C; }
+.icon-btn[aria-pressed="true"] .heart { fill: currentColor; }
+.head { padding: 0 16px 12px; }
+.title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.015em; line-height: 1.2; }
+.tag-demo { font-size: 12.5px; font-weight: 600; color: var(--ink-2); border: 1px solid #9CA3AF; border-radius: 999px; padding: 0 8px; }
+.badge-pro { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: var(--pro); color: #FFFFFF; font-size: 13px; font-weight: 700; }
+
+/* Ligne d'etat = declencheur du menu */
+.status-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; margin: 4px 0 0 -8px; padding: 4px 8px; max-width: calc(100% + 8px);
+  border: 1px solid transparent; border-radius: 12px; background: transparent; text-align: left;
+  font-size: 15px; color: var(--muted); cursor: default;
+}
+.status-btn.is-menu { cursor: pointer; }
+.status-btn.is-menu:hover, .status-btn[aria-expanded="true"] { background: var(--surface); border-color: var(--line); }
+.status-btn.is-nudge { background: #EFF6FF; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.status-btn.is-visitor { cursor: pointer; }
+.status-text { min-width: 0; }
+.nw { white-space: nowrap; }
+.status-word { font-weight: 700; }
+.status-btn[data-state="working"] .status-word { color: var(--ok-ink); }
+.status-btn[data-state="empty"] .status-word { color: var(--warn-ink); }
+.status-btn[data-state="broken"] .status-word { color: var(--ko-ink); }
+.status-btn[data-state="none"] .status-word { color: var(--none-ink); }
+.status-btn.is-soft .status-word { color: var(--ink-3); }
+.status-age { color: var(--muted); }
+.status-age .pro { color: var(--pro); font-weight: 600; }
+.status-btn .chev { width: 18px; height: 18px; color: var(--ink-2); flex: none; transition: transform .18s ease; }
+.status-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.feu { display: inline-flex; gap: 4px; padding: 4px 6px; border-radius: 999px; background: #F1F5F9; border: 1px solid #E2E8F0; flex: none; }
+.feu i { width: 9px; height: 9px; border-radius: 50%; background: var(--off); display: block; }
+[data-state="working"] .feu i:nth-child(1) { background: var(--ok); }
+[data-state="empty"] .feu i:nth-child(2) { background: var(--warn); }
+[data-state="broken"] .feu i:nth-child(3) { background: var(--ko); }
+.is-soft .feu i { opacity: .5; }
+.nudge-note { margin: 2px 0 0; font-size: 13px; color: #1D4ED8; font-weight: 600; }
+
+.meta { margin: 4px 0 0; color: var(--muted); font-size: 14.5px; display: flex; align-items: center; flex-wrap: wrap; column-gap: 6px; }
+.meta .sep { color: #9CA3AF; }
+.meta .star { color: var(--star); font-weight: 600; }
+.meta .price { font-weight: 700; color: var(--ink); }
+.usual { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+.tabs { background: var(--bg); padding: 10px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tabs-track { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--track); }
+.tab { flex: 1; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-3); font-weight: 600; font-size: 15px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--bg); color: var(--ink); font-weight: 800; box-shadow: 0 1px 3px rgba(17,24,39,.14); }
+
+.content { padding: 4px 16px 16px; }
+.shelf-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 16px 0 12px; }
+.shelf-head h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.count { font-size: 15px; font-weight: 700; color: var(--ink-3); }
+.notice { margin: 0 0 12px; padding: 2px 0 2px 10px; border-left: 2px solid var(--warn); color: var(--ink-2); font-size: 13.5px; }
+.notice.is-broken { border-left-color: var(--ko); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.card { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 12px; min-width: 0; border-radius: 14px; border: 1px solid var(--none-line); background: #FFFFFF; box-shadow: 0 1px 2px rgba(17,24,39,.06); }
+.card.is-in { background: var(--in-bg); border-color: var(--in-line); }
+.card.is-out { background: var(--out-bg); border-color: var(--out-line); box-shadow: none; }
+.card.is-open { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.art { width: 36px; height: 36px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #FFFFFF; border: 1px solid rgba(17,24,39,.08); color: var(--ink-2); }
+.art svg { width: 22px; height: 22px; }
+.name { font-size: 15.5px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.fresh { font-size: 12.5px; color: var(--ink-3); }
+.fresh .pro { color: var(--pro); }
+.pill { position: relative; display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 28px; font-size: 12.5px; font-weight: 700; padding: 0 6px 0 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; cursor: pointer; }
+.pill::after { content: ""; position: absolute; left: -4px; right: -4px; top: 50%; height: 44px; transform: translateY(-50%); }
+.pill i { width: 7px; height: 7px; border-radius: 50%; display: block; flex: none; }
+.pill svg { width: 12px; height: 12px; flex: none; transition: transform .15s; }
+.pill[aria-expanded="true"] svg { transform: rotate(180deg); }
+.pill.ok { background: var(--ok-ink); color: #FFFFFF; }
+.pill.ok i { background: #FFFFFF; }
+.pill.out { background: var(--ink-3); color: #FFFFFF; }
+.pill.out i { background: #FFFFFF; }
+.pill.none { background: #FFFFFF; color: var(--none-ink); border-color: #CBD5E1; }
+.pill.none i { border: 1px solid #94A3B8; }
+.pill.is-nudge { box-shadow: 0 0 0 2px var(--focus); }
+.pill:focus-visible { border-radius: 999px; outline-offset: 3px; }
+
+.invite { margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(180deg, #FFF7F7 0%, #FFFFFF 100%); border: 1px solid #F5D0D0; display: grid; grid-template-columns: 40px 1fr; column-gap: 12px; row-gap: 10px; }
+.invite.is-called { animation: called 1.3s ease-out; }
+@keyframes called { 0%, 45% { box-shadow: 0 0 0 4px rgba(214,40,40,.45); } 100% { box-shadow: 0 0 0 4px rgba(214,40,40,0); } }
+.invite-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--brand); color: #FFFFFF; }
+.invite-ico svg { width: 22px; height: 22px; }
+.invite h3 { margin: 0 0 2px; font-size: 16px; font-weight: 800; line-height: 1.25; }
+.invite p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.btn-brand { grid-column: 1 / -1; min-height: 46px; border-radius: 12px; border: 0; background: var(--brand); color: #FFFFFF; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+/* Menu deroulant ancre (meme composant pour l'etat et les produits) */
+.menu {
+  position: absolute; z-index: 30; width: 244px; padding: 4px; background: #FFFFFF;
+  border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 30px rgba(17,24,39,.22);
+  transform-origin: top left; animation: drop .14s ease-out;
+}
+@keyframes drop { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+.menu-head { padding: 8px 12px 6px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.menu-head b { color: var(--none-ink); }
+.menu-item { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; text-align: left; }
+.menu-item:hover, .menu-item:focus { background: var(--surface); outline: none; }
+.menu-item:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.menu-item .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.menu-item .lbl { flex: 1; }
+.menu-item .check { width: 20px; height: 20px; flex: none; color: var(--ink); visibility: hidden; }
+.menu-item[aria-checked="true"] .check { visibility: visible; }
+.menu-item.c-ok { color: var(--ok-ink); }
+.menu-item.c-warn { color: var(--warn-ink); }
+.menu-item.c-ko { color: var(--ko-ink); }
+.menu-item.danger { color: var(--ko-ink); }
+.menu-sep { height: 1px; background: var(--line); margin: 4px 8px; }
+
+/* ---------- Carte et liste : barre d'appli ---------- */
+.appbar { position: absolute; top: 0; left: 0; right: 0; height: 56px; display: flex; align-items: center; padding: 0 6px; background: #FFFFFF; z-index: 5; box-shadow: 0 1px 0 var(--line); }
+.logo { font-size: 22px; font-weight: 900; color: var(--brand); letter-spacing: -.02em; margin-left: 6px; flex: 1; }
+.bnav { position: absolute; left: 0; right: 0; bottom: 0; height: 78px; padding-bottom: 18px; display: flex; background: #FFFFFF; border-top: 1px solid var(--line); z-index: 6; }
+.bnav button { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--ink-3); cursor: pointer; }
+.bnav button svg { width: 24px; height: 24px; }
+.bnav button[aria-current="page"] { color: var(--brand); }
+
+/* ---------- Carte ---------- */
+.map { position: absolute; top: 56px; left: 0; right: 0; bottom: 78px; overflow: hidden; background: #F2EFE9; }
+.map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chips { position: absolute; top: 10px; left: 0; right: 0; display: flex; gap: 8px; padding: 0 12px; overflow: hidden; z-index: 3; }
+.chip { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; background: #FFFFFF; box-shadow: 0 2px 6px rgba(17,24,39,.18); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.chip.is-on { background: var(--ink); color: #FFFFFF; }
+.mk {
+  position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border: 0; background: transparent; cursor: pointer; z-index: 2;
+}
+.mk-disc {
+  position: absolute; inset: 4px; border-radius: 50%; background: var(--c); border: 2.5px solid #FFFFFF;
+  box-shadow: 0 2px 6px rgba(17,24,39,.35); display: grid; place-items: center;
+}
+.mk-emo { width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; font-size: 16px; line-height: 1; }
+.mk-badge {
+  position: absolute; right: -8px; bottom: -1px; min-width: 26px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: #FFFFFF; color: var(--ink); font-size: 11.5px; font-weight: 800; line-height: 18px; text-align: center;
+  box-shadow: 0 1px 3px rgba(17,24,39,.35); font-variant-numeric: tabular-nums;
+}
+.mk-badge.is-zero { color: var(--ko-ink); }
+.mk-fav { position: absolute; right: -3px; top: -1px; width: 19px; height: 19px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(17,24,39,.3); }
+.mk-fav svg { width: 12px; height: 12px; color: #E63946; }
+.mk:focus-visible { outline: none; }
+.mk:focus-visible .mk-disc { box-shadow: 0 0 0 3px var(--focus), 0 2px 6px rgba(17,24,39,.35); }
+.mk-label { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11.5px; font-weight: 700; color: var(--ink); text-shadow: 0 0 2px #FFF, 0 0 2px #FFF, 0 0 3px #FFF; pointer-events: none; }
+.me { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 0 0 8px rgba(37,99,235,.18); z-index: 1; }
+.fabs { position: absolute; right: 12px; bottom: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 3; }
+.fab { width: 48px; height: 48px; border-radius: 50%; border: 0; background: #FFFFFF; box-shadow: 0 2px 8px rgba(17,24,39,.25); display: grid; place-items: center; cursor: pointer; }
+.fab svg { width: 22px; height: 22px; }
+.fab.add { width: 56px; height: 56px; background: var(--brand); color: #FFFFFF; }
+.legend { position: absolute; left: 12px; top: 60px; z-index: 3; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.95); box-shadow: 0 2px 8px rgba(17,24,39,.18); font-size: 12px; color: var(--ink-2); display: grid; gap: 3px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.legend { grid-template-columns: auto; padding: 6px 10px; font-size: 11.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.legend .hint { color: var(--muted); }
+.to-list { position: absolute; left: 50%; transform: translateX(-50%); bottom: 96px; z-index: 3; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--ink); color: #FFFFFF; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(17,24,39,.3); cursor: pointer; }
+.to-list svg { width: 18px; height: 18px; }
+
+/* ---------- Liste ---------- */
+.list { position: absolute; top: 56px; left: 0; right: 0; bottom: 78px; overflow-y: auto; background: #FFFFFF; }
+.list-head { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 16px 4px; }
+.list-head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+.list-head span { font-size: 13.5px; color: var(--muted); }
+.group-t { margin: 0; padding: 12px 16px 4px; font-size: 13px; font-weight: 700; color: var(--ink-3); text-transform: none; }
+.row { width: 100%; display: flex; gap: 12px; align-items: center; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--line); background: #FFFFFF; text-align: left; cursor: pointer; }
+.row:hover { background: #FAFAFA; }
+.row:focus-visible { outline-offset: -3px; border-radius: 0; }
+.thumb { width: 56px; height: 56px; flex: none; border-radius: 12px; background: var(--surface); display: grid; place-items: center; font-size: 28px; }
+.row-body { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.row-name { font-size: 16px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.row-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-name svg { width: 14px; height: 14px; color: #E63946; flex: none; }
+.row-state { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.row-state .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.row-state b { font-weight: 700; }
+.row-meta { font-size: 13.5px; color: var(--muted); }
+.row-meta .stock { color: var(--ink-2); font-weight: 600; }
+.row-meta .star { color: var(--star); }
+.to-map { position: absolute; left: 50%; transform: translateX(-50%); bottom: 92px; z-index: 7; }
+
+/* ---------- Toast ---------- */
+.toast { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 50; width: max-content; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px; background: var(--ink); color: #FFFFFF; font-size: 14.5px; box-shadow: 0 8px 24px rgba(0,0,0,.25); animation: toastin .18s ease-out; }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Variante 1 · Menu ancré + pastille pleine</h1>
+  <p>Fiche : la ligne d'état devient un menu déroulant ancré juste dessous (même composant que le menu produit, façon menu contextuel iOS / champ déroulant Material). Carte : chaque pastille est pleine de la couleur du feu, l'emoji sur un disque blanc, le stock « N/M » en capsule et le cœur des favoris, à la Vélib'. Liste : le même point de couleur et « N sur M dispo ».</p>
+  <form class="settings" id="settings" aria-label="Réglages de la maquette">
+    <fieldset><legend>Écran</legend>
+      <label><input type="radio" name="screen" value="fiche" checked> Fiche</label>
+      <label><input type="radio" name="screen" value="carte"> Carte</label>
+      <label><input type="radio" name="screen" value="liste"> Liste</label>
+    </fieldset>
+    <fieldset><legend>Profil</legend>
+      <label><input type="radio" name="mode" value="visitor"> Visiteur</label>
+      <label><input type="radio" name="mode" value="member" checked> Membre</label>
+      <label><input type="radio" name="mode" value="onsite"> Membre sur place</label>
+    </fieldset>
+    <fieldset><legend>État du distributeur</legend>
+      <label><input type="radio" name="state" value="working" checked> En service</label>
+      <label><input type="radio" name="state" value="empty"> Vide</label>
+      <label><input type="radio" name="state" value="broken"> En panne</label>
+      <label><input type="radio" name="state" value="none"> Pas d'info</label>
+    </fieldset>
+    <fieldset><legend>Ancienneté du signal</legend>
+      <label><input type="radio" name="age" value="50" checked> il y a 50 min</label>
+      <label><input type="radio" name="age" value="180"> il y a 3 h</label>
+    </fieldset>
+    <fieldset><legend>Signal de l'exploitant</legend>
+      <label><input type="radio" name="pro" value="no" checked> Non</label>
+      <label><input type="radio" name="pro" value="yes"> Oui</label>
+      <button type="button" class="reset" id="reset">Réinitialiser</button>
+    </fieldset>
+  </form>
+</header>
+
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="sbar" aria-hidden="true">
+      <span>9:41</span>
+      <svg viewBox="0 0 66 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M29 3.2a9 9 0 0 1 12 0l-1.3 1.4a7 7 0 0 0-9.4 0zM31.4 5.8a5.4 5.4 0 0 1 7.2 0L35 9.6z"/><rect x="45" y="0.5" width="19" height="11" rx="3" fill="none" stroke="currentColor"/><rect x="47" y="2.5" width="14" height="7" rx="1.5"/></svg>
+    </div>
+
+    <!-- ===== Ecran Fiche ===== -->
+    <section class="screen" id="scr-fiche" aria-label="Fiche distributeur">
+      <div class="zone-head">
+        <div class="topbar">
+          <button type="button" class="icon-btn" id="fav" aria-pressed="true" aria-label="Retirer des favoris">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path class="heart" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+          </button>
+          <button type="button" class="icon-btn" aria-label="Partager">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="close" aria-label="Fermer la fiche">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <header class="head">
+          <div class="title-row">
+            <h1 class="title">Légumes Bio Cambo</h1>
+            <span class="tag-demo">Démo</span>
+          </div>
+          <span class="badge-pro" id="badge-pro" hidden>Exploitant vérifié</span>
+          <div><button type="button" class="status-btn" id="status-btn"></button></div>
+          <p class="nudge-note" id="nudge-note" hidden>Tu es à 15 m : l'info date un peu, dis-nous l'état.</p>
+          <p class="meta"><span aria-hidden="true">🥕</span> Produits agricoles <span class="sep">·</span> <span class="price">€€</span> <span class="sep">·</span> <span class="star">4.7 ★</span> (91)</p>
+          <p class="usual">Habituellement plein le matin, à midi et le soir</p>
+        </header>
+      </div>
+      <nav class="tabs" aria-label="Sections de la fiche">
+        <div class="tabs-track" role="tablist">
+          <button type="button" class="tab" role="tab" aria-selected="true">Produits</button>
+          <button type="button" class="tab" role="tab" aria-selected="false" tabindex="-1">Avis</button>
+          <button type="button" class="tab" role="tab" aria-selected="false" tabindex="-1">À propos</button>
+        </div>
+      </nav>
+      <div class="content">
+        <div class="shelf-head"><h2 id="shelf-t">Il reste quoi ?</h2><span class="count" id="count"></span></div>
+        <p class="notice" id="notice" hidden></p>
+        <div class="grid" id="grid" aria-labelledby="shelf-t"></div>
+        <div class="invite" id="invite" role="region" aria-labelledby="invite-t" hidden>
+          <span class="invite-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+          <div><h3 id="invite-t">Tu es devant le distributeur ?</h3><p>Connecte-toi pour signaler ce qu'il reste et donner ton avis.</p></div>
+          <button type="button" class="btn-brand" id="login">Se connecter</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Ecran Carte ===== -->
+    <section class="screen" id="scr-carte" aria-label="Carte" hidden>
+      <div class="appbar">
+        <button type="button" class="icon-btn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <span class="logo">DistriMatch</span>
+        <button type="button" class="icon-btn" aria-label="Rechercher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Compte"><svg viewBox="0 0 24 24" fill="none" stroke="#D62828" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+      </div>
+      <div class="map" id="map">
+        <svg viewBox="0 0 390 710" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="390" height="710" fill="#F2EFE9"/>
+          <path d="M0 0H58C50 90 66 170 52 250C40 330 30 420 44 500C54 580 40 650 30 710H0Z" fill="#AAD3DF"/>
+          <path d="M52 250C110 262 160 250 210 268C260 286 320 282 390 300V328C320 310 262 316 212 298C160 280 110 290 50 282Z" fill="#AAD3DF"/>
+          <path d="M212 298C226 330 250 360 262 400C270 430 266 470 276 510L284 510C276 470 280 430 270 398C258 358 236 328 222 300Z" fill="#AAD3DF"/>
+          <path d="M70 120C120 100 170 130 160 180C150 220 100 225 80 200C64 178 60 140 70 120Z" fill="#CDEBB0"/>
+          <path d="M300 120C340 110 380 130 390 150V230C360 236 320 220 305 190C292 165 290 135 300 120Z" fill="#CDEBB0"/>
+          <path d="M150 600C200 580 250 600 260 640C266 670 230 700 190 700C150 700 130 670 130 640C130 620 138 606 150 600Z" fill="#D8EFC4"/>
+          <path d="M320 560C350 540 390 550 390 560V710H330C310 670 300 600 320 560Z" fill="#CDEBB0"/>
+          <rect x="196" y="350" width="70" height="60" rx="6" fill="#E8E2DA"/>
+          <rect x="96" y="440" width="60" height="50" rx="6" fill="#E8E2DA"/>
+          <g fill="none" stroke-linecap="round">
+            <path d="M60 470C120 450 180 430 240 420C300 410 350 380 390 360" stroke="#E3C96B" stroke-width="9"/>
+            <path d="M60 470C120 450 180 430 240 420C300 410 350 380 390 360" stroke="#F7FABF" stroke-width="6"/>
+            <path d="M180 0C190 100 200 200 220 300C236 380 250 450 290 560C310 620 320 670 330 710" stroke="#E3C96B" stroke-width="9"/>
+            <path d="M180 0C190 100 200 200 220 300C236 380 250 450 290 560C310 620 320 670 330 710" stroke="#F7FABF" stroke-width="6"/>
+            <path d="M80 560C130 520 170 500 230 470M120 300C130 360 140 420 150 480M240 420C270 470 330 500 390 500M100 40C140 80 160 140 230 180C290 210 340 200 390 220M60 640C120 620 200 560 280 560" stroke="#FFFFFF" stroke-width="5"/>
+            <path d="M80 560C130 520 170 500 230 470M120 300C130 360 140 420 150 480M240 420C270 470 330 500 390 500M100 40C140 80 160 140 230 180C290 210 340 200 390 220M60 640C120 620 200 560 280 560" stroke="#D9D3C9" stroke-width="1" stroke-dasharray="0" opacity=".0"/>
+          </g>
+          <g font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="600" fill="#5B5B5B" stroke="#FFFFFF" stroke-width="3" paint-order="stroke" text-anchor="middle">
+            <text x="232" y="392">Bayonne</text>
+            <text x="124" y="410">Anglet</text>
+            <text x="92" y="590">Biarritz</text>
+            <text x="118" y="200">Tarnos</text>
+            <text x="352" y="276">Urt</text>
+            <text x="236" y="676">Cambo-les-Bains</text>
+            <text x="300" y="318" font-size="11" font-style="italic" fill="#4A7FA0" font-weight="500">L'Adour</text>
+            <text x="28" y="360" font-size="11" font-style="italic" fill="#4A7FA0" font-weight="500" transform="rotate(-80 28 360)">Océan</text>
+          </g>
+        </svg>
+        <div class="chips" aria-hidden="true">
+          <span class="chip is-on">📍 Tous</span><span class="chip">🍕 Pizza</span><span class="chip">🥖 Pain</span><span class="chip">🥕 Fermier</span>
+        </div>
+        <div id="markers"></div>
+        <span class="me" style="left:47%;top:60%" aria-hidden="true"></span>
+        <div class="legend" aria-label="Légende">
+          <div class="legend-row"><span><i style="background:var(--ok)"></i>En service</span><span><i style="background:var(--warn)"></i>Vide</span><span><i style="background:var(--ko)"></i>En panne</span><span><i style="background:var(--none)"></i>Pas d'info</span></div>
+          <span class="hint">Pâle : plus de 2 h · 1/4 : produits dispo</span>
+        </div>
+        <div class="fabs">
+          <button type="button" class="fab" aria-label="Me localiser"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+          <button type="button" class="fab add" aria-label="Ajouter un distributeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+      </div>
+      <button type="button" class="to-list" data-go="liste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Liste</button>
+      <nav class="bnav" aria-label="Navigation principale">
+        <button type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Explorer</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Favoris</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Activité</button>
+      </nav>
+    </section>
+
+    <!-- ===== Ecran Liste ===== -->
+    <section class="screen" id="scr-liste" aria-label="Liste des distributeurs" hidden>
+      <div class="appbar">
+        <button type="button" class="icon-btn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <span class="logo">DistriMatch</span>
+        <button type="button" class="icon-btn" aria-label="Rechercher"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+        <button type="button" class="icon-btn" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg></button>
+      </div>
+      <div class="list" id="list"></div>
+      <button type="button" class="to-list to-map" data-go="carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14M15 6v14"/></svg>Carte</button>
+      <nav class="bnav" aria-label="Navigation principale">
+        <button type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>Explorer</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Favoris</button>
+        <button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Activité</button>
+      </nav>
+    </section>
+
+    <div id="toast-slot" aria-live="polite"></div>
+    <span class="home-ind" aria-hidden="true"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Donnees ---------- */
+  var STATE_LABEL = { working: 'En service', empty: 'Vide', broken: 'En panne', none: "Pas d'info" };
+  var STATE_COLOR = { working: 'var(--ok)', empty: 'var(--warn)', broken: 'var(--ko)', none: 'var(--none)' };
+  var STATE_SOFT = { working: 'var(--ok-soft)', empty: 'var(--warn-soft)', broken: 'var(--ko-soft)', none: 'var(--none)' };
+  var STATE_INK = { working: 'var(--ok-ink)', empty: 'var(--warn-ink)', broken: 'var(--ko-ink)', none: 'var(--none-ink)' };
+  var SOFT_AFTER = 120;
+  var NONE_AFTER = 1440;
+
+  var ICONS = {
+    basket: '<path d="M4 10h16l-1.5 9a2 2 0 0 1-2 1.7h-9a2 2 0 0 1-2-1.7z"/><path d="m8 10 3-6M16 10l-3-6M9 14v3M15 14v3"/>',
+    potato: '<path d="M7 5c4-3 12-1 12 6s-6 10-11 9-6-11-1-15z"/><circle cx="10" cy="10" r=".8"/><circle cx="14" cy="13" r=".8"/><circle cx="10" cy="16" r=".8"/>',
+    carrot: '<path d="M14 10 4 20M14 10c2-2 4-1.5 4 .5L8 20 4 20l9.5-10.5c.2-.2.3-.3.5.5z"/><path d="M15 9l2-5M15 9l5-2M15 9l3-3"/>',
+    salad: '<circle cx="12" cy="13" r="8"/><path d="M12 21v-8M12 13l-3-3M12 15l3-3"/>'
+  };
+
+  var PRODUCTS = [
+    { id: 'p1', name: 'Panier légumes saison', icon: 'basket', base: 'in' },
+    { id: 'p2', name: 'Pommes de terre (2kg)', icon: 'potato', base: 'none' },
+    { id: 'p3', name: 'Carottes (1kg)', icon: 'carrot', base: 'none' },
+    { id: 'p4', name: 'Salades (lot de 2)', icon: 'salad', base: 'none' }
+  ];
+
+  var OTHERS = [
+    { id: 'pain', name: 'Distributeur de pain', city: 'Anglet', emoji: '🥖', state: 'empty', age: 20, inStock: 0, total: 0, fav: false, rating: 4.5, km: 1.8, x: 108, y: 452 },
+    { id: 'pepe', name: 'Pépé Joe', city: 'Tarnos', emoji: '🍕', state: 'working', age: 180, inStock: 3, total: 5, fav: false, rating: 4.6, km: 4.1, x: 170, y: 190 },
+    { id: 'plats', name: 'Plats Cuisinés Bayonne', city: 'Bayonne', emoji: '🍽️', state: 'none', age: null, inStock: 0, total: 5, fav: false, rating: 4.2, km: 0.9, x: 268, y: 352 },
+    { id: 'gang', name: 'Gang of Pizza', city: 'Urt', emoji: '🍕', state: 'broken', age: 60, inStock: 0, total: 4, fav: false, rating: 4.3, km: 12, x: 346, y: 236 },
+    { id: 'ossau', name: 'Fromagerie Ossau', city: 'Bayonne', emoji: '🧀', state: 'working', age: 10, inStock: 4, total: 4, fav: true, rating: 4.8, km: 0.6, x: 212, y: 446 },
+    { id: 'bzpizza', name: 'Distributeur de pizzas', city: 'Biarritz', emoji: '🍕', state: 'none', age: null, inStock: 0, total: 0, fav: false, rating: null, km: 5.3, x: 86, y: 528 },
+    { id: 'didier', name: 'Pizza Chez Didier', city: 'Biarritz', emoji: '🍕', state: 'empty', age: 300, inStock: 0, total: 3, fav: false, rating: 4.4, km: 5.9, x: 150, y: 560 }
+  ];
+
+  /* ---------- Etat de la maquette ---------- */
+  var S = {
+    screen: 'fiche', mode: 'member', state: 'working', age: 50, pro: false,
+    signal: null,          // signal du membre sur l'etat : { state, at }
+    productSignals: {},    // id -> { status, at }
+    fav: true
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function ageText(min) {
+    if (min === 0) return "à l'instant";
+    if (min < 60) return 'il y a ' + min + ' min';
+    return 'il y a ' + Math.round(min / 60) + ' h';
+  }
+
+  // Etat courant du distributeur de la fiche
+  function camboState() {
+    if (S.signal) return { state: S.signal.state, age: 0, pro: false };
+    if (S.state === 'none') return { state: 'none', age: null, pro: false };
+    return { state: S.state, age: S.age, pro: S.pro };
+  }
+
+  // Statut d'un produit : signal du membre, sinon base ; un distributeur vide / en panne plus recent l'emporte
+  function productStatus(p) {
+    var st = camboState();
+    var sig = S.productSignals[p.id];
+    var status = sig ? sig.status : p.base;
+    var age = sig ? 0 : (p.base === 'none' ? null : S.age);
+    var pro = sig ? false : S.pro;
+    var stateAge = st.age === null ? Infinity : st.age;
+    if ((st.state === 'empty' || st.state === 'broken') && (age === null || stateAge <= age)) {
+      return { status: 'out', age: stateAge, pro: st.pro, byState: true };
+    }
+    return { status: status, age: age, pro: pro };
+  }
+
+  function camboStock() {
+    var n = 0;
+    PRODUCTS.forEach(function (p) { if (productStatus(p).status === 'in') n += 1; });
+    return { inStock: n, total: PRODUCTS.length };
+  }
+
+  function isMember() { return S.mode !== 'visitor'; }
+
+  /* ---------- Toast ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    var slot = $('toast-slot');
+    slot.innerHTML = '<div class="toast" role="status">' + esc(msg) + '</div>';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { slot.innerHTML = ''; }, 2600);
+  }
+
+  /* ---------- Menu deroulant ancre (generique) ---------- */
+  var CHECK_SVG = '<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>';
+  var openMenuRef = null;
+
+  function closeMenu(restoreFocus) {
+    if (!openMenuRef) return;
+    var ref = openMenuRef;
+    openMenuRef = null;
+    ref.el.remove();
+    ref.trigger.setAttribute('aria-expanded', 'false');
+    if (ref.onClose) ref.onClose();
+    document.removeEventListener('pointerdown', onOutside, true);
+    if (restoreFocus) ref.trigger.focus();
+  }
+
+  function onOutside(e) {
+    if (!openMenuRef) return;
+    if (openMenuRef.el.contains(e.target) || openMenuRef.trigger.contains(e.target)) return;
+    closeMenu(false);
+  }
+
+  function openMenu(opts) {
+    closeMenu(false);
+    var host = opts.host;
+    var el = document.createElement('div');
+    el.className = 'menu';
+    el.id = opts.id;
+    el.setAttribute('role', 'menu');
+    el.setAttribute('aria-label', opts.label);
+    var html = '';
+    if (opts.header) html += '<div class="menu-head" role="none" id="' + opts.id + '-head">' + opts.header + '</div>';
+    opts.items.forEach(function (it) {
+      if (it.sep) { html += '<div class="menu-sep" role="separator"></div>'; return; }
+      var role = it.radio ? 'menuitemradio' : 'menuitem';
+      var checked = it.radio ? ' aria-checked="' + (it.checked ? 'true' : 'false') + '"' : '';
+      html += '<button type="button" class="menu-item ' + (it.cls || '') + '" role="' + role + '"' + checked + ' tabindex="-1" data-value="' + it.value + '">' +
+        (it.dot ? '<span class="dot" style="background:' + it.dot + '" aria-hidden="true"></span>' : '') +
+        '<span class="lbl">' + esc(it.label) + '</span>' + (it.radio ? CHECK_SVG : '') + '</button>';
+    });
+    el.innerHTML = html;
+    if (opts.header) el.setAttribute('aria-describedby', opts.id + '-head');
+    host.appendChild(el);
+
+    // Position : juste sous l'ancre, aligne a gauche, contenu dans l'ecran
+    var h = host.getBoundingClientRect();
+    var a = opts.anchor.getBoundingClientRect();
+    var top = a.bottom - h.top + host.scrollTop + 6;
+    var left = a.left - h.left + (opts.dx || 0);
+    var maxLeft = h.width - el.offsetWidth - 12;
+    el.style.top = top + 'px';
+    el.style.left = Math.max(12, Math.min(left, maxLeft)) + 'px';
+
+    opts.trigger.setAttribute('aria-expanded', 'true');
+    openMenuRef = { el: el, trigger: opts.trigger, onClose: opts.onClose };
+
+    var items = Array.prototype.slice.call(el.querySelectorAll('.menu-item'));
+    var start = items.filter(function (b) { return b.getAttribute('aria-checked') === 'true'; })[0] || items[0];
+    if (opts.focus !== false) start.focus({ preventScroll: true });
+
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('.menu-item');
+      if (!b) return;
+      var v = b.getAttribute('data-value');
+      closeMenu(true);
+      opts.onPick(v);
+    });
+    el.addEventListener('keydown', function (e) {
+      var i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
+      else if (e.key === 'Tab') { closeMenu(false); }
+    });
+    setTimeout(function () { document.addEventListener('pointerdown', onOutside, true); }, 0);
+  }
+
+  /* ---------- Fiche ---------- */
+  var CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function renderStatus() {
+    var st = camboState();
+    var btn = $('status-btn');
+    var soft = st.age !== null && st.age > SOFT_AFTER;
+    var stale = st.state === 'none' || soft;
+    var nudge = S.mode === 'onsite' && stale;
+    var ageHtml;
+    if (st.state === 'none') ageHtml = '· aucun signal depuis 24 h';
+    else if (st.pro) ageHtml = '· <span class="pro">Info de l\'exploitant</span> · <span class="nw">' + ageText(st.age) + '</span>';
+    else ageHtml = '· ' + ageText(st.age);
+
+    btn.setAttribute('data-state', st.state);
+    btn.className = 'status-btn' + (soft ? ' is-soft' : '') + (isMember() ? ' is-menu' : ' is-visitor') + (nudge ? ' is-nudge' : '');
+    btn.innerHTML = '<span class="feu" aria-hidden="true"><i></i><i></i><i></i></span>' +
+      '<span class="status-text"><span class="status-word">' + STATE_LABEL[st.state] + '</span> ' +
+      '<span class="status-age">' + ageHtml + '</span></span>' + (isMember() ? CHEV_SVG : '');
+    var plain = 'État : ' + STATE_LABEL[st.state] + ', ' + btn.querySelector('.status-age').textContent.replace(/^· /, '');
+    if (isMember()) {
+      btn.setAttribute('aria-haspopup', 'menu');
+      btn.setAttribute('aria-controls', 'state-menu');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', plain + '. Changer l\'état');
+    } else {
+      btn.removeAttribute('aria-haspopup');
+      btn.removeAttribute('aria-controls');
+      btn.removeAttribute('aria-expanded');
+      btn.setAttribute('aria-label', plain + '. Connecte-toi pour signaler l\'état');
+    }
+    $('nudge-note').hidden = !nudge;
+    $('badge-pro').hidden = !S.pro;
+  }
+
+  function openStateMenu(focus) {
+    var st = camboState();
+    openMenu({
+      id: 'state-menu', host: $('scr-fiche'), anchor: $('status-btn'), trigger: $('status-btn'), dx: 0, focus: focus,
+      label: 'État du distributeur',
+      header: st.state === 'none' ? 'Actuellement : <b>Pas d\'info</b>' : null,
+      items: [
+        { value: 'working', label: 'En service', dot: 'var(--ok)', cls: 'c-ok', radio: true, checked: st.state === 'working' },
+        { value: 'empty', label: 'Vide', dot: 'var(--warn)', cls: 'c-warn', radio: true, checked: st.state === 'empty' },
+        { value: 'broken', label: 'En panne', dot: 'var(--ko)', cls: 'c-ko', radio: true, checked: st.state === 'broken' }
+      ],
+      onPick: function (v) {
+        S.signal = { state: v };
+        renderFiche();
+        renderMapAndList();
+        toast('Merci ! État signalé : ' + STATE_LABEL[v]);
+        $('status-btn').focus();
+      }
+    });
+  }
+
+  function callInvite() {
+    var inv = $('invite');
+    inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    inv.classList.remove('is-called');
+    void inv.offsetWidth;
+    inv.classList.add('is-called');
+  }
+
+  function pillHtml(p, ps) {
+    var cls = ps.status === 'in' ? 'ok' : ps.status === 'out' ? 'out' : 'none';
+    var label = ps.status === 'in' ? 'Dispo' : ps.status === 'out' ? 'Pas dispo' : "Pas d'info";
+    var stale = ps.age === null || ps.age > SOFT_AFTER;
+    var nudge = S.mode === 'onsite' && stale;
+    var attrs = isMember()
+      ? ' aria-haspopup="menu" aria-expanded="false" aria-label="' + esc(p.name) + ' : ' + label + '. Changer"'
+      : ' aria-label="' + esc(p.name) + ' : ' + label + '. Connecte-toi pour signaler"';
+    return '<button type="button" class="pill ' + cls + (nudge ? ' is-nudge' : '') + '" data-pid="' + p.id + '"' + attrs + '><i aria-hidden="true"></i>' + label +
+      (isMember() ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' : '') + '</button>';
+  }
+
+  function freshHtml(ps) {
+    if (ps.age === null || ps.age === Infinity) return 'aucun signal depuis 24 h';
+    if (ps.pro) return '<span class="pro">Info de l\'exploitant · ' + ageText(ps.age) + '</span>';
+    return 'vu ' + ageText(ps.age);
+  }
+
+  function renderProducts() {
+    var html = '';
+    PRODUCTS.forEach(function (p) {
+      var ps = productStatus(p);
+      var cls = ps.status === 'in' ? ' is-in' : ps.status === 'out' ? ' is-out' : '';
+      html += '<article class="card' + cls + '" data-card="' + p.id + '">' +
+        '<div class="card-top"><span class="art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[p.icon] + '</svg></span>' + pillHtml(p, ps) + '</div>' +
+        '<div><div class="name">' + esc(p.name) + '</div><div class="fresh">' + freshHtml(ps) + '</div></div></article>';
+    });
+    $('grid').innerHTML = html;
+    var stock = camboStock();
+    $('count').textContent = '· ' + stock.inStock + ' sur ' + stock.total + ' dispo';
+    var st = camboState();
+    var notice = $('notice');
+    if (st.state === 'empty' || st.state === 'broken') {
+      notice.hidden = false;
+      notice.className = 'notice' + (st.state === 'broken' ? ' is-broken' : '');
+      notice.textContent = 'Distributeur signalé ' + (st.state === 'empty' ? 'vide ' : 'en panne ') + ageText(st.age) + ' : les produits sont probablement épuisés.';
+    } else {
+      notice.hidden = true;
+    }
+    $('invite').hidden = isMember();
+  }
+
+  function openProductMenu(pill) {
+    var pid = pill.getAttribute('data-pid');
+    var p = PRODUCTS.filter(function (x) { return x.id === pid; })[0];
+    var ps = productStatus(p);
+    var card = pill.closest('.card');
+    card.classList.add('is-open');
+    openMenu({
+      id: 'menu-' + pid, host: $('scr-fiche'), anchor: pill, trigger: pill, dx: -40,
+      label: p.name,
+      header: ps.status === 'none' ? 'Actuellement : <b>Pas d\'info</b>' : null,
+      items: [
+        { value: 'in', label: 'Dispo', dot: 'var(--ok)', cls: 'c-ok', radio: true, checked: ps.status === 'in' },
+        { value: 'out', label: 'Pas dispo', dot: '#9CA3AF', radio: true, checked: ps.status === 'out' },
+        { sep: true },
+        { value: 'rename', label: 'Renommer' },
+        { value: 'remove', label: 'Retirer', cls: 'danger' }
+      ],
+      onClose: function () { card.classList.remove('is-open'); },
+      onPick: function (v) {
+        if (v === 'rename' || v === 'remove') { toast('Hors sujet dans cette maquette'); return; }
+        S.productSignals[pid] = { status: v };
+        renderFiche();
+        renderMapAndList();
+        toast('Merci ! ' + p.name + ' : ' + (v === 'in' ? 'Dispo' : 'Pas dispo'));
+        var again = document.querySelector('.pill[data-pid="' + pid + '"]');
+        if (again) again.focus();
+      }
+    });
+  }
+
+  function renderFiche() {
+    closeMenu(false);
+    renderStatus();
+    renderProducts();
+    var fav = $('fav');
+    fav.setAttribute('aria-pressed', S.fav ? 'true' : 'false');
+    fav.setAttribute('aria-label', S.fav ? 'Retirer des favoris' : 'Ajouter aux favoris');
+  }
+
+  /* ---------- Carte et liste ---------- */
+  function allDistributors() {
+    var st = camboState();
+    var stock = camboStock();
+    var cambo = { id: 'cambo', name: 'Légumes Bio Cambo', city: 'Cambo-les-Bains', emoji: '🥕', state: st.state, age: st.age, pro: st.pro,
+      inStock: stock.inStock, total: stock.total, fav: S.fav, rating: 4.7, km: 17, x: 236, y: 618 };
+    return [cambo].concat(OTHERS);
+  }
+
+  function visualState(d) {
+    var state = d.state;
+    if (d.age !== null && d.age > NONE_AFTER) state = 'none';
+    var soft = state !== 'none' && d.age !== null && d.age > SOFT_AFTER;
+    return { state: state, soft: soft };
+  }
+
+  function describe(d) {
+    var v = visualState(d);
+    var s = d.name + ' : ' + STATE_LABEL[v.state];
+    if (v.state !== 'none') s += ', ' + ageText(d.age);
+    if (d.total > 0) s += ', ' + d.inStock + ' sur ' + d.total + ' dispo';
+    if (d.fav) s += ', favori';
+    return s;
+  }
+
+  var HEART_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-8-5-8-11.2A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 2.8C20 16 12 21 12 21z"/></svg>';
+
+  function renderMarkers() {
+    var html = '';
+    allDistributors().forEach(function (d) {
+      var v = visualState(d);
+      var color = v.soft ? STATE_SOFT[v.state] : STATE_COLOR[v.state];
+      html += '<button type="button" class="mk" data-id="' + d.id + '" style="left:' + (d.x / 390 * 100) + '%;top:' + (d.y / 710 * 100) + '%;--c:' + color + '" aria-label="' + esc(describe(d)) + '">' +
+        '<span class="mk-disc"><span class="mk-emo" aria-hidden="true">' + d.emoji + '</span></span>' +
+        (d.total > 0 ? '<span class="mk-badge' + (d.inStock === 0 ? ' is-zero' : '') + '" aria-hidden="true">' + d.inStock + '/' + d.total + '</span>' : '') +
+        (d.fav ? '<span class="mk-fav" aria-hidden="true">' + HEART_SVG + '</span>' : '') +
+        '</button>';
+    });
+    $('markers').innerHTML = html;
+  }
+
+  function rowHtml(d) {
+    var v = visualState(d);
+    var dot = v.soft ? STATE_SOFT[v.state] : STATE_COLOR[v.state];
+    var ink = v.soft ? 'var(--ink-3)' : STATE_INK[v.state];
+    var age = v.state === 'none' ? 'aucun signal depuis 24 h' : ageText(d.age);
+    var meta = [];
+    if (d.total > 0) meta.push('<span class="stock">' + d.inStock + ' sur ' + d.total + ' dispo</span>');
+    meta.push(d.rating ? '<span class="star">' + d.rating.toFixed(1).replace('.', ',') + ' ★</span>' : 'Pas encore d\'avis');
+    meta.push(String(d.km).replace('.', ',') + ' km');
+    return '<button type="button" class="row" data-id="' + d.id + '" aria-label="' + esc(describe(d)) + ', ' + String(d.km).replace('.', ',') + ' km">' +
+      '<span class="thumb" aria-hidden="true">' + d.emoji + '</span>' +
+      '<span class="row-body" aria-hidden="true">' +
+        '<span class="row-name"><span>' + esc(d.name) + '</span>' + (d.fav ? HEART_SVG : '') + '</span>' +
+        '<span class="row-state"><span class="dot" style="background:' + dot + '"></span><b style="color:' + ink + '">' + STATE_LABEL[v.state] + '</b>· ' + age + '</span>' +
+        '<span class="row-meta">' + meta.join(' · ') + '</span>' +
+      '</span></button>';
+  }
+
+  function renderList() {
+    var list = allDistributors().slice().sort(function (a, b) { return a.km - b.km; });
+    var near = list.filter(function (d) { return d.km < 2; });
+    var far = list.filter(function (d) { return d.km >= 2; });
+    $('list').innerHTML = '<div class="list-head"><h2>À proximité</h2><span>' + list.length + ' distributeurs</span></div>' +
+      '<h3 class="group-t">Moins de 2 km</h3>' + near.map(rowHtml).join('') +
+      '<h3 class="group-t">Plus loin</h3>' + far.map(rowHtml).join('') + '<div style="height:70px"></div>';
+  }
+
+  function renderMapAndList() { renderMarkers(); renderList(); }
+
+  /* ---------- Navigation entre ecrans ---------- */
+  function showScreen(name) {
+    closeMenu(false);
+    S.screen = name;
+    ['fiche', 'carte', 'liste'].forEach(function (n) { $('scr-' + n).hidden = n !== name; });
+    var r = document.querySelector('input[name="screen"][value="' + name + '"]');
+    if (r) r.checked = true;
+  }
+
+  function openFicheFor(id) {
+    if (id === 'cambo') { showScreen('fiche'); $('scr-fiche').scrollTop = 0; return; }
+    toast('Maquette : seule la fiche Légumes Bio Cambo est détaillée');
+  }
+
+  /* ---------- Evenements ---------- */
+  $('status-btn').addEventListener('click', function () {
+    if (!isMember()) { callInvite(); return; }
+    if (openMenuRef && openMenuRef.trigger === this) { closeMenu(false); return; }
+    openStateMenu(true);
+  });
+  $('status-btn').addEventListener('keydown', function (e) {
+    if (!isMember()) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openStateMenu(true); }
+  });
+  $('grid').addEventListener('click', function (e) {
+    var pill = e.target.closest('.pill');
+    if (!pill) return;
+    if (!isMember()) { callInvite(); return; }
+    if (openMenuRef && openMenuRef.trigger === pill) { closeMenu(false); return; }
+    openProductMenu(pill);
+  });
+  $('fav').addEventListener('click', function () { S.fav = !S.fav; renderFiche(); renderMapAndList(); });
+  $('close').addEventListener('click', function () { showScreen('carte'); });
+  $('login').addEventListener('click', function () { toast('Maquette : la connexion ouvre le lien magique'); });
+  $('markers').addEventListener('click', function (e) { var b = e.target.closest('.mk'); if (b) openFicheFor(b.getAttribute('data-id')); });
+  $('list').addEventListener('click', function (e) { var b = e.target.closest('.row'); if (b) openFicheFor(b.getAttribute('data-id')); });
+  document.querySelectorAll('[data-go]').forEach(function (b) { b.addEventListener('click', function () { showScreen(b.getAttribute('data-go')); }); });
+
+  $('settings').addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.name === 'screen') { showScreen(t.value); return; }
+    if (t.name === 'mode') S.mode = t.value;
+    if (t.name === 'state') { S.state = t.value; S.signal = null; S.productSignals = {}; }
+    if (t.name === 'age') { S.age = Number(t.value); S.signal = null; S.productSignals = {}; }
+    if (t.name === 'pro') { S.pro = t.value === 'yes'; S.signal = null; }
+    renderFiche();
+    renderMapAndList();
+  });
+  $('reset').addEventListener('click', function () {
+    S.signal = null; S.productSignals = {}; S.fav = true;
+    renderFiche(); renderMapAndList(); toast('Démo réinitialisée');
+  });
+
+  /* ---------- Demarrage (et ?shot=fiche|visiteur|carte|liste pour les captures) ---------- */
+  var shot = new URLSearchParams(location.search).get('shot');
+  if (shot) document.documentElement.classList.add('shot');
+  if (shot === 'visiteur') { S.mode = 'visitor'; document.querySelector('input[name="mode"][value="visitor"]').checked = true; }
+  renderFiche();
+  renderMapAndList();
+  if (shot === 'carte' || shot === 'liste') showScreen(shot);
+  else showScreen('fiche');
+  if (shot === 'fiche') openStateMenu(false);
+})();
+</script>
+</body>
+</html>
