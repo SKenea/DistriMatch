@@ -86,6 +86,11 @@ d'info » en tete si besoin), separateur, Renommer, Retirer (membre connecte).
 - [x] T16-TS Tests et doc a jour, captures avant fusion.
 
 ### EPIC-T15 Les vrais distributeurs d'OpenStreetMap, Cote Basque (Stephane, 2026-10-01)
+**Correction 2026-10-02 (Stephane : « ce ne sont pas des distributeurs automatiques »)** :
+16 fiches douteuses retirees de la base (vending « food » sans precision : France Asia,
+Essentiel, Aneth et Cerfeuil, Xpress, fiches sans nom ; glacons). Restent 15 fiches
+(8 pizza, 7 pain). `import-osm.mjs` n'importe plus « food » seul (sauf nom qui dit pizza /
+pain), ni les glacons, ni les machines a plusieurs usages.
 Cadrage de US-5 tranche par Stephane : zone Cote Basque, fiches de demo gardees pour
 l'instant, import unique relancable. Comptage a blanc : 32 machines (15 food, 7 pain,
 7 pizza, 2 glacons, 1 mixte).

@@ -17,18 +17,19 @@
 import { runSql } from './lib/supabase-management.mjs';
 
 const UA = 'DistriMatch-import/1.0 (https://skenea.github.io/DistriMatch/)';
-const VENDING = 'pizza|bread|baguette|food|milk|cheese|dairy|eggs|vegetables|fruit|farm|honey|meat|ice';
+const VENDING = 'pizza|bread|baguette|food|milk|cheese|dairy|eggs|vegetables|fruit|farm|honey|meat';   // « food » : garde seulement si le nom dit pizza / pain
 const DUPLICATE_RADIUS_M = 50;
 
-// vending OSM -> type DistriMatch (+ emoji, libelle d'une machine sans nom)
+// vending OSM -> type DistriMatch (+ emoji, libelle d'une machine sans nom).
+// Decision Stephane 2026-10-02 : « food » seul (trop vague : points de vente,
+// boutiques automatiques...), les glacons et les machines a plusieurs usages
+// (« food;drinks;chemist ») ne sont PAS importes ; 16 fiches retirees de la base.
 const TYPES = [
     [/pizza/, 'pizza', '🍕', 'Distributeur de pizzas'],
     [/bread|baguette/, 'bakery', '🥖', 'Distributeur de pain'],
-    [/ice/, 'ice', '🧊', 'Distributeur de glaçons'],
     [/milk|cheese|dairy/, 'dairy', '🥛', 'Distributeur de produits laitiers'],
     [/eggs|vegetables|fruit|farm|honey/, 'agricultural', '🥕', 'Distributeur de produits fermiers'],
-    [/meat/, 'meat', '🥩', 'Distributeur de viande'],
-    [/food/, 'general', '🏪', 'Distributeur alimentaire']
+    [/meat/, 'meat', '🥩', 'Distributeur de viande']
 ];
 
 function arg(name) {
@@ -38,6 +39,8 @@ function arg(name) {
 
 function mapType(vending = '') {
     const v = vending.toLowerCase();
+    if (v.includes(';')) return null;   // machine a plusieurs usages : pas un distributeur alimentaire sur
+
     const hit = TYPES.find(([re]) => re.test(v));
     return hit ? { type: hit[1], emoji: hit[2], label: hit[3] } : null;
 }
