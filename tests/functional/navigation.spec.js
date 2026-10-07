@@ -651,7 +651,7 @@ test.describe('38. Mon activité et cohérence', () => {
         await expect(page.locator('.activity-filters')).toBeHidden();
         const onboarding = await page.locator('#geoloc-overlay').textContent();
         expect(onboarding).not.toMatch(/sans compte|machine/i);
-        expect(onboarding).toContain('Connecte-toi pour signaler');
+        expect(onboarding).toContain('Fais passer le mot.');
     });
 });
 
