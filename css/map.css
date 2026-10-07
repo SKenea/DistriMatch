@@ -1058,3 +1058,22 @@
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
     mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
 }
+
+/* EPIC-T23 : « Voir sur la carte » : halo qui pulse autour de la pastille */
+.distributor-pin.is-located::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 3px solid #D62828;
+    animation: pin-locate 1s ease-out 3;
+    pointer-events: none;
+}
+@keyframes pin-locate {
+    from { transform: scale(0.8); opacity: 1; }
+    to { transform: scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .distributor-pin.is-located::after { animation: none; opacity: 1; }
+}
+.dist-icon-btn[hidden] { display: none; }

@@ -654,3 +654,45 @@ test.describe('38. Mon activité et cohérence', () => {
         expect(onboarding).toContain('Connecte-toi pour signaler');
     });
 });
+
+// ============================================
+// 39. VOIR SUR LA CARTE DEPUIS LA FICHE (EPIC-T23)
+// ============================================
+test.describe('39. Voir sur la carte', () => {
+    test('liste -> fiche -> « Voir sur la carte » : fiche et liste fermees, carte centree, pastille qui pulse', async ({ page }) => {
+        await page.evaluate(async () => { const g = await import('./js/gmaps-ui.js'); g.openSidePanelForType('all'); });
+        const item = page.locator('#side-panel-list .side-panel-item').first();
+        const id = await item.getAttribute('data-id');
+        await item.click();
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-action-locate')).toBeVisible();
+        await page.click('#dist-action-locate');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+        await expect(page.locator('.distributor-pin.is-located')).toHaveCount(1);
+        const center = await page.evaluate(async (x) => {
+            const s = await import('./js/state.js');
+            const d = window.AppState.distributors.find(y => y.id === x);
+            const c = s.mainMap.getCenter();
+            return { dLat: Math.abs(c.lat - d.lat), dLng: Math.abs(c.lng - d.lng), zoom: s.mainMap.getZoom() };
+        }, id);
+        expect(center.dLat).toBeLessThan(0.002);
+        expect(center.dLng).toBeLessThan(0.002);
+        expect(center.zoom).toBeGreaterThanOrEqual(17);
+    });
+
+    test('un filtre de type qui masquait le distributeur est leve', async ({ page }) => {
+        const pick = await page.evaluate(() => {
+            const types = [...new Set(window.AppState.distributors.map(d => d.type))];
+            const d = window.AppState.distributors[0];
+            return { id: d.id, other: types.find(t => t !== d.type) };
+        });
+        test.skip(!pick.other, 'un seul type de distributeur dans les donnees');
+        await page.evaluate(async (t) => { const n = await import('./js/navigation.js'); if (!window.AppState.activeFilters.includes(t)) n.setFilter(t); }, pick.other);
+        await page.evaluate((x) => window.openDistributorModal(x), pick.id);
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.click('#dist-action-locate');
+        await expect.poll(() => page.evaluate(() => window.AppState.activeFilters.length)).toBe(0);
+        await expect(page.locator('.distributor-pin.is-located')).toHaveCount(1);
+    });
+});

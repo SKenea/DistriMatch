@@ -119,10 +119,11 @@ function createDistributorIcon(d, isSubscribed) {
     const summary = getDistributorSummary(d);
     const soft = summary.state !== 'unknown' && !summary.fresh;
     const pending = d.reviewStatus === 'pending';   // EPIC-T21 : vu par l'auteur et l'admin seulement
+    const isLocated = located.id === d.id && Date.now() < located.until;   // EPIC-T23
     const fav = isSubscribed ? '<span class="distributor-pin-fav" aria-hidden="true">♥</span>' : '';
     return L.divIcon({
         className: 'distributor-marker-container',
-        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
+        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}${isLocated ? ' is-located' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
         popupAnchor: [0, -24]
@@ -195,14 +196,40 @@ export function zoomOut() {
     if (mainMap) mainMap.zoomOut();
 }
 
-export function highlightOnMap(id) {
-    const d = AppState.distributors.find(d => d.id === id);
-    if (d && mainMap) {
-        mainMap.setView([d.lat, d.lng], 16);
+// Pastille localisee (EPIC-T23) : le halo survit si les pastilles sont recreees
+// (arrivee des etats, filtre) pendant qu'il pulse.
+let located = { id: null, until: 0 };
 
-        const marker = distributorMarkers.find(m => m.distributorId === id);
-        if (marker) {
-            marker.openPopup();
-        }
+// EPIC-T23 : « Voir sur la carte » depuis la fiche. Centre la carte (zoom de
+// rue), leve un filtre de type qui masquait la pastille, la fait pulser. Retour :
+// false si la carte n'existe pas encore (deep link avant la geolocalisation).
+export function locateOnMap(id) {
+    const d = AppState.distributors.find(x => x.id === id);
+    if (!d || !mainMap || !AppState.mapInitialized) return false;
+    let marker = distributorMarkers.find(m => m.distributorId === id);
+    if (!marker && AppState.activeFilters.length) {
+        AppState.activeFilters = [];
+        document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+        updateMapMarkers(false);
+        marker = distributorMarkers.find(m => m.distributorId === id);
     }
+    mainMap.setView([d.lat, d.lng], Math.max(mainMap.getZoom(), 17), { animate: true });
+    located = { id, until: Date.now() + 3200 };
+    if (marker) {
+        const pin = marker.getElement()?.querySelector('.distributor-pin');
+        if (pin) {
+            pin.classList.remove('is-located');
+            void pin.offsetWidth;   // relancer l'animation
+            pin.classList.add('is-located');
+        }
+        marker.setZIndexOffset(1000);
+    }
+    setTimeout(() => {
+        located = { id: null, until: 0 };
+        document.querySelectorAll('.distributor-pin.is-located').forEach(el => el.classList.remove('is-located'));
+    }, 3200);
+    return true;
 }
+
+// Ancien nom (non utilise) garde pour compatibilite
+export const highlightOnMap = locateOnMap;
