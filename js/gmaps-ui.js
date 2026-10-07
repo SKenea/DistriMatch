@@ -679,6 +679,8 @@ function applyFicheAuthState() {
         statusUpdate.setAttribute('aria-haspopup', canUpdate ? 'menu' : 'false');
     }
     document.getElementById('dist-status')?.classList.toggle('is-member', canUpdate);
+    // EPIC-T22 : « €€ » n'a l'air modifiable (pointille) que pour un membre
+    document.getElementById('dist-modal-pricerange')?.classList.toggle('is-editable', canUpdate);
     // Le menu reste replie tant que la ligne n'est pas touchee
     const machineChoices = document.getElementById('dist-machine-choices');
     if (machineChoices && (!canUpdate || statusUpdate?.getAttribute('aria-expanded') !== 'true')) machineChoices.hidden = true;

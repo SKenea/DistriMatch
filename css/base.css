@@ -38,7 +38,7 @@
     --gray: #6B5E54;           /* Gris brun chaud */
     --gray-light: #A89B8C;     /* Gris creme : NON-TEXTE seulement (fonds, bordures, poignees) : 2,6:1 */
     --text-muted: #7A6C60;     /* Texte et icones secondaires : >= 4,5:1 sur blanc et creme (WCAG 1.4.3 AA) */
-    --light: #FDF8F3;          /* Creme tres claire */
+    --light: #F3F4F6;          /* Gris clair, le fond de la fiche (EPIC-T22 : un seul fond neutre) */
     --lighter: #FEFCF9;        /* Creme pale (fond) */
     --white: #ffffff;
     --gray-dark: #3D3D3D;

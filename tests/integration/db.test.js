@@ -375,7 +375,7 @@ describe('base : exploitants (020)', { skip: SKIP }, () => {
         const src = await probe(`${MAKE_ADMIN}
             insert into distributor_operators (distributor_id, user_id) values ('${DEMO}', ${USER});
             ${AS_USER} perform ${signal('broken')};
-            select source || '/' || (weight = 1)::text into r from availability_signals where distributor_id = '${DEMO}' and user_id = ${USER} order by created_at desc limit 1`);
+            reset role; select source || '/' || (weight = 1)::text into r from availability_signals where distributor_id = '${DEMO}' and user_id = ${USER} order by created_at desc limit 1`);
         assert.equal(src.result, 'owner/true');
     });
 
@@ -550,6 +550,34 @@ describe('base : validation des nouvelles fiches (022)', { skip: SKIP }, () => {
     it('6e ajout du jour pour un compte : refuse (P0001)', async () => {
         const p = await probe(`${AS_USER} ${ADD('itest-rev-1')}; ${ADD('itest-rev-2')}; ${ADD('itest-rev-3')}; ${ADD('itest-rev-4')}; ${ADD('itest-rev-5')}; ${ADD('itest-rev-6')}`);
         assert.equal(p.code, 'P0001');
+    });
+});
+
+// EPIC-T22 (023) : un signal ne revele pas son auteur ; journal du compte
+describe('base : confidentialite des signaux et « Mon activité » (023)', { skip: SKIP }, () => {
+    it('personne ne lit l’auteur d’un signal (user_id, device_hash) ; l’etat public reste lisible', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            const who = await probe(`${role} perform user_id from availability_signals limit 1`);
+            assert.equal(who.code, '42501');
+            const device = await probe(`${role} perform device_hash from availability_signals limit 1`);
+            assert.equal(device.code, '42501');
+        }
+        const ok = await probe(`${AS_ANON} r := (select count(*) from availability_signals)::text
+            || '|' || (select count(*) from distributor_status)::text`);
+        assert.ok(ok.reachedEnd, ok.message);
+    });
+
+    it('my_activity : mes signaux, mes ajouts, mes avis ; refuse sans compte', async () => {
+        const p = await probe(`${AS_USER}
+            perform confirm_availability('${DEMO}', '${DEVICE}', '[]'::jsonb, 'working');
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by) values ('itest-act', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER});
+            insert into reviews (distributor_id, rating, body) values ('${DEMO}', 4, 'itest avis');
+            r := (select string_agg(kind || ':' || coalesce(state, '-'), ',' order by kind) from my_activity()
+                  where at > now() - interval '1 minute')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'addition:pending,review:4,signal:working');
+        const anon = await probe(`${AS_ANON} perform my_activity()`);
+        assert.equal(anon.code, '42501');
     });
 });
 

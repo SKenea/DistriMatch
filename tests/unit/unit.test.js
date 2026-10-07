@@ -26,7 +26,7 @@ import {
     describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
     validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary,
     OPERATOR_RELATIONS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, assessSirene,
-    isPrivateFiche, describeReviewStatus, findNearbyDuplicates
+    isPrivateFiche, describeReviewStatus, findNearbyDuplicates, describeActivityItem
 } from '../../js/utils.js';
 
 import {
@@ -936,23 +936,24 @@ describe('calculateDistance', () => {
 
 describe('formatDistance', () => {
     it('affiche en metres si < 1km', () => {
-        assert.equal(formatDistance(0.5), '500m');
+        assert.equal(formatDistance(0.5), '500 m');
     });
 
     it('affiche en km si >= 1km', () => {
-        assert.equal(formatDistance(2.345), '2.3km');
+        assert.equal(formatDistance(2.345), '2,3 km');
+        assert.equal(formatDistance(16.04), '16 km');   // EPIC-T22 : a la francaise, sans decimale au-dela de 10 km
     });
 
     it('arrondit les metres', () => {
-        assert.equal(formatDistance(0.123), '123m');
+        assert.equal(formatDistance(0.123), '123 m');
     });
 
     it('gere 0', () => {
-        assert.equal(formatDistance(0), '0m');
+        assert.equal(formatDistance(0), '0 m');
     });
 
     it('gere 1km exactement', () => {
-        assert.equal(formatDistance(1), '1.0km');
+        assert.equal(formatDistance(1), '1,0 km');
     });
 });
 
@@ -1755,5 +1756,31 @@ describe('validation des nouvelles fiches (EPIC-T21)', () => {
         assert.equal(mapDistributorRow({ id: 'x', review_status: 'pending', added_by: 'u1' }).reviewStatus, 'pending');
         assert.equal(mapDistributorRow({ id: 'x', added_by: 'u1' }).addedById, 'u1');
         assert.equal(mapDistributorRow({ id: 'y' }).reviewStatus, 'published');
+    });
+});
+
+// ============================================
+// EPIC-T22 : « Mon activité »
+// ============================================
+describe('« Mon activité » : lignes du journal (EPIC-T22)', () => {
+    it('signal produit, signal d\'etat, ajout, avis, demande d\'exploitant', () => {
+        assert.deepEqual(describeActivityItem({ kind: 'signal', product_name: 'Pâté basque', state: 'available' }), { title: 'Pâté basque : Dispo', detail: '', tone: 'working' });
+        assert.equal(describeActivityItem({ kind: 'signal', product_name: 'Pain', state: 'absent' }).title, 'Pain : Pas dispo');
+        assert.deepEqual(describeActivityItem({ kind: 'signal', state: 'empty' }), { title: 'État : Vide', detail: '', tone: 'empty' });
+        assert.deepEqual(describeActivityItem({ kind: 'addition', state: 'rejected', detail: 'Doublon' }), { title: 'Distributeur ajouté', detail: 'Refusée : Doublon', tone: 'broken' });
+        assert.equal(describeActivityItem({ kind: 'review', state: '4', detail: 'Bon' }).title, 'Avis ★★★★☆');
+        assert.equal(describeActivityItem({ kind: 'operator', state: 'code_sent' }).detail, 'Courrier envoyé');
+    });
+
+    it('jamais de code anglais ni de « machine » dans une ligne', () => {
+        const rows = [
+            { kind: 'signal', state: 'working' }, { kind: 'signal', state: 'broken' }, { kind: 'addition', state: 'pending' },
+            { kind: 'review', state: '5', detail: 'x'.repeat(200) }, { kind: 'operator', state: 'pending' }
+        ];
+        for (const r of rows) {
+            const d = describeActivityItem(r);
+            assert.doesNotMatch(`${d.title} ${d.detail}`, /\b(empty|working|broken|pending|machine)\b/i);
+        }
+        assert.ok(describeActivityItem(rows[3]).detail.length <= 90);
     });
 });

@@ -19,6 +19,26 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T22 Coherence et « Mon activité » (critique de design, Stephane, 2026-10-07)
+Objectif : remettre au niveau de la fiche les ecrans restes en retard (accueil, Activite,
+Compte), une seule voix visuelle, et un vrai historique de ses contributions.
+
+- [x] T22-TS1 Base (migration 023) : l'auteur d'un signal n'est plus lisible par l'API
+  (user_id, device_hash) ; `my_activity()` = signaux, ajouts, avis, demandes du compte.
+- [x] T22-US1 En tant que membre, je retrouve mon historique dans « Mon activité »
+  - Acceptance : onglet Activite garde ; liste du plus recent au plus ancien (signal,
+    ajout + statut, avis, demande d'exploitant), filtres Tout / Signaux / Ajouts / Avis,
+    une ligne ouvre la fiche ; visiteur : invitation a se connecter ; plus de points, de
+    « Confirmer / Infirmer », ni de code anglais.
+- [x] T22-US2 En tant que visiteur, l'accueil dit vrai
+  - Acceptance : plus de « sans compte » ni de « machine » ; petits textes lisibles.
+- [x] T22-US3 En tant qu'utilisateur, l'app parle d'une seule voix
+  - Acceptance : Compte sans points ; fond gris unique ; bouton principal rouge (Itineraire
+    compris) ; etoiles d'une seule couleur lisible ; distances « 385 m », « 1,2 km »,
+    « 16 km » ; « Mes favoris » ; visiteur : « €€ » sans pointille, pas de carte d'ajout,
+    invitation sans fausses pastilles.
+- [x] T22-TS2 Tests et doc, captures avant / apres.
+
 ### EPIC-T21 Valider les nouvelles fiches dans la console admin (Stephane, 2026-10-02)
 Objectif : une fiche ajoutee par un membre n'est visible par tous qu'apres validation.
 Decisions : les 15 fiches OSM sont retirees de la base (types non souhaites ; script

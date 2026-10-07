@@ -110,7 +110,8 @@ export function renderProductsList(distributor, targetId = 'dist-products-list',
                 <p class="products-empty-text">Personne n'a encore dit ce que vend ce distributeur.</p>
             </div>`
         : '';
-    const addCard = (canInform || guest) ? renderAddCard(products.length === 0, guest) : '';
+    // EPIC-T22 : un visiteur ne voit pas d'invitation a modifier (l'encadre de connexion suffit)
+    const addCard = canInform ? renderAddCard(products.length === 0, false) : '';
     productsList.innerHTML = empty
         + products.map((prod, index) => renderProductRow(prod, index, { canInform, guest })).join('')
         + addCard;
