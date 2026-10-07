@@ -167,8 +167,13 @@ export function displayActivityFeed() {
     }).join('');
 }
 
+// EPIC-T22 : l'onglet affiche l'historique du compte ; l'ancien fil local ne
+// porte plus de pastille de compteur.
 export function updateActivityBadge() {
     const badge = document.getElementById('activity-badge');
+    if (badge) badge.style.display = 'none';
+    return;
+    // eslint-disable-next-line no-unreachable
     const recentCount = ActivityFeed.items.filter(i =>
         Date.now() - i.timestamp < 24 * 60 * 60 * 1000
     ).length;

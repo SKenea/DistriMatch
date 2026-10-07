@@ -2617,3 +2617,55 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .admin-reject-fiche { align-self: flex-start; }
 /* Une ligne de la page Compte cachee le reste (.account-row impose display:flex) */
 .account-row[hidden] { display: none; }
+
+/* ==========================================
+   COHERENCE ET « MON ACTIVITE » (EPIC-T22)
+   ========================================== */
+/* Etoiles : une seule couleur, lisible (contraste > 4,5:1 sur blanc) */
+.side-panel-item-rating,
+.dist-modal-rating,
+.reviews-summary,
+.review-stars { color: #B45309; }
+.dist-modal-rating.no-reviews { color: var(--gray); }
+/* Bouton principal : rouge marque partout, Itineraire compris */
+.dist-apropos-actions .dist-action-btn.primary { background: var(--primary-text); border-color: var(--primary-text); box-shadow: 0 2px 6px rgba(214, 40, 40, 0.25); }
+.dist-apropos-actions .dist-action-btn.primary:hover { background: var(--primary-dark); }
+/* « €€ » : pointille seulement quand on peut le changer */
+.dist-modal-pricerange:not(.is-editable) { border-color: transparent; padding: 0 2px; cursor: default; }
+/* Journal */
+.activity-filters[hidden] { display: none; }
+.activity-list { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 24px; }
+.activity-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 12px 14px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    font: inherit;
+    text-align: left;
+    color: var(--dark);
+    cursor: pointer;
+}
+.activity-row:disabled { cursor: default; opacity: 0.75; }
+.activity-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.activity-row-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; flex: none; background: #94A3B8; }
+.activity-row-dot.is-working { background: #16A34A; }
+.activity-row-dot.is-empty { background: #EA580C; }
+.activity-row-dot.is-broken { background: #DC2626; }
+.activity-row-dot.is-absent { background: #4B5563; }
+.activity-row-dot.is-action { background: #D97706; }
+.activity-row-dot.is-info { background: #2563EB; }
+.activity-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.activity-row-meta { font-size: 0.82rem; color: var(--gray); }
+.activity-row-detail { font-size: 0.85rem; color: #374151; overflow-wrap: anywhere; }
+.activity-login { margin-top: 12px; flex: none; padding: 0.75rem 1.5rem; }
+/* Accueil (EPIC-T22) : degrade plus profond pour que le texte blanc reste lisible
+   (contraste >= 4,5:1), sous-textes en blanc plein */
+.geoloc-overlay { background: linear-gradient(135deg, #B91C1C 0%, #C2410C 100%); }
+.geoloc-hint { color: rgba(255, 255, 255, 0.95) !important; font-size: 0.8rem !important; }
+.geoloc-subtitle { color: #FFFFFF !important; }
+.geoloc-benefit-text span { color: rgba(255, 255, 255, 0.95); }

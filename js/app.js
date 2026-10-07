@@ -81,6 +81,7 @@ import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
 import { initAdmin, loadAdmin } from './admin.js';
 import { initAdditions } from './additions.js';
+import { initMyActivity, renderMyActivity } from './my-activity.js';
 import { loadSignalSummaries } from './summaries.js';
 
 // ============================================
@@ -305,8 +306,7 @@ function refreshAuthUI(user = getCurrentUser()) {
     if (accountAvatar) accountAvatar.textContent = authed ? initialsFromEmail(user.email) : '·';
     if (accountMeta) {
         if (authed) {
-            const info = getLevelInfo(AppState.points);
-            accountMeta.textContent = `Connecté · ${info.name} · ${info.points} pts`;
+            accountMeta.textContent = 'Connecté';   // EPIC-T22 : plus de niveau ni de points
         } else {
             accountMeta.textContent = 'Connecte-toi pour contribuer et retrouver tes favoris';
         }
@@ -319,7 +319,7 @@ registerViewCallback('profile', () => { updateProfileStats(); refreshAuthUI(); }
 registerViewCallback('account', () => refreshAuthUI());
 registerViewCallback('stats', loadStats);
 registerViewCallback('admin', loadAdmin);
-registerViewCallback('activity', displayActivityFeed);
+registerViewCallback('activity', renderMyActivity);   // EPIC-T22 : historique du compte
 registerViewCallback('notifications', openNotificationsView);
 
 // ============================================
@@ -681,10 +681,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Activity filters
-    document.querySelectorAll('.activity-filter').forEach(btn => {
-        btn.addEventListener('click', () => setActivityFilter(btn.dataset.filter));
-    });
+    // « Mon activité » (EPIC-T22) : filtres et lignes geres par js/my-activity.js
+    initMyActivity();
 
     // Update activity badge
     updateActivityBadge();

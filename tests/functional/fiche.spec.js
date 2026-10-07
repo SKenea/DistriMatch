@@ -276,7 +276,7 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         expect(log).toEqual([expect.objectContaining({ table: 'distributors', method: 'PATCH', query: `?id=eq.${id}`, body: { price_range: '€€€' } })]);
     });
 
-    test('visiteur : etiquette, « + Ajouter » et prix menent a l\u2019invitation, rien n\u2019est envoye', async ({ page }) => {
+    test('visiteur : etiquette et prix menent a l\u2019invitation ; ni carte d\u2019ajout ni pointille (EPIC-T22) ; rien n\u2019est envoye', async ({ page }) => {
         await routeSignals(page);
         const log = await routeEditWrites(page);
         await openSignalableFiche(page, { login: false });
@@ -284,10 +284,8 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await page.locator('#dist-products-list .product-status-btn[data-guest]').first().click();
         await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
         await expect(page.locator('#dist-products-list .product-choices')).toHaveCount(0);
-        await page.evaluate(() => document.getElementById('dist-login-invite').classList.remove('is-highlighted'));
-        await page.click('#dist-product-add');
-        await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
-        await expect(page.locator('.product-add-input')).toHaveCount(0);
+        await expect(page.locator('#dist-product-add')).toHaveCount(0);
+        await expect(page.locator('#dist-modal-pricerange')).not.toHaveClass(/is-editable/);
         await page.click('#dist-modal-pricerange');
         await expect(page.locator('#dist-price-picker')).toHaveCount(0);
         expect(log).toEqual([]);

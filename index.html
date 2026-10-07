@@ -15,7 +15,7 @@
     <!-- Open Graph (previews sur WhatsApp, Slack, iMessage, Discord, Facebook, etc.) -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="DistriMatch - Sache avant d'y aller">
-    <meta property="og:description" content="Le Waze des distributeurs automatiques : l'heure de la dernière vérification sur chaque machine, et un signal en un tap pour les suivants.">
+    <meta property="og:description" content="Le Waze des distributeurs automatiques : l'heure de la dernière vérification sur chaque distributeur, et un signal en un tap pour les suivants.">
     <meta property="og:url" content="https://skenea.github.io/DistriMatch/">
     <meta property="og:image" content="https://skenea.github.io/DistriMatch/images/og-image.png">
     <meta property="og:image:width" content="1200">
@@ -36,11 +36,11 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
-    <link rel="stylesheet" href="css/base.css?v=32">
+    <link rel="stylesheet" href="css/base.css?v=33">
     <link rel="stylesheet" href="css/map.css?v=27">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=53">
+    <link rel="stylesheet" href="css/overlays.css?v=54">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -58,7 +58,7 @@
                     </div>
                     <div class="geoloc-benefit-text">
                         <strong>Vérifié il y a 12 min</strong>
-                        <span>L'heure de la dernière vérification, sur chaque machine</span>
+                        <span>L'heure de la dernière vérification, sur chaque distributeur</span>
                     </div>
                 </div>
                 <div class="geoloc-benefit">
@@ -67,7 +67,7 @@
                     </div>
                     <div class="geoloc-benefit-text">
                         <strong>Dis ce que tu vois, en un tap</strong>
-                        <span>Sans compte : la communauté tient l'info à jour</span>
+                        <span>Connecte-toi pour signaler : la communauté tient l'info à jour</span>
                     </div>
                 </div>
                 <div class="geoloc-benefit">
@@ -76,7 +76,7 @@
                     </div>
                     <div class="geoloc-benefit-text">
                         <strong>Habituellement plein le matin</strong>
-                        <span>Le rythme de chaque machine, appris des signaux</span>
+                        <span>Le rythme de chaque distributeur, appris des signaux</span>
                     </div>
                 </div>
             </div>
@@ -377,11 +377,6 @@
                             <p class="dist-invite-title" id="dist-login-invite-title">Tu es devant le distributeur ?</p>
                             <p>Connecte-toi pour signaler ce qu'il reste et donner ton avis.</p>
                         </div>
-                        <div class="dist-invite-preview" aria-label="Ce que tu pourras faire">
-                            <span class="dist-invite-chip"><span class="dist-feu is-all" aria-hidden="true"><i></i><i></i><i></i></span>État</span>
-                            <span class="dist-invite-chip">Dispo / Pas dispo</span>
-                            <span class="dist-invite-chip">Avis</span>
-                        </div>
                         <button type="button" class="dist-login-invite-btn" id="dist-login-invite-btn">Se connecter</button>
                     </div>
                 </div>
@@ -536,7 +531,7 @@
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
             </button>
-            <h2>Mes Favoris</h2>
+            <h2>Mes favoris</h2>
             <span class="header-count" id="subscriptions-count">0 favori</span>
         </div>
         <div id="subscriptions-list" class="items-list">
@@ -994,21 +989,23 @@
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
             </button>
-            <h2>Activité</h2>
-            <span class="header-count" id="activity-count">0 action(s)</span>
+            <h2>Mon activité</h2>
+            <span class="header-count" id="activity-count"></span>
         </div>
         <div class="activity-filters">
-            <button class="activity-filter active" data-filter="all">Tout</button>
-            <button class="activity-filter" data-filter="reports">Signalements</button>
-            <button class="activity-filter" data-filter="subscriptions">Abonnements</button>
+            <!-- EPIC-T22 : historique du compte (js/my-activity.js, my_activity()) -->
+            <button class="activity-filter active" data-filter="all" aria-pressed="true">Tout</button>
+            <button class="activity-filter" data-filter="signal" aria-pressed="false">Signaux</button>
+            <button class="activity-filter" data-filter="addition" aria-pressed="false">Ajouts</button>
+            <button class="activity-filter" data-filter="review" aria-pressed="false">Avis</button>
         </div>
         <div id="activity-list" class="activity-list">
             <!-- Activites injectees ici -->
         </div>
         <div id="activity-empty" class="empty-state">
             <div class="empty-icon">📋</div>
-            <h3>Aucune activité</h3>
-            <p>Tes signalements et abonnements apparaîtront ici</p>
+            <h3>Rien pour l’instant</h3>
+            <p>Tes signaux, tes ajouts et tes avis apparaîtront ici.</p>
         </div>
     </div>
 
@@ -1078,32 +1075,33 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=72",
-            "./js/state.js": "./js/state.js?v=72",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=72",
-            "./js/config.js": "./js/config.js?v=72",
-            "./js/utils.js": "./js/utils.js?v=72",
-            "./js/auth.js": "./js/auth.js?v=72",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=72",
-            "./js/map.js": "./js/map.js?v=72",
-            "./js/navigation.js": "./js/navigation.js?v=72",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=72",
-            "./js/distributor.js": "./js/distributor.js?v=72",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=72",
-            "./js/chat.js": "./js/chat.js?v=72",
-            "./js/activity.js": "./js/activity.js?v=72",
-            "./js/notifications.js": "./js/notifications.js?v=72",
-            "./js/availability.js": "./js/availability.js?v=72",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=72",
-            "./js/events.js": "./js/events.js?v=72",
-            "./js/stats.js": "./js/stats.js?v=72",
-            "./js/history.js": "./js/history.js?v=72",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=72",
-            "./js/reviews.js": "./js/reviews.js?v=72",
-            "./js/operators.js": "./js/operators.js?v=72",
-            "./js/admin.js": "./js/admin.js?v=72",
-            "./js/summaries.js": "./js/summaries.js?v=72",
-            "./js/additions.js": "./js/additions.js?v=72"
+            "./js/app.js": "./js/app.js?v=73",
+            "./js/state.js": "./js/state.js?v=73",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=73",
+            "./js/config.js": "./js/config.js?v=73",
+            "./js/utils.js": "./js/utils.js?v=73",
+            "./js/auth.js": "./js/auth.js?v=73",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=73",
+            "./js/map.js": "./js/map.js?v=73",
+            "./js/navigation.js": "./js/navigation.js?v=73",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=73",
+            "./js/distributor.js": "./js/distributor.js?v=73",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=73",
+            "./js/chat.js": "./js/chat.js?v=73",
+            "./js/activity.js": "./js/activity.js?v=73",
+            "./js/notifications.js": "./js/notifications.js?v=73",
+            "./js/availability.js": "./js/availability.js?v=73",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=73",
+            "./js/events.js": "./js/events.js?v=73",
+            "./js/stats.js": "./js/stats.js?v=73",
+            "./js/history.js": "./js/history.js?v=73",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=73",
+            "./js/reviews.js": "./js/reviews.js?v=73",
+            "./js/operators.js": "./js/operators.js?v=73",
+            "./js/admin.js": "./js/admin.js?v=73",
+            "./js/summaries.js": "./js/summaries.js?v=73",
+            "./js/additions.js": "./js/additions.js?v=73",
+            "./js/my-activity.js": "./js/my-activity.js?v=73"
         }
     }
     </script>

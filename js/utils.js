@@ -41,9 +41,11 @@ export function calculateDistance(lat1, lng1, lat2, lng2) {
     return R * c;
 }
 
+// Distances a la francaise (EPIC-T22) : « 385 m », « 1,2 km », « 16 km »
 export function formatDistance(km) {
-    if (km < 1) return `${Math.round(km * 1000)}m`;
-    return `${km.toFixed(1)}km`;
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    if (km < 10) return `${km.toFixed(1).replace('.', ',')} km`;
+    return `${Math.round(km)} km`;
 }
 
 export function generateStars(rating) {
@@ -1388,4 +1390,37 @@ export function findNearbyDuplicates(distributor, list = [], radiusM = 100) {
             const o = normalizeName(other.name);
             return !!o && !!name && (o.includes(name) || name.includes(o));
         })());
+}
+
+// ============================================
+// « MON ACTIVITE » (EPIC-T22)
+// ============================================
+// Une ligne de my_activity() -> { title, detail, tone } (tone : working / empty /
+// broken / absent / action / info, pour la pastille de couleur).
+export function describeActivityItem(item) {
+    const kind = item?.kind;
+    if (kind === 'signal') {
+        if (item.product_name) {
+            const dispo = item.state === 'available';
+            return { title: `${item.product_name} : ${dispo ? 'Dispo' : 'Pas dispo'}`, detail: '', tone: dispo ? 'working' : 'absent' };
+        }
+        const label = { working: 'En service', empty: 'Vide', broken: 'En panne' }[item.state] || item.state;
+        return { title: `État : ${label}`, detail: '', tone: item.state || 'info' };
+    }
+    if (kind === 'addition') {
+        const s = describeReviewStatus(item.state);
+        const tone = { pending: 'action', published: 'working', rejected: 'broken' }[item.state] || 'info';
+        return { title: 'Distributeur ajouté', detail: `${s.label}${item.detail ? ` : ${item.detail}` : ''}`, tone };
+    }
+    if (kind === 'review') {
+        const n = Math.max(0, Math.min(5, Number(item.state) || 0));
+        const body = String(item.detail || '').trim();
+        return { title: `Avis ${'★'.repeat(n)}${'☆'.repeat(5 - n)}`, detail: body.length > 90 ? `${body.slice(0, 89)}…` : body, tone: 'info' };
+    }
+    if (kind === 'operator') {
+        const s = describeOperatorStatus(item.state);
+        const tone = { ok: 'working', bad: 'broken', action: 'action' }[s.tone] || 'info';
+        return { title: 'Demande d’exploitant', detail: s.label, tone };
+    }
+    return { title: 'Activité', detail: '', tone: 'info' };
 }

@@ -32,7 +32,7 @@ test.describe('2. Navigation', () => {
         await page.click('.bottom-nav [data-tab="favorites"]');
         await page.waitForSelector('#subscriptions-view.view-active', { timeout: 3000 });
         const h2 = await page.textContent('#subscriptions-view h2');
-        expect(h2).toBe('Mes Favoris');
+        expect(h2).toBe('Mes favoris');
     });
 });
 
@@ -609,5 +609,48 @@ test.describe('29. Vues cachees et police des controles', () => {
         expect(r.tab).toBe(true);
         expect(r.navTab).toBe(true);
         expect(r.search).toBe(true);
+    });
+});
+
+// ============================================
+// 38. MON ACTIVITE, ACCUEIL, COHERENCE (EPIC-T22)
+// ============================================
+test.describe('38. Mon activité et cohérence', () => {
+    test('membre : historique (signal, ajout, avis), filtres, une ligne ouvre la fiche ; plus de points', async ({ page }) => {
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        const name = await page.evaluate(() => window.AppState.distributors[0].name);
+        const now = Date.now();
+        await page.route('**/rest/v1/rpc/my_activity', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+            { kind: 'signal', at: new Date(now - 60000).toISOString(), distributor_id: id, distributor_name: name, product_name: 'Margherita', state: 'available', detail: null },
+            { kind: 'addition', at: new Date(now - 3600000).toISOString(), distributor_id: 'inconnu', distributor_name: 'Fiche refusée', product_name: null, state: 'rejected', detail: 'Doublon' },
+            { kind: 'review', at: new Date(now - 7200000).toISOString(), distributor_id: id, distributor_name: name, product_name: null, state: '4', detail: 'Très bon' }
+        ]) }));
+        await page.evaluate(() => window.__testLogin());
+        await page.click('.bottom-nav [data-tab="activity"]');
+        await page.waitForSelector('#activity-view.view-active');
+        await expect(page.locator('#activity-view h2')).toHaveText('Mon activité');
+        const rows = page.locator('#activity-list .activity-row');
+        await expect(rows).toHaveCount(3);
+        await expect(rows.nth(0)).toContainText('Margherita : Dispo');
+        await expect(rows.nth(1)).toContainText('Refusée : Doublon');
+        await expect(rows.nth(1)).toBeDisabled();   // fiche refusee : pas de fiche a ouvrir
+        await expect(page.locator('#activity-view')).not.toContainText(/pts|Confirmer|Infirmer|empty/);
+        await page.click('.activity-filter[data-filter="review"]');
+        await expect(rows).toHaveCount(1);
+        await expect(rows.first()).toContainText('Avis ★★★★☆');
+        await rows.first().click();
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.evaluate(() => window.switchView('account'));
+        await expect(page.locator('#account-meta')).toHaveText('Connecté');
+    });
+
+    test('visiteur : « Mon activité » invite a se connecter ; accueil sans « sans compte » ni « machine »', async ({ page }) => {
+        await page.click('.bottom-nav [data-tab="activity"]');
+        await page.waitForSelector('#activity-view.view-active');
+        await expect(page.locator('#activity-empty')).toContainText('Connecte-toi pour retrouver ici');
+        await expect(page.locator('.activity-filters')).toBeHidden();
+        const onboarding = await page.locator('#geoloc-overlay').textContent();
+        expect(onboarding).not.toMatch(/sans compte|machine/i);
+        expect(onboarding).toContain('Connecte-toi pour signaler');
     });
 });

@@ -391,7 +391,7 @@ describe('openDistributorModal', () => {
         const list = document.getElementById('dist-products-list');
         assert.equal(list.querySelector('.product-status-btn').dataset.guest, '1');
         assert.equal(list.querySelector('.product-choices'), null);
-        assert.equal(list.querySelector('#dist-product-add').dataset.guest, '1');
+        assert.equal(list.querySelector('#dist-product-add'), null, 'EPIC-T22 : aucune carte ajout pour un visiteur');
     });
 });
 
