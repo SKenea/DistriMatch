@@ -19,6 +19,19 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T23 Voir le distributeur sur la carte depuis sa fiche (Stephane, 2026-10-07)
+Objectif : depuis une fiche ouverte via la liste ou la recherche, retrouver le
+distributeur sur la carte. Hors perimetre : itineraire dans l'app.
+
+- [x] T23-US1 En tant qu'utilisateur, je localise le distributeur depuis sa fiche
+  - Acceptance : icone epingle « Voir sur la carte » dans l'en-tete de la fiche (tout le
+    monde) ; au toucher : la fiche et la liste se ferment, la carte se centre sur le
+    distributeur (zoom de rue), sa pastille pulse quelques secondes ; un filtre de type
+    qui la masquait est leve ; toucher la pastille rouvre la fiche ; « retour » ramene a
+    la carte sans rouvrir la liste ; cachee tant que la carte n'existe pas (deep link
+    avant la geolocalisation).
+- [x] T23-TS1 Tests et captures avant fusion.
+
 ### EPIC-T22 Coherence et « Mon activité » (critique de design, Stephane, 2026-10-07)
 Objectif : remettre au niveau de la fiche les ecrans restes en retard (accueil, Activite,
 Compte), une seule voix visuelle, et un vrai historique de ses contributions.

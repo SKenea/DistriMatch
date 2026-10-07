@@ -17,6 +17,7 @@ import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshRevi
 import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
+import { locateOnMap } from './map.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -105,13 +106,34 @@ function handleSidePanelClick(e) {
 }
 
 export function initSidePanel() {
-    // EPIC-T19 : etat et stock arrives (ou signal envoye) -> la liste ouverte suit
-    document.addEventListener(SUMMARIES_EVENT, () => {
-        if (document.getElementById('sidebar')?.classList.contains('open')) openSidePanelForFilters(currentFilter);
-    });
+    // EPIC-T19 : etat et stock arrives (ou signal envoye) -> la liste ouverte suit,
+    // mise a jour SUR PLACE (EPIC-T23) : reconstruire les lignes perdait un toucher en cours
+    document.addEventListener(SUMMARIES_EVENT, refreshSidePanelSummaries);
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
     document.getElementById('side-panel-list')?.addEventListener('click', handleSidePanelClick);
+}
+
+function refreshSidePanelSummaries() {
+    if (!document.getElementById('sidebar')?.classList.contains('open')) return;
+    document.querySelectorAll('#side-panel-list .side-panel-item[data-id]').forEach(item => {
+        const d = AppState.distributors.find(x => x.id === item.dataset.id);
+        if (!d) return;
+        const summary = getDistributorSummary(d);
+        const photo = item.querySelector('.side-panel-item-photo');
+        if (photo) {
+            photo.classList.remove('is-working', 'is-empty', 'is-broken', 'is-unknown', 'is-soft');
+            photo.classList.add(`is-${summary.state}`);
+            if (summary.state !== 'unknown' && !summary.fresh) photo.classList.add('is-soft');
+            const ring = photo.querySelector('.side-panel-ring');
+            if (ring) ring.outerHTML = renderStatusRing(summary, 'side-panel-ring');
+        }
+        const state = item.querySelector('.side-panel-item-state');
+        if (state && d.reviewStatus !== 'pending') {
+            state.className = `side-panel-item-state is-${summary.state}`;
+            state.innerHTML = `<span class="side-panel-item-state-word">${escapeHTML(summary.label)}</span>${summary.stock ? ` · ${escapeHTML(summary.stock)}` : ''}`;
+        }
+    });
 }
 
 export function openSidePanelForType(type) {
@@ -236,6 +258,14 @@ export function initDistModal() {
     initFicheEdit();   // EPIC-T12 : modifier sans bouton (renommer, retirer, ajouter, prix)
     initReviews();
     initOperators();   // EPIC-T18 : « C'est ton distributeur ? », tag Exploitant
+    // EPIC-T23 : « Voir sur la carte » : ferme la fiche et la liste, puis centre
+    document.getElementById('dist-action-locate')?.addEventListener('click', () => {
+        const d = AppState.currentDistributor;
+        if (!d) return;
+        closeDistModal();
+        closeSidePanel();
+        setTimeout(() => locateOnMap(d.id), 60);
+    });
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
     // Distributeur seulement local : « Publier ce distributeur » (EPIC-T9)
@@ -420,6 +450,9 @@ export function openDistributorModal(id) {
     document.getElementById('dist-apropos-distance').textContent = distance || 'Distance non disponible';
     renderFicheHours(distributor);
     renderOperatorSection(distributor);
+    // EPIC-T23 : pas de carte avant la geolocalisation (deep link) -> pas d'epingle
+    const locateBtn = document.getElementById('dist-action-locate');
+    if (locateBtn) locateBtn.hidden = !AppState.mapInitialized;
     // « Ajouté par la communauté » ne s'affiche pas pour une fiche fictive : la demo prime
     const addedRow = document.getElementById('dist-apropos-added-row');
     if (addedRow) addedRow.style.display = (distributor.isUserAdded && !distributor.isDemo) ? 'flex' : 'none';
