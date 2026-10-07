@@ -2669,3 +2669,10 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .geoloc-hint { color: rgba(255, 255, 255, 0.95) !important; font-size: 0.8rem !important; }
 .geoloc-subtitle { color: #FFFFFF !important; }
 .geoloc-benefit-text span { color: rgba(255, 255, 255, 0.95); }
+
+/* Grand ecran (Stephane 2026-10-07) : hauteur fixe pour que la fiche ne change ni
+   de taille ni de position d'un onglet a l'autre ; le contenu defile dedans.
+   Le telephone reste en plein ecran (regle max-width ci-dessus). */
+@media (min-width: 769px) {
+    .dist-modal { height: min(720px, 90vh); }
+}
