@@ -1784,3 +1784,70 @@ describe('« Mon activité » : lignes du journal (EPIC-T22)', () => {
         assert.ok(describeActivityItem(rows[3]).detail.length <= 90);
     });
 });
+
+// ============================================
+// EPIC-T25 : notifications app fermee
+// ============================================
+import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, isInCooldown, PUSH_COOLDOWN_MS } from '../../supabase/functions/push-notify/logic.js';
+import { buildFavoriteMessage } from '../../js/notifications.js';
+import { urlBase64ToUint8Array, needsHomeScreenForPush } from '../../js/utils.js';
+
+describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
+    const at = (min) => new Date(Date.UTC(2026, 9, 8, 10, min)).toISOString();
+    const machine = (state, min) => ({ product_id: null, state, created_at: at(min) });
+    const product = (state, min) => ({ product_id: 7, state, created_at: at(min) });
+
+    it('etat : vide / en panne notifient une fois, en service seulement apres une panne', () => {
+        assert.deepEqual(decideBaseEvent(machine('empty', 5), null, machine('working', 1)), { type: 'empty' });
+        assert.equal(decideBaseEvent(machine('empty', 5), null, machine('empty', 1)), null);
+        assert.deepEqual(decideBaseEvent(machine('broken', 5), null, null), { type: 'broken' });
+        assert.deepEqual(decideBaseEvent(machine('working', 5), null, machine('broken', 1)), { type: 'working' });
+        assert.equal(decideBaseEvent(machine('working', 5), null, machine('working', 1)), null);
+        assert.equal(decideBaseEvent(machine('working', 5), null, null), null);
+    });
+
+    it('produit : de nouveau dispo apres « Pas dispo » ou un distributeur vide ; rien pour « Pas dispo »', () => {
+        assert.deepEqual(decideBaseEvent(product('available', 9), product('absent', 2), null), { type: 'restock' });
+        assert.deepEqual(decideBaseEvent(product('available', 9), product('available', 1), machine('empty', 4)), { type: 'restock' });
+        assert.equal(decideBaseEvent(product('available', 9), product('available', 5), machine('empty', 1)), null);
+        assert.deepEqual(decideBaseEvent(product('available', 9), null, null), { type: 'available' });
+        assert.equal(decideBaseEvent(product('absent', 9), product('available', 1), null), null);
+    });
+
+    it('« vu dispo » seulement pour un produit suivi ; les autres evenements pour tous', () => {
+        assert.deepEqual(eventForSubscriber({ type: 'available' }, 'Œufs', ['œufs']), { type: 'stock', product: 'Œufs' });
+        assert.equal(eventForSubscriber({ type: 'available' }, 'Œufs', ['pain']), null);
+        assert.deepEqual(eventForSubscriber({ type: 'restock' }, 'Pain', []), { type: 'restock', product: 'Pain' });
+        assert.deepEqual(eventForSubscriber({ type: 'empty' }, null, []), { type: 'empty' });
+        assert.equal(eventForSubscriber(null, 'x', ['x']), null);
+    });
+
+    it('memes textes que le centre de notifications', () => {
+        for (const event of [{ type: 'broken' }, { type: 'working' }, { type: 'empty' }, { type: 'stock', product: 'Œufs' }, { type: 'restock', product: 'Pain' }]) {
+            assert.equal(buildPushMessage('La Ferme', event), buildFavoriteMessage('La Ferme', event));
+        }
+        assert.equal(buildPushMessage('La Ferme', { type: 'stock', product: 'Œufs' }), 'Œufs vu dispo chez La Ferme');
+    });
+
+    it('heures calmes dans le fuseau de l’abonne, anti-rafale de 30 min', () => {
+        const lateUtc = new Date(Date.UTC(2026, 9, 8, 23, 30));   // 01:30 a Paris, 19:30 a New York
+        assert.equal(isQuietTime(22, 8, 'Europe/Paris', lateUtc), true);
+        assert.equal(isQuietTime(22, 8, 'America/New_York', lateUtc), false);
+        assert.equal(isQuietTime(null, null, 'Europe/Paris', lateUtc), false);
+        assert.equal(isQuietTime(13, 14, 'Fuseau/Inconnu', new Date(Date.UTC(2026, 9, 8, 13, 10))), true);
+        const now = Date.UTC(2026, 9, 8, 12, 0);
+        assert.equal(isInCooldown(new Date(now - PUSH_COOLDOWN_MS + 60000).toISOString(), now), true);
+        assert.equal(isInCooldown(new Date(now - PUSH_COOLDOWN_MS - 60000).toISOString(), now), false);
+        assert.equal(isInCooldown(null, now), false);
+    });
+
+    it('cle VAPID decodee ; iPhone hors ecran d’accueil = guide', () => {
+        const key = urlBase64ToUint8Array('BAyf_Y4xhWwQGtGPnwY61v2hA0rgJjoAQSe3B-7gzIq82cQNjahR__HDhrXthUeqhp7QXc9OOKI6BOTmKoyZ_7o');
+        assert.equal(key.length, 65);
+        assert.equal(key[0], 4);
+        const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
+        assert.equal(needsHomeScreenForPush(iphone, false), true);
+        assert.equal(needsHomeScreenForPush(iphone, true), false);
+        assert.equal(needsHomeScreenForPush('Mozilla/5.0 (Linux; Android 14) Chrome/120', false), false);
+    });
+});

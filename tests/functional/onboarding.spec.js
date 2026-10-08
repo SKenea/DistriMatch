@@ -129,17 +129,18 @@ test.describe('22. Geolocalisation obligatoire', () => {
 test.describe('30. Ecran d\'accueil', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
-    test('« Fais passer le mot. » : le geste et la carte, ni « tap », ni « reste », ni rythme, ni territoire (EPIC-T24)', async ({ browser }) => {
+    test('« Ton distributeur préféré te prévient. » : favori, notification, ni « tap », ni « reste », ni territoire (EPIC-T24/T25)', async ({ browser }) => {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         await page.goto(BASE_URL);
         await page.waitForSelector('#geoloc-btn', { state: 'visible', timeout: 15000 });
         const text = await page.textContent('#geoloc-overlay');
-        expect(text).toContain('Fais passer le mot.');
-        expect(text).toContain('et les membres de la communauté en sont informés.');
+        expect(text).toContain('Ton distributeur préféré te prévient.');
+        expect(text).toContain('dès que tes œufs sont dispo, tu le sais, sans te déplacer.');
+        expect(text).toContain('Œufs vu dispo chez');
         await expect(page.locator('#geoloc-btn')).toContainText('Voir autour de moi');
-        await expect(page.locator('.welcome-pin.is-sel')).toBeVisible();
+        await expect(page.locator('.welcome-pin.is-sel .welcome-fav')).toBeVisible();
         expect(text).not.toMatch(/\btap\b|\breste\b|habitude|machine/i);
         expect(text).not.toContain('Alertes stock');
         expect(text).not.toMatch(/C[oô]te Basque/);

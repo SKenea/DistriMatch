@@ -58,6 +58,8 @@ export const NotificationPrefs = {
     perDistributor: {},
     followedProducts: [],
     lastNotifications: {},
+    // Notifications app fermee acceptees sur cet appareil (EPIC-T25, js/push.js)
+    push: false,
     // Dernier etat vu des machines en favori (js/favorites-watch.js) :
     // { [distributorId]: { machineState, machineAt, products: { [productId]: { state, at } } } }
     lastSeenSignals: {}

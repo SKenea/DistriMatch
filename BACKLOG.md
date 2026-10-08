@@ -19,6 +19,45 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T25 Ton distributeur préféré te prévient, même app fermée (Stephane, 2026-10-08)
+Objectif : etre prevenu quand son distributeur favori change (vide, en panne, de nouveau
+en service, produit suivi dispo) meme quand l'app est fermee, et le dire des l'accueil.
+Valeur : ne plus se deplacer pour rien ; raison de revenir dans l'app.
+Decisions (Stephane 2026-10-08) : sans compte (abonnement lie au telephone, comme les
+favoris) ; l'accueil « Ton distributeur préféré te prévient. » ne sort qu'avec les
+notifications. Hors perimetre : e-mail, SMS, application native.
+
+- [ ] T25-US1 En tant que visiteur, je comprends des l'accueil que mon distributeur
+  prefere me previent
+  - Acceptance : maquette retenue `docs/maquettes/2026-10-07-accueil/` (v7, titre 1) :
+    titre « Ton distributeur préféré te prévient. », sous-titre « Mets-le en favori : dès
+    que tes œufs sont dispo, tu le sais, sans te déplacer. », pastille des oeufs avec le
+    coeur des favoris, exemple de notification « Œufs vu dispo chez … » (texte reel de
+    l'app) ; apercu de partage aligne ; ni « tap », ni « reste », aucun lieu reel.
+- [ ] T25-US2 En tant qu'utilisateur qui met un favori, on me propose d'etre prevenu meme
+  app fermee
+  - Acceptance : au premier coeur, une invitation « Être prévenu même app fermée ? »
+    (jamais a l'ouverture de l'app) ; Oui -> permission du navigateur -> abonnement ;
+    Non -> plus redemande, reactivable dans les reglages des notifications ; refus du
+    navigateur explique sans bloquer ; sur iPhone hors ecran d'accueil : petit guide
+    « Ajoute DistriMatch à ton écran d'accueil » au lieu de la demande.
+- [ ] T25-US3 En tant qu'abonne, je recois une notification quand un de mes favoris change
+  - Acceptance : memes evenements que la veille actuelle (vide, en panne, de nouveau en
+    service, produit suivi vu dispo, de nouveau dispo) et memes textes ; jamais pour son
+    propre signal (si connecte), ni pour les signaux de demo ; heures calmes et anti-rafale
+    (un meme favori au plus toutes les 30 min) respectees ; toucher la notification ouvre
+    la fiche ; delai cible < 1 min apres le signal.
+- [ ] T25-US4 En tant qu'abonne, je garde la main
+  - Acceptance : reglages : activer / couper « même app fermée » ; retirer un favori le
+    retire de l'abonnement ; « Réinitialiser mes données » supprime l'abonnement ; un
+    abonnement expire (navigateur) est efface automatiquement.
+- [ ] T25-TS1 Technique : service worker limite aux notifications (aucun cache), cles
+  VAPID (publique dans config.js, privee en secret serveur), table `push_subscriptions`
+  non lisible par l'API + RPC d'abonnement anonymes (l'adresse d'abonnement sert de
+  secret), declencheur sur les signaux -> fonction serveur Supabase qui envoie les
+  notifications. Prerequis : jeton Supabase avec les droits Edge Functions (Stephane).
+- [ ] T25-TS2 Tests (unitaires, base, fonctionnels) et captures iPhone avant fusion.
+
 ### EPIC-T24 Accueil « Fais passer le mot. » (Stephane, 2026-10-07)
 Objectif : un ecran d'accueil percutant, positif, compris a tout age, qui montre le
 geste de l'app (dire ce qui est dispo) et son effet sur la carte. Maquette retenue :

@@ -11,6 +11,7 @@ import { switchView } from './navigation.js';
 import { addActivityItem } from './activity.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { confirmDialog } from './confirm-dialog.js';
+import { syncPushSubscription, refreshPushSettings } from './push.js';
 
 // ============================================
 // HEURES CALMES ET COOLDOWN
@@ -426,6 +427,7 @@ export function followProduct(productName) {
         saveNotificationPrefs();
         showToast(`Tu seras notifié pour "${productName}"`, 'success');
         updateFollowedProductsList();
+        syncPushSubscription();
     }
 }
 
@@ -436,6 +438,7 @@ export function unfollowProduct(productName) {
     saveNotificationPrefs();
     showToast(`Produit "${productName}" retire`, 'info');
     updateFollowedProductsList();
+    syncPushSubscription();
 }
 
 function updateFollowedProductsList() {
@@ -476,6 +479,7 @@ export function openNotificationSettings() {
 
     updateFollowedProductsList();
     refreshNotifPermissionLabel();
+    refreshPushSettings();
 
     switchView('notification-settings');
 }
@@ -516,6 +520,7 @@ export function saveNotificationSettingsFromUI() {
     NotificationPrefs.geofence.radius = parseInt(document.getElementById('geofence-radius').value);
 
     saveNotificationPrefs();
+    syncPushSubscription();
     showToast('Paramètres sauvegardés', 'success');
 }
 

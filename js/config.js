@@ -42,6 +42,10 @@ export const PROD_HOSTNAMES = ['skenea.github.io', 'distrimatch.pages.dev'];
 // galerie, ni vignettes, ni photo a l'ajout d'un distributeur. true = tout revient.
 export const FEATURES = { chat: false, photos: false };
 
+// Notifications app fermee (EPIC-T25) : cle PUBLIQUE VAPID (la privee est un
+// secret de la fonction serveur push-notify, jamais dans le depot).
+export const VAPID_PUBLIC_KEY = 'BAyf_Y4xhWwQGtGPnwY61v2hA0rgJjoAQSe3B-7gzIq82cQNjahR__HDhrXthUeqhp7QXc9OOKI6BOTmKoyZ_7o';
+
 // ============================================
 // HELPERS
 // ============================================

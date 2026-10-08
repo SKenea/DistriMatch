@@ -281,3 +281,91 @@ test.describe('12. Suivre un produit (modale)', () => {
         expect(stored.toLowerCase()).not.toContain('ne doit pas etre suivi');
     });
 });
+
+// ============================================
+// 40. NOTIFICATIONS APP FERMEE (EPIC-T25)
+// ============================================
+
+async function favoriteDemo(page) {
+    await page.evaluate(() => window.openDistributorModal('dist-007'));
+    await page.waitForSelector('#dist-modal-overlay.active');
+    await page.click('#dist-action-favorite');
+}
+
+test.describe('40. Notifications app fermee', () => {
+    // Chromium sans affichage repond « denied » : on simule « pas encore demande ».
+    test.beforeEach(async ({ page }) => {
+        await page.evaluate(() => {
+            localStorage.removeItem('distrimatch_push_asked');
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+        });
+    });
+
+    test('premier favori : invitation « Être prévenu même app fermée ? » ; « Plus tard » = plus redemandee', async ({ page }) => {
+        await favoriteDemo(page);
+        const modal = page.locator('#confirm-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toContainText('Être prévenu même app fermée ?');
+        await expect(page.locator('#confirm-ok')).toHaveText('Oui, préviens-moi');
+        await page.click('#confirm-cancel');
+        await expect(modal).not.toHaveClass(/active/);
+        // retirer puis remettre : pas de nouvelle invitation
+        await page.click('#dist-action-favorite');
+        await page.click('#dist-action-favorite');
+        await page.waitForTimeout(300);
+        await expect(modal).not.toHaveClass(/active/);
+    });
+
+    test('« Oui » puis permission refusee : message clair, reglage coupe', async ({ page }) => {
+        await page.evaluate(() => { Notification.requestPermission = async () => 'denied'; });
+        await favoriteDemo(page);
+        await page.click('#confirm-ok');
+        await expect(page.locator('.toast').last()).toContainText('Notifications bloquées');
+        expect(await page.evaluate(() => window.NotificationPrefs?.push ?? JSON.parse(localStorage.getItem('snackmatch_notification_prefs') || '{}').push)).toBe(false);
+    });
+
+    test('« Oui » et permission accordee : abonnement envoye avec les favoris, sans compte', async ({ page }) => {
+        let body = null;
+        await page.route('**/rest/v1/rpc/push_subscribe', async route => {
+            body = route.request().postDataJSON();
+            await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+        });
+        await page.evaluate(() => {
+            Notification.requestPermission = async () => 'granted';
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+            const fakeSub = {
+                endpoint: 'https://push.test/abc',
+                toJSON: () => ({ endpoint: 'https://push.test/abc', keys: { p256dh: 'p256', auth: 'auth' } })
+            };
+            const fakeReg = { pushManager: { getSubscription: async () => null, subscribe: async () => fakeSub } };
+            navigator.serviceWorker.register = async () => fakeReg;
+            Object.defineProperty(navigator.serviceWorker, 'ready', { configurable: true, value: Promise.resolve(fakeReg) });
+        });
+        await favoriteDemo(page);
+        await page.click('#confirm-ok');
+        await expect(page.locator('.toast').last()).toContainText('tu seras prévenu même app fermée');
+        expect(body.p_endpoint).toBe('https://push.test/abc');
+        expect(body.p_favorites).toContain('dist-007');
+        expect(typeof body.p_tz).toBe('string');
+    });
+
+    test('reglages : interrupteur « Prévenu même app fermée » et son explication', async ({ page }) => {
+        await page.evaluate(async () => (await import('./js/notifications.js')).openNotificationSettings());
+        await page.waitForSelector('#notification-settings.view-active');
+        await expect(page.locator('#notification-settings')).toContainText('Prévenu même app fermée');
+        await expect(page.locator('#push-state')).not.toBeEmpty();
+    });
+});
+
+test.describe('40b. Notifications app fermee sur iPhone', () => {
+    test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1' });
+
+    test('hors ecran d’accueil : guide « Ajoute DistriMatch à ton écran d’accueil » au lieu de la demande', async ({ page }) => {
+        await page.evaluate(() => localStorage.removeItem('distrimatch_push_asked'));
+        await favoriteDemo(page);
+        const modal = page.locator('#confirm-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toContainText('Ajoute DistriMatch à ton écran d’accueil');
+        await expect(modal).toContainText('Sur l’écran d’accueil');
+    });
+});
