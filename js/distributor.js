@@ -8,7 +8,7 @@ import {
     updateImplicitProfile, saveToLocalStorage,
     resolveProductStatus, productIconKey, describeMenuHeader
 } from './utils.js';
-import { updateBadges, goBackToMap } from './navigation.js';
+import { updateBadges } from './navigation.js';
 import { updateMapMarkers } from './map.js';
 import { addActivityItem, updateActivityBadge } from './activity.js';
 import { generateWelcomeMessage } from './chat.js';
@@ -21,7 +21,6 @@ import { maybeOfferPush, syncPushSubscription } from './push.js';
 // PAGE DISTRIBUTEUR
 // ============================================
 
-// La fonction showDetails legacy a ete supprimee. Utiliser showInBottomSheet (js/bottomsheet.js).
 
 // ============================================
 // PHOTOS
@@ -206,49 +205,6 @@ export function renderProductRow(p, index, { canInform = false, guest = false } 
         </div>`;
 }
 
-export function toggleAddProductForm() {
-    const form = document.getElementById('bs-add-product-form');
-    if (!form) return;
-    form.style.display = form.style.display === 'none' ? 'flex' : 'none';
-    if (form.style.display === 'flex') {
-        document.getElementById('bs-detail-product-name').value = '';
-        document.getElementById('bs-detail-product-name').focus();
-    }
-}
-
-export async function submitDetailProduct() {
-    if (!(await requireAuth())) return;
-
-    const name = document.getElementById('bs-detail-product-name').value.trim();
-
-    if (!name || !AppState.currentDistributor) return;
-
-    const product = { name, available: true };
-
-    if (supabaseClient) {
-        try {
-            const { data, error } = await supabaseClient.from('products').insert({
-                distributor_id: AppState.currentDistributor.id,
-                name: name,
-                available: true
-            }).select('id').single();
-            if (error) throw error;
-            product.dbId = data.id;
-            console.log('[DistriMatch] Produit ajoute sur Supabase:', name);
-        } catch (e) {
-            console.warn('[DistriMatch] Erreur ajout produit Supabase:', e.message);
-        }
-    }
-
-    AppState.currentDistributor.products.push(product);
-    renderProductsList(AppState.currentDistributor, 'bs-products-list');
-
-    document.getElementById('bs-detail-product-name').value = '';
-    document.getElementById('bs-add-product-form').style.display = 'none';
-
-    showToast(`${escapeHTML(name)} ajouté !`, 'success');
-}
-
 // ============================================
 // ITINERAIRE
 // ============================================
@@ -328,7 +284,7 @@ export function displaySubscriptions() {
         const unreadCount = FEATURES.chat ? (Conversations.unreadCounts[id] || 0) : 0;
 
         return `
-            <div class="subscription-card" onclick="openDistributorModal('${d.id}', false, true)">
+            <div class="subscription-card" onclick="openDistributorModal('${d.id}')">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
                 <div class="subscription-image" style="background: ${typeConfig.gradient || '#E63946'}">
                     <span class="subscription-emoji">${d.emoji}</span>

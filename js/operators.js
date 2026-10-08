@@ -16,7 +16,7 @@
 import { AppState, supabaseClient } from './state.js';
 import {
     escapeHTML, showToast, validateOperatorRequest, describeOperatorRequestError, OPERATOR_RELATIONS,
-    OPERATOR_STEPS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, isPrivateFiche
+    OPERATOR_STEPS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, isPrivateFiche, formatWhen
 } from './utils.js';
 import { isAuthenticated, requireAuth, onAuthChange } from './auth.js';
 import { switchView, registerViewCallback } from './navigation.js';
@@ -202,14 +202,6 @@ export function renderOperatorProgress(status) {
         const state = n < s.step || status === 'approved' ? 'done' : n === s.step ? 'current' : 'todo';
         return `<li class="is-${state}"${state === 'current' ? ' aria-current="step"' : ''}><span class="operator-progress-dot" aria-hidden="true"></span>${escapeHTML(label)}</li>`;
     }).join('')}</ol>`;
-}
-
-function formatWhen(iso) {
-    try {
-        return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-        return '';
-    }
 }
 
 // Fil : la demande en premiere bulle, puis les messages (membre / equipe / evenements)

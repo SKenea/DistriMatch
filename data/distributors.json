@@ -569,6 +569,14 @@
     "general": {
       "label": "Distributeur mixte",
       "gradient": "linear-gradient(135deg, #636e72 0%, #b2bec3 100%)"
+    },
+    "ice": {
+      "label": "Glacons",
+      "gradient": "linear-gradient(135deg, #74b9ff 0%, #a8d8ea 100%)"
+    },
+    "other": {
+      "label": "Autre",
+      "gradient": "linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)"
     }
   }
 }

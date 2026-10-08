@@ -4,9 +4,7 @@
 
 import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
-    escapeHTML, formatDistance, showToast, getFilteredDistributors,
-    updateImplicitProfile, getTopPreferredTypes, loadUserDistributors,
-    getLevelInfo
+    escapeHTML, formatDistance, updateImplicitProfile, getTopPreferredTypes, loadUserDistributors, getLevelInfo
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 import { pushLayer, popLayer } from './history.js';
@@ -122,26 +120,10 @@ export function updateConversationsBadge() {
 // SIDEBAR
 // ============================================
 
-export function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-
-    AppState.sidebarOpen = !AppState.sidebarOpen;
-
-    if (AppState.sidebarOpen) {
-        sidebar.classList.add('open');
-        overlay.classList.add('active');
-    } else {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-    }
-}
-
 export function closeSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
 
-    AppState.sidebarOpen = false;
     sidebar.classList.remove('open');
     overlay.classList.remove('active');
 }

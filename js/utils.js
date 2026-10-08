@@ -1462,3 +1462,12 @@ export function zoomFromDrag(startZoom, dy, minZoom, maxZoom, pxPerLevel = 120) 
     const z = startZoom + dy / pxPerLevel;
     return Math.min(maxZoom, Math.max(minZoom, z));
 }
+
+// Date et heure courtes d'un message (« 8 oct., 14:05 ») : fils d'echange
+export function formatWhen(iso) {
+    try {
+        return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return '';
+    }
+}

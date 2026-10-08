@@ -234,7 +234,7 @@ function createDistributorIcon(d, isSubscribed) {
 function openFromMap(d) {
     const zoom = Math.max(mainMap.getZoom(), 15);
     mainMap.setView(centerAboveSheet([d.lat, d.lng], zoom), zoom);
-    if (window.showDetails) window.showDetails(d.id);   // bottom sheet (pattern Google Maps)
+    if (window.openDistributorModal) window.openDistributorModal(d.id);   // bottom sheet (pattern Google Maps)
 }
 
 // EPIC-T26 : sur telephone, la fiche couvre le bas de l'ecran (58 %) : on centre
@@ -411,5 +411,3 @@ export function locateOnMap(id) {
     return true;
 }
 
-// Ancien nom (non utilise) garde pour compatibilite
-export const highlightOnMap = locateOnMap;
