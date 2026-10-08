@@ -478,33 +478,9 @@ export function openNotificationSettings() {
     document.getElementById('radius-value').textContent = `${NotificationPrefs.geofence.radius / 1000} km`;
 
     updateFollowedProductsList();
-    refreshNotifPermissionLabel();
     refreshPushSettings();
 
     switchView('notification-settings');
-}
-
-export function refreshNotifPermissionLabel() {
-    const label = document.getElementById('notif-permission-state');
-    const btn = document.getElementById('notif-permission-btn');
-    if (!label) return;
-    const supported = typeof window !== 'undefined' && 'Notification' in window;
-    const perm = supported ? Notification.permission : 'unsupported';
-    const map = {
-        granted: 'Notifications navigateur : activées',
-        denied: 'Notifications navigateur : bloquées (à réactiver dans le navigateur). Repli sur le bandeau in-app.',
-        default: 'Notifications navigateur : non autorisees',
-        unsupported: 'Notifications navigateur non supportées ici. Repli sur le bandeau in-app.'
-    };
-    label.textContent = map[perm] || map.default;
-    if (btn) btn.style.display = (perm === 'default') ? 'inline-flex' : 'none';
-}
-
-export function askNotifPermissionFromUI() {
-    requestNotificationPermission();
-    // requestPermission peut etre async (promesse) ou callback ; on
-    // rafraichit apres un court delai pour refleter le choix.
-    setTimeout(refreshNotifPermissionLabel, 300);
 }
 
 export function saveNotificationSettingsFromUI() {

@@ -31,7 +31,10 @@ function getFocusable(container) {
     );
 }
 
-export function activateFocusTrap(modal, onEscape) {
+// options.initialFocus : element a focaliser a l'ouverture (ex. le cadre de la
+// fiche, pour ne pas allumer l'anneau de la croix quand la page s'ouvre depuis
+// une notification ou un QR code, sans toucher prealable).
+export function activateFocusTrap(modal, onEscape, options = {}) {
     if (!modal || modal.__focusTrap) return;
     const trigger = document.activeElement;
 
@@ -69,7 +72,7 @@ export function activateFocusTrap(modal, onEscape) {
     // modale auth), sinon le 1er focusable, sinon la modale (tabindex="-1").
     const items = getFocusable(modal);
     const preferred = modal.querySelector('[autofocus]');
-    const target = preferred || items[0] || modal;
+    const target = options.initialFocus || preferred || items[0] || modal;
     target.focus();
     // Une modale qui passe de visibility:hidden a visible dans la meme frame
     // (audit UX-20) peut refuser le focus immediat : on reessaie au prochain

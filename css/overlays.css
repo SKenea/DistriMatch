@@ -2663,3 +2663,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
    l'en-tete (epingle, coeur, partage, croix) ne bougent plus d'un onglet a
    l'autre selon qu'il defile ou non (Stephane 2026-10-07). */
 .dist-modal { scrollbar-gutter: stable; }
+
+/* Le cadre de la fiche recoit le focus a l'ouverture : pas d'anneau sur lui,
+   l'anneau reste sur les boutons atteints au clavier. */
+.dist-modal:focus, .dist-modal:focus-visible { outline: none; }
