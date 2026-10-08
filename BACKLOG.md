@@ -25,30 +25,31 @@ Valeur : plus de mauvais toucher, plus de « fermer, dezoomer, retoucher » ; la
 le centre de l'app. Ordre : US1 et US2, puis US3 et US4, puis US5 ; une PR par point,
 essai par Stephane sur son telephone avant chaque fusion.
 
-- [ ] T26-US1 En tant qu'utilisateur, quand des pastilles se chevauchent sous mon doigt, je
+- [x] T26-US1 En tant qu'utilisateur, quand des pastilles se chevauchent sous mon doigt, je
   choisis celle que je veux
   - Acceptance : toucher une pastille qui en chevauche d'autres ouvre un petit menu
     « N distributeurs ici » (emoji, nom, etat · stock) ; un choix ouvre sa fiche ; une
     pastille isolee ouvre sa fiche directement comme avant ; rayon plus large au doigt
     qu'a la souris ; toucher une pastille ne fait plus dezoomer la carte.
-- [ ] T26-US2 En tant qu'utilisateur sur telephone, la fiche ne cache pas toute la carte
+- [x] T26-US2 En tant qu'utilisateur sur telephone, la fiche ne cache pas toute la carte
   - Acceptance : la fiche s'ouvre a mi-hauteur (feuille du bas), la carte visible au-dessus
     avec la pastille choisie mise en avant ; tirer vers le haut = plein ecran, vers le bas
     = fermer (et une voie en un toucher pour chaque, WCAG 2.5.1) ; toucher une autre
     pastille ouvre sa fiche sans rien fermer ; ordinateur inchange.
-- [ ] T26-US3 En tant qu'utilisateur, la recherche et les notifications ne se superposent plus
+- [x] T26-US3 En tant qu'utilisateur, la recherche et les notifications ne se superposent plus
   - Acceptance : un seul ecran a la fois (ouvrir l'un ferme l'autre) ; champ de recherche
     jamais coupe ; recherche vide = suggestions (distributeurs proches, types) au lieu
     d'une page blanche ; zones de toucher des icones du haut >= 44 px ; « Ajoute un
     distributeur a tes favoris » (plus « machine ») dans les notifications vides.
-- [ ] T26-US4 En tant qu'utilisateur, le titre de groupe de la liste reste en place
+- [x] T26-US4 En tant qu'utilisateur, le titre de groupe de la liste reste en place
   - Acceptance : « Plus loin · plus de 5 km » (et les autres titres de groupe) reste fixe
     en haut de la liste en defilant, sur toute la largeur, opaque, sans saut, sur iPhone.
-- [ ] T26-US5 En tant qu'utilisateur, je zoome d'un seul doigt
+- [x] T26-US5 En tant qu'utilisateur, je zoome d'un seul doigt
   - Acceptance : double toucher + doigt maintenu + glisser = zoom continu centre sous le
     doigt (vers le bas = zoom avant, comme Google Maps) ; double toucher simple, pincement
     et boutons + / - inchanges.
-- [ ] T26-TS1 Tests (unitaires, fonctionnels) et essai sur telephone avant chaque fusion.
+- [x] T26-TS1 Tests (unitaires, fonctionnels) a chaque PR (#172 a #175). Pas d'adresse d'apercu par
+  branche : l'essai sur telephone se fait apres fusion, sur le site en ligne.
 
 ### EPIC-T25 Ton distributeur préféré te prévient, même app fermée (Stephane, 2026-10-08)
 Objectif : etre prevenu quand son distributeur favori change (vide, en panne, de nouveau

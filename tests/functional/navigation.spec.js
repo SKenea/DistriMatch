@@ -844,3 +844,40 @@ test.describe('43. Recherche, notifications et titres de groupe', () => {
         expect(r).toMatchObject({ dTop: 0, dW: 0, dLeft: 0 });
     });
 });
+
+// ============================================
+// 44. ZOOM D'UN SEUL DOIGT (EPIC-T26)
+// ============================================
+
+test.describe('44. Zoom d’un seul doigt', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    async function gesture(page, moves) {
+        return page.evaluate(async (moves) => {
+            const state = await import('./js/state.js');
+            const map = state.mainMap;
+            map.setZoom(15, { animate: false });
+            const pane = map.getPane('mapPane');
+            const rect = map.getContainer().getBoundingClientRect();
+            const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+            const fire = (type, cy, id) => pane.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: cy, pointerId: id, pointerType: 'touch', isPrimary: true }));
+            const wait = (ms) => new Promise(r => setTimeout(r, ms));
+            fire('pointerdown', y, 1); await wait(40); fire('pointerup', y, 1);
+            await wait(80);
+            fire('pointerdown', y, 2);
+            for (const dy of moves) { fire('pointermove', y + dy, 2); await wait(16); }
+            fire('pointerup', y + (moves[moves.length - 1] || 0), 2);
+            await wait(400);
+            return map.getZoom();
+        }, moves);
+    }
+
+    test('double toucher + glisser vers le bas = zoom avant ; vers le haut = zoom arriere', async ({ page }) => {
+        expect(await gesture(page, [20, 60, 120, 240])).toBe(17);
+        expect(await gesture(page, [-20, -60, -120, -240])).toBe(13);
+    });
+
+    test('double toucher simple : un cran de plus', async ({ page }) => {
+        expect(await gesture(page, [])).toBe(16);
+    });
+});
