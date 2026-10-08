@@ -106,8 +106,7 @@ input[type="range"]:focus-visible {
    centrage carte, marqueurs Leaflet) : ils sont deja un bloc conteneur.
    Le test e2e "14. Cibles tactiles" mesure la zone effective. */
 .close-search, .side-panel-close, .chat-back, .chat-close, .chat-subscribe,
-.chat-report, .back-btn, .btn-unsubscribe, .notif-item-delete, .btn-zoom,
-.vote-btn, .filter-chip, .activity-filter, .quick-reply-btn,
+.chat-report, .back-btn, .btn-unsubscribe, .notif-item-delete, .btn-zoom, .filter-chip, .activity-filter, .quick-reply-btn,
 .account-auth-btn, .account-reset-btn, .btn-primary-clean, .btn-secondary-clean,
 .btn-danger-clean {
     position: relative;
@@ -117,8 +116,7 @@ input[type="range"]:focus-visible {
 .chat-back::after, .chat-close::after, .chat-subscribe::after, .chat-report::after,
 .back-btn::after, .btn-unsubscribe::after, .notif-item-delete::after,
 .close-modal::after, .auth-modal-close::after, .dist-modal-close::after,
-.webcam-modal-close::after, .btn-center-map::after, .btn-zoom::after,
-.vote-btn::after, .filter-chip::after, .activity-filter::after,
+.webcam-modal-close::after, .btn-center-map::after, .btn-zoom::after, .filter-chip::after, .activity-filter::after,
 .quick-reply-btn::after, .account-auth-btn::after, .account-reset-btn::after,
 .btn-primary-clean::after, .btn-secondary-clean::after,
 .distributor-marker-container::after {

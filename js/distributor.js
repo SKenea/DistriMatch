@@ -10,7 +10,6 @@ import {
 } from './utils.js';
 import { updateBadges } from './navigation.js';
 import { updateMapMarkers } from './map.js';
-import { addActivityItem, updateActivityBadge } from './activity.js';
 import { generateWelcomeMessage } from './chat.js';
 import { FEATURES } from './config.js';
 import { checkFavoriteUpdates } from './favorites-watch.js';
@@ -232,7 +231,6 @@ export async function toggleSubscription(id, event) {
     if (added) {
         AppState.subscriptions.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
-        addActivityItem('subscription', id);
         showToast('Ajouté à tes favoris : tu seras prévenu si ça change', 'success');
         if (FEATURES.chat) generateWelcomeMessage(id);
         // Memorise l'etat actuel de la machine : les notifications ne partent
@@ -240,14 +238,12 @@ export async function toggleSubscription(id, event) {
         checkFavoriteUpdates();
     } else {
         AppState.subscriptions.splice(index, 1);
-        addActivityItem('unsubscription', id);
         showToast(`Retiré de tes favoris : ${distributor?.name || 'ce distributeur'}`, 'default');
     }
 
     saveToLocalStorage();
     updateBadges();
     updateMapMarkers(false);
-    updateActivityBadge();
     // EPIC-T25 : premier favori -> proposer les notifications app fermee ;
     // sinon le serveur suit la liste des favoris (fire-and-forget).
     if (added) maybeOfferPush();

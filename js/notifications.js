@@ -8,7 +8,6 @@ import {
     saveNotificationPrefs, saveNotificationQueue
 } from './utils.js';
 import { switchView } from './navigation.js';
-import { addActivityItem } from './activity.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { syncPushSubscription, refreshPushSettings } from './push.js';
@@ -250,10 +249,6 @@ function sendNotification(notif) {
         updateNotificationsBadge();
     }
 
-    addActivityItem('notification', notif.distributorId, {
-        subtype: notif.type,
-        message: notif.message
-    });
 }
 
 // ============================================
