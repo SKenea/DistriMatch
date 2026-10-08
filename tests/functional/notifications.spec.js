@@ -41,13 +41,13 @@ test.describe('5ter. Centre de notifications', () => {
         expect(r.notifBadgeDisplay).toBe('none');     // pas de notif -> badge cache
     });
 
-    test('reglages : bouton/etat permission navigateur present', async ({ page }) => {
+    test('reglages : un seul reglage de permission, l’interrupteur « même app fermée » (EPIC-T25)', async ({ page }) => {
         const r = await page.evaluate(() => ({
-            stateEl: !!document.getElementById('notif-permission-state'),
-            btnEl: !!document.getElementById('notif-permission-btn'),
+            push: !!document.getElementById('push-enabled'),
+            oldBtn: !!document.getElementById('notif-permission-btn'),
         }));
-        expect(r.stateEl).toBe(true);
-        expect(r.btnEl).toBe(true);
+        expect(r.push).toBe(true);
+        expect(r.oldBtn).toBe(false);
     });
 });
 

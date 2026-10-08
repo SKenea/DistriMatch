@@ -492,7 +492,9 @@ export function openDistributorModal(id) {
     // Couche d'historique (audit UX-04) : le bouton retour ferme la fiche
     if (overlay && !overlay.classList.contains('active')) pushLayer('fiche', closeDistModal);
     overlay?.classList.add('active');
-    if (overlay) activateFocusTrap(overlay, closeDistModal);
+    // Focus sur le cadre de la fiche (tabindex=-1), pas sur la croix : sinon
+    // l'anneau clavier s'allume a l'arrivee par une notification (Stephane 2026-10-08)
+    if (overlay) activateFocusTrap(overlay, closeDistModal, { initialFocus: document.getElementById('dist-modal') });
 }
 
 export function closeDistModal() {
