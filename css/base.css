@@ -205,13 +205,13 @@ body {
 
 .nav-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
     align-items: center;
 }
 
 .icon-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;     /* cible tactile recommandee (EPIC-T26) */
+    height: 44px;
     border: none;
     background: transparent;
     border-radius: 50%;
@@ -265,7 +265,10 @@ body {
     right: 0;
     bottom: 0;
     background: var(--white);
-    z-index: var(--z-overlay);
+    /* Au-dessus des vues (Notifications, Compte...) qui partagent --z-overlay :
+       sinon la recherche s'ouvrait dessous, champ coupe (EPIC-T26) */
+    z-index: calc(var(--z-overlay) + 10);
+    overflow-y: auto;
     transform: translateY(-100%);
     transition: transform 0.3s ease;
 }
@@ -595,3 +598,7 @@ body {
     white-space: nowrap;
 }
 .demo-tag[hidden] { display: none; }
+
+/* Recherche vide : suggestions au lieu d'une page blanche (EPIC-T26) */
+.search-suggest-title { margin: 1rem 1rem 0.25rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.search-suggest-hint { margin: 0.25rem 1rem 0.75rem; font-size: 0.9rem; color: var(--gray); }

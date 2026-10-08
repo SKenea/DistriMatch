@@ -794,3 +794,53 @@ test.describe('42. Fiche a mi-hauteur sur telephone', () => {
         await expect(page.locator('.distributor-pin.is-selected')).toHaveCount(0);
     });
 });
+
+// ============================================
+// 43. RECHERCHE, NOTIFICATIONS ET TITRES DE GROUPE (EPIC-T26)
+// ============================================
+
+test.describe('43. Recherche, notifications et titres de groupe', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test('depuis Notifications, la recherche s’ouvre par-dessus, champ entier, avec des suggestions « Près de toi »', async ({ page }) => {
+        await page.click('.nav-icon-btn[data-view="notifications"]');
+        await page.waitForSelector('#notifications-view.view-active');
+        await expect(page.locator('#notifications-view')).not.toContainText('machine');
+        await page.click('#search-toggle');
+        await expect(page.locator('#search-overlay')).toHaveClass(/active/);
+        await page.waitForTimeout(400);
+        const top = await page.evaluate(() => document.elementFromPoint(195, 300)?.closest('#search-overlay, .view-page')?.id);
+        expect(top).toBe('search-overlay');
+        const input = await page.locator('#quick-search').boundingBox();
+        const container = await page.locator('.search-container-clean').boundingBox();
+        expect(input.y + input.height).toBeLessThanOrEqual(container.y + container.height);
+        await expect(page.locator('#search-results')).toContainText('Près de toi');
+        expect(await page.locator('#search-results .search-item-clean').count()).toBeGreaterThan(0);
+    });
+
+    test('icones du haut : cibles de 44 px', async ({ page }) => {
+        for (const sel of ['#search-toggle', '.nav-icon-btn[data-view="notifications"]', '#profile-avatar-btn']) {
+            const b = await page.locator(sel).boundingBox();
+            expect(Math.round(b.width)).toBeGreaterThanOrEqual(44);
+            expect(Math.round(b.height)).toBeGreaterThanOrEqual(44);
+        }
+    });
+
+    test('liste : le titre de groupe reste colle en haut, sur toute la largeur, en defilant', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await page.waitForSelector('.side-panel.open');
+        const r = await page.evaluate(async () => {
+            const list = document.getElementById('side-panel-list');
+            const headers = [...list.querySelectorAll('.side-panel-group-header')];
+            const target = headers[headers.length - 1];
+            if (target.getAttribute('aria-expanded') !== 'true') target.click();
+            await new Promise(res => setTimeout(res, 300));
+            list.scrollTop = target.offsetTop + 300;
+            await new Promise(res => setTimeout(res, 300));
+            const lr = list.getBoundingClientRect(), hr = target.getBoundingClientRect();
+            return { dTop: Math.round(hr.top - lr.top), dW: Math.round(hr.width - lr.width), dLeft: Math.round(hr.left - lr.left), scrolled: list.scrollTop > 0 };
+        });
+        expect(r.scrolled).toBe(true);
+        expect(r).toMatchObject({ dTop: 0, dW: 0, dLeft: 0 });
+    });
+});

@@ -152,7 +152,33 @@ export function closeSidebar() {
 
 export function openSearch() {
     document.getElementById('search-overlay').classList.add('active');
+    renderSearchSuggestions();
     document.getElementById('quick-search').focus();
+}
+
+function searchItemHTML(d) {
+    const distance = Number.isFinite(d.distance) ? formatDistance(d.distance) : '';
+    return `
+            <div class="search-item-clean" onclick="closeSearch(); openDistributorModal('${escapeHTML(d.id)}');">
+                <div class="search-item-name">
+                    <span>${escapeHTML(d.emoji || '')} ${escapeHTML(d.name)}</span>
+                </div>
+                <div class="search-item-location">${escapeHTML(d.address || '')} ${distance ? '- ' + distance : ''}</div>
+            </div>
+        `;
+}
+
+// Recherche vide (EPIC-T26) : les distributeurs les plus proches et une aide,
+// plutot qu'une page blanche.
+function renderSearchSuggestions() {
+    const results = document.getElementById('search-results');
+    if (!results) return;
+    const nearest = AppState.distributors
+        .filter(d => d.reviewStatus !== 'pending' && Number.isFinite(d.distance))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 5);
+    results.innerHTML = `<p class="search-suggest-hint">Tape un produit (œufs, pain, pizza…) ou le nom d'un distributeur.</p>`
+        + (nearest.length ? `<p class="search-suggest-title">Près de toi</p>${nearest.map(searchItemHTML).join('')}` : '');
 }
 
 export function closeSearch() {
@@ -165,7 +191,7 @@ export function performSearch(query) {
     const results = document.getElementById('search-results');
 
     if (query.length < 2) {
-        results.innerHTML = '';
+        renderSearchSuggestions();
         return;
     }
 
@@ -188,17 +214,7 @@ export function performSearch(query) {
         return;
     }
 
-    results.innerHTML = matches.map(d => {
-        const distance = d.distance ? formatDistance(d.distance) : '';
-        return `
-            <div class="search-item-clean" onclick="closeSearch(); openDistributorModal('${d.id}');">
-                <div class="search-item-name">
-                    <span>${d.emoji} ${escapeHTML(d.name)}</span>
-                </div>
-                <div class="search-item-location">${escapeHTML(d.address)} ${distance ? '- ' + distance : ''}</div>
-            </div>
-        `;
-    }).join('');
+    results.innerHTML = matches.map(searchItemHTML).join('');
 }
 
 // ============================================
