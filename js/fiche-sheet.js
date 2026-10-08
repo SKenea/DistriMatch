@@ -1,89 +1,176 @@
-// DistriMatch - Fiche en feuille du bas sur telephone (EPIC-T26 US2).
-// A l'ouverture, la fiche occupe la moitie basse de l'ecran : la carte reste
-// visible et touchable au-dessus (toucher une autre pastille ouvre sa fiche).
-// La poignee se tire (vers le haut = plein ecran, vers le bas = fermer) ou se
-// touche (bascule mi-hauteur / plein ecran : voie en un toucher, WCAG 2.5.1).
-// Faire defiler le contenu d'une fiche a mi-hauteur la passe en plein ecran.
+// DistriMatch - Fiche en feuille du bas sur telephone (EPIC-T26, comme Google Maps).
+// Trois positions : plein ecran, mi-hauteur (a l'ouverture), reduite en bas (nom et
+// etat seulement, la carte utilisable au-dessus). On tire la feuille depuis la
+// poignee ou tout le haut de la fiche (nom, etat) : elle suit le doigt, puis se pose
+// sur la position la plus proche (en tenant compte de l'elan) ; un dernier glisser
+// vers le bas depuis la position reduite la ferme. Toucher la poignee (ou Entree /
+// Espace) remonte d'un cran : voie en un toucher (WCAG 2.5.1).
+// La feuille garde toujours la hauteur de l'ecran et se deplace par transform
+// (fluide) ; une marge basse egale au decalage garde la fin du contenu atteignable.
 // Grand ecran : rien ne change (modale centree).
 
 const SHEET_QUERY = '(max-width: 768px)';
-const DRAG_THRESHOLD = 6;      // px avant de considerer un glisser (sinon c'est un toucher)
-const CLOSE_RATIO = 0.3;       // relachee sous 30 % de l'ecran : fermee
-const FULL_RATIO = 0.72;       // relachee au-dessus de 72 % : plein ecran
+const HALF_RATIO = 0.58;        // part de l'ecran visible a mi-hauteur
+const DRAG_THRESHOLD = 6;       // px avant de considerer un glisser
+const CLOSE_MARGIN = 60;        // px tires sous la position reduite pour fermer
+const MOMENTUM_MS = 120;        // projection de l'elan au lacher
+
+let state = 'half';
 
 export function isSheetLayout() {
     return typeof window.matchMedia === 'function' && window.matchMedia(SHEET_QUERY).matches;
 }
 
-function refreshHandle(modal) {
-    const handle = document.getElementById('dist-sheet-handle');
-    if (!handle) return;
-    const full = modal.classList.contains('is-full');
-    handle.setAttribute('aria-label', full ? 'Réduire la fiche' : 'Agrandir la fiche');
-    handle.setAttribute('aria-expanded', String(full));
+function modalEl() {
+    return document.getElementById('dist-modal');
 }
 
-// Mi-hauteur par defaut ; plein ecran sur demande (ou deep link sans carte).
-export function resetFicheSheet({ full = false } = {}) {
-    const modal = document.getElementById('dist-modal');
+// Hauteur visible en position reduite : jusqu'a la ligne d'etat (nom + etat).
+function peekVisible(modal) {
+    const status = document.getElementById('dist-status');
+    if (!status) return 150;
+    const bottom = status.getBoundingClientRect().bottom - modal.getBoundingClientRect().top + modal.scrollTop;
+    return Math.max(120, Math.min(260, Math.round(bottom + 14)));
+}
+
+function offsetFor(name, modal) {
+    const vh = window.innerHeight;
+    if (name === 'full') return 0;
+    if (name === 'peek') return Math.max(0, vh - peekVisible(modal));
+    return Math.round(vh * (1 - HALF_RATIO));
+}
+
+function currentOffset(modal) {
+    const m = /translateY\((-?[\d.]+)px\)/.exec(modal.style.transform || '');
+    return m ? parseFloat(m[1]) : offsetFor(state, modal);
+}
+
+function refreshHandle() {
+    const handle = document.getElementById('dist-sheet-handle');
+    if (!handle) return;
+    handle.setAttribute('aria-label', state === 'full' ? 'Réduire la fiche' : 'Agrandir la fiche');
+    handle.setAttribute('aria-expanded', String(state === 'full'));
+}
+
+function applyState(name, modal = modalEl()) {
     if (!modal) return;
-    modal.style.height = '';
-    modal.classList.toggle('is-full', full);
-    refreshHandle(modal);
+    state = name;
+    const offset = offsetFor(name, modal);
+    modal.style.transform = `translateY(${offset}px)`;
+    modal.style.setProperty('--sheet-offset', `${offset}px`);
+    modal.classList.toggle('is-full', name === 'full');
+    modal.classList.toggle('is-peek', name === 'peek');
+    if (name !== 'full') modal.scrollTop = 0;
+    refreshHandle();
+}
+
+// Ouverture : la feuille monte du bas jusqu'a mi-hauteur (plein ecran sans carte :
+// deep link avant la geolocalisation). Une fiche deja ouverte garde sa position
+// (sauf reduite : elle remonte a mi-hauteur pour montrer la nouvelle fiche).
+export function openFicheSheet({ full = false, alreadyOpen = false } = {}) {
+    const modal = modalEl();
+    if (!modal || !isSheetLayout()) return;
+    if (alreadyOpen && !full) {
+        applyState(state === 'peek' ? 'half' : state, modal);
+        return;
+    }
+    modal.classList.add('is-dragging');            // pas de transition pour le point de depart
+    modal.style.transform = `translateY(${window.innerHeight}px)`;
+    void modal.offsetHeight;                        // fixe le point de depart
+    modal.classList.remove('is-dragging');
+    requestAnimationFrame(() => applyState(full ? 'full' : 'half', modal));
+}
+
+// Fermeture (ou grand ecran) : plus aucun style de feuille.
+export function resetFicheSheet() {
+    const modal = modalEl();
+    if (!modal) return;
+    state = 'half';
+    modal.style.transform = '';
+    modal.style.removeProperty('--sheet-offset');
+    modal.classList.remove('is-full', 'is-peek', 'is-dragging');
+    refreshHandle();
+}
+
+// Toucher la poignee : remonte d'un cran (plein ecran -> mi-hauteur).
+function stepUp() {
+    applyState(state === 'peek' ? 'half' : state === 'half' ? 'full' : 'half');
 }
 
 export function initFicheSheet(onClose) {
-    const modal = document.getElementById('dist-modal');
+    const modal = modalEl();
     const handle = document.getElementById('dist-sheet-handle');
     if (!modal || !handle) return;
     let drag = null;
+    let swallowClick = false;
 
-    handle.addEventListener('pointerdown', (e) => {
-        if (!isSheetLayout()) return;
-        drag = { y: e.clientY, height: modal.getBoundingClientRect().height, moved: false };
-        try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pointeur deja relache */ }
+    // Zones de prise : la poignee et le haut de la fiche (nom, etat)
+    function inGrip(target) {
+        return target.closest('#dist-sheet-handle, .dist-modal-header') && !target.closest('input, textarea, select');
+    }
+
+    modal.addEventListener('pointerdown', (e) => {
+        if (!isSheetLayout() || !inGrip(e.target)) return;
+        drag = { id: e.pointerId, y: e.clientY, x: e.clientX, start: currentOffset(modal), moved: false, lastY: e.clientY, lastT: e.timeStamp, v: 0, onHandle: !!e.target.closest('#dist-sheet-handle') };
     });
-    handle.addEventListener('pointermove', (e) => {
-        if (!drag) return;
+    modal.addEventListener('pointermove', (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
         const dy = e.clientY - drag.y;
-        if (!drag.moved && Math.abs(dy) < DRAG_THRESHOLD) return;
         if (!drag.moved) {
+            if (Math.abs(dy) < DRAG_THRESHOLD || Math.abs(dy) < Math.abs(e.clientX - drag.x)) return;
             drag.moved = true;
             modal.classList.add('is-dragging');
+            try { modal.setPointerCapture(e.pointerId); } catch (err) { /* pointeur deja relache */ }
         }
-        modal.style.height = `${Math.min(window.innerHeight, Math.max(80, drag.height - dy))}px`;
+        const dt = Math.max(1, e.timeStamp - drag.lastT);
+        drag.v = (e.clientY - drag.lastY) / dt;     // px / ms, positif vers le bas
+        drag.lastY = e.clientY;
+        drag.lastT = e.timeStamp;
+        const offset = Math.min(window.innerHeight - 40, Math.max(0, drag.start + dy));
+        modal.style.transform = `translateY(${offset}px)`;
     });
-    function endDrag() {
-        if (!drag) return;
-        const { moved } = drag;
+    function release(e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        const d = drag;
         drag = null;
         modal.classList.remove('is-dragging');
-        if (!moved) {
-            resetFicheSheet({ full: !modal.classList.contains('is-full') });
+        if (!d.moved) {
+            if (d.onHandle) stepUp();
             return;
         }
-        const ratio = modal.getBoundingClientRect().height / window.innerHeight;
-        if (ratio < CLOSE_RATIO) {
+        swallowClick = true;                         // le glisser n'est pas un toucher
+        setTimeout(() => { swallowClick = false; }, 300);
+        const projected = currentOffset(modal) + d.v * MOMENTUM_MS;
+        const peek = offsetFor('peek', modal);
+        if (projected > peek + CLOSE_MARGIN) {
             resetFicheSheet();
             onClose();
             return;
         }
-        resetFicheSheet({ full: ratio > FULL_RATIO });
+        const nearest = ['full', 'half', 'peek']
+            .map(name => ({ name, gap: Math.abs(offsetFor(name, modal) - projected) }))
+            .sort((a, b) => a.gap - b.gap)[0].name;
+        applyState(nearest, modal);
     }
-    handle.addEventListener('pointerup', endDrag);
-    handle.addEventListener('pointercancel', () => {
+    modal.addEventListener('pointerup', release);
+    modal.addEventListener('pointercancel', (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
         drag = null;
         modal.classList.remove('is-dragging');
-        modal.style.height = '';
+        applyState(state, modal);
     });
-    // Clavier (Entree / Espace) : meme bascule qu'un toucher
+    modal.addEventListener('click', (e) => {
+        if (!swallowClick) return;
+        swallowClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+    }, true);
+    // Clavier (Entree / Espace) sur la poignee : meme cran qu'un toucher
     handle.addEventListener('click', (e) => {
-        if (e.detail === 0) resetFicheSheet({ full: !modal.classList.contains('is-full') });
+        if (e.detail === 0 && isSheetLayout()) stepUp();
     });
-    // Lire la suite d'une fiche a mi-hauteur la deplie
-    modal.addEventListener('scroll', () => {
-        if (isSheetLayout() && !modal.classList.contains('is-full') && modal.scrollTop > 40) {
-            resetFicheSheet({ full: true });
-        }
-    }, { passive: true });
+    // Rotation / clavier virtuel : la position se recale
+    window.addEventListener('resize', () => {
+        if (isSheetLayout() && modal.style.transform) applyState(state, modal);
+    });
 }

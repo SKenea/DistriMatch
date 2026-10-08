@@ -362,12 +362,11 @@ test.describe('8. Mobile', () => {
 
         const r = await page.evaluate(() => {
             const rect = document.getElementById('dist-modal').getBoundingClientRect();
-            return { height: rect.height, bottom: rect.bottom, vh: innerHeight };
+            return { visible: innerHeight - rect.top, vh: innerHeight };
         });
         // Decision 2026-10-08 (retour testeur) : la fiche ne cache plus toute la carte
-        expect(r.height).toBeGreaterThan(r.vh * 0.5);
-        expect(r.height).toBeLessThan(r.vh * 0.65);
-        expect(Math.round(r.bottom)).toBe(r.vh);
+        expect(r.visible).toBeGreaterThan(r.vh * 0.5);
+        expect(r.visible).toBeLessThan(r.vh * 0.65);
     });
 
     test('bottom nav visible en mobile', async ({ page }) => {
@@ -653,7 +652,10 @@ test.describe('38. Mon activité et cohérence', () => {
         await page.waitForSelector('#activity-view.view-active');
         await expect(page.locator('#activity-empty')).toContainText('Connecte-toi pour retrouver ici');
         await expect(page.locator('.activity-filters')).toBeHidden();
-        const onboarding = await page.locator('#geoloc-overlay').textContent();
+        // L'ecran d'accueil est retire de la page apres son animation de sortie : on lit
+        // son texte dans la page servie (sinon le test dependait du rythme de la machine)
+        const html = await (await page.request.get('/')).text();
+        const onboarding = html.slice(html.indexOf('id="geoloc-overlay"'), html.indexOf('id="geoloc-error"')).replace(/<[^>]+>/g, ' ');
         expect(onboarding).not.toMatch(/sans compte|machine/i);
         expect(onboarding).toContain('Ton distributeur préféré te prévient.');
     });
@@ -774,9 +776,10 @@ test.describe('42. Fiche a mi-hauteur sur telephone', () => {
         });
         if (await page.locator('.pin-choice').count()) await page.locator(`.pin-choice[data-id="${id}"]`).click();
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await page.waitForTimeout(450);   // fin de la montee
         const half = await page.evaluate(() => {
             const m = document.getElementById('dist-modal');
-            return { ratio: m.getBoundingClientRect().height / innerHeight, full: m.classList.contains('is-full') };
+            return { ratio: (innerHeight - m.getBoundingClientRect().top) / innerHeight, full: m.classList.contains('is-full') };
         });
         expect(half.full).toBe(false);
         expect(half.ratio).toBeGreaterThan(0.5);
@@ -879,5 +882,70 @@ test.describe('44. Zoom d’un seul doigt', () => {
 
     test('double toucher simple : un cran de plus', async ({ page }) => {
         expect(await gesture(page, [])).toBe(16);
+    });
+});
+
+// ============================================
+// 45. FICHE EN TROIS POSITIONS ET « VOIR SUR LA CARTE » DEPUIS UNE PAGE (EPIC-T26)
+// ============================================
+
+test.describe('45. Fiche en trois positions', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    async function dragSheet(page, fromSelector, dy) {
+        return page.evaluate(async ({ fromSelector, dy }) => {
+            const el = document.querySelector(fromSelector);
+            const r = el.getBoundingClientRect();
+            const x = r.left + r.width / 2, y0 = r.top + Math.min(20, r.height / 2);
+            const fire = (type, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 9, pointerType: 'touch', isPrimary: true }));
+            const wait = (ms) => new Promise(res => setTimeout(res, ms));
+            fire('pointerdown', y0);
+            for (let i = 1; i <= 10; i++) { fire('pointermove', y0 + dy * i / 10); await wait(30); }
+            await wait(80);                                  // elan nul au lacher
+            fire('pointermove', y0 + dy); await wait(30);
+            fire('pointerup', y0 + dy);
+            await wait(450);
+            const m = document.getElementById('dist-modal');
+            return {
+                open: document.getElementById('dist-modal-overlay').classList.contains('active'),
+                full: m.classList.contains('is-full'),
+                peek: m.classList.contains('is-peek'),
+                visible: Math.round(innerHeight - m.getBoundingClientRect().top)
+            };
+        }, { fromSelector, dy });
+    }
+
+    test('mi-hauteur -> tirer le nom vers le bas = reduite (nom + etat visibles) -> encore = fermee ; vers le haut = plein ecran', async ({ page }) => {
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForTimeout(450);
+        const down = await dragSheet(page, '.dist-modal-header', 260);
+        expect(down.peek).toBe(true);
+        expect(down.visible).toBeLessThan(300);
+        await expect(page.locator('#dist-modal-name')).toBeInViewport();
+        await expect(page.locator('#dist-status')).toBeInViewport();
+        const up = await dragSheet(page, '.dist-modal-header', -700);
+        expect(up.full).toBe(true);
+        const half = await dragSheet(page, '#dist-sheet-handle', 330);
+        expect(half.full).toBe(false);
+        expect(half.peek).toBe(false);
+        await dragSheet(page, '.dist-modal-header', 260);
+        const closed = await dragSheet(page, '.dist-modal-header', 200);
+        expect(closed.open).toBe(false);
+    });
+
+    test('depuis Favoris, « Voir sur la carte » ferme la page et ramene sur la carte', async ({ page }) => {
+        const id = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            window.AppState.subscriptions = [d.id];
+            return d.id;
+        });
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active');
+        await page.evaluate((id) => window.openDistributorModal(id), id);
+        await page.waitForTimeout(450);
+        await page.click('#dist-action-locate');
+        await expect(page.locator('#subscriptions-view')).not.toHaveClass(/view-active/);
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('.distributor-pin.is-located')).toHaveCount(1);
     });
 });

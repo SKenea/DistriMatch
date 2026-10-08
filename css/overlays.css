@@ -2678,15 +2678,21 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .dist-modal-overlay.active::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: var(--nav-height); pointer-events: auto; }
     .dist-modal {
         pointer-events: auto;
-        height: 58vh; height: 58dvh;
+        /* Toujours la hauteur de l'ecran, deplacee par transform (fiche-sheet.js) */
+        height: 100vh; height: 100dvh;
         max-height: 100vh; max-height: 100dvh;
         border-radius: 18px 18px 0 0;
         box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.22);
-        transition: height 0.25s ease, border-radius 0.25s ease;
-        animation: dist-sheet-up 0.25s ease;
+        transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.2s ease;
+        will-change: transform;
+        animation: none;
     }
-    .dist-modal.is-full { height: 100vh; height: 100dvh; border-radius: 0; }
+    /* La fin du contenu reste atteignable a mi-hauteur : marge egale au decalage */
+    .dist-modal::after { content: ""; display: block; flex: none; height: var(--sheet-offset, 0px); }
+    .dist-modal.is-full { border-radius: 0; }
     .dist-modal.is-dragging { transition: none; }
+    /* Prise de la feuille : la poignee et le haut de la fiche */
+    .dist-modal-header { touch-action: none; }
     .dist-sheet-handle {
         display: flex; align-items: center; justify-content: center;
         position: sticky; top: 0; z-index: 1; flex: none;   /* sous les icones de l'en-tete (z 2) */
@@ -2697,8 +2703,4 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .dist-sheet-handle:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
     .dist-modal-top-actions, .dist-modal-close { top: 26px; }
     .dist-modal-header { padding-top: 5.1rem; }
-}
-@keyframes dist-sheet-up {
-    from { transform: translateY(35%); }
-    to { transform: none; }
 }

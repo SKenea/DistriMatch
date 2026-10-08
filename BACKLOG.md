@@ -48,6 +48,16 @@ essai par Stephane sur son telephone avant chaque fusion.
   - Acceptance : double toucher + doigt maintenu + glisser = zoom continu centre sous le
     doigt (vers le bas = zoom avant, comme Google Maps) ; double toucher simple, pincement
     et boutons + / - inchanges.
+- [ ] T26-US6 En tant qu'utilisateur, « Voir sur la carte » depuis Favoris (ou une autre
+  page) me ramene sur la carte
+  - Acceptance : l'epingle de la fiche ferme la fiche, la liste ET la page ouverte
+    (Favoris, Notifications, Activite...) puis centre la carte sur la pastille qui pulse.
+- [ ] T26-US7 En tant qu'utilisateur sur telephone, la fiche a trois positions comme Google Maps
+  - Acceptance : plein ecran / mi-hauteur (ouverture) / reduite en bas (nom + etat, la
+    carte utilisable) ; on la tire depuis la poignee ou le haut de la fiche, elle suit le
+    doigt et se pose sur la position la plus proche (avec l'elan) ; glisser sous la
+    position reduite = fermer ; toucher la poignee = un cran plus haut ; plus de passage
+    automatique en plein ecran au defilement ; animation fluide (transform).
 - [x] T26-TS1 Tests (unitaires, fonctionnels) a chaque PR (#172 a #175). Pas d'adresse d'apercu par
   branche : l'essai sur telephone se fait apres fusion, sur le site en ligne.
 

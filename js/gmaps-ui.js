@@ -18,7 +18,8 @@ import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edi
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { locateOnMap, setSelectedPin } from './map.js';
-import { initFicheSheet, resetFicheSheet, isSheetLayout } from './fiche-sheet.js';
+import { initFicheSheet, openFicheSheet, resetFicheSheet } from './fiche-sheet.js';
+import { goBackToMap } from './navigation.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -266,7 +267,11 @@ export function initDistModal() {
         if (!d) return;
         closeDistModal();
         closeSidePanel();
-        setTimeout(() => locateOnMap(d.id), 60);
+        // EPIC-T26 : depuis Favoris, Notifications... la page se ferme aussi,
+        // sinon la carte se centrait derriere elle sans que rien ne se voie
+        const fromView = !!document.querySelector('.view-page.view-active');
+        if (fromView) goBackToMap();
+        setTimeout(() => locateOnMap(d.id), fromView ? 180 : 60);
     });
     // Visiteur : « Connecte-toi pour informer » ouvre la connexion par e-mail
     document.getElementById('dist-login-invite-btn')?.addEventListener('click', () => requireAuth());
@@ -492,14 +497,15 @@ export function openDistributorModal(id) {
     // Afficher la modal
     const overlay = document.getElementById('dist-modal-overlay');
     // Couche d'historique (audit UX-04) : le bouton retour ferme la fiche
-    if (overlay && !overlay.classList.contains('active')) pushLayer('fiche', closeDistModal);
+    const alreadyOpen = !!overlay?.classList.contains('active');
+    if (overlay && !alreadyOpen) pushLayer('fiche', closeDistModal);
     overlay?.classList.add('active');
     // Focus sur le cadre de la fiche (tabindex=-1), pas sur la croix : sinon
     // l'anneau clavier s'allume a l'arrivee par une notification (Stephane 2026-10-08)
     if (overlay) activateFocusTrap(overlay, closeDistModal, { initialFocus: document.getElementById('dist-modal') });
     // EPIC-T26 : sur telephone, feuille a mi-hauteur (plein ecran s'il n'y a pas
     // encore de carte : deep link avant la geolocalisation) ; pastille mise en avant
-    if (isSheetLayout()) resetFicheSheet({ full: !AppState.mapInitialized });
+    openFicheSheet({ full: !AppState.mapInitialized, alreadyOpen });
     setSelectedPin(id);
 }
 
