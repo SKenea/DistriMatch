@@ -1077,3 +1077,14 @@
     .distributor-pin.is-located::after { animation: none; opacity: 1; }
 }
 .dist-icon-btn[hidden] { display: none; }
+
+/* Menu « N distributeurs ici » quand des pastilles se chevauchent (EPIC-T26) */
+.pin-chooser-popup .leaflet-popup-content-wrapper { border-radius: 14px; padding: 0; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.22); }
+.pin-chooser-popup .leaflet-popup-content { margin: 6px; min-width: 220px; }
+.pin-chooser-title { margin: 10px 10px 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.pin-choice { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 6px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--dark); font: inherit; text-align: left; cursor: pointer; }
+.pin-choice:hover, .pin-choice:focus-visible { background: var(--light); }
+.pin-choice-emoji { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--light); display: grid; place-items: center; font-size: 1.15rem; }
+.pin-choice-text { display: flex; flex-direction: column; min-width: 0; }
+.pin-choice-text b { font-size: 0.95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pin-choice-text small { font-size: 0.8rem; color: var(--gray); }

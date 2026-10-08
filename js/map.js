@@ -7,7 +7,7 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors, centroidOf, escapeHTML } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear } from './utils.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 
 // ============================================
@@ -93,12 +93,11 @@ export function updateMapMarkers(fitBounds = true) {
 
         marker.distributorId = d.id;
 
+        // EPIC-T26 : des pastilles se chevauchent sous le doigt -> petit menu de choix
         marker.on('click', () => {
-            mainMap.setView([d.lat, d.lng], 15);
-            // Ouvrir le bottom sheet directement (pattern Google Maps)
-            if (window.showDetails) {
-                window.showDetails(d.id);
-            }
+            const ids = overlappingPinIds(marker);
+            if (ids.length > 1) openPinChooser(marker.getLatLng(), ids);
+            else openFromMap(d);
         });
 
         newMarkers.push(marker);
@@ -128,6 +127,59 @@ function createDistributorIcon(d, isSubscribed) {
         iconAnchor: [22, 22],
         popupAnchor: [0, -24]
     });
+}
+
+// Ouvrir une fiche depuis la carte : centrer sans jamais dezoomer (au-dela du
+// zoom 15, la carte garde le zoom choisi pour separer des pastilles proches).
+function openFromMap(d) {
+    mainMap.setView([d.lat, d.lng], Math.max(mainMap.getZoom(), 15));
+    if (window.showDetails) window.showDetails(d.id);   // bottom sheet (pattern Google Maps)
+}
+
+// Rayon de toucher : plus large au doigt qu'a la souris (une pastille fait 44 px).
+function tapRadius() {
+    const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    return coarse ? 40 : 24;
+}
+
+function overlappingPinIds(marker) {
+    const center = mainMap.latLngToContainerPoint(marker.getLatLng());
+    const points = distributorMarkers.map(m => {
+        const p = mainMap.latLngToContainerPoint(m.getLatLng());
+        return { id: m.distributorId, x: p.x, y: p.y };
+    });
+    return pinsNear(points, center.x, center.y, tapRadius());
+}
+
+function describePinChoice(d) {
+    if (d.reviewStatus === 'pending') return 'En attente de validation';
+    const s = getDistributorSummary(d);
+    return s.stock ? `${s.label} · ${s.stock}` : s.label;
+}
+
+function openPinChooser(latlng, ids) {
+    const items = ids.map(id => AppState.distributors.find(x => x.id === id)).filter(Boolean);
+    const menu = document.createElement('div');
+    menu.className = 'pin-chooser';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', `${items.length} distributeurs ici`);
+    menu.innerHTML = `<p class="pin-chooser-title">${items.length} distributeurs ici</p>` + items.map(d => `
+        <button type="button" class="pin-choice" role="menuitem" data-id="${escapeHTML(d.id)}">
+            <span class="pin-choice-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>
+            <span class="pin-choice-text"><b>${escapeHTML(d.name)}</b><small>${escapeHTML(describePinChoice(d))}</small></span>
+        </button>`).join('');
+    menu.addEventListener('click', (e) => {
+        const btn = e.target.closest('.pin-choice');
+        if (!btn) return;
+        const d = AppState.distributors.find(x => x.id === btn.dataset.id);
+        mainMap.closePopup();
+        if (d) openFromMap(d);
+    });
+    L.popup({ closeButton: false, className: 'pin-chooser-popup', offset: [0, -18], autoPanPadding: [16, 16], maxWidth: 300 })
+        .setLatLng(latlng)
+        .setContent(menu)
+        .openOn(mainMap);
+    menu.querySelector('.pin-choice')?.focus({ preventScroll: true });
 }
 
 function markerTitle(d) {

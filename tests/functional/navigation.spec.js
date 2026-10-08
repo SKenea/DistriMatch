@@ -696,3 +696,57 @@ test.describe('39. Voir sur la carte', () => {
         await expect(page.locator('.distributor-pin.is-located')).toHaveCount(1);
     });
 });
+
+// ============================================
+// 41. PASTILLES QUI SE CHEVAUCHENT (EPIC-T26)
+// ============================================
+
+test.describe('41. Pastilles qui se chevauchent', () => {
+    test('toucher une pastille qui en chevauche une autre : menu « 2 distributeurs ici », le choix ouvre la bonne fiche', async ({ page }) => {
+        const ids = await page.evaluate(async () => {
+            const [a, b] = window.AppState.distributors.filter(d => d.reviewStatus !== 'pending').slice(0, 2);
+            b.lat = a.lat + 0.00008; b.lng = a.lng + 0.00012;
+            const map = await import('./js/map.js');
+            const state = await import('./js/state.js');
+            map.updateMapMarkers(false);
+            state.mainMap.setView([a.lat, a.lng], 16, { animate: false });
+            return [a.id, b.id, b.name];
+        });
+        await page.waitForTimeout(400);
+        await page.evaluate(async (id) => {
+            const state = await import('./js/state.js');
+            state.distributorMarkers.find(m => m.distributorId === id).fire('click');
+        }, ids[0]);
+        const menu = page.locator('.pin-chooser');
+        await expect(menu).toBeVisible();
+        await expect(menu).toContainText('2 distributeurs ici');
+        await expect(page.locator('.pin-choice')).toHaveCount(2);
+        await page.locator(`.pin-choice[data-id="${ids[1]}"]`).click();
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await expect(page.locator('#dist-modal-name')).toHaveText(ids[2]);
+        await expect(menu).toHaveCount(0);
+    });
+
+    test('une pastille isolee ouvre sa fiche directement, sans dezoomer la carte', async ({ page }) => {
+        const r = await page.evaluate(async () => {
+            const state = await import('./js/state.js');
+            const map = await import('./js/map.js');
+            map.updateMapMarkers(false);
+            const marker = state.distributorMarkers[0];
+            state.mainMap.setView(marker.getLatLng(), 18, { animate: false });
+            // isoler : toutes les autres pastilles loin
+            return { id: marker.distributorId };
+        });
+        await page.evaluate(async (id) => {
+            const state = await import('./js/state.js');
+            const others = state.distributorMarkers.filter(m => m.distributorId !== id);
+            const marker = state.distributorMarkers.find(m => m.distributorId === id);
+            const c = state.mainMap.latLngToContainerPoint(marker.getLatLng());
+            if (others.some(m => c.distanceTo(state.mainMap.latLngToContainerPoint(m.getLatLng())) < 40)) throw new Error('pastille non isolee');
+            marker.fire('click');
+        }, r.id);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await expect(page.locator('.pin-chooser')).toHaveCount(0);
+        expect(await page.evaluate(async () => (await import('./js/state.js')).mainMap.getZoom())).toBe(18);
+    });
+});
