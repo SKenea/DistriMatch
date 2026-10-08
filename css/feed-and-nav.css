@@ -189,7 +189,6 @@
 @media (min-width: 769px) {
     .bottom-nav {
         bottom: 16px;
-        left: 50%;
         right: auto;
         transform: translateX(-50%);
         width: auto;
@@ -303,7 +302,6 @@
     overflow-y: auto;
     flex: 1;
 }
-
 
 /* ==========================================
    RESPONSIVE BOTTOM NAV
