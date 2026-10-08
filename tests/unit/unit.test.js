@@ -1851,3 +1851,18 @@ describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
         assert.equal(needsHomeScreenForPush('Mozilla/5.0 (Linux; Android 14) Chrome/120', false), false);
     });
 });
+
+// ============================================
+// EPIC-T26 : pastilles sous le doigt
+// ============================================
+import { pinsNear } from '../../js/utils.js';
+
+describe('Carte : pastilles sous le doigt (EPIC-T26)', () => {
+    it('garde les pastilles dans le rayon, de la plus proche a la plus loin', () => {
+        const pts = [{ id: 'a', x: 100, y: 100 }, { id: 'b', x: 130, y: 100 }, { id: 'c', x: 200, y: 100 }, { id: 'd', x: 105, y: 95 }];
+        assert.deepEqual(pinsNear(pts, 100, 100, 40), ['a', 'd', 'b']);
+        assert.deepEqual(pinsNear(pts, 100, 100, 24), ['a', 'd']);
+        assert.deepEqual(pinsNear([], 0, 0, 40), []);
+        assert.deepEqual(pinsNear(null, 0, 0, 40), []);
+    });
+});

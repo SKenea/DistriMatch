@@ -1441,3 +1441,17 @@ export function urlBase64ToUint8Array(base64) {
 export function needsHomeScreenForPush(userAgent, standalone) {
     return /iPhone|iPad|iPod/i.test(String(userAgent || '')) && !standalone;
 }
+
+// ============================================
+// CARTE : PASTILLES SOUS LE DOIGT (EPIC-T26)
+// ============================================
+
+// points : [{ id, x, y }] en pixels ecran. Retour : les ids a moins de `radius`
+// px du point touche, du plus proche au plus loin (le touche en premier).
+export function pinsNear(points, x, y, radius) {
+    return (points || [])
+        .map(p => ({ id: p.id, d: Math.hypot(p.x - x, p.y - y) }))
+        .filter(p => p.d <= radius)
+        .sort((a, b) => a.d - b.d)
+        .map(p => p.id);
+}
