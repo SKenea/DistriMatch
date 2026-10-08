@@ -421,13 +421,14 @@
 
 .side-panel-group-header {
     position: sticky;
-    top: 0;
-    z-index: 1;
+    top: -0.5rem;                        /* colle au bord : couvre le padding haut de la liste (EPIC-T26) */
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    width: 100%;
+    width: calc(100% + 1rem);            /* toute la largeur, padding 0.5rem de chaque cote compris */
     margin: 0 -0.5rem;                   /* bleed sur le padding 0.5rem de .side-panel-list */
+    box-sizing: border-box;
     padding: 0.625rem 1.25rem;
     background: var(--white);            /* opaque : les items passent dessous */
     border: none;
