@@ -1455,3 +1455,10 @@ export function pinsNear(points, x, y, radius) {
         .sort((a, b) => a.d - b.d)
         .map(p => p.id);
 }
+
+// Zoom d'un seul doigt (EPIC-T26) : glisser de dy px depuis le zoom de depart.
+// Vers le bas (dy > 0) = zoom avant, comme Google Maps ; borne par min / max.
+export function zoomFromDrag(startZoom, dy, minZoom, maxZoom, pxPerLevel = 120) {
+    const z = startZoom + dy / pxPerLevel;
+    return Math.min(maxZoom, Math.max(minZoom, z));
+}

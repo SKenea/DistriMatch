@@ -7,7 +7,7 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag } from './utils.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { isSheetLayout } from './fiche-sheet.js';
 
@@ -45,6 +45,7 @@ export function initMainMap() {
     }).addTo(mainMap);
 
     L.control.zoom({ position: 'bottomleft' }).addTo(mainMap);
+    enableOneFingerZoom(mainMap);   // EPIC-T26
 
     if (AppState.userLocation) {
         const userIcon = L.divIcon({
@@ -70,6 +71,100 @@ export function initMainMap() {
     // (sinon Leaflet re-zoom pour englober tous les markers)
     updateMapMarkers(false);
     console.log('[DistriMatch] Carte initialisee avec', AppState.distributors.length, 'distributeurs');
+}
+
+// EPIC-T26 : zoom d'un seul doigt, comme Google Maps : double toucher, doigt
+// maintenu, glisser (vers le bas = zoom avant), zoom continu centre sous le doigt.
+// Un double toucher simple zoome toujours d'un cran ; le pincement et les boutons
+// ne changent pas. Sur ecran tactile, ce geste remplace le double toucher de
+// Leaflet (qui ne sait pas glisser) ; a la souris, rien ne change.
+const DOUBLE_TAP_MS = 300;     // delai max entre les deux touchers
+const DOUBLE_TAP_PX = 40;      // ecart max entre les deux touchers
+const TAP_MOVE_PX = 12;        // en dessous : un toucher, pas un glisser
+
+function enableOneFingerZoom(map) {
+    const el = map.getContainer();
+    const zoomSnap = map.options.zoomSnap;
+    const touches = new Set();
+    let lastTap = null;
+    let down = null;
+    let gesture = null;
+    let swallowClick = false;
+
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) {
+        map.doubleClickZoom.disable();
+    }
+
+    function finish(e, apply) {
+        const g = gesture;
+        gesture = null;
+        map.options.zoomSnap = zoomSnap;
+        map.dragging.enable();
+        lastTap = null;
+        if (apply) {
+            // Glisse : on arrondit au cran le plus proche ; simple double toucher : un cran de plus
+            const target = g.moved ? Math.round(map.getZoom()) : map.getZoom() + 1;
+            map.setZoomAround(g.point, Math.min(map.getMaxZoom(), target));
+            swallowClick = true;   // le toucher ne doit pas ouvrir une pastille ni fermer quoi que ce soit
+            setTimeout(() => { swallowClick = false; }, 400);
+        }
+        if (e) { e.stopPropagation(); e.preventDefault(); }
+    }
+
+    el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch') return;
+        touches.add(e.pointerId);
+        if (touches.size > 1) {            // pincement : Leaflet s'en charge
+            if (gesture) finish(null, false);
+            return;
+        }
+        down = { x: e.clientX, y: e.clientY, t: e.timeStamp };
+        const second = lastTap && e.timeStamp - lastTap.t < DOUBLE_TAP_MS
+            && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < DOUBLE_TAP_PX;
+        if (!second) return;
+        const rect = el.getBoundingClientRect();
+        gesture = { id: e.pointerId, y: e.clientY, zoom: map.getZoom(), point: L.point(e.clientX - rect.left, e.clientY - rect.top), moved: false };
+        map.dragging.disable();
+        map.options.zoomSnap = 0;           // zoom continu pendant le geste
+        e.stopPropagation();
+        e.preventDefault();
+    }, true);
+
+    el.addEventListener('pointermove', (e) => {
+        if (!gesture || e.pointerId !== gesture.id) return;
+        const dy = e.clientY - gesture.y;
+        if (!gesture.moved && Math.abs(dy) < TAP_MOVE_PX) return;
+        gesture.moved = true;
+        map.setZoomAround(gesture.point, zoomFromDrag(gesture.zoom, dy, map.getMinZoom(), map.getMaxZoom()), { animate: false });
+        e.stopPropagation();
+        e.preventDefault();
+    }, true);
+
+    el.addEventListener('pointerup', (e) => {
+        if (e.pointerType !== 'touch') return;
+        touches.delete(e.pointerId);
+        if (gesture && e.pointerId === gesture.id) {
+            finish(e, true);
+            return;
+        }
+        const isTap = down && e.timeStamp - down.t < 250
+            && Math.hypot(e.clientX - down.x, e.clientY - down.y) < TAP_MOVE_PX;
+        lastTap = isTap ? { t: e.timeStamp, x: e.clientX, y: e.clientY } : null;
+        down = null;
+    }, true);
+
+    el.addEventListener('pointercancel', (e) => {
+        touches.delete(e.pointerId);
+        if (gesture && e.pointerId === gesture.id) finish(null, false);
+        down = null;
+    }, true);
+
+    el.addEventListener('click', (e) => {
+        if (!swallowClick) return;
+        swallowClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+    }, true);
 }
 
 // EPIC-T19 : etat et stock arrives (ou signal envoye) -> les pastilles suivent

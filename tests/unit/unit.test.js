@@ -1866,3 +1866,15 @@ describe('Carte : pastilles sous le doigt (EPIC-T26)', () => {
         assert.deepEqual(pinsNear(null, 0, 0, 40), []);
     });
 });
+
+import { zoomFromDrag } from '../../js/utils.js';
+
+describe('Carte : zoom d’un seul doigt (EPIC-T26)', () => {
+    it('vers le bas = zoom avant, vers le haut = zoom arriere, borne', () => {
+        assert.equal(zoomFromDrag(15, 120, 2, 19), 16);
+        assert.equal(zoomFromDrag(15, -240, 2, 19), 13);
+        assert.equal(zoomFromDrag(15, 60, 2, 19), 15.5);
+        assert.equal(zoomFromDrag(18, 600, 2, 19), 19);
+        assert.equal(zoomFromDrag(3, -600, 2, 19), 2);
+    });
+});
