@@ -10,7 +10,7 @@
 // Grand ecran : rien ne change (modale centree).
 
 const SHEET_QUERY = '(max-width: 768px)';
-const HALF_RATIO = 0.58;        // part de l'ecran visible a mi-hauteur
+const HALF_RATIO = 0.64;        // part de la zone visible a mi-hauteur
 const DRAG_THRESHOLD = 6;       // px avant de considerer un glisser
 const CLOSE_MARGIN = 60;        // px tires sous la position reduite pour fermer
 const MOMENTUM_MS = 120;        // projection de l'elan au lacher
@@ -37,8 +37,13 @@ function peekVisible(modal) {
     return Math.max(140, Math.min(320, Math.round(bottom + 8)));
 }
 
+// Hauteur de la zone de la feuille (entre les barres du haut et du bas).
+function areaHeight(modal) {
+    return modal.parentElement?.clientHeight || window.innerHeight;
+}
+
 function offsetFor(name, modal) {
-    const vh = window.innerHeight;
+    const vh = areaHeight(modal);
     if (name === 'full') return 0;
     if (name === 'peek') return Math.max(0, vh - peekVisible(modal));
     return Math.round(vh * (1 - HALF_RATIO));
@@ -79,7 +84,7 @@ export function openFicheSheet({ full = false, alreadyOpen = false } = {}) {
         return;
     }
     modal.classList.add('is-dragging');            // pas de transition pour le point de depart
-    modal.style.transform = `translateY(${window.innerHeight}px)`;
+    modal.style.transform = `translateY(${areaHeight(modal)}px)`;
     void modal.offsetHeight;                        // fixe le point de depart
     modal.classList.remove('is-dragging');
     requestAnimationFrame(() => applyState(full ? 'full' : 'half', modal));
@@ -130,7 +135,7 @@ export function initFicheSheet(onClose) {
         drag.v = (e.clientY - drag.lastY) / dt;     // px / ms, positif vers le bas
         drag.lastY = e.clientY;
         drag.lastT = e.timeStamp;
-        const offset = Math.min(window.innerHeight - 40, Math.max(0, drag.start + dy));
+        const offset = Math.min(areaHeight(modal) - 40, Math.max(0, drag.start + dy));
         modal.style.transform = `translateY(${offset}px)`;
     });
     function release(e) {
@@ -177,6 +182,10 @@ export function initFicheSheet(onClose) {
     handle.addEventListener('click', (e) => {
         if (e.detail === 0 && isSheetLayout()) stepUp();
     });
+    // La zone de la feuille ne defile jamais : un focus (ouverture) la faisait
+    // defiler et annulait le decalage de la feuille
+    const area = modal.parentElement;
+    area?.addEventListener('scroll', () => { if (area.scrollTop) area.scrollTop = 0; });
     // Rotation / clavier virtuel : la position se recale
     window.addEventListener('resize', () => {
         if (isSheetLayout() && modal.style.transform) applyState(state, modal);

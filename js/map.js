@@ -46,6 +46,8 @@ export function initMainMap() {
 
     L.control.zoom({ position: 'bottomleft' }).addTo(mainMap);
     enableOneFingerZoom(mainMap);   // EPIC-T26
+    // Toucher la carte hors pastille (pas un glisser) : la fiche ouverte se ferme (gmaps-ui.js)
+    mainMap.on('click', () => document.dispatchEvent(new CustomEvent('distrimatch:map-tap')));
 
     if (AppState.userLocation) {
         const userIcon = L.divIcon({
@@ -237,11 +239,12 @@ function openFromMap(d) {
 
 // EPIC-T26 : sur telephone, la fiche couvre le bas de l'ecran (58 %) : on centre
 // la pastille dans la partie de carte qui reste visible au-dessus.
-const SHEET_RATIO = 0.58;
+const SHEET_RATIO = 0.64;
 function centerAboveSheet(latlng, zoom) {
     if (!isSheetLayout()) return latlng;
     const rect = mainMap.getContainer().getBoundingClientRect();
-    const sheetTop = window.innerHeight * (1 - SHEET_RATIO);
+    const area = document.getElementById('dist-modal-overlay')?.getBoundingClientRect();
+    const sheetTop = area && area.height ? area.top + area.height * (1 - SHEET_RATIO) : window.innerHeight * (1 - SHEET_RATIO);
     const visibleCenter = (rect.top + Math.min(sheetTop, rect.bottom)) / 2;
     const mapCenter = (rect.top + rect.bottom) / 2;
     const shift = Math.max(0, mapCenter - visibleCenter);
