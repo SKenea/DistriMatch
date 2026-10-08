@@ -777,15 +777,15 @@ test.describe('42. Fiche a mi-hauteur sur telephone', () => {
         });
         if (await page.locator('.pin-choice').count()) await page.locator(`.pin-choice[data-id="${id}"]`).click();
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
-        await page.waitForTimeout(450);   // fin de la montee
-        const half = await page.evaluate(() => {
+        // attend la fin de la montee (animation) plutot qu'un delai fixe
+        const ratio = () => page.evaluate(() => {
             const m = document.getElementById('dist-modal');
             const area = document.getElementById('dist-modal-overlay').getBoundingClientRect();
-            return { ratio: (area.bottom - m.getBoundingClientRect().top) / area.height, full: m.classList.contains('is-full') };
+            return (area.bottom - m.getBoundingClientRect().top) / area.height;
         });
-        expect(half.full).toBe(false);
-        expect(half.ratio).toBeGreaterThan(0.5);
-        expect(half.ratio).toBeLessThan(0.7);
+        await expect.poll(ratio, { timeout: 5000 }).toBeGreaterThan(0.5);
+        await expect.poll(ratio, { timeout: 5000 }).toBeLessThan(0.7);
+        await expect(page.locator('#dist-modal')).not.toHaveClass(/is-full/);
         await expect(page.locator('.distributor-pin.is-selected')).toHaveCount(1);
         const handle = page.locator('#dist-sheet-handle');
         await expect(handle).toHaveAttribute('aria-label', 'Agrandir la fiche');
