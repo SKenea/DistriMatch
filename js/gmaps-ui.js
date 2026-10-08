@@ -18,7 +18,7 @@ import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edi
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { locateOnMap, setSelectedPin } from './map.js';
-import { initFicheSheet, openFicheSheet, resetFicheSheet } from './fiche-sheet.js';
+import { initFicheSheet, openFicheSheet, resetFicheSheet, isSheetLayout } from './fiche-sheet.js';
 import { goBackToMap } from './navigation.js';
 
 // ============================================
@@ -244,6 +244,13 @@ export function initDistModal() {
 
     closeBtn?.addEventListener('click', closeDistModal);
     initFicheSheet(closeDistModal);   // EPIC-T26 : poignee de la feuille du bas
+    // Telephone : toucher la carte (hors pastille) ou une barre (haut / bas) ferme la
+    // fiche ; le bouton touche fait aussi son action (Stephane 2026-10-08)
+    const ficheOpenAsSheet = () => overlay?.classList.contains('active') && isSheetLayout();
+    document.addEventListener('distrimatch:map-tap', () => { if (ficheOpenAsSheet()) closeDistModal(); });
+    document.addEventListener('click', (e) => {
+        if (ficheOpenAsSheet() && e.target.closest('.top-nav, .bottom-nav')) closeDistModal();
+    }, true);
 
     // Clic sur l'overlay (en dehors du modal) ferme
     overlay?.addEventListener('click', (e) => {
@@ -498,6 +505,7 @@ export function openDistributorModal(id) {
     const overlay = document.getElementById('dist-modal-overlay');
     // Couche d'historique (audit UX-04) : le bouton retour ferme la fiche
     const alreadyOpen = !!overlay?.classList.contains('active');
+    overlay?.classList.toggle('is-standalone', !AppState.mapInitialized);   // sans carte : plein ecran
     if (overlay && !alreadyOpen) pushLayer('fiche', closeDistModal);
     overlay?.classList.add('active');
     // Focus sur le cadre de la fiche (tabindex=-1), pas sur la croix : sinon

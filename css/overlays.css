@@ -2674,13 +2674,16 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
    Toucher la barre du haut ferme la fiche (zone de l'overlay). */
 .dist-sheet-handle { display: none; }
 @media (max-width: 768px) {
-    .dist-modal-overlay { background: transparent; pointer-events: none; align-items: flex-end; padding: 0; animation: none; }
-    .dist-modal-overlay.active::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: var(--nav-height); pointer-events: auto; }
+    /* Entre la barre du haut et la barre du bas, qui restent visibles et touchables
+       (Stephane 2026-10-08) ; sans carte (deep link avant la geolocalisation) : plein ecran */
+    .dist-modal-overlay { background: transparent; pointer-events: none; align-items: flex-end; padding: 0; animation: none;
+        top: var(--nav-height); bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); overflow: hidden; overflow: clip; }
+    .dist-modal-overlay.is-standalone { top: 0; bottom: 0; }
     .dist-modal {
         pointer-events: auto;
-        /* Toujours la hauteur de l'ecran, deplacee par transform (fiche-sheet.js) */
-        height: 100vh; height: 100dvh;
-        max-height: 100vh; max-height: 100dvh;
+        /* Toute la zone disponible, deplacee par transform (fiche-sheet.js) */
+        height: 100%;
+        max-height: 100%;
         border-radius: 18px 18px 0 0;
         box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.22);
         transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.2s ease;
@@ -2712,4 +2715,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .dist-modal.is-full .dist-sheet-handle { background: var(--white); }
     /* Fiche reduite : nom + icones, etat, onglets ; le reste attend la mi-hauteur */
     .dist-modal.is-peek .dist-modal-header > :not(.dist-modal-title):not(.dist-status) { display: none; }
+    .dist-modal.is-peek .demo-tag, .dist-modal.is-peek .operator-tag { display: none; }
+    .dist-modal.is-peek .dist-modal-header h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dist-modal.is-peek .dist-modal-name-wrap { min-width: 0; flex-wrap: nowrap; }
 }

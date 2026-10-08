@@ -362,11 +362,12 @@ test.describe('8. Mobile', () => {
 
         const r = await page.evaluate(() => {
             const rect = document.getElementById('dist-modal').getBoundingClientRect();
-            return { visible: innerHeight - rect.top, vh: innerHeight };
+            const area = document.getElementById('dist-modal-overlay').getBoundingClientRect();
+            return { visible: area.bottom - rect.top, vh: area.height };
         });
         // Decision 2026-10-08 (retour testeur) : la fiche ne cache plus toute la carte
         expect(r.visible).toBeGreaterThan(r.vh * 0.5);
-        expect(r.visible).toBeLessThan(r.vh * 0.65);
+        expect(r.visible).toBeLessThan(r.vh * 0.7);
     });
 
     test('bottom nav visible en mobile', async ({ page }) => {
@@ -779,11 +780,12 @@ test.describe('42. Fiche a mi-hauteur sur telephone', () => {
         await page.waitForTimeout(450);   // fin de la montee
         const half = await page.evaluate(() => {
             const m = document.getElementById('dist-modal');
-            return { ratio: (innerHeight - m.getBoundingClientRect().top) / innerHeight, full: m.classList.contains('is-full') };
+            const area = document.getElementById('dist-modal-overlay').getBoundingClientRect();
+            return { ratio: (area.bottom - m.getBoundingClientRect().top) / area.height, full: m.classList.contains('is-full') };
         });
         expect(half.full).toBe(false);
         expect(half.ratio).toBeGreaterThan(0.5);
-        expect(half.ratio).toBeLessThan(0.65);
+        expect(half.ratio).toBeLessThan(0.7);
         await expect(page.locator('.distributor-pin.is-selected')).toHaveCount(1);
         const handle = page.locator('#dist-sheet-handle');
         await expect(handle).toHaveAttribute('aria-label', 'Agrandir la fiche');
@@ -910,7 +912,7 @@ test.describe('45. Fiche en trois positions', () => {
                 open: document.getElementById('dist-modal-overlay').classList.contains('active'),
                 full: m.classList.contains('is-full'),
                 peek: m.classList.contains('is-peek'),
-                visible: Math.round(innerHeight - m.getBoundingClientRect().top)
+                visible: Math.round(document.getElementById('dist-modal-overlay').getBoundingClientRect().bottom - m.getBoundingClientRect().top)
             };
         }, { fromSelector, dy });
     }
@@ -971,5 +973,46 @@ test.describe('46. Fiche reduite : onglets', () => {
         await page.click('.dist-tab[data-tab="avis"]');
         await expect(page.locator('#dist-modal')).not.toHaveClass(/is-peek/);
         await expect(page.locator('.dist-tab[data-tab="avis"]')).toHaveClass(/active/);
+    });
+});
+
+test.describe('47. Fiche et barres de navigation', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    async function openFiche(page) {
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForTimeout(450);
+    }
+
+    test('barres du haut et du bas visibles et touchables, meme en plein ecran', async ({ page }) => {
+        await openFiche(page);
+        await page.locator('#dist-sheet-handle').click();
+        await expect(page.locator('#dist-modal')).toHaveClass(/is-full/);
+        await page.waitForTimeout(400);
+        const r = await page.evaluate(() => {
+            const nav = document.querySelector('.bottom-nav').getBoundingClientRect();
+            const top = document.querySelector('.top-nav').getBoundingClientRect();
+            const m = document.getElementById('dist-modal').getBoundingClientRect();
+            const hitNav = document.elementFromPoint(nav.left + nav.width / 2, nav.top + nav.height / 2)?.closest('.bottom-nav');
+            const hitTop = document.elementFromPoint(top.left + 20, top.top + top.height / 2)?.closest('.top-nav');
+            return { sheetBottom: Math.round(m.bottom), navTop: Math.round(nav.top), sheetTop: Math.round(m.top), topBottom: Math.round(top.bottom), hitNav: !!hitNav, hitTop: !!hitTop };
+        });
+        expect(r.hitNav).toBe(true);
+        expect(r.hitTop).toBe(true);
+        expect(r.sheetBottom).toBeLessThanOrEqual(r.navTop);
+        expect(r.sheetTop).toBeGreaterThanOrEqual(r.topBottom);
+    });
+
+    test('toucher la carte ferme la fiche', async ({ page }) => {
+        await openFiche(page);
+        await page.evaluate(async () => (await import('./js/state.js')).mainMap.fire('click', { latlng: (await import('./js/state.js')).mainMap.getCenter() }));
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+    });
+
+    test('toucher Favoris dans la barre du bas ferme la fiche et ouvre Favoris', async ({ page }) => {
+        await openFiche(page);
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('#subscriptions-view')).toHaveClass(/view-active/);
     });
 });
