@@ -6,8 +6,7 @@ import {
     AppState, Conversations, GREETING_MESSAGES, ALERT_MESSAGES
 } from './state.js';
 import {
-    escapeHTML, formatTime, formatDistance, showToast, getTimeSlot,
-    updateImplicitProfile, saveConversations
+    escapeHTML, formatTime, formatDistance, getTimeSlot, updateImplicitProfile, saveConversations
 } from './utils.js';
 import { closeSidebar, updateConversationsBadge } from './navigation.js';
 import { toggleSubscription, getDirectionsTo } from './distributor.js';

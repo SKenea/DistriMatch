@@ -14,7 +14,7 @@ import { pushLayer, popLayer } from './history.js';
 import { checkNearbyForFiche, loadAvailabilityForDistributor, initFicheSignals, focusSignalFromQr, renderFicheStatus } from './availability.js';
 import { logEvent, rememberEntrySource } from './events.js';
 import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshReviewsForAuth } from './reviews.js';
-import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
+import { initFicheEdit, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { locateOnMap, setSelectedPin } from './map.js';

@@ -12,15 +12,7 @@ import {
 } from './state.js';
 
 import {
-    escapeHTML, showToast, calculateDistance,
-    getUserLocation, sortByDistance,
-    saveToLocalStorage, loadFromLocalStorage,
-    saveProfile, loadProfile,
-    saveConversations, loadConversations,
-    saveNotificationPrefs, loadNotificationPrefs,
-    saveNotificationQueue, loadNotificationQueue,
-    loadUserDistributors, saveUserDistributor, getLevelInfo, mapDistributorRow,
-    findLocalDuplicates, removeUserDistributors
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -29,19 +21,11 @@ import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
 
 import {
-    switchView, switchTab, goBackToMap,
-    hideAllViews, registerViewCallback,
-    updateBadges, updateConversationsBadge,
-    toggleSidebar, closeSidebar, setFilter,
-    openSearch, closeSearch, performSearch,
-    initFilterChips, updateProfileStats
+    switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, closeSidebar, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats
 } from './navigation.js';
 
 import {
-    renderProductsList,
-    toggleAddProductForm, submitDetailProduct,
-    toggleSubscription, displaySubscriptions,
-    loadPhotoThumbnails
+    renderProductsList, toggleSubscription, displaySubscriptions, loadPhotoThumbnails
 } from './distributor.js';
 
 import {
@@ -52,19 +36,11 @@ import {
 } from './chat.js';
 
 import {
-    loadActivityFeed, displayActivityFeed,
-    updateActivityBadge, setActivityFilter,
-    voteOnReport, loadReportsFromSupabase,
-    openReportModal, selectReportType, submitReport, closeReportModal
+    loadActivityFeed, updateActivityBadge, voteOnReport, loadReportsFromSupabase, selectReportType, submitReport, closeReportModal
 } from './activity.js';
 
 import {
-    startGeofenceMonitoring, processQueuedNotifications,
-    openNotificationSettings, saveNotificationSettingsFromUI,
-    updateRadiusDisplay, promptAddProductFollow,
-    unfollowProduct,
-    openNotificationsView, updateNotificationsBadge,
-    deleteNotification, clearAllNotifications
+    startGeofenceMonitoring, processQueuedNotifications, openNotificationSettings, saveNotificationSettingsFromUI, updateRadiusDisplay, promptAddProductFollow, unfollowProduct, openNotificationsView, updateNotificationsBadge, clearAllNotifications
 } from './notifications.js';
 
 import {
@@ -73,7 +49,7 @@ import {
     previewAddPhotos, removeAddPhoto
 } from './add-distributor.js';
 
-import { initSidePanel, openSidePanelForType, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, closeDistModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
+import { initSidePanel, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
 import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
@@ -329,15 +305,11 @@ registerViewCallback('notifications', openNotificationsView);
 // WINDOW GLOBALS (pour onclick inline)
 // ============================================
 
-// Carte popups — showDetails redirige vers le bottom sheet
-window.showDetails = openDistributorModal;
 window.openDistributorModal = openDistributorModal;
 window.openConversation = openConversation;
 
 // Page distributeur
 window.renderProductsList = renderProductsList;
-window.toggleAddProductForm = toggleAddProductForm;
-window.submitDetailProduct = submitDetailProduct;
 
 // Abonnements
 window.toggleSubscription = toggleSubscription;

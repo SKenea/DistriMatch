@@ -9,20 +9,12 @@
  */
 
 import { AppState, supabaseClient } from './state.js';
-import { escapeHTML, showToast, describeReviewStatus, countUnreadMessages, describeOperatorRequestError } from './utils.js';
+import { escapeHTML, showToast, describeReviewStatus, countUnreadMessages, describeOperatorRequestError, formatWhen } from './utils.js';
 import { isAuthenticated, getCurrentUser, onAuthChange } from './auth.js';
 import { switchView, registerViewCallback } from './navigation.js';
 
 let mine = [];          // fiches du compte (toutes, refusees comprises)
 let messages = [];      // fil de chacune
-
-function formatWhen(iso) {
-    try {
-        return new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-        return '';
-    }
-}
 
 // Fil d'une fiche (membre ou console) : evenements centres, bulles sinon
 export function renderReviewThread(list, me = 'member') {

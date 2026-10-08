@@ -1335,14 +1335,13 @@ describe('state setters', () => {
     it('setMainMap stocke la reference', () => {
         const fakeMap = { id: 'test-map' };
         setMainMap(fakeMap);
-        // On ne peut pas lire mainMap directement (non exporte en lecture)
-        // Mais on verifie que ca ne crash pas
-        assert.ok(true);
+        assert.equal(stateModule.mainMap, fakeMap);   // liaison vivante de l'export
     });
 
     it('setDistributorMarkers stocke le tableau', () => {
-        setDistributorMarkers([{ id: 'm1' }, { id: 'm2' }]);
-        assert.ok(true);
+        const markers = [{ id: 'm1' }, { id: 'm2' }];
+        setDistributorMarkers(markers);
+        assert.equal(stateModule.distributorMarkers, markers);
     });
 
     it('incrementAddProductCounter incremente', () => {
@@ -1878,3 +1877,5 @@ describe('Carte : zoom d’un seul doigt (EPIC-T26)', () => {
         assert.equal(zoomFromDrag(3, -600, 2, 19), 2);
     });
 });
+
+import * as stateModule from '../../js/state.js';

@@ -142,24 +142,6 @@ function triggerProximityNotification(distributor, distanceMeters) {
     sendNotification(notification);
 }
 
-export function triggerProductNotification(distributor, product) {
-    const notification = {
-        type: 'stock',
-        distributorId: distributor.id,
-        distributorName: distributor.name,
-        product: product,
-        message: `${product} est dispo chez ${distributor.name}`,
-        timestamp: Date.now()
-    };
-
-    if (isQuietHours()) {
-        queueNotification(notification);
-        return;
-    }
-
-    sendNotification(notification);
-}
-
 // Changement sur une machine en favori (js/favorites-watch.js).
 // event : { type: 'empty' | 'broken' | 'working' | 'stock' | 'restock', at, product? }
 // L'horodatage est celui du SIGNAL : le centre affiche "il y a 40 min" par

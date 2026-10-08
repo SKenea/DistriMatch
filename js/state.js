@@ -12,7 +12,6 @@ export const AppState = {
     reports: 0,
     points: 0,
     mapInitialized: false,
-    sidebarOpen: false,
     activeFilters: []
 };
 
