@@ -1,0 +1,156 @@
+<title>Accueil DistriMatch</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root { --bg:#F3F4F6; --paper:#FFFFFF; --ink:#111827; --muted:#4B5563; --line:#E5E7EB; --accent:#B91C1C; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#111418; --paper:#1B1F24; --ink:#F3F4F6; --muted:#AAB2BD; --line:#2D333B; --accent:#F87171; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg:#111418; --paper:#1B1F24; --ink:#F3F4F6; --muted:#AAB2BD; --line:#2D333B; --accent:#F87171; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width: 1260px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; }
+  .kicker { margin:0; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  h1 { margin: 4px 0 8px; font-size: clamp(24px,5vw,32px); line-height:1.2; text-wrap: balance; }
+  h2 { margin: 40px 0 8px; font-size: 22px; text-wrap: balance; }
+  p { max-width: 70ch; }
+  .lead { margin:0; color:var(--muted); }
+  .rules { padding-left: 20px; max-width: 75ch; }
+  .rules li { margin: 4px 0; }
+
+  .phones { display:grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 28px; margin-top: 16px; align-items: start; }
+  .option h3 { margin: 0 0 2px; font-size: 18px; }
+  .option .why { margin: 0 0 12px; color: var(--muted); font-size: 14px; min-height: 42px; }
+  .reco { display:inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #166534; color:#fff; font-size: 12px; font-weight: 600; vertical-align: 2px; }
+  .notes { margin: 14px auto 0; max-width: 390px; font-size: 14px; color: var(--muted); padding-left: 18px; }
+  .notes li { margin: 3px 0; }
+
+  /* ---------- Ecran (390 x 780) : meme fond rouge que l'app ---------- */
+  .screen { position: relative; width: 100%; max-width: 390px; height: 780px; margin: 0 auto; border-radius: 34px; overflow: hidden;
+            background: linear-gradient(160deg, #B91C1C 0%, #C2410C 100%); color: #fff;
+            box-shadow: 0 12px 40px rgba(17,24,39,.25); display:flex; flex-direction:column; padding: 56px 24px 26px; }
+  .brand { display:flex; align-items:center; gap:8px; font-weight: 700; font-size: 15px; }
+  .brand i { width: 26px; height: 26px; border-radius: 8px; background: #fff; display:grid; place-items:center; font-style: normal; }
+  .brand i svg { width: 16px; height: 16px; color: #B91C1C; }
+  .grow { flex: 1; }
+  .screen h4 { margin: 0; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; font-size: 34px; line-height: 1.06; }
+  .screen .sub { margin: 8px 0 0; font-size: 16.5px; line-height: 1.4; }
+  .cta { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height: 54px; border:0; border-radius: 999px; background:#fff; color:#991B1B;
+         font: 600 17px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+  .cta svg { width: 20px; height: 20px; }
+  .privacy { margin: 10px 0 0; text-align:center; font-size: 13px; color: rgba(255,255,255,.95); }
+  .check { display:flex; gap: 10px; align-items:flex-start; margin: 14px 0 0; font-size: 16px; line-height: 1.4; }
+  .check svg { flex:none; width: 22px; height: 22px; margin-top: 1px; }
+
+  /* ---------- Carte (dessinee, facon fond OSM) ---------- */
+  .map { position: relative; overflow: hidden; border-radius: 18px; background:#EEF0E8; box-shadow: 0 10px 30px rgba(0,0,0,.22); }
+  .map > svg.ground { position:absolute; inset:0; width:100%; height:100%; }
+  .pin { position:absolute; width: 40px; height: 40px; transform: translate(-50%,-50%); display:grid; place-items:center; }
+  .pin svg { position:absolute; inset:0; width:40px; height:40px; filter: drop-shadow(0 1px 2px rgba(17,24,39,.25)); }
+  .pin span { width: 28px; height: 28px; border-radius: 50%; background:#fff; display:grid; place-items:center; font-size: 15px; line-height: 1; }
+  .pin.sel { width: 50px; height: 50px; z-index: 2; }
+  .pin.sel svg { width: 50px; height: 50px; }
+  .pin.sel span { width: 36px; height: 36px; font-size: 19px; }
+  .pin.sel::after { content:""; position:absolute; inset:-8px; border-radius:50%; border: 3px solid rgba(22,163,74,.45); }
+  .me { position:absolute; width: 16px; height: 16px; border-radius:50%; background:#2563EB; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(37,99,235,.2); transform: translate(-50%,-50%); }
+  .bubble { position:absolute; transform: translate(-50%, -100%); background:#fff; color:#111827; border-radius: 10px; padding: 5px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.2); display:flex; align-items:center; gap:6px; z-index: 3; }
+  .bubble::after { content:""; position:absolute; left:50%; bottom:-5px; width:10px; height:10px; background:#fff; transform: translateX(-50%) rotate(45deg); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background:#16A34A; display:inline-block; flex:none; }
+
+  /* ---------- Le geste (carte produit + Dispo / Pas dispo) ---------- */
+  .gesture { background:#fff; color:#111827; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.22); position: relative; }
+  .gesture .prod { display:flex; align-items:center; justify-content:space-between; padding: 8px 10px; border-radius: 12px; background:#F3F4F6; }
+  .gesture .prod b { font-size: 16px; }
+  .gesture .prod small { font-size: 13px; color:#4B5563; }
+  .gesture .menu { margin-top: 8px; display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gesture .menu div { min-height: 46px; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-weight: 700; font-size: 16px; border: 2px solid #E5E7EB; color:#374151; }
+  .gesture .menu .on { background:#16A34A; border-color:#16A34A; color:#fff; }
+  .finger { position:absolute; left: 24%; bottom: -16px; width: 42px; height: 42px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.3)); }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color:#6B7280; display:block; margin: 0 0 6px 2px; }
+
+  /* Option A : carte puis geste, superposes */
+  .oa .map { height: 230px; margin-top: 18px; }
+  .oa .gesture { margin: -54px 12px 0; z-index: 4; }
+
+  /* Option B : carte en grand, feuille rouge en bas */
+  .ob { padding: 0; }
+  .ob .map { position:absolute; left:0; right:0; top:0; height: 395px; border-radius: 0; box-shadow:none; }
+  .ob .brand-float { position:absolute; left: 20px; top: 52px; z-index: 5; background:#fff; color:#111827; border-radius: 999px; padding: 6px 12px 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .ob .sheet { position:absolute; left:0; right:0; bottom:0; top: 365px; border-radius: 26px 26px 0 0; background: linear-gradient(160deg, #B91C1C 0%, #C2410C 100%); padding: 22px 24px 26px; display:flex; flex-direction:column; }
+  .ob .sheet h4 { font-size: 40px; line-height: 1.02; }
+  .ob .row { margin-top: 14px; display:grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items:center; background:#fff; color:#111827; border-radius: 16px; padding: 8px 8px 8px 14px; position: relative; }
+  .ob .row b { font-size: 16px; }
+  .ob .row .btn { min-height: 44px; padding: 0 14px; border-radius: 12px; display:flex; align-items:center; font-weight: 700; font-size: 15px; border: 2px solid #E5E7EB; color:#374151; }
+  .ob .row .btn.on { background:#16A34A; border-color:#16A34A; color:#fff; }
+  .ob .row .finger { left: auto; right: 104px; bottom: -20px; }
+
+  /* Option C : avant / apres */
+  .oc .steps { margin-top: 18px; display:flex; flex-direction:column; gap: 8px; }
+  .oc .num { display:flex; align-items:center; gap: 8px; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .oc .num i { width: 24px; height: 24px; border-radius: 50%; background:#fff; color:#B91C1C; display:grid; place-items:center; font-style: normal; font-size: 13px; font-weight: 800; }
+  .oc .arrow { display:flex; justify-content:center; height: 18px; }
+  .oc .arrow svg { width: 22px; height: 22px; }
+  .oc .map { height: 165px; }
+  .oc h4 { font-size: 30px; }
+  .oc .steps { margin-top: 14px; }
+</style>
+<div class="wrap">
+  <p class="kicker">DistriMatch · écran d'accueil · version 6 · 7 octobre 2026</p>
+  <h1>Accueil : « Fais passer le mot. »</h1>
+  <p class="lead">On garde la B (la carte en haut, la feuille rouge en bas) avec les œufs. Titre retenu : « Fais passer le mot. » Sur la carte, la pastille passe au vert, comme dans l'app, sans étiquette ajoutée. Toujours au positif, sans « reste », sans « tap », sans promesse.</p>
+  <h2>La version retenue</h2>
+  <div class="phones">
+    <section class="option">
+      <h3>1 · Fais passer le mot</h3>
+      <p class="why">Une expression que tout le monde connaît, à tout âge. Chaleureuse, active, elle dit le partage sans l'expliquer.</p>
+      <div class="screen ob" id="screen-1">
+        <div class="map" data-map="b"></div>
+        <div class="brand brand-float"><i style="background:#B91C1C"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></i>DistriMatch</div>
+        <div class="sheet">
+          <h4>Fais passer le mot.</h4>
+          <p class="sub">Des œufs au distributeur&nbsp;? Indique-le, et les membres de la communauté en sont informés.</p>
+          <div class="row"><b>Œufs</b><span class="btn on">Dispo</span><span class="btn">Pas dispo</span><svg class="finger" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5a1.5 1.5 0 0 1 3 0v5h.5V8.5a1.5 1.5 0 0 1 3 0V10h.5a1.5 1.5 0 0 1 3 0v4.5a6.5 6.5 0 0 1-6.5 6.5h-1a6 6 0 0 1-4.6-2.2L4 15.5a1.6 1.6 0 0 1 2.4-2.1L9 15.5z" fill="#fff" stroke="#111827" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+          <div class="grow"></div>
+          <button class="cta" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Voir autour de moi</button><p class="privacy">Ta position est privée. Jamais partagée, jamais stockée.</p>
+        </div>
+      </div>
+      <ul class="notes"><li>Expression populaire : comprise de 15 à 85 ans.</li><li>Un verbe à l'impératif : ça donne envie d'agir.</li><li>Le « bouche-à-oreille » version téléphone.</li></ul>
+    </section>
+  </div>
+</div>
+
+<script>
+  // Fond de carte dessine (rues, parc, riviere) + pastilles a anneau comme dans l'app
+  var GROUND = '<svg class="ground" viewBox="0 0 340 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
+    + '<rect width="340" height="240" fill="#EEF0E8"/>'
+    + '<path d="M-10 200 C 80 170, 150 230, 350 185 L350 240 L-10 240z" fill="#BFDBFE"/>'
+    + '<rect x="210" y="20" width="90" height="60" rx="10" fill="#CDE8C4"/>'
+    + '<g stroke="#fff" stroke-linecap="round" fill="none">'
+    + '<path d="M-10 60 L350 95" stroke-width="12"/><path d="M60 -10 L110 250" stroke-width="10"/>'
+    + '<path d="M-10 150 L350 130" stroke-width="8"/><path d="M190 -10 L230 250" stroke-width="8"/>'
+    + '<path d="M260 100 L340 60" stroke-width="6"/><path d="M0 105 L60 110" stroke-width="5"/></g>'
+    + '<g stroke="#F6D58E" stroke-width="5" fill="none" stroke-linecap="round"><path d="M-10 60 L350 95"/></g></svg>';
+  var C = 2 * Math.PI * 19;
+  function ring(color, fill, dashed) {
+    if (dashed) return '<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="' + color + '" stroke-width="4" stroke-dasharray="5 4"/></svg>';
+    return '<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="' + color + '" stroke-opacity=".28" stroke-width="4"/>'
+      + '<circle cx="22" cy="22" r="19" fill="none" stroke="' + color + '" stroke-width="4" stroke-dasharray="' + (fill * C).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 22 22)"/></svg>';
+  }
+  var PINS = [
+    { x: 52, y: 40, e: '🥚', sel: true },
+    { x: 14, y: 50, e: '🧀', c: '#16A34A', f: .6 },
+    { x: 88, y: 46, e: '🍕', c: '#9CA3AF', dashed: true },
+    { x: 74, y: 66, e: '🥖', c: '#EA580C', f: .25 },
+    { x: 30, y: 70, e: '🥩', c: '#16A34A', f: .9 }
+  ];
+  var LAYOUT = { a: { me: [40, 52] }, b: { me: [40, 56], shiftY: 6 }, c: { me: [40, 54] } };
+  document.querySelectorAll('[data-map]').forEach(function (el) {
+    var v = LAYOUT[el.dataset.map];
+    var html = GROUND;
+    PINS.forEach(function (p) {
+      var y = p.y + (v.shiftY || 0);
+      var r = p.sel ? ring('#16A34A', 1) : ring(p.c, p.f, p.dashed);
+      html += '<div class="pin' + (p.sel ? ' sel' : '') + '" style="left:' + p.x + '%;top:' + y + '%">' + r + '<span>' + p.e + '</span></div>';
+    });
+    html += '<div class="me" style="left:' + v.me[0] + '%;top:' + (v.me[1] + (v.shiftY || 0)) + '%"></div>';
+    el.innerHTML = html;
+  });
+</script>

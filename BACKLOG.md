@@ -19,6 +19,28 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-T24 Accueil « Fais passer le mot. » (Stephane, 2026-10-07)
+Objectif : un ecran d'accueil percutant, positif, compris a tout age, qui montre le
+geste de l'app (dire ce qui est dispo) et son effet sur la carte. Maquette retenue :
+`docs/maquettes/2026-10-07-accueil/` (carte en grand, feuille rouge en bas).
+Hors perimetre : le parcours de localisation lui-meme, les notifications push.
+
+- [x] T24-US1 En tant que nouveau visiteur, je comprends en un coup d'oeil a quoi sert
+  DistriMatch et comment j'aide les autres
+  - Acceptance : carte dessinee en haut (pastilles a anneau comme l'app, celle des oeufs
+    en vert, sans etiquette ajoutee), feuille rouge en bas : titre « Fais passer le
+    mot. », sous-titre « Des œufs au distributeur ? Indique-le, et les membres de la
+    communauté en sont informés. », exemple « Œufs · Dispo / Pas dispo » ; bouton
+    « Voir autour de moi » (la demande de localisation du navigateur suit) ;
+    « Ta position est privée. Jamais partagée, jamais stockée. » ; ni « tap », ni
+    « reste », ni « machine », ni promesse de rythme, aucun lieu nomme ; erreur de
+    localisation et « Réessayer » inchanges ; lisible sur telephone et grand ecran.
+- [x] T24-US2 En tant que personne qui recoit un lien, l'apercu du partage reprend le
+  nouveau message
+  - Acceptance : titres og / twitter « DistriMatch - Fais passer le mot », descriptions
+    sans « tap ».
+- [x] T24-TS1 Tests et captures iPhone avant fusion.
+
 ### EPIC-T23 Voir le distributeur sur la carte depuis sa fiche (Stephane, 2026-10-07)
 Objectif : depuis une fiche ouverte via la liste ou la recherche, retrouver le
 distributeur sur la carte. Hors perimetre : itineraire dans l'app.
