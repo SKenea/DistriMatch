@@ -6,10 +6,7 @@
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--warning) 100%);
     display: flex;
-    align-items: center;
-    justify-content: center;
     transition: opacity 0.4s ease, visibility 0.4s ease;
 }
 
@@ -83,8 +80,6 @@
 }
 
 .geoloc-hint {
-    font-size: 0.75rem !important;
-    color: rgba(255, 255, 255, 0.55) !important;
     margin-bottom: 0 !important;
     margin-top: 0.75rem !important;
 }
@@ -92,7 +87,6 @@
 .geoloc-subtitle {
     font-size: 0.95rem !important;
     line-height: 1.5 !important;
-    color: rgba(255, 255, 255, 0.92) !important;
     margin-bottom: 1.5rem !important;
 }
 
@@ -539,7 +533,6 @@
 }
 
 .side-panel-item-rating {
-    color: var(--warning);
     font-weight: 600;
 }
 
@@ -612,7 +605,6 @@
 }
 
 .dist-modal {
-    background: var(--white);
     border-radius: 16px;
     width: 100%;
     max-width: 480px;
@@ -630,12 +622,7 @@
 
 .dist-modal-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.95);
     border: none;
     color: var(--dark);
     cursor: pointer;
@@ -643,7 +630,6 @@
     align-items: center;
     justify-content: center;
     z-index: 2;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dist-modal-close:hover {
@@ -669,21 +655,12 @@
 }
 .dist-apropos-photos .photo-gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-.dist-modal-header {
-    padding: 0.75rem 1.25rem 0.25rem;
-}
-
 .dist-modal-header h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem;
-    color: var(--dark);
     line-height: 1.2;
 }
 
 .dist-modal-meta {
     display: flex;
-    margin-top: 0.5rem;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -692,13 +669,11 @@
 }
 
 .dist-modal-rating {
-    color: var(--warning);
     font-weight: 600;
 }
 
 /* Variante "Pas encore d'avis" : pas de couleur jaune, italic discret. */
 .dist-modal-rating.no-reviews {
-    color: var(--gray);
     font-weight: 400;
     font-style: italic;
 }
@@ -791,11 +766,7 @@
 }
 
 .dist-modal-tabs {
-    display: flex;
     gap: 0.4rem;
-    border-bottom: 1px solid var(--light);
-    padding: 0.6rem 1rem;
-    background: var(--white);
     position: sticky;
     top: 0;
     z-index: 1;
@@ -803,25 +774,12 @@
 
 .dist-tab {
     flex: 1;
-    min-height: 44px;
     padding: 0.55rem 0.5rem;
     background: none;
     border: none;
-    border-radius: 999px;
     font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--gray);
     cursor: pointer;
     transition: all 0.15s;
-}
-
-.dist-tab:hover {
-    color: var(--dark);
-}
-
-.dist-tab.active {
-    color: #fff;
-    background: var(--primary-text);
 }
 
 .dist-modal-content {
@@ -876,7 +834,7 @@
 .review-actions { display: flex; gap: 0.5rem; }
 .review-actions button { min-height: 44px; }
 .review-actions button[hidden] { display: none; }
-.reviews-summary { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: var(--dark); }
+.reviews-summary { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; }
 .reviews-summary[hidden] { display: none; }
 .reviews-list { list-style: none; margin: 0; padding: 0; }
 .review-item { padding: 0.75rem 0; border-bottom: 1px solid var(--light); }
@@ -894,7 +852,7 @@
     color: var(--gray);
 }
 .review-time { font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap; }
-.review-stars { margin: 0.15rem 0; color: #b45309; font-size: 1rem; letter-spacing: 0.05em; }
+.review-stars { margin: 0.15rem 0; font-size: 1rem; letter-spacing: 0.05em; }
 .review-body { margin: 0.2rem 0 0; font-size: 0.95rem; color: var(--dark); line-height: 1.45; }
 .reviews-empty { margin: 1rem 0; text-align: center; color: var(--gray); font-weight: 600; }
 .reviews-empty[hidden] { display: none; }
@@ -928,13 +886,10 @@
 @media (max-width: 768px) {
     .dist-modal {
         max-width: 100%;
-        max-height: 100vh;
         height: 100vh;
-        border-radius: 0;
     }
 
     .dist-modal-overlay {
-        padding: 0;
     }
 }
 
@@ -1128,23 +1083,13 @@
 .dist-login-invite.is-highlighted { animation: hintPulse 2.4s ease; }
 .machine-choice {
     flex: 1;
-    min-height: 56px;
     padding: 0.5rem 0.25rem;
-    border: 1.5px solid var(--light-gray);
-    border-radius: 16px;
     background: var(--white);
     font: inherit;
-    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
 }
-.machine-choice.is-working { color: #166534; }
-.machine-choice.is-empty { color: #9a3412; }
-.machine-choice.is-broken { color: #991B1B; }
-.machine-choice.is-current { color: #fff; border-color: transparent; }
-.machine-choice.is-working.is-current { background: #15803d; }
-.machine-choice.is-empty.is-current { background: #c2410c; }
-.machine-choice.is-broken.is-current { background: #b91c1c; }
+.machine-choice.is-current { border-color: transparent; }
 .machine-choice:disabled { opacity: 0.5; cursor: wait; }
 .machine-choice:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
@@ -1194,8 +1139,8 @@
 /* ===== « Il reste quoi ? » : statut et signal sur chaque aliment (EPIC-T2) ===== */
 .products-section-head { margin: 0 0 0.6rem; }
 .products-section-head[hidden] { display: none; }
-.products-section-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--dark); }
-.products-count { font-size: 1rem; font-weight: 700; color: var(--text-muted); }
+.products-section-title { margin: 0; font-weight: 800; color: var(--dark); }
+.products-count { font-weight: 700; color: var(--text-muted); }
 @keyframes hintPulse {
     0%, 60% { background: rgba(244, 162, 97, 0.25); color: var(--dark); }
     100% { background: transparent; }
@@ -1270,19 +1215,11 @@
 .dist-status .dist-modal-verified.is-fresh { display: inline; margin: 0; font-size: inherit; font-weight: 400; font-style: normal; color: var(--gray); }
 .dist-status .dist-modal-verified:not(:empty)::before { content: "· "; }
 .dist-status-update {
-    min-height: 44px;
-    padding: 0 0.35rem;
-    border: none;
-    background: none;
-    color: var(--dark);
     font: inherit;
-    font-size: 0.9rem;
-    text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
 }
 .dist-status-update[hidden] { display: none; }
-.dist-status-update[aria-expanded="true"] { font-weight: 700; }
 .dist-modal-meta { margin-top: 0.15rem; }
 
 /* Trois etats derriere « Mettre à jour » : tuiles sobres { font-size: 0.9rem; }
@@ -1344,8 +1281,6 @@
 }
 .product-row.is-available { background: #F0FDF4; border-color: #BBF7D0; }
 .product-row.is-available.is-soft { background: #F8FDF9; border-color: #DCFCE7; }
-.product-row.is-absent { background: #F3F4F6; border-color: #E5E7EB; }
-.product-row.is-unknown { background: #FFFFFF; border-color: #E5E7EB; }
 .product-row-main {
     width: 100%;
     min-height: 44px;
@@ -1398,24 +1333,19 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-pill.is-unknown::before { background: transparent; border: 1px solid #94A3B8; }
 
 /* Signaler sur la carte : deux boutons avec les mots de l'affichage */
-.product-choices { display: flex; gap: 6px; padding: 0 12px 12px; }
-.product-choices[hidden] { display: none; }
+.product-choices { gap: 6px; }
 .product-choice {
     flex: 1;
     min-width: 0;
     min-height: 44px;
     padding: 0 2px;
-    border: 1px solid #E5E7EB;
     border-radius: 10px;
-    background: #FFFFFF;
     font: inherit;
     font-size: 0.82rem;
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
 }
-.product-choice.is-yes { color: #166534; }
-.product-choice.is-no { color: #4B5563; }
 .product-choice:disabled { opacity: 0.5; cursor: wait; }
 .product-choice:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
@@ -1598,26 +1528,12 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 
 /* Carte ouverte : bord marque ; « Toujours dispo ? » + Dispo | Pas dispo colles en bas */
 .product-row.is-open { border-color: #111827; box-shadow: 0 2px 8px rgba(17, 24, 39, 0.12); }
-.product-choices { display: block; padding: 0; border-top: 1px solid #E5E7EB; background: #FFFFFF; border-radius: 0 0 13px 13px; overflow: hidden; }
-.product-choices[hidden] { display: none; }
+.product-choices { border-top: 1px solid #E5E7EB; }
 .product-choices-q { margin: 0; padding: 8px 12px 6px; font-size: 0.82rem; font-weight: 700; color: #111827; }
 .product-choices .product-choice {
     flex: 1;
-    min-height: 52px;
-    border: none;
     border-top: 1px solid #E5E7EB;
-    border-radius: 0;
-    box-shadow: none;
-    background: #FFFFFF;
-    font-size: 0.9rem;
-    font-weight: 800;
 }
-.product-choices .product-choice + .product-choice { border-left: 1px solid #E5E7EB; }
-.product-choices .product-choice.is-yes { color: #166534; }
-.product-choices .product-choice.is-no { color: #374151; }
-.product-choices .product-choice.is-current.is-yes { background: #166534; color: #FFFFFF; }
-.product-choices .product-choice.is-current.is-no { background: #4B5563; color: #FFFFFF; }
-.product-choices .product-choice:active { transform: none; filter: brightness(0.95); }
 
 /* Renommer (EPIC-T16, depuis le menu) : le nom devient un champ */
 .product-rename { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -1643,7 +1559,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-add-card {
     display: flex;
     align-items: center;
-    gap: 10px;
     min-height: 88px;
     padding: 12px;
     border: 1.5px dashed #9CA3AF;
@@ -1773,9 +1688,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .add-chip {
     display: flex;
     align-items: center;
-    gap: 8px;
     min-height: 52px;
-    padding: 6px 10px 6px 6px;
     border: 1.5px solid #D1D5DB;
     border-radius: 12px;
     background: #F9FAFB;
@@ -1789,9 +1702,8 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .add-chip:hover { background: #F3F4F6; border-color: #9CA3AF; }
 .add-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .add-chip:active { transform: translateY(1px); }
-.add-chip-icon .product-icon { width: 34px; height: 34px; }
-.add-chip-name { flex: 1; min-width: 0; font-size: 0.9rem; font-weight: 700; overflow-wrap: break-word; hyphens: auto; }
-.add-chip-plus { font-size: 1.25rem; font-weight: 600; color: #374151; }
+.add-chip-name { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: break-word; hyphens: auto; }
+.add-chip-plus { font-weight: 600; color: #374151; }
 .add-other { display: flex; align-items: center; gap: 8px; }
 .add-other .product-add-input {
     flex: 1;
@@ -1856,12 +1768,8 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 }
 .dist-apropos-actions .dist-action-btn.primary {
     flex: 1;
-    background: #111827;
-    border-color: #111827;
     color: #FFFFFF;
-    box-shadow: 0 2px 6px rgba(17, 24, 39, 0.25);
 }
-.dist-apropos-actions .dist-action-btn.primary:hover { background: #1F2937; }
 .dist-apropos-actions .dist-action-btn svg { width: 20px; height: 20px; }
 
 /* ==========================================
@@ -1873,23 +1781,16 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     position: absolute;
     top: 50px;
     left: 6px;
-    right: 6px;
     z-index: 5;
     display: flex;
     flex-direction: column;
-    padding: 4px;
     border: 1px solid #E5E7EB;
-    border-radius: 12px;
     background: #FFFFFF;
-    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
     overflow: visible;
 }
 .product-choices[hidden] { display: none; }
 .product-choices .product-choices-q {
     margin: 0;
-    padding: 8px 10px 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
     color: #4B5563;
     border-bottom: 1px solid #F3F4F6;
 }
@@ -1897,17 +1798,12 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices .product-menu-action {
     display: flex;
     align-items: center;
-    gap: 8px;
     width: 100%;
     min-height: 44px;
-    padding: 0 10px;
     border: none;
     border-radius: 8px;
     background: none;
     font: inherit;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #111827;
     text-align: left;
     text-decoration: none;
     box-shadow: none;
@@ -1931,7 +1827,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choice.is-current .dd-check { visibility: visible; }
 .product-choice.is-current.is-no .dd-check { color: #374151; }
 .dd-sep { width: 100%; height: 1px; margin: 4px 0; border: none; background: #E5E7EB; }
-.product-choices .product-menu-action.is-danger { color: #B91C1C; }
 
 /* ==========================================
    HORAIRES ET COUP DE POUCE SUR PLACE (EPIC-T17)
@@ -2089,20 +1984,13 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     z-index: 30;
     display: flex;
     flex-direction: column;
-    width: min(260px, 100%);
     margin: 0;
-    padding: 4px;
     border: 1px solid #E5E7EB;
-    border-radius: 12px;
     background: #FFFFFF;
-    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.22);
 }
 #dist-machine-choices[hidden] { display: none; }
 #dist-machine-choices .machine-choices-q {
     margin: 0;
-    padding: 8px 10px 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
     color: #4B5563;
     border-bottom: 1px solid #F3F4F6;
 }
@@ -2110,26 +1998,19 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 #dist-machine-choices .machine-choice {
     display: flex;
     align-items: center;
-    gap: 8px;
     flex: none;
     width: 100%;
     min-height: 44px;
     margin: 0;
-    padding: 0 10px;
     border: none;
     border-radius: 8px;
     background: none;
     box-shadow: none;
     font: inherit;
-    font-size: 0.95rem;
-    font-weight: 700;
     text-align: left;
     white-space: nowrap;
     cursor: pointer;
 }
-#dist-machine-choices .machine-choice.is-working { color: #166534; }
-#dist-machine-choices .machine-choice.is-empty { color: #9A3412; }
-#dist-machine-choices .machine-choice.is-broken { color: #991B1B; }
 #dist-machine-choices .machine-choice.is-current { background: none; }
 #dist-machine-choices .machine-choice:hover,
 #dist-machine-choices .machine-choice:focus-visible { background: #F3F4F6; outline: none; }
@@ -2217,7 +2098,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 #dist-machine-choices .dd-dot,
 .product-choices .dd-dot { width: 8px; height: 8px; }
 #dist-machine-choices .dd-check,
-.product-choices .dd-check { width: 16px; height: 16px; margin-left: 12px; color: #374151; }
+.product-choices .dd-check { margin-left: 12px; }
 #dist-machine-choices .machine-choices-q,
 .product-choices .product-choices-q { padding: 6px 10px 4px; font-size: 0.75rem; font-weight: 500; }
 .product-choices .dd-sep { margin: 3px 0; }
@@ -2506,7 +2387,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .activity-login { margin-top: 12px; flex: none; padding: 0.75rem 1.5rem; }
 /* Accueil (EPIC-T22) : degrade plus profond pour que le texte blanc reste lisible
    (contraste >= 4,5:1), sous-textes en blanc plein */
-.geoloc-overlay { background: linear-gradient(135deg, #B91C1C 0%, #C2410C 100%); }
 .geoloc-hint { color: rgba(255, 255, 255, 0.95) !important; font-size: 0.8rem !important; }
 .geoloc-subtitle { color: #FFFFFF !important; }
 
@@ -2590,7 +2470,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
         display: flex; align-items: center; justify-content: center;
         position: sticky; top: 0; z-index: 1; flex: none;   /* sous les icones de l'en-tete (z 2) */
         width: 100%; height: 44px; margin-bottom: -44px; padding-bottom: 18px;
-        border: 0; background: var(--white); cursor: grab; touch-action: none;
+        border: 0; cursor: grab; touch-action: none;
     }
     .dist-sheet-handle span { width: 40px; height: 5px; border-radius: 3px; background: #CBD5E1; }
     .dist-sheet-handle:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
