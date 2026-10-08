@@ -32,6 +32,9 @@ export async function captureEvents(page, status = 200) {
 
 export async function setupApp(page, context) {
     await captureEvents(page);
+    // EPIC-T25 : pas d'invitation « même app fermée » au premier coeur, sauf
+    // dans les tests qui la verifient (ils retirent la cle).
+    await page.addInitScript(() => { try { localStorage.setItem('distrimatch_push_asked', '1'); } catch (e) { /* bloque */ } });
     await context.grantPermissions(['geolocation'], { origin: BASE_URL });
     await context.setGeolocation({ latitude: 43.4929, longitude: -1.4748 });
     await page.goto(BASE_URL);

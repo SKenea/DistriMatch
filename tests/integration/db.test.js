@@ -581,6 +581,47 @@ describe('base : confidentialite des signaux et « Mon activité » (023)', { sk
     });
 });
 
+describe('base : notifications app fermee (024)', { skip: SKIP }, () => {
+    const ENDPOINT = 'https://push.itest.example/abc';
+    const sub = (followed) => `push_subscribe('${ENDPOINT}', 'p256dh-itest', 'auth-itest', array['${DEMO}'], array['${followed}'], 22, 8, 'Europe/Paris')`;
+
+    it('un visiteur s’abonne sans compte, met a jour, se desabonne ; il ne lit jamais les abonnements', async () => {
+        const p = await probe(`${AS_ANON} perform ${sub('œufs')}; perform ${sub('pain')};
+            set local role postgres;
+            r := (select count(*)::text || '|' || max(followed_products[1]) || '|' || coalesce(max(user_id::text), 'anonyme') from push_subscriptions where endpoint = '${ENDPOINT}');
+            set local role anon;
+            perform push_unsubscribe('${ENDPOINT}');
+            set local role postgres;
+            r := r || '|' || (select count(*) from push_subscriptions where endpoint = '${ENDPOINT}')::text`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, '1|pain|anonyme|0');
+        const read = await probe(`${AS_ANON} perform endpoint from push_subscriptions limit 1`);
+        assert.equal(read.code, '42501');
+    });
+
+    it('un membre abonne est reconnu (pour ne pas recevoir son propre signal)', async () => {
+        const p = await probe(`${AS_USER} perform ${sub('œufs')}; set local role postgres;
+            r := (select (user_id = ${USER})::text from push_subscriptions where endpoint = '${ENDPOINT}')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true');
+    });
+
+    it('refuse une adresse qui n’est pas https et une liste trop longue', async () => {
+        const bad = await probe(`${AS_ANON} perform push_subscribe('http://x', 'k', 'a', '{}', '{}', null, null, 'UTC')`);
+        assert.equal(bad.code, '22023');
+        const big = await probe(`${AS_ANON} perform push_subscribe('https://push.itest.example/big', 'k', 'a', (select array_agg(g::text) from generate_series(1, 201) g), '{}', null, null, 'UTC')`);
+        assert.equal(big.code, '22023');
+    });
+
+    it('un signal passe toujours, declencheur en place', async () => {
+        const p = await probe(`${AS_USER} perform ${signal('working')};
+            set local role postgres;
+            r := (select count(*) from pg_trigger where tgname = 'notify_push_on_signal')::text`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, '1');
+    });
+});
+
 describe('base : lectures anonymes', { skip: SKIP }, () => {
     it('un visiteur lit les fiches, les produits et les vues de signaux', async () => {
         const p = await probe(`${AS_ANON}
@@ -605,8 +646,9 @@ describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
             (select count(*) from distributors where id like 'itest-%') as fiches,
             (select count(*) from signal_bans where reason = 'itest') as bans,
             (select count(*) from reviews where body = 'itest avis') as avis,
-            (select count(*) from operator_requests where company = 'Societe itest') as demandes`);
-        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0, demandes: 0 });
+            (select count(*) from operator_requests where company = 'Societe itest') as demandes,
+            (select count(*) from push_subscriptions where endpoint like 'https://push.itest.example/%') as abonnements`);
+        assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0, demandes: 0, abonnements: 0 });
     });
 });
 

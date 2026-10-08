@@ -15,6 +15,7 @@ import { generateWelcomeMessage } from './chat.js';
 import { FEATURES } from './config.js';
 import { checkFavoriteUpdates } from './favorites-watch.js';
 import { requireAuth } from './auth.js';
+import { maybeOfferPush, syncPushSubscription } from './push.js';
 
 // ============================================
 // PAGE DISTRIBUTEUR
@@ -271,7 +272,8 @@ export async function toggleSubscription(id, event) {
     const index = AppState.subscriptions.indexOf(id);
     const distributor = AppState.distributors.find(d => d.id === id);
 
-    if (index === -1) {
+    const added = index === -1;
+    if (added) {
         AppState.subscriptions.push(id);
         updateImplicitProfile('add_favorite', { type: distributor?.type });
         addActivityItem('subscription', id);
@@ -290,6 +292,10 @@ export async function toggleSubscription(id, event) {
     updateBadges();
     updateMapMarkers(false);
     updateActivityBadge();
+    // EPIC-T25 : premier favori -> proposer les notifications app fermee ;
+    // sinon le serveur suit la liste des favoris (fire-and-forget).
+    if (added) maybeOfferPush();
+    else syncPushSubscription();
 
     if (document.getElementById('subscriptions-view').classList.contains('view-active')) {
         displaySubscriptions();

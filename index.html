@@ -14,8 +14,8 @@
 
     <!-- Open Graph (previews sur WhatsApp, Slack, iMessage, Discord, Facebook, etc.) -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="DistriMatch - Fais passer le mot">
-    <meta property="og:description" content="Le Waze des distributeurs automatiques : indique ce qui est dispo, et les membres de la communauté en sont informés.">
+    <meta property="og:title" content="DistriMatch - Ton distributeur préféré te prévient">
+    <meta property="og:description" content="Mets ton distributeur automatique préféré en favori : dès que tes produits sont dispo, tu le sais, sans te déplacer.">
     <meta property="og:url" content="https://skenea.github.io/DistriMatch/">
     <meta property="og:image" content="https://skenea.github.io/DistriMatch/images/og-image.png">
     <meta property="og:image:width" content="1200">
@@ -26,7 +26,7 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="DistriMatch - Fais passer le mot">
+    <meta name="twitter:title" content="DistriMatch - Ton distributeur préféré te prévient">
     <meta name="twitter:description" content="Le Waze des distributeurs automatiques, vérifiés par la communauté.">
     <meta name="twitter:image" content="https://skenea.github.io/DistriMatch/images/og-image.png">
 
@@ -40,13 +40,14 @@
     <link rel="stylesheet" href="css/map.css?v=28">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=57">
+    <link rel="stylesheet" href="css/overlays.css?v=58">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-    <!-- Overlay geolocalisation (pre-permission prompt). Accueil EPIC-T24 « Fais passer
-         le mot. » : carte dessinee (illustration, la position n'est pas encore connue)
-         + feuille rouge. Aucun lieu nomme, ni « tap », ni « reste », ni promesse. -->
+    <!-- Overlay geolocalisation (pre-permission prompt). Accueil EPIC-T25 « Ton
+         distributeur préféré te prévient. » : carte dessinee (illustration, la position
+         n'est pas encore connue), favori en coeur, exemple de notification app fermee.
+         Aucun lieu reel, ni « tap », ni « reste ». -->
     <div id="geoloc-overlay" class="geoloc-overlay">
         <div class="welcome-map" aria-hidden="true">
             <svg class="welcome-ground" viewBox="0 0 340 240" preserveAspectRatio="xMidYMid slice">
@@ -61,7 +62,7 @@
                 <path d="M-10 60 L350 95" stroke="#F6D58E" stroke-width="5" fill="none" stroke-linecap="round"/>
             </svg>
             <div class="welcome-pins">
-                <span class="welcome-pin is-sel" style="left:52%;top:46%"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-opacity=".28" stroke-width="4"/><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-width="4" stroke-dasharray="119.4 119.4" transform="rotate(-90 22 22)"/></svg><span>🥚</span></span>
+                <span class="welcome-pin is-sel" style="left:52%;top:46%"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-opacity=".28" stroke-width="4"/><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-width="4" stroke-dasharray="119.4 119.4" transform="rotate(-90 22 22)"/></svg><span>🥚</span><i class="welcome-fav"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z" fill="#DC2626"/></svg></i></span>
                 <span class="welcome-pin" style="left:14%;top:56%"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-opacity=".28" stroke-width="4"/><circle cx="22" cy="22" r="19" fill="none" stroke="#16A34A" stroke-width="4" stroke-dasharray="71.6 119.4" transform="rotate(-90 22 22)"/></svg><span>🧀</span></span>
                 <span class="welcome-pin" style="left:88%;top:52%"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#9CA3AF" stroke-width="4" stroke-dasharray="5 4"/></svg><span>🍕</span></span>
                 <span class="welcome-pin" style="left:74%;top:72%"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" fill="none" stroke="#EA580C" stroke-opacity=".28" stroke-width="4"/><circle cx="22" cy="22" r="19" fill="none" stroke="#EA580C" stroke-width="4" stroke-dasharray="29.8 119.4" transform="rotate(-90 22 22)"/></svg><span>🥖</span></span>
@@ -75,13 +76,16 @@
         </div>
 
         <div class="geoloc-content welcome-sheet">
-            <h2 id="geoloc-title">Fais passer le mot.</h2>
-            <p class="geoloc-subtitle">Des œufs au distributeur&nbsp;? Indique‑le, et les membres de la communauté en sont informés.</p>
+            <h2 id="geoloc-title">Ton distributeur préféré te prévient.</h2>
+            <p class="geoloc-subtitle">Mets-le en favori&nbsp;: dès que tes œufs sont dispo, tu le sais, sans te déplacer.</p>
 
-            <!-- Exemple du geste (illustration) -->
-            <div class="welcome-gesture" aria-hidden="true">
-                <b>Œufs</b><span class="welcome-choice is-on">Dispo</span><span class="welcome-choice">Pas dispo</span>
-                <svg class="welcome-finger" viewBox="0 0 24 24"><path d="M9 11V5a1.5 1.5 0 0 1 3 0v5h.5V8.5a1.5 1.5 0 0 1 3 0V10h.5a1.5 1.5 0 0 1 3 0v4.5a6.5 6.5 0 0 1-6.5 6.5h-1a6 6 0 0 1-4.6-2.2L4 15.5a1.6 1.6 0 0 1 2.4-2.1L9 15.5z" fill="#fff" stroke="#111827" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            <!-- Exemple de notification (illustration ; meme texte que l'app) -->
+            <div class="welcome-notif" aria-hidden="true">
+                <span class="welcome-notif-app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+                <span class="welcome-notif-text">
+                    <span class="welcome-notif-top"><b>DistriMatch</b><span>maintenant</span></span>
+                    <span class="welcome-notif-body">Œufs vu dispo chez La Ferme du Moulin</span>
+                </span>
             </div>
 
             <!-- Action primaire -->
@@ -844,6 +848,12 @@
                 <button class="btn-secondary-clean" id="notif-permission-btn" onclick="askNotifPermissionFromUI()" style="display:none">
                     Autoriser les notifications du navigateur
                 </button>
+                <!-- EPIC-T25 : notifications app fermee (js/push.js) -->
+                <label class="setting-toggle">
+                    <span>Prévenu même app fermée</span>
+                    <input type="checkbox" id="push-enabled">
+                </label>
+                <p class="setting-hint" id="push-state">Tes favoris te préviennent, même si DistriMatch est fermé.</p>
             </div>
 
             <div class="settings-section">
@@ -1085,33 +1095,34 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=74",
-            "./js/state.js": "./js/state.js?v=74",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=74",
-            "./js/config.js": "./js/config.js?v=74",
-            "./js/utils.js": "./js/utils.js?v=74",
-            "./js/auth.js": "./js/auth.js?v=74",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=74",
-            "./js/map.js": "./js/map.js?v=74",
-            "./js/navigation.js": "./js/navigation.js?v=74",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=74",
-            "./js/distributor.js": "./js/distributor.js?v=74",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=74",
-            "./js/chat.js": "./js/chat.js?v=74",
-            "./js/activity.js": "./js/activity.js?v=74",
-            "./js/notifications.js": "./js/notifications.js?v=74",
-            "./js/availability.js": "./js/availability.js?v=74",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=74",
-            "./js/events.js": "./js/events.js?v=74",
-            "./js/stats.js": "./js/stats.js?v=74",
-            "./js/history.js": "./js/history.js?v=74",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=74",
-            "./js/reviews.js": "./js/reviews.js?v=74",
-            "./js/operators.js": "./js/operators.js?v=74",
-            "./js/admin.js": "./js/admin.js?v=74",
-            "./js/summaries.js": "./js/summaries.js?v=74",
-            "./js/additions.js": "./js/additions.js?v=74",
-            "./js/my-activity.js": "./js/my-activity.js?v=74"
+            "./js/app.js": "./js/app.js?v=75",
+            "./js/state.js": "./js/state.js?v=75",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=75",
+            "./js/config.js": "./js/config.js?v=75",
+            "./js/utils.js": "./js/utils.js?v=75",
+            "./js/auth.js": "./js/auth.js?v=75",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=75",
+            "./js/map.js": "./js/map.js?v=75",
+            "./js/navigation.js": "./js/navigation.js?v=75",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=75",
+            "./js/distributor.js": "./js/distributor.js?v=75",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=75",
+            "./js/chat.js": "./js/chat.js?v=75",
+            "./js/activity.js": "./js/activity.js?v=75",
+            "./js/notifications.js": "./js/notifications.js?v=75",
+            "./js/availability.js": "./js/availability.js?v=75",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=75",
+            "./js/events.js": "./js/events.js?v=75",
+            "./js/stats.js": "./js/stats.js?v=75",
+            "./js/history.js": "./js/history.js?v=75",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=75",
+            "./js/reviews.js": "./js/reviews.js?v=75",
+            "./js/operators.js": "./js/operators.js?v=75",
+            "./js/admin.js": "./js/admin.js?v=75",
+            "./js/summaries.js": "./js/summaries.js?v=75",
+            "./js/additions.js": "./js/additions.js?v=75",
+            "./js/push.js": "./js/push.js?v=75",
+            "./js/my-activity.js": "./js/my-activity.js?v=75"
         }
     }
     </script>

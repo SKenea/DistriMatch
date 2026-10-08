@@ -79,6 +79,7 @@ import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuth
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
+import { initPushSettings, syncPushSubscription, disablePush } from './push.js';
 import { initAdmin, loadAdmin } from './admin.js';
 import { initAdditions } from './additions.js';
 import { initMyActivity, renderMyActivity } from './my-activity.js';
@@ -235,6 +236,7 @@ async function clearUserData() {
     });
     if (!ok) return;
 
+    await disablePush();   // EPIC-T25 : l'abonnement serveur part avec les donnees
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(CONVERSATIONS_KEY);
@@ -253,6 +255,7 @@ async function clearUserData() {
         perDistributor: {},
         followedProducts: [],
         lastNotifications: {},
+        push: false,
         lastSeenSignals: {}
     });
     NotificationQueue.pending = [];
@@ -557,6 +560,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Favoris : ce qui a change sur les machines suivies depuis le dernier
     // passage alimente le centre de notifications (fire-and-forget).
     startFavoritesWatch();
+    // Notifications app fermee (EPIC-T25) : reglages + abonnement a jour
+    initPushSettings();
+    syncPushSubscription();
 
     // Demarrer la surveillance geofence
     startGeofenceMonitoring();
@@ -625,6 +631,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthChange(refreshAuthUI);
     // Fiche ouverte : bascule lecture / information a la connexion (EPIC-T5)
     onAuthChange(refreshFicheForAuth);
+    // Le serveur ne notifie pas son propre signal : il connait le compte (EPIC-T25)
+    onAuthChange(syncPushSubscription);
 
     // Menu deroulant avatar
     const avatarBtn = document.getElementById('profile-avatar-btn');
