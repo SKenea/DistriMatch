@@ -1391,8 +1391,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .dist-invite-card .dist-login-invite-btn:hover { background: #A51818; }
 
 /* Le contenu occupe la hauteur restante : sur une fiche courte, le pied reste en bas */
-.dist-modal { display: flex; flex-direction: column; }
-.dist-modal > .dist-modal-content { flex: 1 0 auto; }
 
 /* Pied de fiche colle en bas : Itineraire en principal {
     position: sticky;
@@ -1413,7 +1411,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
    ========================================== */
 
 /* Zones */
-.dist-modal { background: #FFFFFF; }
+.dist-modal { display: flex; flex-direction: column; background: #FFFFFF; }
 .dist-modal-header { padding-bottom: 0.75rem; }
 .dist-modal-tabs {
     display: block;
@@ -1422,7 +1420,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     border-top: 1px solid #E5E7EB;
     border-bottom: 1px solid #E5E7EB;
 }
-.dist-modal > .dist-modal-content { background: #F4F5F7; }
+.dist-modal > .dist-modal-content { flex: 1 0 auto; background: #F4F5F7; }
 
 /* Onglets : piste grise, onglet actif blanc en gras (plus de rouge) */
 .dist-tabs-track {
@@ -1556,18 +1554,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-row { position: relative; }
 
 /* Carte « + Ajouter un produit » (pointillé) et son champ */
-.product-add-card {
-    display: flex;
-    align-items: center;
-    min-height: 88px;
-    padding: 12px;
-    border: 1.5px dashed #9CA3AF;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.6);
-    font: inherit;
-    color: #374151;
-}
-.product-add-card { justify-content: center; flex-direction: column; gap: 6px; cursor: pointer; }
+.product-add-card { display: flex; align-items: center; min-height: 88px; padding: 12px; border: 1.5px dashed #9CA3AF; border-radius: 14px; background: rgba(255, 255, 255, 0.6); font: inherit; color: #374151; justify-content: center; flex-direction: column; gap: 6px; cursor: pointer; }
 .product-add-card:hover { background: #FFFFFF; border-color: #6B7280; }
 .product-add-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .product-add-card.is-first { grid-column: 1 / -1; }
@@ -1629,7 +1616,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 }
 
 /* Toast avec « Annuler » */
-.toast.toast-action { display: flex; align-items: center; gap: 12px; }
 .toast-action-btn {
     min-height: 44px;
     padding: 0 12px;
@@ -1652,7 +1638,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 /* Deux colonnes strictement egales : un champ de saisie n'elargit pas sa colonne */
 #dist-products-list.products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .product-add-card { min-width: 0; }
-.toast.toast-action { width: max-content; max-width: min(420px, calc(100vw - 32px)); }
+.toast.toast-action { display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(420px, calc(100vw - 32px)); }
 
 /* ==========================================
    AJOUTER PAR LISTE (EPIC-T13) : 4 produits courants + « Autre… » avec suggestions
@@ -2097,8 +2083,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices .product-menu-action.is-danger { color: #B91C1C; }
 #dist-machine-choices .dd-dot,
 .product-choices .dd-dot { width: 8px; height: 8px; }
-#dist-machine-choices .dd-check,
-.product-choices .dd-check { margin-left: 12px; }
 #dist-machine-choices .machine-choices-q,
 .product-choices .product-choices-q { padding: 6px 10px 4px; font-size: 0.75rem; font-weight: 500; }
 .product-choices .dd-sep { margin: 3px 0; }
@@ -2109,6 +2093,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
    2026-10-02) ; les autres options : case vide. Etat du distributeur et produits. */
 #dist-machine-choices .dd-check,
 .product-choices .dd-check {
+    margin-left: 12px;
     visibility: visible;
     box-sizing: border-box;
     width: 18px;

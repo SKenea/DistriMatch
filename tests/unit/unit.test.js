@@ -4,7 +4,7 @@
  */
 
 import '../setup.js';
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ============================================
@@ -996,8 +996,9 @@ describe('formatTime', () => {
 
     it('affiche la date pour > 24h', () => {
         const old = Date.now() - 48 * 3600000;
-        const result = formatTime(old);
-        assert.ok(result.includes('.') || result.includes('/') || /\d/.test(result), `Format date: ${result}`);
+        const expected = new Date(old).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        assert.equal(formatTime(old), expected);
+        assert.notEqual(formatTime(old), 'maintenant');
     });
 });
 
@@ -1362,11 +1363,17 @@ describe('isQuietHours', () => {
     });
 
     it('retourne true si dans la plage (meme jour)', () => {
-        NotificationPrefs.quietHours.enabled = true;
-        const hour = new Date().getHours();
-        NotificationPrefs.quietHours.start = hour;
-        NotificationPrefs.quietHours.end = hour + 2;
-        assert.equal(isQuietHours(), true);
+        mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 8, 14, 30) });
+        try {
+            NotificationPrefs.quietHours.enabled = true;
+            NotificationPrefs.quietHours.start = 14;
+            NotificationPrefs.quietHours.end = 16;
+            assert.equal(isQuietHours(), true);
+            NotificationPrefs.quietHours.start = 15;
+            assert.equal(isQuietHours(), false);
+        } finally {
+            mock.timers.reset();
+        }
     });
 
     it('gere le passage minuit (22h-8h)', () => {
@@ -1419,29 +1426,41 @@ describe('markNotified', () => {
         markNotified('dist-b');
         assert.ok(NotificationPrefs.lastNotifications['dist-a']);
         assert.ok(NotificationPrefs.lastNotifications['dist-b']);
-        assert.notEqual(NotificationPrefs.lastNotifications['dist-a'], undefined);
+        assert.deepEqual(Object.keys(NotificationPrefs.lastNotifications).sort(), ['dist-a', 'dist-b']);
     });
 });
 
 describe('isQuietHours - cas additionnels', () => {
-    it('retourne false si on est apres end (plage normale meme jour)', () => {
+    function at(hour, minute = 0) {
+        mock.timers.reset();
+        mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 8, hour, minute) });
+    }
+
+    it('plage normale : faux apres la fin et avant le debut, vrai pile au debut', () => {
         NotificationPrefs.quietHours.enabled = true;
-        const hour = new Date().getHours();
-        // Plage 0h-1h, on est forcement apres 1h sauf entre 0 et 1
         NotificationPrefs.quietHours.start = 0;
         NotificationPrefs.quietHours.end = 1;
-        const expected = hour >= 0 && hour < 1;
-        assert.equal(isQuietHours(), expected);
+        try {
+            at(10); assert.equal(isQuietHours(), false);
+            at(0, 30); assert.equal(isQuietHours(), true);
+            at(1); assert.equal(isQuietHours(), false);   // la fin est exclue
+        } finally {
+            mock.timers.reset();
+        }
     });
 
-    it('retourne false si on est avant start (plage normale meme jour)', () => {
+    it('passage de minuit : vrai a 23 h et a 7 h, faux a 8 h et a 21 h', () => {
         NotificationPrefs.quietHours.enabled = true;
-        // Plage 23h-23h59, on est forcement avant 23h sauf entre 23 et minuit
-        NotificationPrefs.quietHours.start = 23;
-        NotificationPrefs.quietHours.end = 23.99;
-        const hour = new Date().getHours();
-        const expected = hour >= 23;
-        assert.equal(isQuietHours(), expected);
+        NotificationPrefs.quietHours.start = 22;
+        NotificationPrefs.quietHours.end = 8;
+        try {
+            at(23); assert.equal(isQuietHours(), true);
+            at(7, 59); assert.equal(isQuietHours(), true);
+            at(8); assert.equal(isQuietHours(), false);
+            at(21); assert.equal(isQuietHours(), false);
+        } finally {
+            mock.timers.reset();
+        }
     });
 });
 
