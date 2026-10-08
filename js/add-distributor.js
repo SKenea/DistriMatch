@@ -13,7 +13,6 @@ import {
     compressImage
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
-import { addActivityItem, updateActivityBadge } from './activity.js';
 import { requireAuth } from './auth.js';
 import { FEATURES } from './config.js';
 
@@ -473,7 +472,5 @@ async function confirmAddDistributorImpl() {
 
     AppState.points += 20;
 
-    addActivityItem('new_distributor', newDistributor.id, { name: newDistributor.name, points: 20 });
     saveToLocalStorage();
-    updateActivityBadge();
 }

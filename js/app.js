@@ -36,7 +36,7 @@ import {
 } from './chat.js';
 
 import {
-    loadActivityFeed, updateActivityBadge, voteOnReport, loadReportsFromSupabase, selectReportType, submitReport, closeReportModal
+    removeLegacyActivityFeed, selectReportType, submitReport, closeReportModal
 } from './activity.js';
 
 import {
@@ -317,7 +317,6 @@ window.goBackToMap = goBackToMap;
 window.__distrimatchLayers = openLayers;   // tests e2e (bouton retour, audit UX-04)
 
 // Activite
-window.voteOnReport = voteOnReport;
 
 // Navigation
 window.closeSearch = closeSearch;
@@ -452,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadFromLocalStorage(updateBadges);
     loadProfile();
     loadConversations();
-    loadActivityFeed();
+    removeLegacyActivityFeed();   // ancien fil local (retire)
     loadNotificationPrefs();
     loadNotificationQueue();
 
@@ -498,7 +497,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Charger les signalements communautaires : meme principe (fire-and-forget).
     // Ils fusionnent dans le feed activite, rendu au changement d'onglet (pas la
     // vue par defaut), donc aucun besoin de bloquer l'init pour les attendre.
-    loadReportsFromSupabase().catch(() => {});
 
     // Initialiser la carte
     initMainMap();
@@ -664,7 +662,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMyActivity();
 
     // Update activity badge
-    updateActivityBadge();
 
     // Centrer la carte
     document.getElementById('center-map').addEventListener('click', centerMapOnUser);
