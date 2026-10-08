@@ -383,13 +383,6 @@ body {
     display: none;
 }
 
-/* Sidebar header */
-.sidebar-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--light);
-    background: var(--white);
-}
-
 .sidebar-title {
     font-size: 0.95rem;
     font-weight: 700;

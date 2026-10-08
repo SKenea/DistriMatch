@@ -236,11 +236,6 @@
     stroke: var(--primary);
 }
 
-.nav-tab.nav-tab-disabled {
-    opacity: 0.35;
-    pointer-events: none;
-}
-
 .nav-tab-badge {
     position: absolute;
     top: 0;
@@ -876,23 +871,5 @@
 
 .settings-actions .btn-primary-clean {
     width: 100%;
-}
-
-/* Profile Actions avec Notifications */
-.profile-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem;
-}
-
-.profile-actions .btn-primary-clean {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.profile-actions .btn-primary-clean svg {
-    flex-shrink: 0;
 }
 

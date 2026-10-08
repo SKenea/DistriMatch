@@ -26,22 +26,6 @@
     color: #fff;
 }
 
-.geoloc-icon {
-    margin-bottom: 1.5rem;
-    animation: geoloc-pulse 2s ease-in-out infinite;
-}
-
-.geoloc-icon svg {
-    width: 80px;
-    height: 80px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
-}
-
-@keyframes geoloc-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
 .geoloc-content h2 {
     font-size: 1.75rem;
     font-weight: 700;
@@ -666,7 +650,6 @@
     background: var(--light);
 }
 
-
 /* Galerie photos dans « À propos » */
 .dist-apropos-photos { padding-top: 0.75rem; }
 .dist-apropos-photos[hidden] { display: none; }
@@ -730,13 +713,6 @@
    seulement quand les signaux la justifient (sinon rien, jamais inventee). */
 .dist-modal-rhythm { display: none; margin: 0 0 0.35rem; font-size: 0.85rem; color: var(--text-muted); }
 .dist-modal-rhythm.is-visible { display: block; }
-
-.dist-modal-actions {
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid var(--light);
-}
 
 .dist-action-btn {
     flex: 1;
@@ -1150,8 +1126,6 @@
 .machine-choices[hidden] { display: none; }
 .machine-choices.is-highlighted,
 .dist-login-invite.is-highlighted { animation: hintPulse 2.4s ease; }
-.machine-choices-title { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--dark); }
-.machine-choices-row { display: flex; gap: 0.5rem; }
 .machine-choice {
     flex: 1;
     min-height: 56px;
@@ -1222,19 +1196,10 @@
 .products-section-head[hidden] { display: none; }
 .products-section-title { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--dark); }
 .products-count { font-size: 1rem; font-weight: 700; color: var(--text-muted); }
-.products-hint { margin: 0.2rem 0 0; font-size: 1rem; color: var(--dark); border-radius: 6px; }
-.products-hint .hint-yes { color: #166534; }
-.products-hint .hint-no { color: #991B1B; }
-.products-hint[hidden] { display: none; }
-.products-hint.is-highlighted { animation: hintPulse 2.4s ease; }
 @keyframes hintPulse {
     0%, 60% { background: rgba(244, 162, 97, 0.25); color: var(--dark); }
     100% { background: transparent; }
 }
-
-
-
-.products-add-first { margin-top: 0.75rem; min-height: 44px; }
 
 /* ==========================================
    FICHE V3 (EPIC-T10) : les produits d'abord, l'etat en discret
@@ -1292,12 +1257,9 @@
     flex: none;
 }
 .dist-feu i { width: 9px; height: 9px; border-radius: 50%; background: #CBD5E1; display: block; }
-.dist-status[data-state="working"] .dist-feu i:nth-child(1),
-.dist-feu.is-all i:nth-child(1) { background: #16A34A; }
-.dist-status[data-state="empty"] .dist-feu i:nth-child(2),
-.dist-feu.is-all i:nth-child(2) { background: #EA580C; }
-.dist-status[data-state="broken"] .dist-feu i:nth-child(3),
-.dist-feu.is-all i:nth-child(3) { background: #DC2626; }
+.dist-status[data-state="working"] .dist-feu i:nth-child(1) { background: #16A34A; }
+.dist-status[data-state="empty"] .dist-feu i:nth-child(2) { background: #EA580C; }
+.dist-status[data-state="broken"] .dist-feu i:nth-child(3) { background: #DC2626; }
 .dist-status.is-soft .dist-feu i { opacity: 0.5; }
 .dist-status-word { font-weight: 700; color: #475569; }
 .dist-status[data-state="working"] .dist-status-word { color: #166534; }
@@ -1323,8 +1285,7 @@
 .dist-status-update[aria-expanded="true"] { font-weight: 700; }
 .dist-modal-meta { margin-top: 0.15rem; }
 
-/* Trois etats derriere « Mettre à jour » : tuiles sobres, pastille de couleur */
-.machine-choices-title { font-size: 0.9rem; }
+/* Trois etats derriere « Mettre à jour » : tuiles sobres { font-size: 0.9rem; }
 .machine-choice {
     min-height: 48px;
     display: inline-flex;
@@ -1349,9 +1310,6 @@
 /* « Il reste quoi ? » */
 .products-section-title { font-size: 1.1rem; }
 .products-count { font-size: 0.9rem; }
-.products-hint { font-size: 0.875rem; color: var(--gray); }
-.products-hint .hint-yes { color: #166534; }
-.products-hint .hint-no { color: #4B5563; }
 
 /* Distributeur vide / en panne : dit une seule fois, au-dessus des cartes */
 .products-notice {
@@ -1492,21 +1450,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .dist-invite-icon svg { width: 22px; height: 22px; }
 .dist-invite-text p { margin: 0; font-size: 0.875rem; line-height: 1.35; color: #374151; }
 .dist-invite-text .dist-invite-title { margin: 0 0 2px; font-size: 1rem; font-weight: 800; color: #111827; }
-.dist-invite-preview { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-.dist-invite-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 9px 4px 7px;
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    color: #374151;
-    white-space: nowrap;
-}
-.dist-invite-chip .dist-feu { padding: 2px 4px; }
-.dist-invite-chip .dist-feu i { width: 7px; height: 7px; }
 .dist-invite-card .dist-login-invite-btn {
     grid-column: 1 / -1;
     min-height: 46px;
@@ -1521,8 +1464,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .dist-modal { display: flex; flex-direction: column; }
 .dist-modal > .dist-modal-content { flex: 1 0 auto; }
 
-/* Pied de fiche colle en bas : Itineraire en principal, Photo / Modifier (connecte) */
-.dist-modal-actions {
+/* Pied de fiche colle en bas : Itineraire en principal {
     position: sticky;
     bottom: 0;
     z-index: 1;
@@ -1532,27 +1474,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     border-top: 1px solid var(--light-gray);
     border-bottom: none;
 }
-.dist-modal-actions .dist-action-btn {
-    flex: 0 0 auto;
-    flex-direction: row;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 48px;
-    padding: 0 0.9rem;
-    border: 1px solid var(--light-gray);
-    border-radius: 12px;
-    color: var(--dark);
-    font-size: 0.9rem;
-}
-.dist-modal-actions .dist-action-btn svg { width: 20px; height: 20px; }
-.dist-modal-actions .dist-action-btn.primary {
-    flex: 1;
-    background: #111827;
-    border-color: #111827;
-    color: #FFFFFF;
-    font-size: 1rem;
-}
-.dist-modal-actions .dist-action-btn.primary:hover { background: #1F2937; }
 
 /* ==========================================
    FICHE : ZONES ET BOUTONS DISTINCTS (EPIC-T11)
@@ -1572,7 +1493,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     border-bottom: 1px solid #E5E7EB;
 }
 .dist-modal > .dist-modal-content { background: #F4F5F7; }
-.dist-modal-actions { box-shadow: 0 -6px 16px rgba(17, 24, 39, 0.07); border-top-color: #E5E7EB; }
 
 /* Onglets : piste grise, onglet actif blanc en gras (plus de rouge) */
 .dist-tabs-track {
@@ -1635,32 +1555,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .dist-status-update:hover { background: #F3F4F6; }
 .dist-status-update[aria-expanded="true"] { background: #111827; border-color: #111827; color: #FFFFFF; font-weight: 600; }
 .dist-status-update:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-
-/* Secondaire : contour + icone (Photo, Modifier, Ajouter les produits) */
-.dist-modal-actions .dist-action-btn:not(.primary),
-.products-add-first {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 48px;
-    padding: 0 0.9rem;
-    border: 1.5px solid #9CA3AF;
-    border-radius: 12px;
-    background: #FFFFFF;
-    color: #111827;
-    font: inherit;
-    font-size: 0.9rem;
-    font-weight: 700;
-    cursor: pointer;
-}
-.dist-modal-actions .dist-action-btn:not(.primary):hover,
-.products-add-first:hover { background: #F3F4F6; border-color: #6B7280; }
-.products-add-first { margin-top: 0.85rem; }
-.products-add-first svg { width: 18px; height: 18px; }
-
-/* Principal plein : Itineraire (noir) ; Se connecter garde son rouge */
-.dist-modal-actions .dist-action-btn.primary { box-shadow: 0 2px 6px rgba(17, 24, 39, 0.25); }
 .dist-invite-card .dist-login-invite-btn { box-shadow: 0 2px 6px rgba(200, 30, 30, 0.3); }
 
 /* Dispo / Pas dispo sur les cartes : de vrais boutons (bordure, relief) */
@@ -1707,7 +1601,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-choices { display: block; padding: 0; border-top: 1px solid #E5E7EB; background: #FFFFFF; border-radius: 0 0 13px 13px; overflow: hidden; }
 .product-choices[hidden] { display: none; }
 .product-choices-q { margin: 0; padding: 8px 12px 6px; font-size: 0.82rem; font-weight: 700; color: #111827; }
-.product-choices-row { display: flex; }
 .product-choices .product-choice {
     flex: 1;
     min-height: 52px;
@@ -1747,7 +1640,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-row { position: relative; }
 
 /* Carte « + Ajouter un produit » (pointillé) et son champ */
-.product-add-card, .product-add-form {
+.product-add-card {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1762,11 +1655,10 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .product-add-card { justify-content: center; flex-direction: column; gap: 6px; cursor: pointer; }
 .product-add-card:hover { background: #FFFFFF; border-color: #6B7280; }
 .product-add-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.product-add-card.is-first, .product-add-form.is-first { grid-column: 1 / -1; }
+.product-add-card.is-first { grid-column: 1 / -1; }
 .product-add-plus { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #111827; color: #FFFFFF; }
 .product-add-plus svg { width: 18px; height: 18px; }
 .product-add-label { font-weight: 700; font-size: 0.9rem; }
-.product-add-form { border-style: solid; border-color: #111827; background: #FFFFFF; }
 .product-add-input { flex: 1; min-width: 0; min-height: 44px; border: none; outline: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #111827; }
 .products-empty-state { grid-column: 1 / -1; }
 
@@ -1844,7 +1736,7 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 }
 /* Deux colonnes strictement egales : un champ de saisie n'elargit pas sa colonne */
 #dist-products-list.products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.product-add-form, .product-add-card { min-width: 0; }
+.product-add-card { min-width: 0; }
 .toast.toast-action { width: max-content; max-width: min(420px, calc(100vw - 32px)); }
 
 /* ==========================================
@@ -2142,8 +2034,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 .admin-card-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 0.75rem; font-size: 0.875rem; }
 .admin-card-facts dt { color: var(--gray); }
 .admin-card-facts dd { margin: 0; color: var(--dark); overflow-wrap: anywhere; }
-.admin-card-actions { display: flex; gap: 0.6rem; }
-.admin-card-actions button:disabled { opacity: 0.5; cursor: wait; }
 #admin-operators.account-card { gap: 0; }
 .admin-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.25rem; }
 .admin-row + .admin-row { border-top: 1px solid var(--light-gray); }
