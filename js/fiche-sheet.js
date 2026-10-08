@@ -25,12 +25,16 @@ function modalEl() {
     return document.getElementById('dist-modal');
 }
 
-// Hauteur visible en position reduite : jusqu'a la ligne d'etat (nom + etat).
+// Hauteur visible en position reduite : nom et icones, etat, onglets (comme Google
+// Maps qui garde ses boutons d'action). Mesuree avec la mise en page reduite.
 function peekVisible(modal) {
-    const status = document.getElementById('dist-status');
-    if (!status) return 150;
-    const bottom = status.getBoundingClientRect().bottom - modal.getBoundingClientRect().top + modal.scrollTop;
-    return Math.max(120, Math.min(260, Math.round(bottom + 14)));
+    const tabs = modal.querySelector('.dist-modal-tabs');
+    if (!tabs) return 200;
+    const wasPeek = modal.classList.contains('is-peek');
+    modal.classList.add('is-peek');
+    const bottom = tabs.getBoundingClientRect().bottom - modal.getBoundingClientRect().top + modal.scrollTop;
+    if (!wasPeek) modal.classList.remove('is-peek');
+    return Math.max(140, Math.min(320, Math.round(bottom + 8)));
 }
 
 function offsetFor(name, modal) {
@@ -56,10 +60,10 @@ function applyState(name, modal = modalEl()) {
     if (!modal) return;
     state = name;
     const offset = offsetFor(name, modal);
-    modal.style.transform = `translateY(${offset}px)`;
-    modal.style.setProperty('--sheet-offset', `${offset}px`);
     modal.classList.toggle('is-full', name === 'full');
     modal.classList.toggle('is-peek', name === 'peek');
+    modal.style.transform = `translateY(${offset}px)`;
+    modal.style.setProperty('--sheet-offset', `${offset}px`);
     if (name !== 'full') modal.scrollTop = 0;
     refreshHandle();
 }
@@ -165,6 +169,10 @@ export function initFicheSheet(onClose) {
         e.stopPropagation();
         e.preventDefault();
     }, true);
+    // Fiche reduite : toucher un onglet (Produits, Avis, A propos) remonte a mi-hauteur
+    modal.addEventListener('click', (e) => {
+        if (state === 'peek' && e.target.closest('.dist-tab')) applyState('half', modal);
+    });
     // Clavier (Entree / Espace) sur la poignee : meme cran qu'un toucher
     handle.addEventListener('click', (e) => {
         if (e.detail === 0 && isSheetLayout()) stepUp();

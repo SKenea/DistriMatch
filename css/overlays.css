@@ -2701,6 +2701,15 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     }
     .dist-sheet-handle span { width: 40px; height: 5px; border-radius: 3px; background: #CBD5E1; }
     .dist-sheet-handle:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
-    .dist-modal-top-actions, .dist-modal-close { top: 26px; }
-    .dist-modal-header { padding-top: 5.1rem; }
+    /* En-tete compacte comme Google Maps : nom a gauche, icones a droite sur la meme
+       ligne ; un nom long passe a la ligne, les icones restent en place (EPIC-T26) */
+    .dist-modal-top-actions, .dist-modal-close { top: 34px; }
+    .dist-modal-header { padding-top: 34px; }
+    .dist-modal-header h2 { font-size: 1.2rem; line-height: 1.25; }
+    .dist-modal-title { padding-right: calc(4 * 44px - 6px); min-height: 44px; align-items: center; }
+    /* La poignee ne masque pas le nom : fond transparent tant que la fiche n'a pas defile */
+    .dist-sheet-handle { background: transparent; }
+    .dist-modal.is-full .dist-sheet-handle { background: var(--white); }
+    /* Fiche reduite : nom + icones, etat, onglets ; le reste attend la mi-hauteur */
+    .dist-modal.is-peek .dist-modal-header > :not(.dist-modal-title):not(.dist-status) { display: none; }
 }

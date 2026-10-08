@@ -918,17 +918,22 @@ test.describe('45. Fiche en trois positions', () => {
     test('mi-hauteur -> tirer le nom vers le bas = reduite (nom + etat visibles) -> encore = fermee ; vers le haut = plein ecran', async ({ page }) => {
         await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
         await page.waitForTimeout(450);
-        const down = await dragSheet(page, '.dist-modal-header', 260);
+        const down = await dragSheet(page, '.dist-modal-header', 150);
         expect(down.peek).toBe(true);
         expect(down.visible).toBeLessThan(300);
         await expect(page.locator('#dist-modal-name')).toBeInViewport();
         await expect(page.locator('#dist-status')).toBeInViewport();
+        // comme Google Maps : icones sur la ligne du nom, onglets visibles
+        await expect(page.locator('#dist-modal-close')).toBeInViewport();
+        await expect(page.locator('.dist-tab[data-tab="avis"]')).toBeInViewport();
+        const sameRow = await page.evaluate(() => Math.abs(document.getElementById('dist-modal-close').getBoundingClientRect().top - document.getElementById('dist-modal-name').getBoundingClientRect().top) < 30);
+        expect(sameRow).toBe(true);
         const up = await dragSheet(page, '.dist-modal-header', -700);
         expect(up.full).toBe(true);
         const half = await dragSheet(page, '#dist-sheet-handle', 330);
         expect(half.full).toBe(false);
         expect(half.peek).toBe(false);
-        await dragSheet(page, '.dist-modal-header', 260);
+        await dragSheet(page, '.dist-modal-header', 150);
         const closed = await dragSheet(page, '.dist-modal-header', 200);
         expect(closed.open).toBe(false);
     });
@@ -947,5 +952,24 @@ test.describe('45. Fiche en trois positions', () => {
         await expect(page.locator('#subscriptions-view')).not.toHaveClass(/view-active/);
         await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
         await expect(page.locator('.distributor-pin.is-located')).toHaveCount(1);
+    });
+});
+
+test.describe('46. Fiche reduite : onglets', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test('toucher « Avis » sur la fiche reduite la remonte a mi-hauteur sur les avis', async ({ page }) => {
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForTimeout(450);
+        await page.evaluate(async () => {
+            const el = document.querySelector('.dist-modal-header'); const r = el.getBoundingClientRect(); const x = r.left + 60, y0 = r.top + 20;
+            const fire = (t, y) => el.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 4, pointerType: 'touch', isPrimary: true }));
+            const w = (ms) => new Promise(res => setTimeout(res, ms));
+            fire('pointerdown', y0); for (let i = 1; i <= 10; i++) { fire('pointermove', y0 + 15 * i); await w(30); } await w(80); fire('pointermove', y0 + 150); await w(20); fire('pointerup', y0 + 150); await w(450);
+        });
+        await expect(page.locator('#dist-modal')).toHaveClass(/is-peek/);
+        await page.click('.dist-tab[data-tab="avis"]');
+        await expect(page.locator('#dist-modal')).not.toHaveClass(/is-peek/);
+        await expect(page.locator('.dist-tab[data-tab="avis"]')).toHaveClass(/active/);
     });
 });
