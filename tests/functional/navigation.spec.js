@@ -354,16 +354,20 @@ test.describe('7. Profil (Local Guides + menu avatar)', () => {
 // ============================================
 
 test.describe('8. Mobile', () => {
-    test('modal plein ecran en mobile', async ({ page }) => {
+    test('fiche en feuille du bas en mobile (EPIC-T26) : collee en bas, a mi-hauteur', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         await page.waitForTimeout(300);
         await openDistModal(page);
+        await page.waitForTimeout(400);   // fin de l'animation d'arrivee
 
-        const height = await page.evaluate(() =>
-            document.getElementById('dist-modal').getBoundingClientRect().height
-        );
-        // En mobile, la modal prend tout l'ecran
-        expect(height).toBeGreaterThan(500);
+        const r = await page.evaluate(() => {
+            const rect = document.getElementById('dist-modal').getBoundingClientRect();
+            return { height: rect.height, bottom: rect.bottom, vh: innerHeight };
+        });
+        // Decision 2026-10-08 (retour testeur) : la fiche ne cache plus toute la carte
+        expect(r.height).toBeGreaterThan(r.vh * 0.5);
+        expect(r.height).toBeLessThan(r.vh * 0.65);
+        expect(Math.round(r.bottom)).toBe(r.vh);
     });
 
     test('bottom nav visible en mobile', async ({ page }) => {
@@ -748,5 +752,45 @@ test.describe('41. Pastilles qui se chevauchent', () => {
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
         await expect(page.locator('.pin-chooser')).toHaveCount(0);
         expect(await page.evaluate(async () => (await import('./js/state.js')).mainMap.getZoom())).toBe(18);
+    });
+});
+
+// ============================================
+// 42. FICHE A MI-HAUTEUR SUR TELEPHONE (EPIC-T26)
+// ============================================
+
+test.describe('42. Fiche a mi-hauteur sur telephone', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test('depuis la carte : fiche a mi-hauteur, pastille mise en avant ; la poignee bascule plein ecran / mi-hauteur ; fermer libere la pastille', async ({ page }) => {
+        const id = await page.evaluate(async () => {
+            const state = await import('./js/state.js');
+            const map = await import('./js/map.js');
+            map.updateMapMarkers(false);
+            const marker = state.distributorMarkers[0];
+            state.mainMap.setView(marker.getLatLng(), 19, { animate: false });
+            marker.fire('click');
+            return marker.distributorId;
+        });
+        if (await page.locator('.pin-choice').count()) await page.locator(`.pin-choice[data-id="${id}"]`).click();
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        const half = await page.evaluate(() => {
+            const m = document.getElementById('dist-modal');
+            return { ratio: m.getBoundingClientRect().height / innerHeight, full: m.classList.contains('is-full') };
+        });
+        expect(half.full).toBe(false);
+        expect(half.ratio).toBeGreaterThan(0.5);
+        expect(half.ratio).toBeLessThan(0.65);
+        await expect(page.locator('.distributor-pin.is-selected')).toHaveCount(1);
+        const handle = page.locator('#dist-sheet-handle');
+        await expect(handle).toHaveAttribute('aria-label', 'Agrandir la fiche');
+        await handle.click();
+        await expect(page.locator('#dist-modal')).toHaveClass(/is-full/);
+        await expect(handle).toHaveAttribute('aria-label', 'Réduire la fiche');
+        await handle.click();
+        await expect(page.locator('#dist-modal')).not.toHaveClass(/is-full/);
+        await page.click('#dist-modal-close');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('.distributor-pin.is-selected')).toHaveCount(0);
     });
 });

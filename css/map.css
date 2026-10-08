@@ -1088,3 +1088,7 @@
 .pin-choice-text { display: flex; flex-direction: column; min-width: 0; }
 .pin-choice-text b { font-size: 0.95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pin-choice-text small { font-size: 0.8rem; color: var(--gray); }
+
+/* Pastille de la fiche ouverte (EPIC-T26) : plus grande, cerclee de rouge */
+.distributor-pin.is-selected { transform: scale(1.25); transition: transform 0.15s ease; }
+.distributor-pin.is-selected .distributor-pin-emoji { box-shadow: 0 0 0 3px #B91C1C, 0 4px 10px rgba(17, 24, 39, 0.3); }

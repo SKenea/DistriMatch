@@ -17,7 +17,8 @@ import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshRevi
 import { initFicheEdit, ficheEditRights, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
-import { locateOnMap } from './map.js';
+import { locateOnMap, setSelectedPin } from './map.js';
+import { initFicheSheet, resetFicheSheet, isSheetLayout } from './fiche-sheet.js';
 
 // ============================================
 // PANNEAU LATERAL (liste filtree)
@@ -241,6 +242,7 @@ export function initDistModal() {
     const closeBtn = document.getElementById('dist-modal-close');
 
     closeBtn?.addEventListener('click', closeDistModal);
+    initFicheSheet(closeDistModal);   // EPIC-T26 : poignee de la feuille du bas
 
     // Clic sur l'overlay (en dehors du modal) ferme
     overlay?.addEventListener('click', (e) => {
@@ -495,6 +497,10 @@ export function openDistributorModal(id) {
     // Focus sur le cadre de la fiche (tabindex=-1), pas sur la croix : sinon
     // l'anneau clavier s'allume a l'arrivee par une notification (Stephane 2026-10-08)
     if (overlay) activateFocusTrap(overlay, closeDistModal, { initialFocus: document.getElementById('dist-modal') });
+    // EPIC-T26 : sur telephone, feuille a mi-hauteur (plein ecran s'il n'y a pas
+    // encore de carte : deep link avant la geolocalisation) ; pastille mise en avant
+    if (isSheetLayout()) resetFicheSheet({ full: !AppState.mapInitialized });
+    setSelectedPin(id);
 }
 
 export function closeDistModal() {
@@ -502,6 +508,8 @@ export function closeDistModal() {
     overlay?.classList.remove('active');
     popLayer('fiche');
     if (overlay) deactivateFocusTrap(overlay);
+    setSelectedPin(null);   // EPIC-T26
+    resetFicheSheet();
     // CustomEvent de la fenetre du document (en test jsdom, le global est celui de Node)
     document.dispatchEvent(new (document.defaultView?.CustomEvent || CustomEvent)('distmodal:closed'));
 }
