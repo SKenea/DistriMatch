@@ -37,10 +37,10 @@
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=33">
-    <link rel="stylesheet" href="css/map.css?v=29">
+    <link rel="stylesheet" href="css/map.css?v=30">
     <link rel="stylesheet" href="css/panels.css?v=37">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=28">
-    <link rel="stylesheet" href="css/overlays.css?v=59">
+    <link rel="stylesheet" href="css/overlays.css?v=60">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -282,6 +282,8 @@
          ============================================ -->
     <div class="dist-modal-overlay" id="dist-modal-overlay">
         <div class="dist-modal" id="dist-modal" role="dialog" aria-modal="true" aria-labelledby="dist-modal-name" tabindex="-1">
+            <!-- EPIC-T26 : poignee de la feuille du bas (telephone) : tirer ou toucher -->
+            <button class="dist-sheet-handle" id="dist-sheet-handle" type="button" aria-label="Agrandir la fiche" aria-expanded="false"><span aria-hidden="true"></span></button>
             <button class="dist-modal-close" id="dist-modal-close" aria-label="Fermer">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -1091,34 +1093,35 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=77",
-            "./js/state.js": "./js/state.js?v=77",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=77",
-            "./js/config.js": "./js/config.js?v=77",
-            "./js/utils.js": "./js/utils.js?v=77",
-            "./js/auth.js": "./js/auth.js?v=77",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=77",
-            "./js/map.js": "./js/map.js?v=77",
-            "./js/navigation.js": "./js/navigation.js?v=77",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=77",
-            "./js/distributor.js": "./js/distributor.js?v=77",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=77",
-            "./js/chat.js": "./js/chat.js?v=77",
-            "./js/activity.js": "./js/activity.js?v=77",
-            "./js/notifications.js": "./js/notifications.js?v=77",
-            "./js/availability.js": "./js/availability.js?v=77",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=77",
-            "./js/events.js": "./js/events.js?v=77",
-            "./js/stats.js": "./js/stats.js?v=77",
-            "./js/history.js": "./js/history.js?v=77",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=77",
-            "./js/reviews.js": "./js/reviews.js?v=77",
-            "./js/operators.js": "./js/operators.js?v=77",
-            "./js/admin.js": "./js/admin.js?v=77",
-            "./js/summaries.js": "./js/summaries.js?v=77",
-            "./js/additions.js": "./js/additions.js?v=77",
-            "./js/push.js": "./js/push.js?v=77",
-            "./js/my-activity.js": "./js/my-activity.js?v=77"
+            "./js/app.js": "./js/app.js?v=78",
+            "./js/state.js": "./js/state.js?v=78",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=78",
+            "./js/config.js": "./js/config.js?v=78",
+            "./js/utils.js": "./js/utils.js?v=78",
+            "./js/auth.js": "./js/auth.js?v=78",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=78",
+            "./js/map.js": "./js/map.js?v=78",
+            "./js/navigation.js": "./js/navigation.js?v=78",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=78",
+            "./js/distributor.js": "./js/distributor.js?v=78",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=78",
+            "./js/chat.js": "./js/chat.js?v=78",
+            "./js/activity.js": "./js/activity.js?v=78",
+            "./js/notifications.js": "./js/notifications.js?v=78",
+            "./js/availability.js": "./js/availability.js?v=78",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=78",
+            "./js/events.js": "./js/events.js?v=78",
+            "./js/stats.js": "./js/stats.js?v=78",
+            "./js/history.js": "./js/history.js?v=78",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=78",
+            "./js/reviews.js": "./js/reviews.js?v=78",
+            "./js/operators.js": "./js/operators.js?v=78",
+            "./js/admin.js": "./js/admin.js?v=78",
+            "./js/summaries.js": "./js/summaries.js?v=78",
+            "./js/additions.js": "./js/additions.js?v=78",
+            "./js/push.js": "./js/push.js?v=78",
+            "./js/fiche-sheet.js": "./js/fiche-sheet.js?v=78",
+            "./js/my-activity.js": "./js/my-activity.js?v=78"
         }
     }
     </script>

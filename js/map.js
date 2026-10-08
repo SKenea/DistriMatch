@@ -9,6 +9,7 @@ import {
 } from './state.js';
 import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear } from './utils.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
+import { isSheetLayout } from './fiche-sheet.js';
 
 // ============================================
 // CARTE LEAFLET
@@ -92,6 +93,7 @@ export function updateMapMarkers(fitBounds = true) {
         }).addTo(mainMap);
 
         marker.distributorId = d.id;
+        if (selectedId === d.id) marker.setZIndexOffset(1500);   // au-dessus du point bleu (1000)
 
         // EPIC-T26 : des pastilles se chevauchent sous le doigt -> petit menu de choix
         marker.on('click', () => {
@@ -119,10 +121,11 @@ function createDistributorIcon(d, isSubscribed) {
     const soft = summary.state !== 'unknown' && !summary.fresh;
     const pending = d.reviewStatus === 'pending';   // EPIC-T21 : vu par l'auteur et l'admin seulement
     const isLocated = located.id === d.id && Date.now() < located.until;   // EPIC-T23
+    const isSelected = selectedId === d.id;   // EPIC-T26 : fiche ouverte
     const fav = isSubscribed ? '<span class="distributor-pin-fav" aria-hidden="true">♥</span>' : '';
     return L.divIcon({
         className: 'distributor-marker-container',
-        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}${isLocated ? ' is-located' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
+        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}${isLocated ? ' is-located' : ''}${isSelected ? ' is-selected' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
         popupAnchor: [0, -24]
@@ -132,8 +135,35 @@ function createDistributorIcon(d, isSubscribed) {
 // Ouvrir une fiche depuis la carte : centrer sans jamais dezoomer (au-dela du
 // zoom 15, la carte garde le zoom choisi pour separer des pastilles proches).
 function openFromMap(d) {
-    mainMap.setView([d.lat, d.lng], Math.max(mainMap.getZoom(), 15));
+    const zoom = Math.max(mainMap.getZoom(), 15);
+    mainMap.setView(centerAboveSheet([d.lat, d.lng], zoom), zoom);
     if (window.showDetails) window.showDetails(d.id);   // bottom sheet (pattern Google Maps)
+}
+
+// EPIC-T26 : sur telephone, la fiche couvre le bas de l'ecran (58 %) : on centre
+// la pastille dans la partie de carte qui reste visible au-dessus.
+const SHEET_RATIO = 0.58;
+function centerAboveSheet(latlng, zoom) {
+    if (!isSheetLayout()) return latlng;
+    const rect = mainMap.getContainer().getBoundingClientRect();
+    const sheetTop = window.innerHeight * (1 - SHEET_RATIO);
+    const visibleCenter = (rect.top + Math.min(sheetTop, rect.bottom)) / 2;
+    const mapCenter = (rect.top + rect.bottom) / 2;
+    const shift = Math.max(0, mapCenter - visibleCenter);
+    return mainMap.unproject(mainMap.project(latlng, zoom).add([0, shift]), zoom);
+}
+
+// Pastille de la fiche ouverte (EPIC-T26) : mise en avant, survit a une
+// re-creation des pastilles (arrivee des etats, filtre).
+let selectedId = null;
+export function setSelectedPin(id) {
+    selectedId = id || null;
+    distributorMarkers.forEach(m => {
+        const pin = m.getElement()?.querySelector('.distributor-pin');
+        const on = m.distributorId === selectedId;
+        pin?.classList.toggle('is-selected', on);
+        m.setZIndexOffset(on ? 1500 : 0);
+    });
 }
 
 // Rayon de toucher : plus large au doigt qu'a la souris (une pastille fait 44 px).

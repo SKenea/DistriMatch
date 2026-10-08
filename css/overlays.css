@@ -2667,3 +2667,37 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 /* Le cadre de la fiche recoit le focus a l'ouverture : pas d'anneau sur lui,
    l'anneau reste sur les boutons atteints au clavier. */
 .dist-modal:focus, .dist-modal:focus-visible { outline: none; }
+
+/* Fiche en feuille du bas sur telephone (EPIC-T26) : mi-hauteur, la carte reste
+   visible et touchable au-dessus ; poignee a tirer ou a toucher (fiche-sheet.js).
+   Toucher la barre du haut ferme la fiche (zone de l'overlay). */
+.dist-sheet-handle { display: none; }
+@media (max-width: 768px) {
+    .dist-modal-overlay { background: transparent; pointer-events: none; align-items: flex-end; padding: 0; animation: none; }
+    .dist-modal-overlay.active::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: var(--nav-height); pointer-events: auto; }
+    .dist-modal {
+        pointer-events: auto;
+        height: 58vh; height: 58dvh;
+        max-height: 100vh; max-height: 100dvh;
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.22);
+        transition: height 0.25s ease, border-radius 0.25s ease;
+        animation: dist-sheet-up 0.25s ease;
+    }
+    .dist-modal.is-full { height: 100vh; height: 100dvh; border-radius: 0; }
+    .dist-modal.is-dragging { transition: none; }
+    .dist-sheet-handle {
+        display: flex; align-items: center; justify-content: center;
+        position: sticky; top: 0; z-index: 1; flex: none;   /* sous les icones de l'en-tete (z 2) */
+        width: 100%; height: 44px; margin-bottom: -44px; padding-bottom: 18px;
+        border: 0; background: var(--white); cursor: grab; touch-action: none;
+    }
+    .dist-sheet-handle span { width: 40px; height: 5px; border-radius: 3px; background: #CBD5E1; }
+    .dist-sheet-handle:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
+    .dist-modal-top-actions, .dist-modal-close { top: 26px; }
+    .dist-modal-header { padding-top: 5.1rem; }
+}
+@keyframes dist-sheet-up {
+    from { transform: translateY(35%); }
+    to { transform: none; }
+}
