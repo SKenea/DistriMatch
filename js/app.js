@@ -12,7 +12,7 @@ import {
 } from './state.js';
 
 import {
-    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -194,9 +194,25 @@ async function loadDistributors() {
         console.log('[DistriMatch] Doublons par contenu collapses:', beforeContentDedup - AppState.distributors.length);
     }
 
+    // Favoris d'un distributeur qui n'existe plus (fiche retiree de la base) :
+    // retires du telephone, sinon « 4 favoris » pour 3 cartes (2026-10-17).
+    // Seulement quand la base a repondu : les donnees de repli ne font pas foi.
+    if (supabaseData) pruneMissingFavorites();
+    updateBadges();   // pastille Favoris : seuls les distributeurs connus comptent
+
     if (AppState.userLocation) {
         sortByDistance();
     }
+}
+
+function pruneMissingFavorites() {
+    const known = new Set(AppState.distributors.map((d) => d.id));
+    const kept = AppState.subscriptions.filter((id) => known.has(id));
+    if (kept.length === AppState.subscriptions.length) return;
+    console.log('[DistriMatch] Favoris disparus retires:', AppState.subscriptions.length - kept.length);
+    AppState.subscriptions = kept;
+    saveToLocalStorage();
+    syncPushSubscription();
 }
 
 // ============================================

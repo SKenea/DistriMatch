@@ -351,99 +351,9 @@
     padding: 1rem;
 }
 
-.subscription-card {
-    display: flex;
-    gap: 0.875rem;
-    padding: 1rem;
-    background: var(--white);
-    border-radius: var(--radius);
-    margin-bottom: 0.75rem;
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    border-left: 4px solid var(--primary);
-}
-
-.subscription-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.subscription-card .unread-indicator {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    background: var(--danger);
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-}
-
-.subscription-image {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    background: var(--light);
-}
-
-.subscription-emoji {
-    font-size: 1.75rem;
-}
-
-.subscription-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.subscription-title {
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin: 0 0 0.25rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .subscribed-icon {
     font-size: 0.75rem;
     margin-left: 4px;
-}
-
-.subscription-address {
-    color: var(--gray);
-    font-size: 0.8rem;
-    margin: 0 0 0.375rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.subscription-meta {
-    display: flex;
-    gap: 0.75rem;
-    font-size: 0.8rem;
-}
-
-.subscription-distance {
-    color: var(--primary-text);
-    font-weight: 600;
-}
-
-.subscription-rating {
-    color: var(--warning);
-}
-
-/* Variante "Nouveau" affichee a la place du rating quand aucun avis. */
-.subscription-rating--new {
-    color: var(--gray);
-    font-style: italic;
 }
 
 .btn-unsubscribe {
@@ -1328,3 +1238,12 @@
     background: var(--primary);
 }
 
+/* Favoris (2026-10-17) : meme ligne que la liste « Tous les distributeurs »
+   (anneau d'etat, « En service · N sur M dispo »), coeur plein pour retirer */
+.favorite-row { position: relative; display: flex; align-items: center; gap: 4px; margin-bottom: 0.75rem; padding-right: 8px;
+    background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer; }
+.favorite-row .side-panel-item { flex: 1; min-width: 0; }
+.favorite-row .side-panel-item::after { display: none; }
+.favorite-row .btn-unsubscribe { flex: none; color: #BE123C; }
+.favorite-row .unread-indicator { position: absolute; top: 0.5rem; right: 3.5rem; background: var(--danger); color: #fff;
+    font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }

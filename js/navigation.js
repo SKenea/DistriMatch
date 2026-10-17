@@ -80,8 +80,9 @@ export function updateBadges() {
     // Badge favoris dans la bottom nav
     const favoritesBadge = document.getElementById('favorites-badge');
     if (favoritesBadge) {
-        if (AppState.subscriptions.length > 0) {
-            favoritesBadge.textContent = AppState.subscriptions.length;
+        const favoritesCount = AppState.subscriptions.filter(id => AppState.distributors.some(d => d.id === id)).length;
+        if (favoritesCount > 0) {
+            favoritesBadge.textContent = favoritesCount;
             favoritesBadge.style.display = 'flex';
         } else {
             favoritesBadge.style.display = 'none';

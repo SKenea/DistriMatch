@@ -119,8 +119,8 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await loginForTest(page);
         await page.evaluate(() => { window.AppState.subscriptions = [window.AppState.distributors[0].id]; });
         await page.click('.bottom-nav [data-tab="favorites"]');
-        await page.waitForSelector('#subscriptions-list .subscription-card');
-        await page.click('#subscriptions-list .subscription-card');
+        await page.waitForSelector('#subscriptions-list .favorite-row');
+        await page.click('#subscriptions-list .favorite-row');
         await page.waitForSelector('#dist-modal-overlay.active');
         await expect(page.locator('#dist-action-edit')).toHaveCount(0);
         await expect(page.locator('#dist-products-add-section')).toHaveCount(0);

@@ -44,7 +44,7 @@ const DISTANCE_GROUPS = [
 
 // Markup d'un item de liste. Identique entre le rendu plat (sans geoloc)
 // et le rendu groupe pour ne pas casser le binding .side-panel-item / le CSS.
-function renderSidePanelItem(d, extraClass = '') {
+export function renderSidePanelItem(d, extraClass = '') {
     const distance = d.distance ? formatDistance(d.distance) : '';
     // Vignette : 1ere photo reelle si dispo (cache prefetch), sinon emoji.
     // L'emoji de categorie reste TOUJOURS visible : seul (pas de photo) ou
