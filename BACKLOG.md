@@ -48,11 +48,13 @@ essai par Stephane sur son telephone avant chaque fusion.
   - Acceptance : double toucher + doigt maintenu + glisser = zoom continu centre sous le
     doigt (vers le bas = zoom avant, comme Google Maps) ; double toucher simple, pincement
     et boutons + / - inchanges.
-- [ ] T26-US6 En tant qu'utilisateur, « Voir sur la carte » depuis Favoris (ou une autre
+- [x] T26-US6 En tant qu'utilisateur, « Voir sur la carte » depuis Favoris (ou une autre
   page) me ramene sur la carte
   - Acceptance : l'epingle de la fiche ferme la fiche, la liste ET la page ouverte
     (Favoris, Notifications, Activite...) puis centre la carte sur la pastille qui pulse.
-- [ ] T26-US7 En tant qu'utilisateur sur telephone, la fiche a trois positions comme Google Maps
+- [x] T26-US7 En tant qu'utilisateur sur telephone, la fiche a trois positions comme Google Maps
+  (livre PR #176 ; suivis : en-tete compacte et fiche reduite avec onglets #177, barres de
+  navigation visibles et fermeture en touchant la carte ou une barre #178)
   - Acceptance : plein ecran / mi-hauteur (ouverture) / reduite en bas (nom + etat, la
     carte utilisable) ; on la tire depuis la poignee ou le haut de la fiche, elle suit le
     doigt et se pose sur la position la plus proche (avec l'elan) ; glisser sous la
@@ -951,7 +953,8 @@ Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration
   - Hors perimetre, a garder pour le chantier 5 : notification app fermee (Web Push +
     Realtime), reglage par type d'evenement, par machine.
 
-- [ ] US-4b Chantier 3 (suite) : ni points ni niveaux
+- [x] US-4b Chantier 3 (suite) : ni points ni niveaux — ABANDONNE (decision Stephane 2026-10-08 :
+  la gamification est gardee, points et niveau de Mon profil restent)
   - En tant que visiteur, je ne veux ni points ni niveaux, afin que chaque element de
     l'ecran serve a trouver une machine pleine et a le dire aux suivants.
   - Constat (audit UX-17) : Profil « Explorateur / 0 points », Activite « +10 pts » et
@@ -1011,6 +1014,8 @@ Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration
 - [ ] Chantier 5 : alertes reelles "previens-moi quand c'est plein" (Supabase Realtime +
   Web Push), branchees sur les signaux ; fermeture de boucle apres l'alerte ("Tu y es
   alle ? Il en restait ?").
+  - Fait en partie (EPIC-T25, PR #170) : notifications app fermee sur les favoris (Web Push,
+    sans compte). Reste : la fermeture de boucle apres l'alerte.
 
 - [x] Chantier 6 : vue product_rhythm livree en 008 (2026-09-16) ; la partie front est en Priorite haute. Ancien enonce : agregation des signaux par heure et jour
   ("habituellement plein le matin"), affichee quand une machine a assez de signaux.
