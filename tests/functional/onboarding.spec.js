@@ -150,3 +150,45 @@ test.describe('30. Ecran d\'accueil', () => {
         await context.close();
     });
 });
+
+// ============================================
+// RETOUR AVEC LA LOCALISATION DEJA AUTORISEE (comme Google Maps, 2026-10-17)
+// ============================================
+
+test.describe('Retour avec la localisation autorisee', () => {
+    test.beforeEach(async () => { /* override : pas de setupApp */ });
+
+    test('localisation deja autorisee : pas d accueil, directement la carte', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await page.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 30000 });
+        const overlay = page.locator('#geoloc-overlay');
+        await expect(overlay).toHaveCount(0, { timeout: 5000 }).catch(async () => { await expect(overlay).toHaveClass(/hidden/); });
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_geo_ok'))).toBe('1');
+        await context.close();
+    });
+
+    test('lien vers une fiche, localisation autorisee : fermer la fiche montre la carte, pas l accueil', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        const page = await context.newPage();
+        await page.goto(BASE_URL + '?id=dist-007');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
+        await page.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 30000 });
+        await page.click('#dist-modal-close');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        const welcomeVisible = await page.evaluate(() => { const o = document.getElementById('geoloc-overlay'); return !!o && !o.classList.contains('hidden'); });
+        expect(welcomeVisible).toBe(false);
+        await expect(page.locator('#main-map')).toBeVisible();
+        await context.close();
+    });
+
+    test('sans autorisation : l accueil reste, meme si l appareil avait autorise avant', async ({ browser }) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.addInitScript(() => localStorage.setItem('distrimatch_geo_ok', '1'));
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        await expect(page.locator('#geoloc-btn')).toBeVisible({ timeout: 15000 });
+        await context.close();
+    });
+});

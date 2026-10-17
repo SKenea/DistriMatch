@@ -2475,3 +2475,6 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .dist-modal.is-peek .dist-modal-header h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dist-modal.is-peek .dist-modal-name-wrap { min-width: 0; flex-wrap: nowrap; }
 }
+
+/* Retour avec la localisation deja autorisee : pas de flash de l'accueil (js/app.js) */
+.geo-returning .geoloc-overlay { visibility: hidden; }

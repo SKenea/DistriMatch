@@ -30,6 +30,19 @@ export async function captureEvents(page, status = 200) {
 // HELPERS
 // ============================================
 
+// Accueil : avec la localisation deja autorisee il disparait seul (comme Google
+// Maps, 2026-10-17) ; sinon on touche « Voir autour de moi ».
+export async function passWelcome(page) {
+    await page.waitForFunction(() => {
+        const o = document.getElementById('geoloc-overlay');
+        const b = document.getElementById('geoloc-btn');
+        const shown = o && !o.classList.contains('hidden') && !document.documentElement.classList.contains('geo-returning');
+        return !o || o.classList.contains('hidden') || (shown && b && b.offsetParent !== null);
+    }, null, { timeout: 20000 });
+    const btn = page.locator('#geoloc-overlay:not(.hidden) #geoloc-btn');
+    if (await btn.isVisible().catch(() => false)) await btn.click().catch(() => {});
+}
+
 export async function setupApp(page, context) {
     await captureEvents(page);
     // EPIC-T25 : pas d'invitation « même app fermée » au premier coeur, sauf
@@ -38,8 +51,7 @@ export async function setupApp(page, context) {
     await context.grantPermissions(['geolocation'], { origin: BASE_URL });
     await context.setGeolocation({ latitude: 43.4929, longitude: -1.4748 });
     await page.goto(BASE_URL);
-    await page.waitForSelector('#geoloc-btn', { state: 'visible', timeout: 10000 });
-    await page.click('#geoloc-btn');
+    await passWelcome(page);
 
     try {
         await page.waitForSelector('#geoloc-overlay.hidden', { timeout: 10000 });

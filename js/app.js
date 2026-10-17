@@ -355,9 +355,37 @@ window.signOut = signOut;
 // annule le « Voir la carte sans me localiser » d'UX-02). Seul un deep link
 // (?id=, scan QR) montre la fiche avant le consentement ; la fermer ramene
 // l'ecran de geolocalisation.
+// Comme Google Maps (Stephane 2026-10-17) : si le telephone a deja autorise la
+// localisation, on passe l'ecran d'accueil et la carte se charge directement
+// (aussi derriere une fiche ouverte par lien, QR ou retour de connexion).
+
+const GEO_OK_KEY = 'distrimatch_geo_ok';
+
+function rememberGeoGranted(ok) {
+    try {
+        if (ok) localStorage.setItem(GEO_OK_KEY, '1');
+        else localStorage.removeItem(GEO_OK_KEY);
+    } catch (e) { /* stockage bloque : l'accueil reste affiche */ }
+}
+
+async function geolocationAlreadyGranted() {
+    try {
+        if (!navigator.permissions?.query) return false;
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        return status.state === 'granted';
+    } catch (e) {
+        return false;
+    }
+}
+
+function hideGeolocOverlay(overlay) {
+    overlay.classList.add('hidden');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    document.documentElement.classList.remove('geo-returning');
+}
 
 function initGeolocationOverlay() {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         const overlay = document.getElementById('geoloc-overlay');
         const btn = document.getElementById('geoloc-btn');
         const errorEl = document.getElementById('geoloc-error');
@@ -367,6 +395,21 @@ function initGeolocationOverlay() {
             return;
         }
 
+        // Localisation deja autorisee : directement la carte, sans l'accueil
+        if (await geolocationAlreadyGranted()) {
+            try {
+                await getUserLocation();
+                rememberGeoGranted(true);
+                hideGeolocOverlay(overlay);
+                resolve();
+                return;
+            } catch (e) {
+                /* position indisponible : l'accueil et son bouton prennent le relais */
+            }
+        }
+        // L'accueil etait masque par anticipation (index.html) : on le montre
+        document.documentElement.classList.remove('geo-returning');
+
         btn.addEventListener('click', async () => {
             btn.disabled = true;
             btn.innerHTML = '<span class="geoloc-spinner"></span> Localisation...';
@@ -374,10 +417,11 @@ function initGeolocationOverlay() {
 
             try {
                 await getUserLocation();
-                overlay.classList.add('hidden');
-                overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+                rememberGeoGranted(true);
+                hideGeolocOverlay(overlay);
                 resolve();
             } catch (err) {
+                if (err.code === 1) rememberGeoGranted(false);
                 let message = 'Impossible d\'obtenir ta position.';
                 let helpHtml = '';
                 if (err.code === 1) {

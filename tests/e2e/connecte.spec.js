@@ -38,7 +38,13 @@ test.describe.serial('E2E connecte (site en ligne, vrai compte de test)', () => 
         await context.addInitScript(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(session)]);
         await page.route('**/rest/v1/rpc/log_event', route => route.abort());   // pas de mesure d'audience
         await page.goto(`./?nocache=${Date.now()}`);
-        await page.click('#geoloc-btn');
+        // Localisation accordee : l'accueil disparait seul (2026-10-17) ; sinon on le passe
+        await page.waitForFunction(() => {
+            const o = document.getElementById('geoloc-overlay');
+            return !o || o.classList.contains('hidden') || (!document.documentElement.classList.contains('geo-returning') && document.getElementById('geoloc-btn')?.offsetParent);
+        }, null, { timeout: 30000 });
+        const btn = page.locator('#geoloc-overlay:not(.hidden) #geoloc-btn');
+        if (await btn.isVisible().catch(() => false)) await btn.click().catch(() => {});
         await page.waitForFunction(() => window.AppState?.distributors?.length > 0, null, { timeout: 60000 });
         await page.evaluate((id) => window.openDistributorModal(id), DEMO_ID);
         await page.waitForSelector('#dist-modal-overlay.active');

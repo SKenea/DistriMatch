@@ -29,7 +29,13 @@ async function openApp(page, context, query = '') {
 }
 
 async function passGeoloc(page) {
-    await page.click('#geoloc-btn');
+    // Localisation accordee : l'accueil disparait seul (2026-10-17) ; sinon on le passe
+    await page.waitForFunction(() => {
+        const o = document.getElementById('geoloc-overlay');
+        return !o || o.classList.contains('hidden') || (!document.documentElement.classList.contains('geo-returning') && document.getElementById('geoloc-btn')?.offsetParent);
+    }, null, { timeout: 30000 });
+    const btn = page.locator('#geoloc-overlay:not(.hidden) #geoloc-btn');
+    if (await btn.isVisible().catch(() => false)) await btn.click().catch(() => {});
     await page.waitForFunction(() => window.AppState?.distributors?.length > 0, null, { timeout: 60000 });
 }
 
