@@ -173,3 +173,23 @@ test.describe('Connexion depuis une fiche', () => {
         expect(await page.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
     });
 });
+
+test.describe('Connexion depuis une fiche, par le menu du profil', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test('la fiche se ferme en touchant le menu, mais le lien ramene quand meme sur elle', async ({ page, context }) => {
+        await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+        await page.evaluate(() => window.openDistributorModal('dist-005'));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.waitForTimeout(400);
+        await page.click('#profile-avatar-btn');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await page.evaluate(async () => { await (await import('./js/auth.js')).sendMagicLink('test@exemple.fr', 'jeton'); });
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('distrimatch_login_return') || 'null'));
+        expect(saved?.id).toBe('dist-005');
+        const back = await context.newPage();
+        await back.goto('http://localhost:8080/');
+        await back.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
+        await expect(back.locator('#dist-modal-name')).toHaveText('Plats Cuisinés Bayonne');
+    });
+});

@@ -2461,8 +2461,9 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
     .dist-sheet-handle:focus-visible { outline: 2px solid var(--primary); outline-offset: -4px; }
     /* En-tete compacte comme Google Maps : nom a gauche, icones a droite sur la meme
        ligne ; un nom long passe a la ligne, les icones restent en place (EPIC-T26) */
-    .dist-modal-top-actions, .dist-modal-close { top: 34px; }
-    .dist-modal-header { padding-top: 34px; }
+    /* le nom commence sous la zone de la poignee (44 px) : jamais rogne */
+    .dist-modal-top-actions, .dist-modal-close { top: 44px; }
+    .dist-modal-header { padding-top: 44px; }
     .dist-modal-header h2 { font-size: 1.2rem; line-height: 1.25; }
     .dist-modal-title { padding-right: calc(4 * 44px - 6px); min-height: 44px; align-items: center; }
     /* La poignee ne masque pas le nom : fond transparent tant que la fiche n'a pas defile */

@@ -519,6 +519,11 @@ export function openDistributorModal(id) {
 
 export function closeDistModal() {
     const overlay = document.getElementById('dist-modal-overlay');
+    // Derniere fiche fermee : se connecter juste apres (menu du profil, qui ferme
+    // la fiche sur telephone) doit encore ramener sur elle (auth.js)
+    if (overlay?.classList.contains('active') && AppState.currentDistributor) {
+        AppState.lastClosedFiche = { id: AppState.currentDistributor.id, at: Date.now() };
+    }
     overlay?.classList.remove('active');
     popLayer('fiche');
     if (overlay) deactivateFocusTrap(overlay);

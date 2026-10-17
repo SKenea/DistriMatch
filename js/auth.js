@@ -118,9 +118,16 @@ export async function sendMagicLink(email, captchaToken) {
 const LOGIN_RETURN_KEY = 'distrimatch_login_return';
 const LOGIN_RETURN_TTL = 60 * 60 * 1000;
 
+// Fiche en cours : ouverte, ou fermee il y a moins d'une minute (sur telephone,
+// toucher le menu du profil ferme la fiche avant d'ouvrir la connexion).
+const RECENT_FICHE_MS = 60 * 1000;
+
 function rememberLoginReturn() {
     const ficheOpen = document.getElementById('dist-modal-overlay')?.classList.contains('active');
-    const id = ficheOpen ? AppState.currentDistributor?.id : null;
+    const recent = AppState.lastClosedFiche;
+    const id = ficheOpen
+        ? AppState.currentDistributor?.id
+        : (recent && Date.now() - recent.at < RECENT_FICHE_MS ? recent.id : null);
     try {
         if (id) localStorage.setItem(LOGIN_RETURN_KEY, JSON.stringify({ id, at: Date.now() }));
         else localStorage.removeItem(LOGIN_RETURN_KEY);
