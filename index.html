@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <!-- Retour avec la localisation deja autorisee (comme Google Maps) : l'accueil est masque
+         d'emblee ; js/app.js le montre si l'autorisation n'est plus valable. -->
+    <script>try { if (localStorage.getItem('distrimatch_geo_ok') === '1') document.documentElement.classList.add('geo-returning'); } catch (e) {}</script>
     <meta charset="UTF-8">
     <!-- WCAG 1.4.4 : pinch-zoom autorise (user-scalable=no retire). La carte
          Leaflet gere ses propres gestures, donc pas de conflit. -->
@@ -40,7 +43,7 @@
     <link rel="stylesheet" href="css/map.css?v=33">
     <link rel="stylesheet" href="css/panels.css?v=39">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=31">
-    <link rel="stylesheet" href="css/overlays.css?v=71">
+    <link rel="stylesheet" href="css/overlays.css?v=72">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -1093,35 +1096,35 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=89",
-            "./js/state.js": "./js/state.js?v=89",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=89",
-            "./js/config.js": "./js/config.js?v=89",
-            "./js/utils.js": "./js/utils.js?v=89",
-            "./js/auth.js": "./js/auth.js?v=89",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=89",
-            "./js/map.js": "./js/map.js?v=89",
-            "./js/navigation.js": "./js/navigation.js?v=89",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=89",
-            "./js/distributor.js": "./js/distributor.js?v=89",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=89",
-            "./js/chat.js": "./js/chat.js?v=89",
-            "./js/activity.js": "./js/activity.js?v=89",
-            "./js/notifications.js": "./js/notifications.js?v=89",
-            "./js/availability.js": "./js/availability.js?v=89",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=89",
-            "./js/events.js": "./js/events.js?v=89",
-            "./js/stats.js": "./js/stats.js?v=89",
-            "./js/history.js": "./js/history.js?v=89",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=89",
-            "./js/reviews.js": "./js/reviews.js?v=89",
-            "./js/operators.js": "./js/operators.js?v=89",
-            "./js/admin.js": "./js/admin.js?v=89",
-            "./js/summaries.js": "./js/summaries.js?v=89",
-            "./js/additions.js": "./js/additions.js?v=89",
-            "./js/push.js": "./js/push.js?v=89",
-            "./js/fiche-sheet.js": "./js/fiche-sheet.js?v=89",
-            "./js/my-activity.js": "./js/my-activity.js?v=89"
+            "./js/app.js": "./js/app.js?v=90",
+            "./js/state.js": "./js/state.js?v=90",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=90",
+            "./js/config.js": "./js/config.js?v=90",
+            "./js/utils.js": "./js/utils.js?v=90",
+            "./js/auth.js": "./js/auth.js?v=90",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=90",
+            "./js/map.js": "./js/map.js?v=90",
+            "./js/navigation.js": "./js/navigation.js?v=90",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=90",
+            "./js/distributor.js": "./js/distributor.js?v=90",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=90",
+            "./js/chat.js": "./js/chat.js?v=90",
+            "./js/activity.js": "./js/activity.js?v=90",
+            "./js/notifications.js": "./js/notifications.js?v=90",
+            "./js/availability.js": "./js/availability.js?v=90",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=90",
+            "./js/events.js": "./js/events.js?v=90",
+            "./js/stats.js": "./js/stats.js?v=90",
+            "./js/history.js": "./js/history.js?v=90",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=90",
+            "./js/reviews.js": "./js/reviews.js?v=90",
+            "./js/operators.js": "./js/operators.js?v=90",
+            "./js/admin.js": "./js/admin.js?v=90",
+            "./js/summaries.js": "./js/summaries.js?v=90",
+            "./js/additions.js": "./js/additions.js?v=90",
+            "./js/push.js": "./js/push.js?v=90",
+            "./js/fiche-sheet.js": "./js/fiche-sheet.js?v=90",
+            "./js/my-activity.js": "./js/my-activity.js?v=90"
         }
     }
     </script>
