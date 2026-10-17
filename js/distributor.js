@@ -14,6 +14,8 @@ import { generateWelcomeMessage } from './chat.js';
 import { FEATURES } from './config.js';
 import { checkFavoriteUpdates } from './favorites-watch.js';
 import { requireAuth } from './auth.js';
+import { renderSidePanelItem } from './gmaps-ui.js';
+import { SUMMARIES_EVENT } from './summaries.js';
 import { maybeOfferPush, syncPushSubscription } from './push.js';
 
 // ============================================
@@ -259,7 +261,13 @@ export function displaySubscriptions() {
     const empty = document.getElementById('subscriptions-empty');
     const count = document.getElementById('subscriptions-count');
 
-    if (AppState.subscriptions.length === 0) {
+    // Seuls les favoris encore sur la carte comptent (un favori disparu ne
+    // s'affiche pas : il ne doit pas gonfler le compteur)
+    const favorites = AppState.subscriptions
+        .map(id => AppState.distributors.find(dist => dist.id === id))
+        .filter(Boolean);
+
+    if (favorites.length === 0) {
         list.style.display = 'none';
         empty.style.display = 'flex';
         count.textContent = '0 favori';
@@ -268,40 +276,29 @@ export function displaySubscriptions() {
 
     list.style.display = 'block';
     empty.style.display = 'none';
-    count.textContent = `${AppState.subscriptions.length} favori${AppState.subscriptions.length > 1 ? 's' : ''}`;
+    count.textContent = `${favorites.length} favori${favorites.length > 1 ? 's' : ''}`;
 
-    list.innerHTML = AppState.subscriptions.map(id => {
-        const d = AppState.distributors.find(dist => dist.id === id);
-        if (!d) return '';
-
-        const distance = d.distance ? formatDistance(d.distance) : '';
-        const typeConfig = AppState.typeConfig[d.type] || {};
+    list.innerHTML = favorites.map(d => {
         // Messages du bot non lus : sans objet tant que le chat est inactif
-        const unreadCount = FEATURES.chat ? (Conversations.unreadCounts[id] || 0) : 0;
-
+        const unreadCount = FEATURES.chat ? (Conversations.unreadCounts[d.id] || 0) : 0;
+        // Meme ligne que la liste « Tous les distributeurs » : anneau d'etat,
+        // « En service · 1 sur 4 dispo », derniere verification (2026-10-17)
         return `
-            <div class="subscription-card" onclick="openDistributorModal('${d.id}')">
+            <div class="favorite-row" onclick="openDistributorModal('${escapeHTML(d.id)}')">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
-                <div class="subscription-image" style="background: ${typeConfig.gradient || '#E63946'}">
-                    <span class="subscription-emoji">${d.emoji}</span>
-                </div>
-                <div class="subscription-content">
-                    <h3 class="subscription-title">${escapeHTML(d.name)} <span class="subscribed-icon">🔔</span></h3>
-                    <p class="subscription-address">${escapeHTML(d.address)}</p>
-                    <div class="subscription-meta">
-                        <span class="subscription-distance">${distance}</span>
-                        ${(d.reviewCount ?? 0) > 0
-                            ? `<span class="subscription-rating">${generateStars(d.rating)} ${d.rating}</span>`
-                            : `<span class="subscription-rating subscription-rating--new">Nouveau</span>`}
-                    </div>
-                </div>
-                <button class="btn-unsubscribe" aria-label="Retirer des favoris" onclick="toggleSubscription('${d.id}', event)" title="Retirer des favoris">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                ${renderSidePanelItem(d, 'favorite-item')}
+                <button class="btn-unsubscribe" aria-label="Retirer des favoris" onclick="toggleSubscription('${escapeHTML(d.id)}', event)" title="Retirer des favoris">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
                     </svg>
                 </button>
-            </div>
-        `;
+            </div>`;
     }).join('');
+}
+
+// Etats et stocks arrives (ou signal envoye) : la page Favoris ouverte suit
+if (typeof document !== 'undefined') {
+    document.addEventListener(SUMMARIES_EVENT, () => {
+        if (document.getElementById('subscriptions-view')?.classList.contains('view-active')) displaySubscriptions();
+    });
 }

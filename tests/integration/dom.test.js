@@ -774,11 +774,19 @@ describe('switchView', () => {
 
 describe('updateBadges', () => {
     it('affiche le badge favoris quand il y a des abonnements', () => {
+        AppState.distributors = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
         AppState.subscriptions = ['a', 'b', 'c'];
         updateBadges();
         const badge = document.getElementById('favorites-badge');
         assert.equal(badge.textContent, '3');
         assert.notEqual(badge.style.display, 'none');
+    });
+
+    it('ne compte pas un favori dont le distributeur n existe plus (2026-10-17)', () => {
+        AppState.distributors = [{ id: 'a' }, { id: 'b' }];
+        AppState.subscriptions = ['a', 'b', 'disparu'];
+        updateBadges();
+        assert.equal(document.getElementById('favorites-badge').textContent, '2');
     });
 
     it('masque le badge si 0 abonnements', () => {
@@ -869,7 +877,7 @@ describe('displaySubscriptions', () => {
         AppState.subscriptions = ['d1', 'd2'];
         displaySubscriptions();
         const list = document.getElementById('subscriptions-list');
-        const cards = list.querySelectorAll('.subscription-card');
+        const cards = list.querySelectorAll('.favorite-row');
         assert.equal(cards.length, 2);
     });
 
@@ -878,6 +886,15 @@ describe('displaySubscriptions', () => {
         displaySubscriptions();
         const count = document.getElementById('subscriptions-count');
         assert.ok(count.textContent.includes('1'));
+    });
+
+    it('un favori disparu ne compte pas et ne s affiche pas ; la carte montre l etat (2026-10-17)', () => {
+        AppState.subscriptions = ['d1', 'disparu'];
+        displaySubscriptions();
+        assert.equal(document.getElementById('subscriptions-count').textContent, '1 favori');
+        const row = document.querySelector('#subscriptions-list .favorite-row');
+        assert.ok(row.querySelector('.side-panel-item-state'), 'ligne d etat');
+        assert.ok(!row.textContent.includes('🔔'), 'plus de cloche');
     });
 });
 
