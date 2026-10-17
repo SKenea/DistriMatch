@@ -144,3 +144,32 @@ test.describe('10. Politique d\'authentification', () => {
         expect(r.changed).toBe(true);
     });
 });
+
+// ============================================
+// RETOUR SUR LA FICHE APRES CONNEXION (2026-10-17)
+// ============================================
+
+test.describe('Connexion depuis une fiche', () => {
+    test('le lien de connexion retient la fiche ouverte ; au retour, la fiche se rouvre', async ({ page, context }) => {
+        await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+        await page.evaluate(() => window.openDistributorModal('dist-007'));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.evaluate(async () => { await (await import('./js/auth.js')).sendMagicLink('test@exemple.fr', 'jeton'); });
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('distrimatch_login_return') || 'null'));
+        expect(saved?.id).toBe('dist-007');
+
+        // Le lien ouvre l'adresse de base du site (comme Supabase) : la fiche revient
+        const back = await context.newPage();
+        await back.goto('http://localhost:8080/');
+        await back.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
+        await expect(back.locator('#dist-modal-name')).toHaveText('Légumes Bio Cambo');
+        expect(await back.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
+    });
+
+    test('sans fiche ouverte, rien n est retenu', async ({ page }) => {
+        await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+        await page.evaluate(() => localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'ancien', at: Date.now() })));
+        await page.evaluate(async () => { await (await import('./js/auth.js')).sendMagicLink('test@exemple.fr', 'jeton'); });
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
+    });
+});

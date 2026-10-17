@@ -8,7 +8,7 @@
  * prefs notifs, suivi produits, chat). Lectures toujours anonymes.
  */
 
-import { supabaseClient } from './state.js';
+import { supabaseClient, AppState } from './state.js';
 import { showToast, escapeHTML } from './utils.js';
 import { getHcaptchaSitekey, isLocalhost } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
@@ -104,7 +104,40 @@ export async function sendMagicLink(email, captchaToken) {
     const { error } = await supabaseClient.auth.signInWithOtp({ email, options });
 
     if (error) throw error;
+    rememberLoginReturn();
     return true;
+}
+
+// ============================================
+// RETOUR SUR LA FICHE APRES CONNEXION (Stephane 2026-10-17)
+// ============================================
+// Le lien recu par e-mail ramene a l'adresse de base du site (seule adresse de
+// retour autorisee chez Supabase) : sans ceci, on revenait sur l'accueil. La
+// fiche ouverte au moment de la demande est retenue sur l'appareil (1 h) et
+// rouverte au retour, comme un lien partage (?id=).
+const LOGIN_RETURN_KEY = 'distrimatch_login_return';
+const LOGIN_RETURN_TTL = 60 * 60 * 1000;
+
+function rememberLoginReturn() {
+    const ficheOpen = document.getElementById('dist-modal-overlay')?.classList.contains('active');
+    const id = ficheOpen ? AppState.currentDistributor?.id : null;
+    try {
+        if (id) localStorage.setItem(LOGIN_RETURN_KEY, JSON.stringify({ id, at: Date.now() }));
+        else localStorage.removeItem(LOGIN_RETURN_KEY);
+    } catch (e) { /* stockage bloque : on reviendra sur l'accueil */ }
+}
+
+// Fiche a rouvrir au retour du lien de connexion (une seule fois), ou null.
+export function takeLoginReturn(now = Date.now()) {
+    try {
+        const raw = localStorage.getItem(LOGIN_RETURN_KEY);
+        if (!raw) return null;
+        localStorage.removeItem(LOGIN_RETURN_KEY);
+        const { id, at } = JSON.parse(raw);
+        return id && now - at < LOGIN_RETURN_TTL ? String(id) : null;
+    } catch (e) {
+        return null;
+    }
 }
 
 // ============================================

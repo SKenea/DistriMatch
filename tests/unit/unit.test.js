@@ -1898,3 +1898,18 @@ describe('Carte : zoom d’un seul doigt (EPIC-T26)', () => {
 });
 
 import * as stateModule from '../../js/state.js';
+
+import { takeLoginReturn } from '../../js/auth.js';
+
+describe('Connexion : retour sur la fiche (2026-10-17)', () => {
+    it('rend la fiche retenue une seule fois, et rien apres une heure', () => {
+        const now = Date.UTC(2026, 9, 17, 10, 0);
+        localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'dist-007', at: now - 60000 }));
+        assert.equal(takeLoginReturn(now), 'dist-007');
+        assert.equal(takeLoginReturn(now), null);
+        localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'dist-007', at: now - 2 * 3600000 }));
+        assert.equal(takeLoginReturn(now), null);
+        localStorage.setItem('distrimatch_login_return', '{abime');
+        assert.equal(takeLoginReturn(now), null);
+    });
+});

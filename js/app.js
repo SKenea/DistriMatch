@@ -51,7 +51,7 @@ import {
 
 import { initSidePanel, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
-import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange } from './auth.js';
+import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange, takeLoginReturn } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
@@ -465,6 +465,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Si l'URL contient ?id=<distId>, ouvrir la modal des que les distributeurs
     // sont prets, sans attendre le consentement geoloc.
+    // Retour du lien de connexion : la fiche ouverte a la demande est rouverte
+    // (auth.js, takeLoginReturn), par le meme chemin qu'un lien partage
+    const loginReturnId = takeLoginReturn();
+    if (loginReturnId && !new URLSearchParams(window.location.search).get('id')) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', loginReturnId);
+        window.history.replaceState(window.history.state, '', url);
+    }
     const deepLinkId = new URLSearchParams(window.location.search).get('id');
     if (deepLinkId) {
         distributorsPromise.then(() => openModalFromUrlParam()).catch(() => {});
