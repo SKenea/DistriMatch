@@ -19,6 +19,47 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R1 Sécurité : fermer les failles de la revue de code (revue du 2026-10-21)
+Objectif : plus aucune faille exploitable en contournant l'app (vol de session, effacement des
+données de la communauté, base remplie jusqu'au blocage). Valeur : la confiance des membres et
+des exploitants avant le vrai pilote. Rapport : https://claude.ai/artifact/T64CmaCdx8oEkXPUmc4Qx5
+Méthode : une fiche d'exécution par story dans `docs/stories/<ID>.md`, exécutable par un modèle
+en effort medium (`/story <ID>`), une PR à la fois dans l'ordre ci-dessous ; les migrations sont
+appliquées par Claude juste avant la fusion, après relecture.
+
+- [ ] SEC-01 En tant qu'équipe, je veux vérifier en base qu'aucune faille n'a servi, afin de
+  corriger en sachant s'il y a des dégâts à réparer — fiche `docs/stories/SEC-01.md`
+  - Acceptance : les 19 requêtes de lecture passées, compte rendu « rien d'anormal » ou liste
+    des points trouvés envoyé à Stéphane ; aucune écriture en base.
+- [ ] SEC-02 En tant que membre ou admin, je veux que rien de ce qu'un autre a saisi ne puisse
+  s'exécuter sur mon téléphone, afin que ma session ne puisse pas être volée — `SEC-02.md`
+  - Acceptance : aucune donnée dans un attribut `on...=` (test garde-fou) ; un id piégé ouvre
+    sa fiche depuis la recherche et Favoris sans rien exécuter.
+- [ ] SEC-03 En tant que membre, je veux que retirer un produit ne détruise jamais l'historique
+  et qu'aucun compte ne puisse vider le catalogue, afin de garder les signaux de la communauté
+  — `SEC-03.md` (migration 025)
+  - Acceptance : « Retirer » = retrait doux restaurable ; DELETE refusé ; 30 écritures / heure /
+    compte, 5 produits max par modification ; compte bloqué refusé ; produit retiré sans état
+    public ni nouveau signal.
+- [ ] SEC-04 En tant que membre abonné, je veux que des faux abonnements ne puissent ni remplir
+  la base ni bloquer mes notifications — `SEC-04.md` (migration 026 + fonction push-notify)
+  - Acceptance : seuls les vrais services push acceptés ; plafonds 200 / heure et 5 000 au total ;
+    envoi par lots avec délai maximum ; abonnements morts effacés.
+- [ ] SEC-05 En tant qu'admin, je veux que la base impose date, note, statut et formats à l'ajout
+  d'une fiche et contrôle le niveau de prix — `SEC-05.md` (migration 027)
+  - Acceptance : limite de 5 ajouts par jour incontournable ; id, nom, adresse, coordonnées,
+    emoji et prix bornés ; une seule fiche par modification de prix ; fuseau envoyé à l'ajout.
+- [ ] SEC-06 En tant qu'équipe, je veux fermer les petites failles restantes de la base — `SEC-06.md`
+  (migration 028)
+  - Acceptance : envoi de photos fermé et bucket borné ; demo_backup protégée ; anciennes RPC
+    retirées ; limite de 20 signaux / heure appliquée même en un appel ; préfixe `demo-` refusé ;
+    tableau de bord sans fiches non publiées.
+
+Hors de cet epic, déjà fait : BUG-01 menu du profil derrière les pages (PR #189, fiche
+`docs/stories/BUG-01.md`, exécutée par un modèle medium en essai de la méthode).
+Lots suivants (fiches à écrire) : vie privée, bugs visibles, connexion et liens, notifications,
+accessibilité, tests, scripts.
+
 ### EPIC-T26 Confort au doigt sur mobile (retour d'un developpeur testeur, Stephane, 2026-10-08)
 Objectif : une carte et une fiche qui se manipulent sans erreur a une main sur telephone.
 Valeur : plus de mauvais toucher, plus de « fermer, dezoomer, retoucher » ; la carte reste
