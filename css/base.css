@@ -154,7 +154,9 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    z-index: var(--z-nav);
+    /* Au-dessus des pages (--z-overlay) pour que le menu du profil, qui deborde de la
+       barre, ne passe pas derriere elles ; sous la recherche (+10) et les fenetres */
+    z-index: calc(var(--z-overlay) + 5);
 }
 
 .nav-left {

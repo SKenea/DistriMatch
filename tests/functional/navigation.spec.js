@@ -347,6 +347,15 @@ test.describe('7. Profil (Local Guides + menu avatar)', () => {
         await page.waitForSelector('.auth-modal-overlay', { timeout: 3000 });
         expect(await page.$('.auth-modal')).not.toBeNull();
     });
+
+    test('menu avatar utilisable depuis une page (Favoris) : Compte s\'ouvre', async ({ page }) => {
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active', { timeout: 3000 });
+        await page.click('#profile-avatar-btn');
+        await page.waitForSelector('#profile-menu:not([hidden])', { timeout: 3000 });
+        await page.click('#profile-menu [data-action="account"]', { timeout: 3000 });
+        await page.waitForSelector('#account-view.view-active', { timeout: 3000 });
+    });
 });
 
 // ============================================
