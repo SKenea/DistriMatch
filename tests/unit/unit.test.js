@@ -1998,3 +1998,30 @@ describe('Connexion : retour sur la fiche (2026-10-17)', () => {
         assert.equal(takeLoginReturn(now), null);
     });
 });
+
+// BUG-07 : compteur « Distributeurs ajoutes » (copies locales + fiches de la base du membre)
+import { countMyAdditions } from '../../js/utils.js';
+
+describe('countMyAdditions (BUG-07)', () => {
+    const local = [{ id: 'user-1' }, { id: 'user-2' }];
+    const base = [
+        { id: 'user-2', addedById: 'u1' },
+        { id: 'user-3', addedById: 'u1' },
+        { id: 'd-9', addedById: 'u2' },
+        { id: 'd-10' }
+    ];
+    it('copies locales + fiches du membre, sans doublon', () => {
+        assert.equal(countMyAdditions(local, base, 'u1'), 3);
+    });
+    it('deconnecte : seulement les copies locales', () => {
+        assert.equal(countMyAdditions(local, base, null), 2);
+    });
+    it('une fiche refusee du membre compte aussi (Stephane 2026-10-25)', () => {
+        const withRejected = [...base, { id: 'user-4', addedById: 'u1', reviewStatus: 'rejected' }];
+        assert.equal(countMyAdditions(local, withRejected, 'u1'), 4);
+    });
+    it('rien : 0', () => {
+        assert.equal(countMyAdditions([], [], 'u1'), 0);
+        assert.equal(countMyAdditions(undefined, undefined, undefined), 0);
+    });
+});

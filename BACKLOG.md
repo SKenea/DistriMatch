@@ -27,7 +27,7 @@ medium (`/story <ID>`), une PR à la fois **dans cet ordre** (chaque fiche suppo
 fusionnée) : BUG-07, BUG-02, BUG-13, BUG-05, BUG-04, BUG-14, BUG-03, BUG-06, BUG-11, BUG-12,
 BUG-15, BUG-08, BUG-09, BUG-10.
 
-- [ ] BUG-07 En tant qu'auteur d'une fiche refusée, je ne la vois plus revenir « seulement sur
+- [x] BUG-07 En tant qu'auteur d'une fiche refusée, je ne la vois plus revenir « seulement sur
   ton téléphone », et « Publier » ne m'annonce plus un faux succès — `BUG-07.md`
   - Acceptance : copie locale retirée dès que la base connaît la fiche ; refus annoncé avec un
     renvoi vers « Mes ajouts » ; compteur « Distributeurs ajoutés » juste.

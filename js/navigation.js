@@ -4,8 +4,9 @@
 
 import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
-    escapeHTML, formatDistance, updateImplicitProfile, getTopPreferredTypes, loadUserDistributors, getLevelInfo
+    escapeHTML, formatDistance, updateImplicitProfile, getTopPreferredTypes, loadUserDistributors, getLevelInfo, countMyAdditions
 } from './utils.js';
+import { getCurrentUser } from './auth.js';
 import { updateMapMarkers } from './map.js';
 import { pushLayer, popLayer } from './history.js';
 
@@ -317,7 +318,10 @@ function updateContributionStats() {
     const statContribReports = document.getElementById('stat-contrib-reports');
 
     if (statContribDistributors) {
-        statContribDistributors.textContent = loadUserDistributors().length;
+        // BUG-07 : une fiche envoyee n'est plus copiee sur le telephone : on compte aussi
+        // les fiches de la base dont le membre connecte est l'auteur, refusees comprises
+        // (une contribution refusee compte : elle peut etre moderee ensuite)
+        statContribDistributors.textContent = countMyAdditions(loadUserDistributors(), [...AppState.distributors, ...(AppState.rejectedDistributors || [])], getCurrentUser()?.id);
     }
     if (statContribPhotos) {
         statContribPhotos.textContent = UserProfile.stats.photosUploaded || 0;

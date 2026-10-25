@@ -4,6 +4,7 @@
 
 export const AppState = {
     distributors: [],
+    rejectedDistributors: [],   // fiches refusees lues en base (auteur / admin) : hors carte (BUG-07)
     subscriptions: [],
     userLocation: null,
     currentDistributor: null,
