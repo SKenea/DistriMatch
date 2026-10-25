@@ -1823,7 +1823,7 @@ describe('« Mon activité » : lignes du journal (EPIC-T22)', () => {
 // ============================================
 // EPIC-T25 : notifications app fermee
 // ============================================
-import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, isInCooldown, PUSH_COOLDOWN_MS } from '../../supabase/functions/push-notify/logic.js';
+import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, isInCooldown, PUSH_COOLDOWN_MS, isAllowedPushEndpoint, pushFailureAction, chunk, PUSH_MAX_FAILURES } from '../../supabase/functions/push-notify/logic.js';
 import { buildFavoriteMessage } from '../../js/notifications.js';
 import { urlBase64ToUint8Array, needsHomeScreenForPush } from '../../js/utils.js';
 
@@ -1884,6 +1884,74 @@ describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
         assert.equal(needsHomeScreenForPush(iphone, false), true);
         assert.equal(needsHomeScreenForPush(iphone, true), false);
         assert.equal(needsHomeScreenForPush('Mozilla/5.0 (Linux; Android 14) Chrome/120', false), false);
+    });
+});
+
+// ============================================
+// SEC-04 : abonnements push sans abus ni blocage
+// ============================================
+import { subscriptionParams } from '../../js/push.js';
+
+describe('Notifications app fermee : sans abus ni blocage (SEC-04)', () => {
+    it('seules les adresses des services push sont acceptees', () => {
+        for (const ok of [
+            'https://fcm.googleapis.com/fcm/send/abc',
+            'https://updates.push.services.mozilla.com/wpush/v2/abc',
+            'https://web.push.apple.com/QK1xyz',
+            'https://wns2-par02p.notify.windows.com/w/?token=abc'
+        ]) assert.equal(isAllowedPushEndpoint(ok), true, ok);
+        for (const bad of [
+            'http://fcm.googleapis.com/fcm/send/abc',
+            'https://fcm.googleapis.com.evil.example/x',
+            'https://evil.example/fcm.googleapis.com/',
+            'https://fcm.googleapis.com:8443/x',
+            'https://user@fcm.googleapis.com/x',
+            'https://push.apple.com.evil.example/x',
+            'https://fcm.googleapis.com',
+            'https://fcm.googleapis.com/' + 'x'.repeat(1000),
+            '', null, undefined
+        ]) assert.equal(isAllowedPushEndpoint(bad), false, String(bad));
+    });
+
+    it('echec d envoi : 404 / 410 efface ; reseau, 400, 429, 5xx comptent puis effacent au 6e ; 401 / 403 journalises', () => {
+        assert.equal(pushFailureAction(410, 0), 'delete');
+        assert.equal(pushFailureAction(404, 0), 'delete');
+        assert.equal(pushFailureAction(undefined, 0), 'count');
+        assert.equal(pushFailureAction(429, 0), 'count');
+        assert.equal(pushFailureAction(503, PUSH_MAX_FAILURES - 1), 'count');
+        assert.equal(pushFailureAction(500, PUSH_MAX_FAILURES), 'delete');
+        assert.equal(pushFailureAction(undefined, PUSH_MAX_FAILURES), 'delete');
+        assert.equal(pushFailureAction(400, 0), 'count');
+        assert.equal(pushFailureAction(400, PUSH_MAX_FAILURES), 'delete');
+        assert.equal(pushFailureAction(403, 9), 'log');
+        assert.equal(pushFailureAction(401, 0), 'log');
+        assert.equal(PUSH_MAX_FAILURES, 5);
+    });
+
+    it('envois par lots de 20', () => {
+        const items = Array.from({ length: 45 }, (_, i) => i);
+        assert.deepEqual(chunk(items, 20).map(b => b.length), [20, 20, 5]);
+        assert.deepEqual(chunk(items, 20)[2], [40, 41, 42, 43, 44]);
+        assert.deepEqual(chunk([], 20), []);
+    });
+
+    it('le front envoie au plus 200 favoris et 30 produits suivis de 60 caracteres', () => {
+        const savedSubs = AppState.subscriptions;
+        const savedFollowed = NotificationPrefs.followedProducts;
+        AppState.subscriptions = Array.from({ length: 250 }, (_, i) => `dist-${i}`);
+        NotificationPrefs.followedProducts = Array.from({ length: 40 }, (_, i) => `produit ${i} ${'x'.repeat(80)}`);
+        try {
+            const p = subscriptionParams({ toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: 'k', auth: 'a' } }) });
+            assert.equal(p.p_endpoint, 'https://fcm.googleapis.com/fcm/send/abc');
+            assert.equal(p.p_favorites.length, 200);
+            assert.equal(p.p_favorites[0], 'dist-0');
+            assert.equal(p.p_followed.length, 30);
+            assert.ok(p.p_followed.every(v => v.length <= 60));
+            assert.equal(p.p_followed[0], `produit 0 ${'x'.repeat(80)}`.slice(0, 60));
+        } finally {
+            AppState.subscriptions = savedSubs;
+            NotificationPrefs.followedProducts = savedFollowed;
+        }
     });
 });
 

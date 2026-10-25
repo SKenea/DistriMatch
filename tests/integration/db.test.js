@@ -739,7 +739,7 @@ describe('base : confidentialite des signaux et « Mon activité » (023)', { sk
 });
 
 describe('base : notifications app fermee (024)', { skip: SKIP }, () => {
-    const ENDPOINT = 'https://push.itest.example/abc';
+    const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/itest-abc';
     const sub = (followed) => `push_subscribe('${ENDPOINT}', 'p256dh-itest', 'auth-itest', array['${DEMO}'], array['${followed}'], 22, 8, 'Europe/Paris')`;
 
     it('un visiteur s’abonne sans compte, met a jour, se desabonne ; il ne lit jamais les abonnements', async () => {
@@ -766,7 +766,7 @@ describe('base : notifications app fermee (024)', { skip: SKIP }, () => {
     it('refuse une adresse qui n’est pas https et une liste trop longue', async () => {
         const bad = await probe(`${AS_ANON} perform push_subscribe('http://x', 'k', 'a', '{}', '{}', null, null, 'UTC')`);
         assert.equal(bad.code, '22023');
-        const big = await probe(`${AS_ANON} perform push_subscribe('https://push.itest.example/big', 'k', 'a', (select array_agg(g::text) from generate_series(1, 201) g), '{}', null, null, 'UTC')`);
+        const big = await probe(`${AS_ANON} perform push_subscribe('https://fcm.googleapis.com/fcm/send/itest-big', 'k', 'a', (select array_agg(g::text) from generate_series(1, 201) g), '{}', null, null, 'UTC')`);
         assert.equal(big.code, '22023');
     });
 
@@ -776,6 +776,76 @@ describe('base : notifications app fermee (024)', { skip: SKIP }, () => {
             r := (select count(*) from pg_trigger where tgname = 'notify_push_on_signal')::text`);
         assert.ok(p.reachedEnd, p.message);
         assert.equal(p.result, '1');
+    });
+});
+
+// SEC-04 (026) : abonnements sans abus ni blocage
+describe('base : abonnements aux notifications sans abus (026)', { skip: SKIP }, () => {
+    const FCM = 'https://fcm.googleapis.com/fcm/send/itest-';
+    const subscribe = (endpoint, favorites = "'{}'", followed = "'{}'") =>
+        `push_subscribe('${endpoint}', 'p256dh-itest', 'auth-itest', ${favorites}, ${followed}, null, null, 'UTC')`;
+
+    it('refuse une adresse qui n’est pas celle d’un service push, aussi en ecriture directe', async () => {
+        for (const endpoint of ['https://evil.example/itest', 'https://fcm.googleapis.com.evil.example/itest', 'https://fcm.googleapis.com:8443/itest']) {
+            const p = await probe(`${AS_ANON} perform ${subscribe(endpoint)}`);
+            assert.equal(p.code, '22023', endpoint);
+        }
+        const direct = await probe(`insert into push_subscriptions (endpoint, p256dh, auth) values ('https://evil.example/itest', 'k', 'a')`);
+        assert.equal(direct.code, '23514');
+    });
+
+    it('refuse un tableau a deux dimensions, plus de 30 produits suivis ou un produit de plus de 60 caracteres', async () => {
+        const fav2d = await probe(`${AS_ANON} perform ${subscribe(FCM + '2d', `array[array['${DEMO}', 'a'], array['b', 'c']]`)}`);
+        assert.equal(fav2d.code, '22023');
+        const followed2d = await probe(`${AS_ANON} perform ${subscribe(FCM + '2d', "'{}'", "array[array['pain', 'oeufs'], array['lait', 'miel']]")}`);
+        assert.equal(followed2d.code, '22023');
+        const many = await probe(`${AS_ANON} perform ${subscribe(FCM + 'many', "'{}'", "(select array_agg('p' || g) from generate_series(1, 31) g)")}`);
+        assert.equal(many.code, '22023');
+        const long = await probe(`${AS_ANON} perform ${subscribe(FCM + 'long', "'{}'", "array[repeat('x', 61)]")}`);
+        assert.equal(long.code, '22023');
+        const max = await probe(`${AS_ANON} perform ${subscribe(FCM + 'max', "'{}'", "(select array_agg(lpad(g::text, 60, 'x')) from generate_series(1, 30) g)")}`);
+        assert.ok(max.reachedEnd, max.message);
+    });
+
+    it('ne garde que les favoris publies qui existent', async () => {
+        const p = await probe(`insert into distributors (id, name, type, lat, lng, review_status)
+                values ('itest-push-pending', 'Fiche itest', 'pizza', 43.49, -1.47, 'pending');
+            ${AS_ANON} perform ${subscribe(FCM + 'fav', `array['${DEMO}', 'itest-push-pending', 'itest-inexistante', '${DEMO}']`)};
+            set local role postgres;
+            r := (select favorites::text from push_subscriptions where endpoint = '${FCM}fav')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, `{${DEMO}}`);
+    });
+
+    it('au plus 200 nouveaux abonnements par heure ; une mise a jour passe toujours et remet les echecs a zero', async () => {
+        const fill = `insert into push_subscriptions (endpoint, p256dh, auth) select '${FCM}cap-' || g, 'k', 'a' from generate_series(1, 200) g;`;
+        const blocked = await probe(`${fill} ${AS_ANON} perform ${subscribe(FCM + 'cap-new')}`);
+        assert.equal(blocked.code, 'P0001');
+        const update = await probe(`${fill} update push_subscriptions set fail_count = 3 where endpoint = '${FCM}cap-1';
+            ${AS_ANON} perform ${subscribe(FCM + 'cap-1', `array['${DEMO}']`)};
+            set local role postgres;
+            r := (select fail_count || '|' || favorites::text from push_subscriptions where endpoint = '${FCM}cap-1')`);
+        assert.ok(update.reachedEnd, update.message);
+        assert.equal(update.result, `0|{${DEMO}}`);
+    });
+
+    it('au plus 5000 abonnements au total pour un nouvel abonnement ; une mise a jour passe toujours', async () => {
+        // Lignes datees d'il y a 2 h : le plafond horaire ne joue pas, seul le plafond total est teste
+        const fill = `insert into push_subscriptions (endpoint, p256dh, auth, created_at, updated_at)
+            select '${FCM}total-' || g, 'k', 'a', now() - interval '2 hours', now() - interval '2 hours' from generate_series(1, 5000) g;`;
+        const blocked = await probe(`${fill} ${AS_ANON} perform ${subscribe(FCM + 'total-new')}`);
+        assert.equal(blocked.code, 'P0001');
+        assert.match(blocked.message, /Trop d'abonnements enregistres/);
+        const update = await probe(`${fill} ${AS_ANON} perform ${subscribe(FCM + 'total-1')}`);
+        assert.ok(update.reachedEnd, update.message);
+    });
+
+    it('purge nocturne des abonnements non rafraichis depuis 60 jours (pg_cron)', async () => {
+        const rows = await query("select schedule, command, active from cron.job where jobname = 'distrimatch-push-purge'");
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].schedule, '30 3 * * *');
+        assert.match(rows[0].command, /updated_at < now\(\) - interval '60 days'/);
+        assert.equal(rows[0].active, true);
     });
 });
 
@@ -804,7 +874,7 @@ describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
             (select count(*) from signal_bans where reason = 'itest') as bans,
             (select count(*) from reviews where body = 'itest avis') as avis,
             (select count(*) from operator_requests where company = 'Societe itest') as demandes,
-            (select count(*) from push_subscriptions where endpoint like 'https://push.itest.example/%') as abonnements`);
+            (select count(*) from push_subscriptions where endpoint like 'https://fcm.googleapis.com/fcm/send/itest-%') as abonnements`);
         assert.deepEqual(r, { signaux: 0, fiches: 0, bans: 0, avis: 0, demandes: 0, abonnements: 0 });
     });
 });
