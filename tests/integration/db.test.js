@@ -383,7 +383,7 @@ describe('base : exploitants (020)', { skip: SKIP }, () => {
         const at = (min, state, source) => `insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, user_id, created_at)
             values ('${DEMO}', v_product, '${state}', '${source}', 0.8, '${DEVICE}', null, now() - interval '${min} minutes')`;
         const read = `select state || '/' || source into r from product_availability where product_id = v_product`;
-        const pre = `select id into v_product from products where distributor_id = '${DEMO}' order by id limit 1; delete from availability_signals where product_id = v_product;`;
+        const pre = `select id into v_product from products where distributor_id = '${DEMO}' and removed_at is null order by id limit 1; delete from availability_signals where product_id = v_product;`;
         const near = await probe(`${pre} ${at(20, 'available', 'owner')}; ${at(5, 'absent', 'user')}; ${read}`, 'v_product bigint;');
         assert.equal(near.result, 'available/owner');
         const far = await probe(`${pre} ${at(60, 'available', 'owner')}; ${at(5, 'absent', 'user')}; ${read}`, 'v_product bigint;');
@@ -503,7 +503,7 @@ describe('base : validation des nouvelles fiches (022)', { skip: SKIP }, () => {
 
     it('un ajout par l’API est toujours « en attente » : visible par son auteur, pas par un visiteur ni ses produits', async () => {
         const p = await probe(`${AS_USER} ${ADD()};
-            insert into products (distributor_id, name, price, available) values ('itest-rev', 'Produit itest', 0, true);
+            insert into products (distributor_id, name, available) values ('itest-rev', 'Produit itest', true);
             v_mine := (select review_status from distributors where id = 'itest-rev');
             ${AS_ANON} r := v_mine || '|' || (select count(*) from distributors where id = 'itest-rev')::text
                 || '|' || (select count(*) from products where distributor_id = 'itest-rev')::text`, 'v_mine text;');
@@ -550,6 +550,163 @@ describe('base : validation des nouvelles fiches (022)', { skip: SKIP }, () => {
     it('6e ajout du jour pour un compte : refuse (P0001)', async () => {
         const p = await probe(`${AS_USER} ${ADD('itest-rev-1')}; ${ADD('itest-rev-2')}; ${ADD('itest-rev-3')}; ${ADD('itest-rev-4')}; ${ADD('itest-rev-5')}; ${ADD('itest-rev-6')}`);
         assert.equal(p.code, 'P0001');
+    });
+});
+
+// SEC-03 (025) : produits : retrait doux, droits par colonne, garde-fous
+describe('base : produits (025)', { skip: SKIP }, () => {
+    // Journal du compte vide (dans la transaction annulee) : la limite de 30 / heure ne gene pas les autres cas
+    const FRESH = `delete from product_edits where user_id = ${USER};`;
+    // Retour en postgres SANS jeton : comme le SQL Editor (gardes inactives)
+    const AS_POSTGRES = `perform set_config('request.jwt.claims', '', true); reset role;`;
+    const FIRST = `select id into v_product from products where distributor_id = '${DEMO}' and removed_at is null order by id limit 1;`;
+    const OTHER = `(select id from auth.users where id <> ${USER} order by created_at limit 1)`;
+    const ADD_PENDING = `insert into distributors (id, name, type, lat, lng, is_user_added, added_by) values ('itest-prod', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER})`;
+    const insertProduct = (name = "'Produit itest'", fiche = DEMO) =>
+        `insert into products (distributor_id, name, available) values ('${fiche}', ${name}, true)`;
+
+    // La base avait 3 regles en double creees au tableau de bord (permissives : elles
+    // rouvraient l'ajout et la modification). Seules les 3 regles de 025 doivent rester.
+    it('products n’a que les 3 regles de 025 (aucune regle oubliee au tableau de bord)', async () => {
+        const p = await probe(`r := (select string_agg(polname, ' | ' order by polname) from pg_policy where polrelid = 'public.products'::regclass)`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'Ajout produits par users authentifies | Lecture publique produits | Modif produits par users authentifies');
+    });
+
+    it('personne ne supprime un produit par l’API (DELETE refuse, 42501)', async () => {
+        for (const role of [AS_USER, AS_ANON]) {
+            const p = await probe(`${FIRST} ${role} delete from products where id = v_product`, 'v_product bigint;');
+            assert.equal(p.reachedEnd, false);
+            assert.equal(p.code, '42501');
+        }
+    });
+
+    it('retirer = retrait doux : les signaux restent, le produit disparait pour tous, l’admin le restaure en SQL', async () => {
+        const p = await probe(`${FRESH} ${FIRST}
+            insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, user_id)
+            values ('${DEMO}', v_product, 'available', 'user', 0.8, '${DEVICE}', null);
+            v_before := (select count(*) from availability_signals where product_id = v_product);
+            ${AS_USER} perform remove_product(v_product);
+            v_seen_user := (select count(*) from products where id = v_product);
+            ${AS_ANON} v_seen_anon := (select count(*) from products where id = v_product);
+            v_state_anon := (select count(*) from product_availability where product_id = v_product);
+            ${AS_POSTGRES}
+            r := json_build_object(
+                'signaux_avant', v_before,
+                'signaux_apres', (select count(*) from availability_signals where product_id = v_product),
+                'retire_par_moi', (select removed_at is not null and removed_by = ${USER} from products where id = v_product),
+                'journal', (select action from product_edits where product_id = v_product and user_id = ${USER} order by id desc limit 1),
+                'vu_membre', v_seen_user,
+                'vu_visiteur', v_seen_anon,
+                'etat_visiteur', v_state_anon
+            )::text;
+            update products set removed_at = null, removed_by = null where id = v_product;
+            ${AS_ANON} r := r || '|' || (select count(*) from products where id = v_product)::text`,
+            'v_product bigint; v_before int; v_seen_user int; v_seen_anon int; v_state_anon int;');
+        assert.ok(p.reachedEnd, p.message);
+        const [json, restored] = p.result.split('|');
+        const res = JSON.parse(json);
+        assert.ok(res.signaux_avant >= 1);
+        assert.equal(res.signaux_apres, res.signaux_avant, 'aucun signal efface');
+        assert.equal(res.retire_par_moi, true);
+        assert.equal(res.journal, 'remove');
+        assert.equal(res.vu_membre, 0);
+        assert.equal(res.vu_visiteur, 0);
+        assert.equal(res.etat_visiteur, 0, 'plus d’etat public (vue product_availability)');
+        assert.equal(restored, '1', 'restaure par l’admin : de nouveau visible');
+    });
+
+    it('produit retire : plus aucun signal accepte (P0002)', async () => {
+        const p = await probe(`${FRESH} ${FIRST} ${AS_USER} perform remove_product(v_product);
+            perform confirm_availability('${DEMO}', '${DEVICE}', jsonb_build_array(jsonb_build_object('product_id', v_product, 'state', 'available')), null)`,
+            'v_product bigint;');
+        assert.equal(p.reachedEnd, false);
+        assert.equal(p.code, 'P0002');
+        assert.match(p.message, /retire/);
+    });
+
+    it('retirer deux fois : P0002 ; sans compte : refuse (42501)', async () => {
+        const twice = await probe(`${FRESH} ${FIRST} ${AS_USER} perform remove_product(v_product); perform remove_product(v_product)`, 'v_product bigint;');
+        assert.equal(twice.code, 'P0002');
+        const anon = await probe(`${FIRST} ${AS_ANON} perform remove_product(v_product)`, 'v_product bigint;');
+        assert.equal(anon.code, '42501');
+    });
+
+    it('renommer : accepte, nom nettoye, ancien nom journalise ; rien d’autre ne se change par l’API', async () => {
+        const p = await probe(`${FRESH} ${FIRST} ${AS_USER}
+            update products set name = '  Nom itest  ' where id = v_product;
+            ${AS_POSTGRES}
+            r := (select name from products where id = v_product) || '|'
+              || (select action || '|' || (old_name is not null)::text || '|' || new_name
+                    from product_edits where product_id = v_product and user_id = ${USER} order by id desc limit 1)`,
+            'v_product bigint;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'Nom itest|rename|true|Nom itest');
+        for (const set of ['distributor_id = distributor_id', 'price = 1', 'removed_at = now()', 'available = false']) {
+            const k = await probe(`${FIRST} ${AS_USER} update products set ${set} where id = v_product`, 'v_product bigint;');
+            assert.equal(k.code, '42501', set);
+        }
+        const price = await probe(`${AS_USER} insert into products (distributor_id, name, price, available) values ('${DEMO}', 'Produit itest', 1, true)`);
+        assert.equal(price.code, '42501');
+        const anon = await probe(`${AS_ANON} ${insertProduct()}`);
+        assert.equal(anon.code, '42501');
+    });
+
+    it('une requete qui modifie plus de 5 produits ou en ajoute plus de 10 : refusee (P0001)', async () => {
+        const [c] = await query("select count(*)::int as n from products p join distributors d on d.id = p.distributor_id where d.is_demo and d.review_status = 'published'");
+        assert.ok(c.n >= 6, 'il faut au moins 6 produits de demo');
+        const demo6 = (n) => `update products set name = name where id in (
+            select id from products where distributor_id in (select id from distributors where is_demo) order by id limit ${n})`;
+        const six = await probe(`${FRESH} ${AS_USER} ${demo6(6)}`);
+        assert.equal(six.reachedEnd, false);
+        assert.equal(six.code, 'P0001');
+        assert.match(six.message, /une seule requete/);
+        const five = await probe(`${FRESH} ${AS_USER} ${demo6(5)}; get diagnostics v_n = row_count; r := v_n::text`, 'v_n int;');
+        assert.ok(five.reachedEnd, five.message);
+        assert.equal(five.result, '5');
+        const eleven = await probe(`${FRESH} ${AS_USER}
+            insert into products (distributor_id, name, available)
+            select '${DEMO}', 'Produit itest ' || g, true from generate_series(1, 11) g`);
+        assert.equal(eleven.code, 'P0001');
+        assert.match(eleven.message, /une seule requete/);
+    });
+
+    it('compte bloque : ni ajout, ni renommage, ni retrait (42501)', async () => {
+        const BAN = `insert into signal_bans (user_id, reason) values (${USER}, 'itest');`;
+        for (const action of [insertProduct(), 'update products set name = name where id = v_product', 'perform remove_product(v_product)']) {
+            const p = await probe(`${BAN} ${FIRST} ${AS_USER} ${action}`, 'v_product bigint;');
+            assert.equal(p.code, '42501', action);
+            assert.match(p.message, /ne peut plus modifier/, action);
+        }
+    });
+
+    it('nom vide ou de plus de 80 caracteres : refuse (23514) ; 80 caracteres : accepte', async () => {
+        assert.equal((await probe(`${FRESH} ${AS_USER} ${insertProduct("repeat('a', 81)")}`)).code, '23514');
+        assert.equal((await probe(`${FRESH} ${AS_USER} ${insertProduct("'   '")}`)).code, '23514');
+        const ok = await probe(`${FRESH} ${AS_USER} ${insertProduct("repeat('a', 80)")}`);
+        assert.ok(ok.reachedEnd, ok.message);
+    });
+
+    it('31e ecriture de produit dans l’heure pour un compte : refusee (P0001)', async () => {
+        const p = await probe(`${FRESH}
+            insert into product_edits (distributor_id, user_id, action, new_name)
+            select '${DEMO}', ${USER}, 'add', 'itest' from generate_series(1, 30);
+            ${AS_USER} ${insertProduct()}`);
+        assert.equal(p.code, 'P0001');
+        assert.match(p.message, /ce compte/);
+    });
+
+    it('fiche en attente : son auteur y ajoute un produit, un autre compte non ; sans fiche : refuse', async () => {
+        const own = await probe(`${FRESH} ${AS_USER} ${ADD_PENDING}; ${insertProduct("'Produit itest'", 'itest-prod')};
+            r := (select count(*) from products where distributor_id = 'itest-prod')::text`);
+        assert.ok(own.reachedEnd, own.message);
+        assert.equal(own.result, '1');
+        const other = await probe(`${FRESH} ${AS_USER} ${ADD_PENDING};
+            ${AS_POSTGRES} update distributors set added_by = ${OTHER} where id = 'itest-prod';
+            ${AS_USER} ${insertProduct("'Produit itest'", 'itest-prod')}`);
+        assert.equal(other.code, '42501');
+        const orphan = await probe(`${FRESH} ${AS_USER} insert into products (distributor_id, name, available) values (null, 'Produit itest', true)`);
+        assert.equal(orphan.code, '42501');
     });
 });
 

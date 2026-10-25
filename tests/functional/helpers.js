@@ -338,5 +338,7 @@ export async function routeEditWrites(page, { insertId = 99001, fail = null } = 
     };
     await page.route(url => url.pathname.endsWith('/rest/v1/products'), handler('products'));
     await page.route(url => url.pathname.endsWith('/rest/v1/distributors'), handler('distributors'));
+    // SEC-03 : « Retirer » passe par la RPC remove_product (retrait doux)
+    await page.route(url => url.pathname.endsWith('/rest/v1/rpc/remove_product'), handler('rpc/remove_product'));
     return log;
 }

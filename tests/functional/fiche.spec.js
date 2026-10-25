@@ -100,9 +100,9 @@ test.describe('4. Modal distributeur', () => {
 // Aucune vraie ecriture : products / distributors interceptes (routeEditWrites).
 
 test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
-    async function openEditable(page, { products } = {}) {
+    async function openEditable(page, { products, fail } = {}) {
         await routeSignals(page);
-        const log = await routeEditWrites(page);
+        const log = await routeEditWrites(page, { fail });
         await loginForTest(page);
         const id = await page.evaluate((prods) => {
             const ok = (p) => p && p.id !== null && p.id !== undefined && p.id !== '' && Number.isInteger(Number(p.id));
@@ -188,10 +188,10 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await page.click('#toast-container .toast-action-btn');
         await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(1);
         await page.waitForTimeout(500);
-        expect(log.filter(l => l.method === 'DELETE')).toEqual([]);
+        expect(log.filter(l => l.method === 'DELETE' || l.table === 'rpc/remove_product')).toEqual([]);
     });
 
-    test('retirer : la suppression part a la fin du delai (7 s) ; plus de menu au clic droit', async ({ page }) => {
+    test('retirer : le retrait part a la fin du delai (7 s) par remove_product, jamais un DELETE ; plus de menu au clic droit', async ({ page }) => {
         const { log } = await openEditable(page);
         const second = page.locator('#dist-products-list .product-row[data-editable]').nth(1);
         const pid = await second.getAttribute('data-product-id');
@@ -201,9 +201,39 @@ test.describe('5bis. Modifier au toucher (EPIC-T12)', () => {
         await second.locator('.product-menu-action[data-action="remove"]').click();
         await page.mouse.move(5, 5);   // un toast survole ne s'efface pas
         await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
-        expect(log.filter(l => l.method === 'DELETE')).toEqual([]);   // pas tout de suite
-        await expect.poll(() => log.filter(l => l.method === 'DELETE').length, { timeout: 10000 }).toBe(1);
-        expect(log.find(l => l.method === 'DELETE').query).toBe(`?id=eq.${pid}`);
+        const removals = () => log.filter(l => l.table === 'rpc/remove_product');
+        expect(removals()).toEqual([]);   // pas tout de suite
+        await expect.poll(() => removals().length, { timeout: 10000 }).toBe(1);
+        expect(removals()[0]).toEqual(expect.objectContaining({ method: 'POST', body: { p_product_id: Number(pid) } }));
+        expect(log.filter(l => l.method === 'DELETE')).toEqual([]);
+    });
+
+    // SEC-03 : la base refuse (compte bloque, 42501) -> le produit revient, un message le dit
+    test('retirer refuse par la base (42501) : le produit revient et un message le dit', async ({ page }) => {
+        const { log } = await openEditable(page, { fail: { table: 'rpc/remove_product', method: 'POST', status: 403, code: '42501' } });
+        const first = page.locator('#dist-products-list .product-row[data-editable]').first();
+        const pid = await first.getAttribute('data-product-id');
+        const name = await first.locator('.product-name-clean').textContent();
+        await first.locator('.product-status-btn').click();
+        await first.locator('.product-menu-action[data-action="remove"]').click();
+        await page.mouse.move(5, 5);
+        await expect.poll(() => log.filter(l => l.table === 'rpc/remove_product').length, { timeout: 10000 }).toBe(1);
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(1);
+        await expect(page.locator('#toast-container')).toContainText(`${name} n'a pas pu être retiré`);
+    });
+
+    // SEC-03 : deja retire par un autre membre (P0002) -> meme resultat, aucun message d'erreur
+    test('retirer : deja retire par un autre membre (P0002) : pas d’erreur, le produit reste retire', async ({ page }) => {
+        const { log } = await openEditable(page, { fail: { table: 'rpc/remove_product', method: 'POST', status: 400, code: 'P0002' } });
+        const first = page.locator('#dist-products-list .product-row[data-editable]').first();
+        const pid = await first.getAttribute('data-product-id');
+        await first.locator('.product-status-btn').click();
+        await first.locator('.product-menu-action[data-action="remove"]').click();
+        await page.mouse.move(5, 5);
+        await expect.poll(() => log.filter(l => l.table === 'rpc/remove_product').length, { timeout: 10000 }).toBe(1);
+        await page.waitForTimeout(300);
+        await expect(page.locator(`#dist-products-list .product-row[data-product-id="${pid}"]`)).toHaveCount(0);
+        await expect(page.locator('#toast-container')).not.toContainText("n'a pas pu être retiré");
     });
 
     test('ajouter : « + Ajouter » ouvre 4 produits courants du type ; un toucher ajoute, la liste propose les suivants', async ({ page }) => {
