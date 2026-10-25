@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
+    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, hasValidCoords, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     productToneRank, describeMachineNotice, productIconKey,
     describeMenuHeader, cleanProductName, isDuplicateProductName,
@@ -274,6 +274,25 @@ describe('centroidOf (centre des distributeurs charges)', () => {
         assert.equal(centroidOf([]), null);
         assert.equal(centroidOf(null), null);
         assert.equal(centroidOf([{ lat: null, lng: null }]), null);
+    });
+});
+
+// BUG-02 : une fiche sans position bloquait Leaflet, donc tout le demarrage
+describe('hasValidCoords (BUG-02 : jamais de pastille sans position)', () => {
+    it('accepte des nombres finis, y compris en texte', () => {
+        assert.equal(hasValidCoords({ lat: 43.49, lng: -1.47 }), true);
+        assert.equal(hasValidCoords({ lat: '43.49', lng: '-1.47' }), true);
+        assert.equal(hasValidCoords({ lat: 0, lng: 0 }), true);
+    });
+    it('refuse null, vide, absent, non numerique, infini', () => {
+        assert.equal(hasValidCoords({ lat: null, lng: null }), false);
+        assert.equal(hasValidCoords({ lat: 43.49, lng: null }), false);
+        assert.equal(hasValidCoords({ lat: '', lng: '' }), false);
+        assert.equal(hasValidCoords({ lat: 'x', lng: 0 }), false);
+        assert.equal(hasValidCoords({ lat: Infinity, lng: 0 }), false);
+        assert.equal(hasValidCoords({ name: 'sans position' }), false);
+        assert.equal(hasValidCoords(null), false);
+        assert.equal(hasValidCoords(undefined), false);
     });
 });
 

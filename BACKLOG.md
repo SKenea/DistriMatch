@@ -31,7 +31,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   ton téléphone », et « Publier » ne m'annonce plus un faux succès — `BUG-07.md`
   - Acceptance : copie locale retirée dès que la base connaît la fiche ; refus annoncé avec un
     renvoi vers « Mes ajouts » ; compteur « Distributeurs ajoutés » juste.
-- [ ] BUG-02 En tant que membre, l'app démarre toujours, même après un ajout annulé — `BUG-02.md`
+- [x] BUG-02 En tant que membre, l'app démarre toujours, même après un ajout annulé — `BUG-02.md`
   - Acceptance : annuler pendant la vérification de position n'enregistre rien ; une fiche locale
     sans position est retirée au démarrage ; une erreur de carte ne bloque plus l'app.
 - [ ] BUG-13 En tant que membre, un onglet resté ouvert ne réécrit plus mes favoris — `BUG-13.md`
