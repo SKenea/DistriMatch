@@ -89,6 +89,11 @@ drop policy if exists "Ajout produits par users authentifies" on products;
 drop policy if exists "Modif produits par users authentifies" on products;
 drop policy if exists "Suppression produits par users authentifies" on products;
 drop policy if exists "Lecture publique produits" on products;
+-- Regles presentes en base mais absentes des migrations (creees au tableau de bord) :
+-- permissives (OU logique), elles rouvriraient l'ajout et la modification a tout compte
+drop policy if exists "Ajout produits par users" on products;
+drop policy if exists "Modification produits par users" on products;
+drop policy if exists "Suppression produits par users" on products;
 
 -- Lecture : produit non retire d'une fiche visible (la lecture des fiches filtre
 -- deja publiee / auteur / admin). Aucun appel de fonction : rien a ouvrir a anon.
@@ -165,9 +170,13 @@ create trigger guard_product_write before insert or update on products
 -- ---------------------------------------------------------------------------
 create or replace function guard_product_bulk() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  -- Seuil calcule a part : dans un IF, PL/pgSQL coupe la condition au premier THEN,
+  -- y compris celui d'un CASE
+  v_max int := case when tg_op = 'INSERT' then 10 else 5 end;
 begin
   if coalesce(auth.role(), '') in ('anon', 'authenticated')
-     and (select count(*) from changed_rows) > case when tg_op = 'INSERT' then 10 else 5 end then
+     and (select count(*) from changed_rows) > v_max then
     raise exception 'Trop de produits en une seule requete' using errcode = 'P0001';
   end if;
   return null;

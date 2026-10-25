@@ -565,6 +565,14 @@ describe('base : produits (025)', { skip: SKIP }, () => {
     const insertProduct = (name = "'Produit itest'", fiche = DEMO) =>
         `insert into products (distributor_id, name, available) values ('${fiche}', ${name}, true)`;
 
+    // La base avait 3 regles en double creees au tableau de bord (permissives : elles
+    // rouvraient l'ajout et la modification). Seules les 3 regles de 025 doivent rester.
+    it('products n’a que les 3 regles de 025 (aucune regle oubliee au tableau de bord)', async () => {
+        const p = await probe(`r := (select string_agg(polname, ' | ' order by polname) from pg_policy where polrelid = 'public.products'::regclass)`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'Ajout produits par users authentifies | Lecture publique produits | Modif produits par users authentifies');
+    });
+
     it('personne ne supprime un produit par l’API (DELETE refuse, 42501)', async () => {
         for (const role of [AS_USER, AS_ANON]) {
             const p = await probe(`${FIRST} ${role} delete from products where id = v_product`, 'v_product bigint;');
