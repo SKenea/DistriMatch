@@ -373,13 +373,18 @@ function showNotificationBanner(notif) {
             <strong>${typeInfo.title}</strong>
             <p>${escapeHTML(notif.message)}</p>
         </div>
-        <button class="notif-action" onclick="openDistributorModal('${escapeHTML(String(notif.distributorId))}'); this.closest('.notification-banner').remove();">
+        <button class="notif-action">
             Voir
         </button>
         <button class="notif-close" aria-label="Fermer la notification" onclick="this.closest('.notification-banner').remove();">&times;</button>
     `;
 
     document.body.appendChild(banner);
+    const distributorId = String(notif.distributorId);
+    banner.querySelector('.notif-action').addEventListener('click', function openFromBanner() {
+        window.openDistributorModal(distributorId);
+        banner.remove();
+    });
 
     setTimeout(() => banner.classList.add('show'), 10);
 
@@ -427,15 +432,16 @@ function updateFollowedProductsList() {
         return;
     }
 
-    container.innerHTML = NotificationPrefs.followedProducts.map(product => {
-        const safeAttr = escapeHTML(product).replace(/'/g, '&#39;');
-        return `
+    container.innerHTML = NotificationPrefs.followedProducts.map(product => `
         <span class="followed-product-chip">
             ${escapeHTML(product)}
-            <button class="remove-btn" aria-label="Retirer ${escapeHTML(product)} des produits suivis" onclick="unfollowProduct('${safeAttr}')">&times;</button>
+            <button class="remove-btn" aria-label="Retirer ${escapeHTML(product)} des produits suivis" data-product="${escapeHTML(product)}">&times;</button>
         </span>
-    `;
-    }).join('');
+    `).join('');
+    // Boutons neufs a chaque rendu : un ecouteur chacun, sans cumul (SEC-02 : plus de onclick)
+    container.querySelectorAll('.remove-btn[data-product]').forEach(function bindRemove(btn) {
+        btn.addEventListener('click', function removeFollowed() { unfollowProduct(btn.dataset.product); });
+    });
 }
 
 // ============================================

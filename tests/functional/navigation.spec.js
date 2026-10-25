@@ -1025,3 +1025,40 @@ test.describe('47. Fiche et barres de navigation', () => {
         await expect(page.locator('#subscriptions-view')).toHaveClass(/view-active/);
     });
 });
+
+// ============================================
+// SECURITE : IDENTIFIANT PIEGE (SEC-02)
+// ============================================
+
+test.describe('Sécurité : identifiant piégé (SEC-02)', () => {
+    const EVIL = "x');window.__pwned=1;//";
+
+    test.beforeEach(async ({ page }) => {
+        await page.evaluate((id) => {
+            const base = window.AppState.distributors[0];
+            window.AppState.distributors.push({ ...base, id, name: 'Piege Test', products: [] });
+            window.AppState.subscriptions.push(id);
+        }, EVIL);
+    });
+
+    test('recherche : la fiche s ouvre et rien ne s execute', async ({ page }) => {
+        await page.click('#search-toggle');
+        await page.fill('#quick-search', 'Piege Test');
+        await page.click('#search-results .search-item-clean');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        expect(await page.evaluate(() => [window.__pwned, window.AppState.currentDistributor?.id])).toEqual([undefined, EVIL]);
+    });
+
+    test('favoris : ouvrir puis retirer, rien ne s execute', async ({ page }) => {
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active', { timeout: 3000 });
+        const row = page.locator('#subscriptions-list .favorite-row', { hasText: 'Piege Test' });
+        await row.locator('.side-panel-item').click();
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        expect(await page.evaluate(() => [window.__pwned, window.AppState.currentDistributor?.id])).toEqual([undefined, EVIL]);
+        await page.click('#dist-modal-close');
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.locator('#subscriptions-list .favorite-row', { hasText: 'Piege Test' }).locator('.btn-unsubscribe').click();
+        expect(await page.evaluate((id) => [window.__pwned, window.AppState.subscriptions.includes(id)], EVIL)).toEqual([undefined, false]);
+    });
+});

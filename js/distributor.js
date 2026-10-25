@@ -14,7 +14,7 @@ import { generateWelcomeMessage } from './chat.js';
 import { FEATURES } from './config.js';
 import { checkFavoriteUpdates } from './favorites-watch.js';
 import { requireAuth } from './auth.js';
-import { renderSidePanelItem } from './gmaps-ui.js';
+import { renderSidePanelItem, openDistributorModal, removeBrokenThumb } from './gmaps-ui.js';
 import { SUMMARIES_EVENT } from './summaries.js';
 import { maybeOfferPush, syncPushSubscription } from './push.js';
 
@@ -284,16 +284,35 @@ export function displaySubscriptions() {
         // Meme ligne que la liste « Tous les distributeurs » : anneau d'etat,
         // « En service · 1 sur 4 dispo », derniere verification (2026-10-17)
         return `
-            <div class="favorite-row" onclick="openDistributorModal('${escapeHTML(d.id)}')">
+            <div class="favorite-row" data-dist-id="${escapeHTML(d.id)}">
                 ${unreadCount > 0 ? `<span class="unread-indicator">${unreadCount} nouveau(x)</span>` : ''}
                 ${renderSidePanelItem(d, 'favorite-item')}
-                <button class="btn-unsubscribe" aria-label="Retirer des favoris" onclick="toggleSubscription('${escapeHTML(d.id)}', event)" title="Retirer des favoris">
+                <button class="btn-unsubscribe" aria-label="Retirer des favoris" data-dist-id="${escapeHTML(d.id)}" title="Retirer des favoris">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
                 </button>
             </div>`;
     }).join('');
+}
+
+// Clics sur la liste des favoris : un seul ecouteur pose une fois sur le conteneur, qui
+// survit aux re-rendus (SEC-02 : plus aucun identifiant dans un onclick)
+function handleSubscriptionsClick(e) {
+    const unsubscribe = e.target.closest('.btn-unsubscribe[data-dist-id]');
+    if (unsubscribe) {
+        toggleSubscription(unsubscribe.dataset.distId, e);
+        return;
+    }
+    const row = e.target.closest('.favorite-row[data-dist-id]');
+    if (row) openDistributorModal(row.dataset.distId);
+}
+
+export function initSubscriptionsList() {
+    const list = document.getElementById('subscriptions-list');
+    if (!list) return;
+    list.addEventListener('click', handleSubscriptionsClick);
+    list.addEventListener('error', removeBrokenThumb, true);
 }
 
 // Etats et stocks arrives (ou signal envoye) : la page Favoris ouverte suit

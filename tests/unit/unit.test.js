@@ -732,6 +732,23 @@ describe('fiche : jamais le mot « machine » (EPIC-T10)', () => {
     });
 });
 
+// SEC-02 : une donnee dans un attribut on...= s'execute meme echappee (&#39; est decode avant le JS)
+describe('XSS : aucune donnee dans un attribut on...= (SEC-02)', () => {
+    it('aucun gabarit de js/ ne place ${...} dans un onclick / onerror...', () => {
+        const root = new URL('../../', import.meta.url);
+        // Numeros internes generes par l'app, jamais saisis par un membre
+        const ALLOWED = ['removeProductRow(${id})', 'removeAddPhoto(${i})'];
+        const offenders = [];
+        for (const f of readdirSync(new URL('js/', root)).filter(name => name.endsWith('.js'))) {
+            const src = readFileSync(new URL(`js/${f}`, root), 'utf8');
+            for (const m of src.matchAll(/\son[a-z]+="[^"]*\$\{[^"]*"/g)) {
+                if (!ALLOWED.some(a => m[0].includes(a))) offenders.push(`js/${f} : ${m[0].trim()}`);
+            }
+        }
+        assert.deepEqual(offenders, [], `donnee dans un attribut on...= :\n${offenders.join('\n')}`);
+    });
+});
+
 describe('aucun territoire en dur dans index.html et manifest.json', () => {
     const root = new URL('../../', import.meta.url);
     it('ni « Côte Basque » ni « Cote Basque » dans les textes servis', () => {
