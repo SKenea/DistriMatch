@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { setupApp, loginForTest, RPC_ROUTE, chooseMachineState } from './helpers.js';
+import { setupApp, loginForTest, RPC_ROUTE, chooseMachineState, passWelcome } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -367,5 +367,40 @@ test.describe('40b. Notifications app fermee sur iPhone', () => {
         await expect(modal).toHaveClass(/active/);
         await expect(modal).toContainText('Ajoute DistriMatch à ton écran d’accueil');
         await expect(modal).toContainText('Sur l’écran d’accueil');
+        // BUG-04 : l'app de l'ecran d'accueil a ses propres favoris, le guide le dit
+        await expect(modal).toContainText('remets-y ton distributeur en favori');
+    });
+
+    // BUG-04 : app ouverte depuis l'icone (navigator.standalone simule), aucun favori
+    test('app de l’écran d’accueil sans favori : un indice au premier lancement, pas au suivant', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+        });
+        await page.evaluate(() => localStorage.removeItem('distrimatch_home_screen_seen'));
+        const hint = page.locator('#toast-container .toast-action', { hasText: 'Touche le cœur de ton distributeur préféré' });
+
+        await page.reload();
+        await passWelcome(page);
+        await page.waitForSelector('#push-enabled[data-wired="1"]', { state: 'attached', timeout: 50000 });
+        await expect(hint).toBeVisible();
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_home_screen_seen'))).toBe('1');
+
+        await page.reload();
+        await passWelcome(page);
+        await page.waitForSelector('#push-enabled[data-wired="1"]', { state: 'attached', timeout: 50000 });
+        await expect(hint).toHaveCount(0);
+    });
+
+    test('app de l’écran d’accueil : au premier cœur, l’invitation aux notifications', async ({ page }) => {
+        await page.evaluate(() => {
+            Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+            localStorage.removeItem('distrimatch_push_asked');
+            // Chromium sans affichage repond « denied » : on simule « pas encore demande »
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+        });
+        await favoriteDemo(page);
+        const modal = page.locator('#confirm-modal');
+        await expect(modal).toHaveClass(/active/);
+        await expect(modal).toContainText('Être prévenu même app fermée ?');
     });
 });

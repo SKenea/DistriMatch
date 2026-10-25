@@ -40,7 +40,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   par e-mail — `BUG-05.md` (**action de Stéphane** : ajouter le code au modèle d'e-mail Supabase)
   - Acceptance : code juste = connecté, fiche conservée ; code faux = message clair ; le lien
     marche toujours dans le navigateur.
-- [ ] BUG-04 En tant que membre sur iPhone, l'app installée m'invite à remettre mon favori — `BUG-04.md`
+- [x] BUG-04 En tant que membre sur iPhone, l'app installée m'invite à remettre mon favori — `BUG-04.md`
   - Acceptance : le guide le dit ; un indice une seule fois au premier lancement de l'app installée.
 - [ ] BUG-14 En tant que membre, « Effacer mes données » efface vraiment tout — `BUG-14.md`
   - Acceptance : toutes les clés de l'utilisateur effacées (liste justifiée), carte non recadrée.

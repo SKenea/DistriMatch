@@ -1455,6 +1455,13 @@ export function needsHomeScreenForPush(userAgent, standalone) {
     return /iPhone|iPad|iPod/i.test(String(userAgent || '')) && !standalone;
 }
 
+// App de l'ecran d'accueil sur iPhone (BUG-04) : son stockage est separe de Safari,
+// les favoris n'y sont pas. Indice une seule fois, seulement s'il n'y a aucun favori.
+export function shouldHintHomeScreenFavorites(userAgent, standalone, favoritesCount, alreadySeen) {
+    return /iPhone|iPad|iPod/i.test(String(userAgent || ''))
+        && standalone === true && favoritesCount === 0 && !alreadySeen;
+}
+
 // ============================================
 // CARTE : PASTILLES SOUS LE DOIGT (EPIC-T26)
 // ============================================
