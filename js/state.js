@@ -95,6 +95,7 @@ export const DISTRIBUTOR_TYPES = [
     { id: 'meals', emoji: '🍽️', name: 'Plats cuisinés' },
     { id: 'cheese', emoji: '🧀', name: 'Fromage' },
     { id: 'dairy', emoji: '🥛', name: 'Produits laitiers' },
+    { id: 'agricultural', emoji: '🥕', name: 'Produits agricoles' },
     { id: 'meat', emoji: '🥩', name: 'Viande' },
     { id: 'terroir', emoji: '🍯', name: 'Terroir' },
     { id: 'ice', emoji: '🧊', name: 'Glacons' },

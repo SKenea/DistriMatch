@@ -160,7 +160,13 @@ async function showPendingDetail(id) {
         .select('id, author, body, created_at').eq('distributor_id', id).order('created_at', { ascending: true });
     if (currentPendingId !== id) return;
     const dups = findNearbyDuplicates(f, AppState.distributors);
-    const types = DISTRIBUTOR_TYPES.map(t => `<option value="${t.id}"${t.id === f.type ? ' selected' : ''}>${t.emoji} ${escapeHTML(t.name)}</option>`).join('');
+    // BUG-03 : un type absent de la liste reste choisi ; sinon le menu tombait sur le
+    // premier type (Pizza) et « Publier » sans y toucher reecrivait le type de la fiche
+    const knownType = DISTRIBUTOR_TYPES.some(t => t.id === f.type);
+    const currentType = f.type && !knownType
+        ? `<option value="${escapeHTML(f.type)}" selected>${escapeHTML(f.emoji || '📍')} ${escapeHTML(f.type)} (type actuel)</option>`
+        : '';
+    const types = currentType + DISTRIBUTOR_TYPES.map(t => `<option value="${t.id}"${t.id === f.type ? ' selected' : ''}>${t.emoji} ${escapeHTML(t.name)}</option>`).join('');
     detail.innerHTML = `
         <button type="button" class="admin-back" data-admin-back="1">← Retour à la console</button>
         <div class="admin-detail-head">
