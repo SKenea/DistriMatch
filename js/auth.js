@@ -12,6 +12,7 @@ import { supabaseClient, AppState } from './state.js';
 import { showToast, escapeHTML } from './utils.js';
 import { getHcaptchaSitekey, isLocalhost } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
+import { isStandalone } from './push.js';
 
 // ============================================
 // ETAT AUTH
@@ -106,6 +107,24 @@ export async function sendMagicLink(email, captchaToken) {
     if (error) throw error;
     rememberLoginReturn();
     return true;
+}
+
+// Code recu par e-mail (BUG-05) : la session nait dans l'app ou on le saisit.
+// Indispensable dans l'app de l'ecran d'accueil sur iPhone : le lien ouvrirait Safari.
+export async function verifyEmailCode(email, token) {
+    if (!supabaseClient) throw new Error('Supabase indisponible');
+    const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) throw error;
+    // Connecte sur place, la fiche est deja ouverte : rien a rouvrir au prochain lancement
+    try { localStorage.removeItem(LOGIN_RETURN_KEY); } catch (e) { /* stockage bloque */ }
+    return true;
+}
+
+// Erreur du code en francais (Supabase repond en anglais)
+function describeCodeError(err) {
+    if (err?.status === 429) return 'Trop d’essais d’affilée : réessaie dans quelques minutes.';
+    if (!err?.status || err.status >= 500) return 'Connexion impossible pour le moment : vérifie ton réseau et réessaie.';
+    return 'Code incorrect ou expiré. Vérifie les chiffres, ou ferme cette fenêtre pour recevoir un nouveau code.';
 }
 
 // ============================================
@@ -210,6 +229,9 @@ export function promptReconnect() {
 function openEmailModal(onClose) {
     if (modalOpen) return;
     modalOpen = true;
+    // App de l'ecran d'accueil : le lien de l'e-mail ouvrirait Safari, on met le code en avant (BUG-05)
+    const standalone = isStandalone();
+    const sendLabel = standalone ? 'Recevoir le code' : 'Recevoir le lien';
 
     const overlay = document.createElement('div');
     overlay.className = 'auth-modal-overlay';
@@ -223,16 +245,21 @@ function openEmailModal(onClose) {
                 </svg>
             </div>
             <h2 id="auth-modal-title">Ton email pour interagir</h2>
-            <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe, juste un lien a cliquer.</p>
+            <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe : tu reçois un lien et un code par e-mail.</p>
             <form class="auth-modal-form">
                 <input type="email" placeholder="ton@email.com" required autofocus>
                 ${isLocalhost()
                     ? '<div class="auth-modal-dev-banner">Mode developpement — captcha desactive sur localhost</div>'
                     : `<div class="h-captcha" data-sitekey="${getHcaptchaSitekey()}" data-callback="onHcaptchaSuccess" data-expired-callback="onHcaptchaExpired"></div>`
                 }
-                <button type="submit" class="auth-modal-submit"${isLocalhost() ? '' : ' disabled'}>Recevoir le lien</button>
+                <button type="submit" class="auth-modal-submit"${isLocalhost() ? '' : ' disabled'}>${sendLabel}</button>
             </form>
             <p class="auth-modal-status" style="display:none"></p>
+            <form class="auth-modal-form auth-modal-otp" hidden>
+                <label for="auth-modal-code">Code reçu par e-mail</label>
+                <input id="auth-modal-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
+                <button type="submit" class="auth-modal-submit auth-modal-code-submit">Valider le code</button>
+            </form>
         </div>
     `;
 
@@ -311,6 +338,10 @@ function openEmailModal(onClose) {
     const input = overlay.querySelector('input[type=email]');
     const submit = overlay.querySelector('.auth-modal-submit');
     const status = overlay.querySelector('.auth-modal-status');
+    const codeForm = overlay.querySelector('.auth-modal-otp');
+    const codeInput = codeForm.querySelector('#auth-modal-code');
+    const codeSubmit = codeForm.querySelector('.auth-modal-code-submit');
+    let sentEmail = '';
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -329,11 +360,16 @@ function openEmailModal(onClose) {
 
         try {
             await sendMagicLink(email, captchaToken);
+            sentEmail = email;
             status.style.display = 'block';
             status.className = 'auth-modal-status success';
-            status.innerHTML = `Lien envoyé a <strong>${escapeHTML(email)}</strong>.<br>Consulte ta boite mail et clique sur le lien pour te connecter.`;
+            status.innerHTML = standalone
+                ? `Code envoyé à <strong>${escapeHTML(email)}</strong>.<br>Entre ici le code reçu par e-mail pour te connecter dans l’app.`
+                : `Lien envoyé à <strong>${escapeHTML(email)}</strong>.<br>Ouvre le lien de l’e-mail, ou entre ici le code reçu.`;
             submit.style.display = 'none';
             input.disabled = true;
+            codeForm.hidden = false;
+            if (standalone) codeInput.focus();
         } catch (err) {
             status.style.display = 'block';
             status.className = 'auth-modal-status error';
@@ -344,7 +380,32 @@ function openEmailModal(onClose) {
             }
             captchaToken = null;
             submit.disabled = true;
-            submit.textContent = 'Recevoir le lien';
+            submit.textContent = sendLabel;
+        }
+    });
+
+    // Code recu par e-mail (BUG-05) : connexion sur place, sans quitter l'app
+    codeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = codeInput.value.replace(/\s/g, '');
+        if (!/^\d{6,10}$/.test(token)) {
+            status.style.display = 'block';
+            status.className = 'auth-modal-status error';
+            status.textContent = 'Entre les chiffres du code reçu par e-mail.';
+            return;
+        }
+        codeSubmit.disabled = true;
+        codeSubmit.textContent = 'Vérification...';
+        try {
+            await verifyEmailCode(sentEmail, token);
+            // En general l'ecouteur onAuthChange ci-dessous a deja ferme la fenetre
+            if (overlay.isConnected) close(true);
+        } catch (err) {
+            status.style.display = 'block';
+            status.className = 'auth-modal-status error';
+            status.textContent = describeCodeError(err);
+            codeSubmit.disabled = false;
+            codeSubmit.textContent = 'Valider le code';
         }
     });
 

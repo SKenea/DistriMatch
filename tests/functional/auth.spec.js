@@ -193,3 +193,105 @@ test.describe('Connexion depuis une fiche, par le menu du profil', () => {
         await expect(back.locator('#dist-modal-name')).toHaveText('Plats Cuisinés Bayonne');
     });
 });
+
+// ============================================
+// CONNEXION PAR CODE RECU PAR E-MAIL (BUG-05)
+// ============================================
+
+// Fausse session au format Supabase (jeton en-tete.charge.signature). Les appels que l'app
+// fera ensuite au vrai serveur avec ce jeton seront refuses : sans effet sur ces tests.
+function fakeSession(email) {
+    const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const user = {
+        id: '00000000-0000-0000-0000-0000000b0505', aud: 'authenticated', role: 'authenticated',
+        email, is_anonymous: false, app_metadata: { provider: 'email' }, user_metadata: {},
+        created_at: new Date().toISOString()
+    };
+    return {
+        access_token: `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: user.id, email, role: 'authenticated', aud: 'authenticated', exp })}.signature`,
+        token_type: 'bearer', expires_in: 3600, expires_at: exp, refresh_token: 'faux-refresh', user
+    };
+}
+
+// Fiche dist-007 ouverte, fenetre de connexion ouverte par requireAuth() (resultat dans window.__authOk)
+async function openLoginOnFiche(page) {
+    await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+    await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+    await page.evaluate(() => window.openDistributorModal('dist-007'));
+    await page.waitForSelector('#dist-modal-overlay.active');
+    await page.evaluate(() => {
+        import('./js/auth.js').then(m => m.requireAuth()).then(ok => { window.__authOk = ok; });
+    });
+    await page.waitForSelector('.auth-modal-overlay');
+    await expect(page.locator('#auth-modal-code')).toBeHidden();
+}
+
+async function sendEmail(page) {
+    await page.fill('.auth-modal-form input[type=email]', 'test@exemple.fr');
+    await page.locator('.auth-modal-form:not(.auth-modal-otp) .auth-modal-submit').click();
+    await expect(page.locator('#auth-modal-code')).toBeVisible();
+}
+
+async function isLoggedIn(page) {
+    return page.evaluate(async () => (await import('./js/auth.js')).isAuthenticated());
+}
+
+test.describe('Connexion par code reçu par e-mail (BUG-05)', () => {
+    test('code juste : connecté, fenêtre fermée, fiche toujours ouverte', async ({ page }) => {
+        let body = null;
+        await page.route('**/auth/v1/verify**', async route => {
+            body = route.request().postDataJSON();
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession('test@exemple.fr')) });
+        });
+        await page.route('**/auth/v1/user**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession('test@exemple.fr').user) }));
+        await openLoginOnFiche(page);
+        await sendEmail(page);
+        await expect(page.locator('.auth-modal-status')).toContainText('entre ici le code reçu');
+        await expect(page.locator('#auth-modal-code')).toHaveAttribute('inputmode', 'numeric');
+        await expect(page.locator('#auth-modal-code')).toHaveAttribute('autocomplete', 'one-time-code');
+
+        await page.fill('#auth-modal-code', '123 456');
+        await page.click('.auth-modal-code-submit');
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(0, { timeout: 5000 });
+        expect(body).toMatchObject({ email: 'test@exemple.fr', token: '123456', type: 'email' });
+        expect(await isLoggedIn(page)).toBe(true);
+        await page.waitForFunction(() => window.__authOk === true, null, { timeout: 3000 });
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        expect(await page.evaluate(() => window.AppState.currentDistributor?.id)).toBe('dist-007');
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
+    });
+
+    test('code faux ou mal saisi : message en français, fenêtre ouverte, pas connecté', async ({ page }) => {
+        let calls = 0;
+        await page.route('**/auth/v1/verify**', route => {
+            calls += 1;
+            return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' }) });
+        });
+        await openLoginOnFiche(page);
+        await sendEmail(page);
+
+        await page.fill('#auth-modal-code', '12ab');
+        await page.click('.auth-modal-code-submit');
+        await expect(page.locator('.auth-modal-status')).toContainText('Entre les chiffres du code');
+        expect(calls).toBe(0);
+
+        await page.fill('#auth-modal-code', '000000');
+        await page.click('.auth-modal-code-submit');
+        await expect(page.locator('.auth-modal-status')).toContainText('Code incorrect ou expiré');
+        expect(calls).toBe(1);
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(1);
+        await expect(page.locator('.auth-modal-code-submit')).toBeEnabled();
+        expect(await isLoggedIn(page)).toBe(false);
+    });
+
+    test('app de l’écran d’accueil : le code est mis en avant', async ({ page }) => {
+        await page.evaluate(() => Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true }));
+        await openLoginOnFiche(page);
+        await expect(page.locator('.auth-modal-form:not(.auth-modal-otp) .auth-modal-submit')).toHaveText('Recevoir le code');
+        await sendEmail(page);
+        await expect(page.locator('.auth-modal-status')).toContainText('Entre ici le code reçu par e-mail');
+        await expect(page.locator('.auth-modal-status')).not.toContainText('Ouvre le lien');
+        await expect(page.locator('#auth-modal-code')).toBeFocused();
+    });
+});

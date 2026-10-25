@@ -299,6 +299,35 @@
     border: 1px solid #fca5a5;
 }
 
+/* Code recu par e-mail (BUG-05). [hidden] : .auth-modal-form est en display:flex,
+   qui l'emporterait sinon sur l'attribut hidden. */
+.auth-modal-form[hidden] {
+    display: none;
+}
+
+.auth-modal-otp {
+    margin-top: 1rem;
+}
+
+.auth-modal-otp label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.auth-modal-otp input {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    font-size: 1.25rem;
+    letter-spacing: 0.3em;
+    text-align: center;
+    outline: none;
+}
+
+.auth-modal-otp input:focus {
+    border-color: var(--primary-text);
+}
+
 /* ==========================================
    PANNEAU LATERAL FILTRES (Google Maps style)
    ========================================== */
