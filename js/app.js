@@ -528,6 +528,34 @@ function initGeolocationOverlay() {
 // INITIALISATION
 // ============================================
 
+// Reglages de depart, releves au chargement du module, avant toute lecture du
+// stockage : servent quand un autre onglet efface ses donnees (BUG-13)
+const DEFAULT_NOTIFICATION_PREFS = JSON.parse(JSON.stringify(NotificationPrefs));
+
+// Un autre onglet de l'app a change les favoris ou les reglages : on relit la memoire
+// de cet onglet, sinon sa prochaine sauvegarde ecraserait ces changements (BUG-13).
+// Lecture seule : ce rappel n'ecrit jamais dans le stockage (pas de ping-pong entre onglets).
+function handleStorageFromOtherTab(e) {
+    if (e.storageArea !== localStorage) return;
+    const everything = e.key === null;   // localStorage.clear() dans l'autre onglet
+    if (everything || e.key === STORAGE_KEY) {
+        if (e.newValue === null) {
+            AppState.subscriptions = [];
+            AppState.reports = 0;
+            AppState.points = 0;
+        } else {
+            loadFromLocalStorage();
+        }
+        updateBadges();
+        updateMapMarkers(false);
+        if (document.getElementById('subscriptions-view')?.classList.contains('view-active')) displaySubscriptions();
+    }
+    if (everything || e.key === NOTIFICATION_PREFS_KEY) {
+        if (e.newValue === null) Object.assign(NotificationPrefs, JSON.parse(JSON.stringify(DEFAULT_NOTIFICATION_PREFS)));
+        else loadNotificationPrefs();
+    }
+}
+
 // Resultat ou suggestion de recherche touche -> fiche (l'id est lu avant de vider la liste)
 function handleSearchResultClick(e) {
     const item = e.target.closest('.search-item-clean[data-dist-id]');
@@ -556,6 +584,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     removeLegacyActivityFeed();   // ancien fil local (retire)
     loadNotificationPrefs();
     loadNotificationQueue();
+    // BUG-13 : un autre onglet change favoris ou reglages -> cet onglet relit sa memoire
+    window.addEventListener('storage', handleStorageFromOtherTab);
 
     // Charger les distributeurs en parallele de l'overlay geoloc :
     // ca permet a un deep link (?id=<distId>) d'ouvrir la modal AVANT
