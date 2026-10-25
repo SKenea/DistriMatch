@@ -55,7 +55,7 @@ import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuth
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
-import { initPushSettings, syncPushSubscription, disablePush } from './push.js';
+import { initPushSettings, syncPushSubscription, disablePush, maybeHintHomeScreenFavorites } from './push.js';
 import { initAdmin, loadAdmin } from './admin.js';
 import { initAdditions } from './additions.js';
 import { initMyActivity, renderMyActivity } from './my-activity.js';
@@ -678,6 +678,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Notifications app fermee (EPIC-T25) : reglages + abonnement a jour
     initPushSettings();
     syncPushSubscription();
+    // iPhone, app de l'ecran d'accueil sans favori : indice une seule fois (BUG-04)
+    maybeHintHomeScreenFavorites();
 
     // Demarrer la surveillance geofence
     startGeofenceMonitoring();

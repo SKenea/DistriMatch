@@ -7,10 +7,11 @@
 
 import { AppState, NotificationPrefs, supabaseClient } from './state.js';
 import { VAPID_PUBLIC_KEY } from './config.js';
-import { showToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScreenForPush } from './utils.js';
+import { showToast, showActionToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScreenForPush, shouldHintHomeScreenFavorites } from './utils.js';
 import { confirmDialog } from './confirm-dialog.js';
 
 const ASKED_KEY = 'distrimatch_push_asked';
+const HOME_SCREEN_SEEN_KEY = 'distrimatch_home_screen_seen';   // BUG-04 : indice deja montre
 // Bornes de push_subscribe (migration 026) : au-dela, le serveur refuse tout l'abonnement.
 const PUSH_MAX_FAVORITES = 200;
 const PUSH_MAX_FOLLOWED = 30;
@@ -85,7 +86,7 @@ export async function syncPushSubscription() {
 function showHomeScreenGuide() {
     return confirmDialog({
         title: 'Ajoute DistriMatch à ton écran d’accueil',
-        message: 'Sur iPhone, les notifications arrivent seulement depuis l’écran d’accueil : touche Partager, puis « Sur l’écran d’accueil ». Ouvre ensuite DistriMatch depuis cette icône.',
+        message: 'Sur iPhone, les notifications arrivent seulement depuis l’écran d’accueil : touche Partager, puis « Sur l’écran d’accueil ». Ouvre ensuite DistriMatch depuis cette icône et remets-y ton distributeur en favori : l’app de l’écran d’accueil a ses propres favoris.',
         confirmLabel: 'Compris',
         cancelLabel: 'Fermer',
         danger: false
@@ -163,6 +164,20 @@ export async function maybeOfferPush() {
         danger: false
     });
     if (ok) await enablePush();
+}
+
+// App de l'ecran d'accueil sur iPhone, premier lancement sans favori (BUG-04) : un
+// indice une seule fois. L'invitation aux notifications vient ensuite au premier coeur
+// (maybeOfferPush), jamais a l'ouverture.
+export function maybeHintHomeScreenFavorites() {
+    let seen;
+    try { seen = localStorage.getItem(HOME_SCREEN_SEEN_KEY) === '1'; } catch (e) { return; }
+    if (!shouldHintHomeScreenFavorites(navigator.userAgent, isStandalone(), AppState.subscriptions.length, seen)) return;
+    try { localStorage.setItem(HOME_SCREEN_SEEN_KEY, '1'); } catch (e) { return; }
+    showActionToast('Bienvenue dans l’app ! Touche le cœur de ton distributeur préféré pour le retrouver ici et activer ses notifications.', {
+        actionLabel: 'OK',
+        duration: 8000
+    });
 }
 
 // Reglages des notifications : interrupteur « Prévenu même app fermée ».

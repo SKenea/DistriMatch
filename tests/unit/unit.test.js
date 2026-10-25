@@ -1844,7 +1844,7 @@ describe('« Mon activité » : lignes du journal (EPIC-T22)', () => {
 // ============================================
 import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, isInCooldown, PUSH_COOLDOWN_MS, isAllowedPushEndpoint, pushFailureAction, chunk, PUSH_MAX_FAILURES } from '../../supabase/functions/push-notify/logic.js';
 import { buildFavoriteMessage } from '../../js/notifications.js';
-import { urlBase64ToUint8Array, needsHomeScreenForPush } from '../../js/utils.js';
+import { urlBase64ToUint8Array, needsHomeScreenForPush, shouldHintHomeScreenFavorites } from '../../js/utils.js';
 
 describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
     const at = (min) => new Date(Date.UTC(2026, 9, 8, 10, min)).toISOString();
@@ -1903,6 +1903,17 @@ describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
         assert.equal(needsHomeScreenForPush(iphone, false), true);
         assert.equal(needsHomeScreenForPush(iphone, true), false);
         assert.equal(needsHomeScreenForPush('Mozilla/5.0 (Linux; Android 14) Chrome/120', false), false);
+    });
+});
+
+describe('App de l’écran d’accueil sans favori : indice (BUG-04)', () => {
+    it('seulement sur iPhone, dans l’app installée, sans favori, une seule fois', () => {
+        const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15';
+        assert.equal(shouldHintHomeScreenFavorites(iphone, true, 0, false), true);
+        assert.equal(shouldHintHomeScreenFavorites(iphone, true, 0, true), false);
+        assert.equal(shouldHintHomeScreenFavorites(iphone, true, 2, false), false);
+        assert.equal(shouldHintHomeScreenFavorites(iphone, false, 0, false), false);
+        assert.equal(shouldHintHomeScreenFavorites('Mozilla/5.0 (Linux; Android 14) Chrome/120', true, 0, false), false);
     });
 });
 
