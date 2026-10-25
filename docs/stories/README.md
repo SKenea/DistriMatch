@@ -50,8 +50,16 @@ Rapport d'origine : https://claude.ai/artifact/T64CmaCdx8oEkXPUmc4Qx5
 - **Import map** : tout module de `js/` modifié = monter le `?v=` de **toutes** les entrées de
   l'import map de `index.html` à la **même** valeur (+1). Le test `cache-busting` vérifie.
 - **CSS** : monter le `?v=` du seul `<link>` du fichier CSS modifié.
-- **Fins de ligne** : garder celles du fichier (l'outil Edit le fait). Ne jamais réécrire un
-  fichier entier ; vérifier avec `git diff --stat` que seules les lignes prévues changent.
+- **Fins de ligne** : la plupart des fichiers sont en CRLF ; garder celles du fichier. Si l'outil
+  Edit refuse un bloc de plusieurs lignes, faire le remplacement par un petit script Node (dans le
+  scratchpad, hors dépôt) qui lit le fichier, remplace en conservant les `\r\n`, et réécrit.
+  Ne jamais réécrire un fichier entier à la main ; vérifier avec `git diff --stat` que seules les
+  lignes prévues changent.
+- **Commandes `grep` des fiches** : les lancer entre **guillemets simples** quand le motif
+  contient `$`, `\` ou `{` (entre guillemets doubles, bash les interprète et le grep ne trouve rien).
+- **« Au-dessus de la fonction qui contient… »** : si le code visé est dans un rappel anonyme
+  (ex. `document.addEventListener('DOMContentLoaded', async () => { ... })` dans `js/app.js`),
+  poser la nouvelle fonction au niveau du module, juste avant ce rappel.
 - **XSS** : tout contenu dynamique injecté par `innerHTML` passe par `escapeHTML()` ;
   **jamais** de donnée dans un attribut `on...=` (voir SEC-02).
 - **Fonction appelée depuis un `onclick` en ligne** : l'exposer sur `window` dans `js/app.js`.
@@ -88,9 +96,12 @@ Playwright WebKit, appareil `iPhone 13`, sur `http://localhost:8080`, avec le sc
 `tests/tools/capture-iphone.mjs` (rien d'autre à écrire) :
 
 ```bash
-node tests/tools/capture-iphone.mjs <ID>-avant <ecran>   # avant d'appliquer les étapes
-node tests/tools/capture-iphone.mjs <ID>-apres <ecran>   # après
+node tests/tools/capture-iphone.mjs <ID>-avant-<ecran> <ecran>   # avant d'appliquer les étapes
+node tests/tools/capture-iphone.mjs <ID>-apres-<ecran> <ecran>   # après
+# ex. node tests/tools/capture-iphone.mjs SEC-02-avant-favoris favoris
 ```
+Le premier argument est le **nom complet** du fichier : y mettre l'écran, sinon deux écrans
+s'écrasent.
 
 `<ecran>` est un des écrans prévus par le script (`carte`, `favoris`, `favoris-menu`, `fiche`,
 `recherche`, `compte`) ; la fiche indique lequel. Les images vont dans `test-results/captures/`
