@@ -944,6 +944,67 @@ describe('base : lectures anonymes', { skip: SKIP }, () => {
     });
 });
 
+// SEC-06 (028) : petites failles de la base fermees
+describe('base : petites failles fermees (028)', { skip: SKIP }, () => {
+    it('demo_backup : ni un visiteur ni un compte ne la lisent (42501)', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            const p = await probe(`${role} perform count(*) from demo_backup`);
+            assert.equal(p.reachedEnd, false, p.message);
+            assert.equal(p.code, '42501');
+        }
+    });
+
+    it('20e et 21e signal de l’heure dans le meme appel : refuse (P0001), rien d’enregistre', async () => {
+        const p = await probe(`
+            insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, user_id)
+            select '${DEMO}', null, 'working', 'user', 0.8, '${DEVICE}', ${USER} from generate_series(1, 19);
+            select id into v_product from products where distributor_id = '${DEMO}' and removed_at is null order by id limit 1;
+            ${AS_USER} perform confirm_availability('${DEMO}', '${DEVICE}', jsonb_build_array(
+                jsonb_build_object('product_id', v_product, 'state', 'available'),
+                jsonb_build_object('product_id', v_product, 'state', 'absent')), null)`, 'v_product bigint;');
+        assert.equal(p.reachedEnd, false, p.message);
+        assert.equal(p.code, 'P0001');
+        assert.match(p.message, /ce compte/);
+    });
+
+    it('device_hash « demo-… » envoye par l’API : refuse (22023)', async () => {
+        const p = await probe(`${AS_USER} perform confirm_availability('${DEMO}', 'demo-itest-000000001', '[]'::jsonb, 'working')`);
+        assert.equal(p.reachedEnd, false, p.message);
+        assert.equal(p.code, '22023');
+        assert.match(p.message, /device_hash/);
+    });
+
+    it('vues KPI : une fiche en attente n’apparait pas et ne compte pas', async () => {
+        const p = await probe(`${AS_USER}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by)
+            values ('itest-kpi', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER});
+            ${AS_ANON} r := json_build_object(
+                'top', (select count(*) from kpi_top_distributors where id = 'itest-kpi'),
+                'machines', (select machines from kpi_coverage),
+                'publiees', (select count(*) from distributors)
+            )::text`);
+        assert.ok(p.reachedEnd, p.message);
+        const res = JSON.parse(p.result);
+        assert.equal(res.top, 0);
+        assert.equal(res.machines, res.publiees);
+    });
+
+    it('garde-fous : verrou par compte, RPC heritees fermees, search_path fixe, envoi de photos ferme', async () => {
+        const [r] = await query(`select
+            position('pg_advisory_xact_lock' in pg_get_functiondef('public.confirm_availability'::regproc)) > 0 as verrou,
+            has_function_privilege('anon', 'public.submit_report(text,text,text,integer)', 'execute') as anon_report,
+            has_function_privilege('authenticated', 'public.submit_report(text,text,text,integer)', 'execute') as auth_report,
+            has_function_privilege('authenticated', 'public.cast_vote(bigint,text)', 'execute') as auth_vote,
+            (select count(*)::int from pg_proc where pronamespace = 'public'::regnamespace
+                and proname in ('submit_report', 'cast_vote', 'handle_new_user')
+                and 'search_path=public' = any(coalesce(proconfig, '{}'::text[]))) as search_path_fixe,
+            (select count(*)::int from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Upload photos par users') as envoi_photos,
+            (select count(*)::int from pg_policies where schemaname = 'public' and tablename = 'distributor_photos' and cmd = 'INSERT') as ajout_photos,
+            (select file_size_limit::int from storage.buckets where id = 'distributor-photos') as taille_max`);
+        assert.deepEqual(r, { verrou: true, anon_report: false, auth_report: false, auth_vote: false, search_path_fixe: 3, envoi_photos: 0, ajout_photos: 0, taille_max: 2097152 });
+    });
+});
+
 describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
     before(async () => { /* les blocs precedents sont tous annules */ });
     it('aucune trace « itest » en base', async () => {
