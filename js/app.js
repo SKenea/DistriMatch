@@ -102,6 +102,9 @@ async function loadDistributorsFromSupabase() {
         // en attente n'est lue (RLS) que par son auteur et l'admin
         const rows = data.map(mapDistributorRow);
         const distributors = rows.filter(d => d.reviewStatus !== 'rejected');
+        // BUG-07 : les fiches refusees restent des contributions (compteur de Mon profil,
+        // moderation ulterieure) : gardees a part, hors carte et hors liste
+        AppState.rejectedDistributors = rows.filter(d => d.reviewStatus === 'rejected');
         // EPIC-T8 : la note affichee vient des vrais avis (vue distributor_ratings,
         // migration 016). Vue indisponible : on garde les colonnes de la fiche.
         if (!ratingsRes.error && Array.isArray(ratingsRes.data)) {

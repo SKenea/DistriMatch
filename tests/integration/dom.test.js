@@ -927,6 +927,21 @@ describe('updateProfileStats - contributions', () => {
         assert.equal(document.getElementById('stat-contrib-distributors').textContent, '2');
     });
 
+    it('connecte : ses fiches en base comptent, refusees comprises (BUG-07, 2026-10-25)', () => {
+        const uid = '00000000-0000-0000-0000-00000000e2e0';   // compte de window.__testLogin (localhost)
+        AppState.distributors.push({ id: 'user-9', name: 'En attente', type: 'pizza', addedById: uid, reviewStatus: 'pending' });
+        AppState.rejectedDistributors = [{ id: 'user-10', name: 'Refusee', type: 'pizza', addedById: uid, reviewStatus: 'rejected' }];
+        window.__testLogin();
+        try {
+            updateProfileStats();
+            // 2 copies locales + 1 en attente + 1 refusee
+            assert.equal(document.getElementById('stat-contrib-distributors').textContent, '4');
+        } finally {
+            window.__testLogout();
+            AppState.rejectedDistributors = [];
+        }
+    });
+
     it('retourne 0 si aucun distributeur ajoute', () => {
         localStorage.setItem('snackmatch_user_distributors', JSON.stringify([]));
         updateProfileStats();

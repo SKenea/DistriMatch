@@ -2016,6 +2016,10 @@ describe('countMyAdditions (BUG-07)', () => {
     it('deconnecte : seulement les copies locales', () => {
         assert.equal(countMyAdditions(local, base, null), 2);
     });
+    it('une fiche refusee du membre compte aussi (Stephane 2026-10-25)', () => {
+        const withRejected = [...base, { id: 'user-4', addedById: 'u1', reviewStatus: 'rejected' }];
+        assert.equal(countMyAdditions(local, withRejected, 'u1'), 4);
+    });
     it('rien : 0', () => {
         assert.equal(countMyAdditions([], [], 'u1'), 0);
         assert.equal(countMyAdditions(undefined, undefined, undefined), 0);

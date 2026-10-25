@@ -319,8 +319,9 @@ function updateContributionStats() {
 
     if (statContribDistributors) {
         // BUG-07 : une fiche envoyee n'est plus copiee sur le telephone : on compte aussi
-        // les fiches de la base dont le membre connecte est l'auteur
-        statContribDistributors.textContent = countMyAdditions(loadUserDistributors(), AppState.distributors, getCurrentUser()?.id);
+        // les fiches de la base dont le membre connecte est l'auteur, refusees comprises
+        // (une contribution refusee compte : elle peut etre moderee ensuite)
+        statContribDistributors.textContent = countMyAdditions(loadUserDistributors(), [...AppState.distributors, ...(AppState.rejectedDistributors || [])], getCurrentUser()?.id);
     }
     if (statContribPhotos) {
         statContribPhotos.textContent = UserProfile.stats.photosUploaded || 0;

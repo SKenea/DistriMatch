@@ -365,7 +365,7 @@ export function removeUserDistributors(ids) {
 }
 
 // Distributeurs ajoutes par ce membre (Mon profil, BUG-07) : copies restees sur le
-// telephone + fiches de la base dont il est l'auteur (en attente ou publiees), sans doublon
+// telephone + fiches de la base dont il est l'auteur (en attente, publiees ou refusees), sans doublon
 export function countMyAdditions(localCopies, distributors, userId) {
     const ids = new Set((localCopies || []).map((d) => d.id));
     if (userId) (distributors || []).forEach((d) => { if (d.addedById === userId) ids.add(d.id); });
