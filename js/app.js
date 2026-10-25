@@ -25,7 +25,7 @@ import {
 } from './navigation.js';
 
 import {
-    renderProductsList, toggleSubscription, displaySubscriptions, loadPhotoThumbnails
+    renderProductsList, toggleSubscription, displaySubscriptions, loadPhotoThumbnails, initSubscriptionsList
 } from './distributor.js';
 
 import {
@@ -495,6 +495,15 @@ function initGeolocationOverlay() {
 // INITIALISATION
 // ============================================
 
+// Resultat ou suggestion de recherche touche -> fiche (l'id est lu avant de vider la liste)
+function handleSearchResultClick(e) {
+    const item = e.target.closest('.search-item-clean[data-dist-id]');
+    if (!item) return;
+    const id = item.dataset.distId;
+    closeSearch();
+    openDistributorModal(id);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DistriMatch V8.0 - Supabase Edition - Initialisation...');
 
@@ -748,6 +757,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('quick-search').addEventListener('input', (e) => {
         performSearch(e.target.value);
     });
+    // Un seul ecouteur sur les resultats (SEC-02 : plus aucun identifiant dans un onclick)
+    document.getElementById('search-results').addEventListener('click', handleSearchResultClick);
+    initSubscriptionsList();
 
     // Chat modal
     document.getElementById('chat-close').addEventListener('click', closeChatModal);

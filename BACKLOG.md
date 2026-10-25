@@ -31,7 +31,7 @@ appliquées par Claude juste avant la fusion, après relecture.
   corriger en sachant s'il y a des dégâts à réparer — fiche `docs/stories/SEC-01.md`
   - Acceptance : les 19 requêtes de lecture passées, compte rendu « rien d'anormal » ou liste
     des points trouvés envoyé à Stéphane ; aucune écriture en base.
-- [ ] SEC-02 En tant que membre ou admin, je veux que rien de ce qu'un autre a saisi ne puisse
+- [x] SEC-02 En tant que membre ou admin, je veux que rien de ce qu'un autre a saisi ne puisse
   s'exécuter sur mon téléphone, afin que ma session ne puisse pas être volée — `SEC-02.md`
   - Acceptance : aucune donnée dans un attribut `on...=` (test garde-fou) ; un id piégé ouvre
     sa fiche depuis la recherche et Favoris sans rien exécuter.

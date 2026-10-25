@@ -142,7 +142,7 @@ export function openSearch() {
 function searchItemHTML(d) {
     const distance = Number.isFinite(d.distance) ? formatDistance(d.distance) : '';
     return `
-            <div class="search-item-clean" onclick="closeSearch(); openDistributorModal('${escapeHTML(d.id)}');">
+            <div class="search-item-clean" data-dist-id="${escapeHTML(d.id)}">
                 <div class="search-item-name">
                     <span>${escapeHTML(d.emoji || '')} ${escapeHTML(d.name)}</span>
                 </div>

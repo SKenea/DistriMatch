@@ -335,8 +335,8 @@ export function updateConversationsList() {
         const unreadCount = Conversations.unreadCounts[id] || 0;
 
         return `
-            <div class="conversation-item ${isActive ? 'active' : ''} ${isSubscribed ? 'subscribed' : ''}" onclick="openConversation('${id}')">
-                <div class="conversation-avatar">${d.emoji}</div>
+            <div class="conversation-item ${isActive ? 'active' : ''} ${isSubscribed ? 'subscribed' : ''}" data-conv-id="${escapeHTML(id)}">
+                <div class="conversation-avatar">${escapeHTML(d.emoji || '')}</div>
                 <div class="conversation-info">
                     <div class="conversation-name">
                         ${escapeHTML(d.name)}
@@ -351,6 +351,10 @@ export function updateConversationsList() {
             </div>
         `;
     }).join('');
+    // Lignes neuves a chaque rendu : un ecouteur chacune (SEC-02 : plus d'identifiant dans un onclick)
+    list.querySelectorAll('.conversation-item[data-conv-id]').forEach(function bindConversation(item) {
+        item.addEventListener('click', function openFromList() { openConversation(item.dataset.convId); });
+    });
 }
 
 // ============================================

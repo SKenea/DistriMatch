@@ -49,11 +49,11 @@ export function renderSidePanelItem(d, extraClass = '') {
     // Vignette : 1ere photo reelle si dispo (cache prefetch), sinon emoji.
     // L'emoji de categorie reste TOUJOURS visible : seul (pas de photo) ou
     // en pastille superposee a la photo (repere visuel du type conserve).
-    // onerror : si l'image casse, on retombe sur l'emoji seul.
+    // Image cassee : removeBrokenThumb la retire, la pastille emoji reste (SEC-02).
     const emoji = escapeHTML(d.emoji || '📍');
     const thumb = AppState.photoThumbs && AppState.photoThumbs[d.id];
     const photoCell = thumb
-        ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy" onerror="this.parentNode.textContent='${emoji}'"><span class="side-panel-item-cat" aria-hidden="true">${emoji}</span>`
+        ? `<img src="${escapeHTML(thumb)}" alt="" loading="lazy"><span class="side-panel-item-cat" aria-hidden="true">${emoji}</span>`
         : emoji;
     // Fraicheur : l'age de la derniere verification, toujours affiche
     // (docs/STRATEGIE.md : la confiance = l'horodatage).
@@ -107,6 +107,12 @@ function handleSidePanelClick(e) {
     }
 }
 
+// Vignette qui ne charge pas : on la retire, la pastille emoji reste visible.
+// Ecouteur en capture (l'evenement error ne remonte pas). Remplace un onerror en ligne (SEC-02).
+export function removeBrokenThumb(e) {
+    if (e.target.tagName === 'IMG' && e.target.closest('.side-panel-item-photo')) e.target.remove();
+}
+
 export function initSidePanel() {
     // EPIC-T19 : etat et stock arrives (ou signal envoye) -> la liste ouverte suit,
     // mise a jour SUR PLACE (EPIC-T23) : reconstruire les lignes perdait un toucher en cours
@@ -114,6 +120,7 @@ export function initSidePanel() {
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
     document.getElementById('side-panel-list')?.addEventListener('click', handleSidePanelClick);
+    document.getElementById('side-panel-list')?.addEventListener('error', removeBrokenThumb, true);
 }
 
 function refreshSidePanelSummaries() {
