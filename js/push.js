@@ -11,6 +11,10 @@ import { showToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScree
 import { confirmDialog } from './confirm-dialog.js';
 
 const ASKED_KEY = 'distrimatch_push_asked';
+// Bornes de push_subscribe (migration 026) : au-dela, le serveur refuse tout l'abonnement.
+const PUSH_MAX_FAVORITES = 200;
+const PUSH_MAX_FOLLOWED = 30;
+const PUSH_MAX_PRODUCT_LENGTH = 60;
 
 export function isPushSupported() {
     return typeof window !== 'undefined' && 'serviceWorker' in navigator
@@ -44,15 +48,15 @@ async function currentSubscription() {
     return registration ? registration.pushManager.getSubscription() : null;
 }
 
-function subscriptionParams(subscription) {
+export function subscriptionParams(subscription) {
     const { endpoint, keys } = subscription.toJSON();
     const quiet = NotificationPrefs.quietHours;
     return {
         p_endpoint: endpoint,
         p_p256dh: keys.p256dh,
         p_auth: keys.auth,
-        p_favorites: AppState.subscriptions.map(String),
-        p_followed: [...NotificationPrefs.followedProducts],
+        p_favorites: AppState.subscriptions.map(String).slice(0, PUSH_MAX_FAVORITES),
+        p_followed: NotificationPrefs.followedProducts.slice(0, PUSH_MAX_FOLLOWED).map(p => String(p).slice(0, PUSH_MAX_PRODUCT_LENGTH)),
         p_quiet_start: quiet.enabled ? quiet.start : null,
         p_quiet_end: quiet.enabled ? quiet.end : null,
         p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'

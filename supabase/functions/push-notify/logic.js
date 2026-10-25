@@ -72,3 +72,36 @@ export function isQuietTime(quietStart, quietEnd, timeZone, now = new Date()) {
 export function isInCooldown(lastSentAt, now = Date.now()) {
     return lastSentAt != null && now - new Date(lastSentAt).getTime() < PUSH_COOLDOWN_MS;
 }
+
+// Adresses d'abonnement acceptees : celles des services push des navigateurs
+// (FCM : Chrome, Android, Edge Android, Samsung ; Mozilla : Firefox ; Apple : Safari ;
+// WNS : Edge Windows). Meme liste que push_endpoint_allowed (migration 026).
+// Le / juste apres l'hote ecarte un port, un « user@ » ou un faux suffixe.
+const PUSH_ENDPOINT_PATTERN = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)\//;
+
+export function isAllowedPushEndpoint(endpoint) {
+    return typeof endpoint === 'string' && endpoint.length <= 1000 && PUSH_ENDPOINT_PATTERN.test(endpoint);
+}
+
+// Echecs d'envoi de suite tolere avant d'effacer un abonnement.
+export const PUSH_MAX_FAILURES = 5;
+
+// Que faire d'un envoi en echec. 404 / 410 : abonnement retire par le navigateur
+// -> 'delete'. Reseau, delai depasse, 400 (adresse inventee), 429 ou 5xx -> 'count'
+// (fail_count + 1), puis 'delete' au-dela de PUSH_MAX_FAILURES echecs de suite.
+// 401 / 403 et autres 4xx (cle VAPID mal configuree...) : 'log' seulement, pour ne
+// pas effacer tout le monde sur une erreur de configuration.
+// failCount = echecs deja comptes avant celui-ci.
+export function pushFailureAction(statusCode, failCount) {
+    if (statusCode === 404 || statusCode === 410) return 'delete';
+    const transient = !statusCode || statusCode === 400 || statusCode === 429 || statusCode >= 500;
+    if (!transient) return 'log';
+    return (Number(failCount) || 0) + 1 > PUSH_MAX_FAILURES ? 'delete' : 'count';
+}
+
+// Decoupe une liste en lots de `size` (envois en parallele bornes).
+export function chunk(items, size) {
+    const out = [];
+    for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+    return out;
+}
