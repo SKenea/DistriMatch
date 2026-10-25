@@ -36,7 +36,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
     sans position est retirée au démarrage ; une erreur de carte ne bloque plus l'app.
 - [x] BUG-13 En tant que membre, un onglet resté ouvert ne réécrit plus mes favoris — `BUG-13.md`
   - Acceptance : un favori ajouté dans un onglet est connu des autres sans recharger.
-- [ ] BUG-05 En tant que membre sur iPhone, je me connecte dans l'app installée avec un code reçu
+- [x] BUG-05 En tant que membre sur iPhone, je me connecte dans l'app installée avec un code reçu
   par e-mail — `BUG-05.md` (**action de Stéphane** : ajouter le code au modèle d'e-mail Supabase)
   - Acceptance : code juste = connecté, fiche conservée ; code faux = message clair ; le lien
     marche toujours dans le navigateur.

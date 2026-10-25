@@ -21,7 +21,7 @@ export function isPushSupported() {
         && 'PushManager' in window && 'Notification' in window;
 }
 
-function isStandalone() {
+export function isStandalone() {
     return window.navigator.standalone === true
         || (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches);
 }
