@@ -8,15 +8,16 @@
  *     puis Renommer et Retirer ; le nom n'est jamais un champ par lui-meme ;
  *   - renommer : le nom devient un champ avec les suggestions des listes (Entree =
  *     enregistre, Echap ou vide = annule) ;
- *   - retirer : toast « Annuler » 7 s, la suppression en base n'a lieu qu'a la fin
- *     du delai ;
+ *   - retirer : toast « Annuler » 7 s, le retrait en base (doux, SEC-03 : le produit
+ *     et ses signaux restent, l'admin peut le restaurer) n'a lieu qu'a la fin du delai ;
  *   - ajouter (EPIC-T13) : carte « + Ajouter un produit » -> panneau sur place :
  *     4 produits courants du type en pastilles (un toucher ajoute), puis un champ
  *     « Autre… » avec suggestions ; le panneau reste ouvert pour enchainer ;
  *   - prix : toucher « €€ » -> € / €€ / €€€ sur place.
  * Le signal Dispo / Pas dispo (toucher l'etiquette) est dans availability.js.
  * Visiteur : ces memes zones menent a l'invitation a se connecter (UC2 : modifier
- * est un privilege de compte). RLS : 005 (products), 013 (price_range).
+ * est un privilege de compte). Base : 025 (products : droits par colonne, retrait
+ * par la RPC remove_product), 013 (price_range).
  */
 
 import { AppState, supabaseClient } from './state.js';
@@ -223,21 +224,23 @@ function removeProduct(productId) {
     });
 }
 
+// SEC-03 (migration 025) : retrait doux par la RPC remove_product. Plus aucun DELETE :
+// le produit et ses signaux restent en base, il disparait pour tous.
 async function deleteProductForGood(d, product, index) {
     let error = null;
     if (!supabaseClient) {
         error = { message: 'Service indisponible' };
+    } else if (product.id === null || product.id === undefined || product.id === '') {
+        error = { message: 'Produit sans identifiant' };
     } else {
         try {
-            const query = supabaseClient.from('products').delete();
-            ({ error } = product.id !== null && product.id !== undefined && product.id !== ''
-                ? await query.eq('id', product.id)
-                : await query.eq('distributor_id', d.id).eq('name', product.name));
+            ({ error } = await supabaseClient.rpc('remove_product', { p_product_id: Number(product.id) }));
         } catch (e) {
             error = e;
         }
     }
-    if (!error) return;
+    // P0002 : deja retire (par un autre membre) : le resultat est le meme
+    if (!error || error.code === 'P0002') return;
     console.warn('[DistriMatch] Retrait refuse :', error.code, error.message);
     d.products.splice(Math.min(index, d.products.length), 0, product);
     if (AppState.currentDistributor?.id === d.id) renderFicheProducts();
