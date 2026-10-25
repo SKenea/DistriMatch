@@ -710,6 +710,85 @@ describe('base : produits (025)', { skip: SKIP }, () => {
     });
 });
 
+// SEC-05 (027) : la base impose les valeurs d'un ajout et du niveau de prix
+describe('base : ajout de fiche et niveau de prix (027, SEC-05)', { skip: SKIP }, () => {
+    const COLS = 'id, name, type, lat, lng, is_user_added, added_by, address, price_range';
+    // Autre compte, lu en tant que postgres avant le changement de role
+    const DECLARE_OTHER = 'v_other uuid := (select id from auth.users where id <> v_uid order by created_at limit 1);';
+
+    it('ajout par l’API : date, auteur, etat, note et fraicheur poses par la base ; fuseau inconnu efface', async () => {
+        const p = await probe(`${AS_USER}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by, created_at, updated_at,
+                                      modified_by, last_verified, status, rating, review_count, tz)
+            values ('itest-forge', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, '2000-01-01', '2000-01-01',
+                    v_other, now(), 'warning', 4.9, 999, 'Pas/Un_Fuseau');
+            r := (select (created_at = now())::text || '|' || (updated_at = now())::text
+                  || '|' || coalesce((modified_by = ${USER})::text, 'null') || '|' || coalesce(last_verified::text, 'null')
+                  || '|' || status || '|' || rating::text || '|' || review_count::text || '|' || coalesce(tz, 'null')
+                  from distributors where id = 'itest-forge')`, DECLARE_OTHER);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true|true|true|null|verified|0.0|0|null');
+    });
+
+    it('un fuseau connu envoye par l’app est conserve', async () => {
+        const p = await probe(`${AS_USER}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by, tz)
+            values ('itest-tz', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, 'Europe/Paris');
+            r := (select coalesce(tz, 'null') from distributors where id = 'itest-tz')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'Europe/Paris');
+    });
+
+    it('antidater created_at ne contourne plus la limite de 5 ajouts par jour (P0001)', async () => {
+        const add = (n) => `insert into distributors (id, name, type, lat, lng, is_user_added, added_by, created_at)
+            values ('itest-old-${n}', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, '2000-01-01')`;
+        const p = await probe(`${AS_USER} ${add(1)}; ${add(2)}; ${add(3)}; ${add(4)}; ${add(5)}; ${add(6)}`);
+        assert.equal(p.reachedEnd, false, 'le 6e ajout aurait du etre refuse');
+        assert.equal(p.code, 'P0001');
+    });
+
+    it('valeurs hors bornes a l’ajout : refusees (23514)', async () => {
+        const CASES = [
+            ['id hors format', `('itest bad!', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, null, null)`],
+            ['nom d’un caractere', `('itest-court', 'x', 'other', 43.49, -1.47, true, ${USER}, null, null)`],
+            ['nom de 101 caracteres', `('itest-long', repeat('x', 101), 'other', 43.49, -1.47, true, ${USER}, null, null)`],
+            ['latitude 91', `('itest-lat', 'Fiche itest', 'other', 91, -1.47, true, ${USER}, null, null)`],
+            ['adresse de 201 caracteres', `('itest-adr', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, repeat('a', 201), null)`],
+            ['prix hors liste', `('itest-prix', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, null, 'XXXX')`],
+        ];
+        for (const [label, values] of CASES) {
+            const p = await probe(`${AS_USER} insert into distributors (${COLS}) values ${values}`);
+            assert.equal(p.code, '23514', label);
+        }
+        const emoji = await probe(`${AS_USER} insert into distributors (id, name, type, emoji, lat, lng, is_user_added, added_by)
+            values ('itest-emoji', 'Fiche itest', 'other', '<img>', 43.49, -1.47, true, ${USER})`);
+        assert.equal(emoji.code, '23514', 'emoji avec chevrons');
+    });
+
+    it('niveau de prix hors liste : refuse (23514)', async () => {
+        const p = await probe(`${AS_USER} update distributors set price_range = 'XXXX' where id = '${DEMO}'`);
+        assert.equal(p.code, '23514');
+    });
+
+    it('niveau de prix : une seule fiche par requete pour l’API (42501) ; postgres n’est pas limite', async () => {
+        const api = await probe(`${AS_USER} update distributors set price_range = price_range
+            where id in (select id from distributors where is_demo and review_status = 'published' order by id limit 2)`);
+        assert.equal(api.code, '42501');
+        assert.match(api.message, /Une seule fiche/);
+        const admin = await probe(`update distributors set price_range = price_range where is_demo;
+            get diagnostics v_n = row_count; r := v_n::text`, 'v_n int;');
+        assert.ok(admin.reachedEnd, admin.message);
+        assert.ok(Number(admin.result) >= 2, admin.result);
+    });
+
+    it('compte bloque : ne change plus le niveau de prix (42501)', async () => {
+        const p = await probe(`insert into signal_bans (user_id, reason) values (${USER}, 'itest');
+            ${AS_USER} update distributors set price_range = price_range where id = '${DEMO}'`);
+        assert.equal(p.code, '42501');
+        assert.match(p.message, /Compte bloque/);
+    });
+});
+
 // EPIC-T22 (023) : un signal ne revele pas son auteur ; journal du compte
 describe('base : confidentialite des signaux et « Mon activité » (023)', { skip: SKIP }, () => {
     it('personne ne lit l’auteur d’un signal (user_id, device_hash) ; l’etat public reste lisible', async () => {

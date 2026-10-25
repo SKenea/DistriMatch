@@ -87,7 +87,7 @@ test.describe('33. Machines seulement locales', () => {
         await page.click('#dist-local-publish');
 
         await expect(page.locator('#toast-container .toast.success')).toContainText('visible par tous après validation');
-        expect(posted.distributors).toMatchObject({ id: 'user-local-only', name: 'Machine locale de test', is_user_added: true });
+        expect(posted.distributors).toMatchObject({ id: 'user-local-only', name: 'Machine locale de test', is_user_added: true, tz: expect.any(String) });   // SEC-05 : fuseau du telephone
         expect(posted.distributors.is_demo).toBeUndefined();   // jamais envoye
         expect(posted.products).toEqual([{ distributor_id: 'user-local-only', name: 'Produit test', available: true }]);
         await expect(page.locator('#dist-local-only')).toBeHidden();

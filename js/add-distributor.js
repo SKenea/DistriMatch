@@ -76,8 +76,8 @@ function getAddPopupContent() {
         <div class="add-distributor-popup">
             <h4>Nouveau distributeur</h4>
             <select id="new-dist-type">${options}</select>
-            <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required>
-            <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)">
+            <input type="text" id="new-dist-name" placeholder="Nom du distributeur" required maxlength="100">
+            <input type="text" id="new-dist-address" placeholder="Adresse (optionnel)" maxlength="200">
             <label class="add-dist-pricerange">Niveau de prix
                 <select id="new-dist-price" aria-label="Niveau de prix">
                     <option value="€">€</option>
@@ -321,7 +321,9 @@ export async function publishDistributor(distributor) {
             status: 'verified',
             price_range: distributor.priceRange || '€€',
             is_user_added: true,
-            added_by: session?.user?.id || null
+            added_by: session?.user?.id || null,
+            // SEC-05 : fuseau du telephone (ajout sur place) ; la base l'efface s'il est inconnu
+            tz: Intl.DateTimeFormat().resolvedOptions().timeZone || null
         });
         if (error && error.code !== '23505') throw error;
         if (!error && (distributor.products || []).length > 0) {
@@ -372,6 +374,11 @@ async function confirmAddDistributorImpl() {
 
     if (!name) {
         showToast('Nom requis', 'error');
+        return;
+    }
+    // SEC-05 : la base refuse un nom de moins de 2 caracteres (contrainte 027)
+    if (name.length < 2) {
+        showToast('Donne-lui un nom d’au moins 2 caractères', 'error');
         return;
     }
 
