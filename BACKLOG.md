@@ -34,7 +34,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
 - [x] BUG-02 En tant que membre, l'app démarre toujours, même après un ajout annulé — `BUG-02.md`
   - Acceptance : annuler pendant la vérification de position n'enregistre rien ; une fiche locale
     sans position est retirée au démarrage ; une erreur de carte ne bloque plus l'app.
-- [ ] BUG-13 En tant que membre, un onglet resté ouvert ne réécrit plus mes favoris — `BUG-13.md`
+- [x] BUG-13 En tant que membre, un onglet resté ouvert ne réécrit plus mes favoris — `BUG-13.md`
   - Acceptance : un favori ajouté dans un onglet est connu des autres sans recharger.
 - [ ] BUG-05 En tant que membre sur iPhone, je me connecte dans l'app installée avec un code reçu
   par e-mail — `BUG-05.md` (**action de Stéphane** : ajouter le code au modèle d'e-mail Supabase)

@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, routeEditWrites, kpiFixture, routeKpi, passWelcome } from './helpers.js';
+import { BASE_URL, captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, routeEditWrites, kpiFixture, routeKpi, passWelcome } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -362,5 +362,57 @@ test.describe('Ajout annulé et démarrage robuste (BUG-02)', () => {
         expect(ids).toContain('user-bug02-ok');
         const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('snackmatch_user_distributors') || '[]').map((d) => d.id));
         expect(saved).toEqual(['user-bug02-ok']);
+    });
+});
+
+// ============================================
+// 19. DEUX ONGLETS OUVERTS (BUG-13)
+// ============================================
+// L'evenement storage n'est envoye qu'aux AUTRES pages : deux pages du meme contexte
+// (meme localStorage). La page 1 est celle du beforeEach.
+
+test.describe('19. Deux onglets ouverts (BUG-13)', () => {
+    test('un favori ajoute dans l autre onglet est connu ici sans recharger, et une action ici ne l efface pas', async ({ page, context }) => {
+        const [idA, idB] = await page.evaluate(() => window.AppState.distributors.slice(0, 2).map(d => d.id));
+        // Page 2 : un produit suivi est deja enregistre quand elle demarre (ecrit avant son chargement)
+        const page2 = await context.newPage();
+        await page2.goto(`${BASE_URL}/manifest.json`);
+        await page2.evaluate(() => localStorage.setItem('snackmatch_notification_prefs', JSON.stringify({ followedProducts: ['pain'] })));
+        await setupApp(page2, context);
+        await page2.evaluate((id) => window.toggleSubscription(id), idA);
+
+        // Page 1 : connait le favori sans recharger
+        await expect.poll(() => page.evaluate((id) => window.AppState.subscriptions.includes(id), idA), { timeout: 5000 }).toBe(true);
+        await expect(page.locator('#favorites-badge')).toHaveText('1');
+
+        // Page 1 : deux actions qui sauvegardent depuis sa memoire
+        await page.evaluate(() => window.unfollowProduct('autre'));
+        await page.evaluate((id) => window.toggleSubscription(id), idB);
+
+        const stored = await page.evaluate(() => ({
+            subscriptions: JSON.parse(localStorage.getItem('snackmatch_user')).subscriptions,
+            followed: JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).followedProducts
+        }));
+        expect(stored.subscriptions).toEqual(expect.arrayContaining([idA, idB]));
+        expect(stored.followed).toEqual(['pain']);
+        await page2.close();
+    });
+
+    test('« Effacer mes données » dans l autre onglet vide aussi les favoris ici', async ({ page, context }) => {
+        const [idA, idB] = await page.evaluate(() => window.AppState.distributors.slice(0, 2).map(d => d.id));
+        await page.evaluate((id) => window.toggleSubscription(id), idA);
+
+        const page2 = await context.newPage();
+        await setupApp(page2, context);
+        await page2.evaluate(() => window.switchView('account'));
+        await page2.waitForSelector('#account-view.view-active');
+        await page2.click('#clear-data-btn');
+        await page2.click('#confirm-ok');
+        await expect(page2.locator('#toast-container .toast.success')).toContainText('Données effacées');
+
+        await expect.poll(() => page.evaluate(() => window.AppState.subscriptions.length), { timeout: 5000 }).toBe(0);
+        await page.evaluate((id) => window.toggleSubscription(id), idB);
+        expect(await page.evaluate(() => JSON.parse(localStorage.getItem('snackmatch_user')).subscriptions)).toEqual([idB]);
+        await page2.close();
     });
 });
