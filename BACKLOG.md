@@ -19,6 +19,47 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R3 Bugs visibles de la revue de code (lot 3, revue du 2026-10-21)
+Objectif : corriger ce que les membres rencontrent aujourd'hui (app bloquée, iPhone, console
+admin, recherche, saisies perdues). Valeur : une app fiable avant le vrai pilote.
+Méthode : comme EPIC-R1, une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle
+medium (`/story <ID>`), une PR à la fois **dans cet ordre** (chaque fiche suppose la précédente
+fusionnée) : BUG-07, BUG-02, BUG-13, BUG-05, BUG-04, BUG-14, BUG-03, BUG-06, BUG-11, BUG-12,
+BUG-15, BUG-08, BUG-09, BUG-10.
+
+- [ ] BUG-07 En tant qu'auteur d'une fiche refusée, je ne la vois plus revenir « seulement sur
+  ton téléphone », et « Publier » ne m'annonce plus un faux succès — `BUG-07.md`
+  - Acceptance : copie locale retirée dès que la base connaît la fiche ; refus annoncé avec un
+    renvoi vers « Mes ajouts » ; compteur « Distributeurs ajoutés » juste.
+- [ ] BUG-02 En tant que membre, l'app démarre toujours, même après un ajout annulé — `BUG-02.md`
+  - Acceptance : annuler pendant la vérification de position n'enregistre rien ; une fiche locale
+    sans position est retirée au démarrage ; une erreur de carte ne bloque plus l'app.
+- [ ] BUG-13 En tant que membre, un onglet resté ouvert ne réécrit plus mes favoris — `BUG-13.md`
+  - Acceptance : un favori ajouté dans un onglet est connu des autres sans recharger.
+- [ ] BUG-05 En tant que membre sur iPhone, je me connecte dans l'app installée avec un code reçu
+  par e-mail — `BUG-05.md` (**action de Stéphane** : ajouter le code au modèle d'e-mail Supabase)
+  - Acceptance : code juste = connecté, fiche conservée ; code faux = message clair ; le lien
+    marche toujours dans le navigateur.
+- [ ] BUG-04 En tant que membre sur iPhone, l'app installée m'invite à remettre mon favori — `BUG-04.md`
+  - Acceptance : le guide le dit ; un indice une seule fois au premier lancement de l'app installée.
+- [ ] BUG-14 En tant que membre, « Effacer mes données » efface vraiment tout — `BUG-14.md`
+  - Acceptance : toutes les clés de l'utilisateur effacées (liste justifiée), carte non recadrée.
+- [ ] BUG-03 En tant que membre, je peux ajouter un distributeur « Produits agricoles » — `BUG-03.md`
+  - Acceptance : le type est proposé ; test garde-fou de cohérence des types.
+- [ ] BUG-06 En tant qu'admin, écrire au membre ne m'efface plus mes corrections — `BUG-06.md`
+  - Acceptance : nom, type et position corrigés conservés jusqu'à « Publier ».
+- [ ] BUG-11 En tant que membre, mes messages dans « Mes ajouts » arrivent ou je sais que
+  l'échange est terminé — `BUG-11.md`
+  - Acceptance : champ seulement sur une fiche en attente ; fil ouvert après envoi ; pas de doublon.
+- [ ] BUG-12 En tant que membre, « Mon activité » et « Mes ajouts » ne mentent plus — `BUG-12.md`
+  - Acceptance : pas de « Rien pour l'instant » sous l'historique ; erreur annoncée avec « Réessayer ».
+- [ ] BUG-15 En tant que futur exploitant, ma saisie du SIRET ou du code n'est plus effacée — `BUG-15.md`
+  - Acceptance : saisie conservée à la relecture ; un seul envoi sur double toucher.
+- [ ] BUG-08 En tant que membre dans le navigateur du téléphone, je vois tout le bas de la carte
+  — `BUG-08.md` (**vérification de Stéphane** sur téléphone)
+- [ ] BUG-09 En tant que membre, la recherche trouve « Œufs » quand je tape « oeufs » — `BUG-09.md`
+- [ ] BUG-10 En tant que membre, « Centrer sur ma position » met les distances à jour — `BUG-10.md`
+
 ### EPIC-R1 Sécurité : fermer les failles de la revue de code (revue du 2026-10-21)
 Objectif : plus aucune faille exploitable en contournant l'app (vol de session, effacement des
 données de la communauté, base remplie jusqu'au blocage). Valeur : la confiance des membres et

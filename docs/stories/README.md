@@ -25,7 +25,10 @@ Rapport d'origine : https://claude.ai/artifact/T64CmaCdx8oEkXPUmc4Qx5
 1. **Lire la fiche en entier**, puis les fichiers listés dans « Avant de coder ».
 2. **Lancer les contrôles** de la section « Avant de coder ». Si un contrôle ne trouve pas le
    code attendu : **s'arrêter** et signaler (le code a bougé depuis la fiche). Ne pas adapter
-   la correction au jugé.
+   la correction au jugé. **Un numéro de ligne différent n'est pas un échec** : seul compte que
+   le motif soit trouvé le nombre de fois annoncé (les stories précédentes décalent les lignes).
+   Ne lancer une story qu'une fois la précédente **fusionnée** sur master (ligne « Prérequis »
+   en tête de fiche) : les extraits « avant » supposent son code.
 3. **Créer la branche** indiquée (`fix/...` ou `feat/...`) à partir de `master` à jour.
    Des fichiers non suivis ou modifiés hors de la fiche peuvent exister dans le dépôt (réglages
    locaux, brouillons) : c'est normal, **ne pas y toucher et ne jamais les committer**.
