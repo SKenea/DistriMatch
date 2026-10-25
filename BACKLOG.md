@@ -42,7 +42,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
     marche toujours dans le navigateur.
 - [x] BUG-04 En tant que membre sur iPhone, l'app installée m'invite à remettre mon favori — `BUG-04.md`
   - Acceptance : le guide le dit ; un indice une seule fois au premier lancement de l'app installée.
-- [ ] BUG-14 En tant que membre, « Effacer mes données » efface vraiment tout — `BUG-14.md`
+- [x] BUG-14 En tant que membre, « Effacer mes données » efface vraiment tout — `BUG-14.md`
   - Acceptance : toutes les clés de l'utilisateur effacées (liste justifiée), carte non recadrée.
 - [ ] BUG-03 En tant que membre, je peux ajouter un distributeur « Produits agricoles » — `BUG-03.md`
   - Acceptance : le type est proposé ; test garde-fou de cohérence des types.

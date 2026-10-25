@@ -193,6 +193,13 @@ export function getDeviceId() {
     return id;
 }
 
+// « Effacer mes données » (BUG-14) : l'identifiant d'appareil repart de zero,
+// un nouveau est tire au prochain besoin (getDeviceId)
+export function resetDeviceId() {
+    memoDeviceId = null;
+    try { localStorage.removeItem(DEVICE_ID_KEY); } catch (e) { /* localStorage indisponible */ }
+}
+
 // Payload de la RPC confirm_availability a partir des choix du panneau
 // "Il reste quoi ?". choices : { [productId]: 'available' | 'absent' | 'unseen' }.
 // Les produits "pas regarde" et les ids non numeriques sont exclus ; l'etat
@@ -345,7 +352,8 @@ export function loadNotificationQueue() {
 
 export function loadUserDistributors() {
     try {
-        return JSON.parse(localStorage.getItem(USER_DISTRIBUTORS_KEY)) || [];
+        const list = JSON.parse(localStorage.getItem(USER_DISTRIBUTORS_KEY));
+        return Array.isArray(list) ? list : [];   // donnee abimee (objet, nombre...) : jamais de plantage
     } catch (e) {
         console.error('Erreur chargement distributeurs utilisateur:', e);
         return [];

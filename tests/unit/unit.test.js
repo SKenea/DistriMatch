@@ -1349,6 +1349,12 @@ describe('saveUserDistributor (upsert par id)', () => {
         saveUserDistributor({ id: 'user-2', name: 'B' });
         assert.equal(loadUserDistributors().length, 2);
     });
+
+    it('renvoie [] si la valeur stockee n est pas un tableau (donnee abimee)', () => {
+        localStorage.clear();
+        localStorage.setItem('snackmatch_user_distributors', '{"a":1}');
+        assert.deepEqual(loadUserDistributors(), []);
+    });
 });
 
 describe('escapeHTML', () => {
