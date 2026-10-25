@@ -27,7 +27,7 @@ Méthode : une fiche d'exécution par story dans `docs/stories/<ID>.md`, exécut
 en effort medium (`/story <ID>`), une PR à la fois dans l'ordre ci-dessous ; les migrations sont
 appliquées par Claude juste avant la fusion, après relecture.
 
-- [ ] SEC-01 En tant qu'équipe, je veux vérifier en base qu'aucune faille n'a servi, afin de
+- [x] SEC-01 (2026-10-25 : rien d'anormal, 23 requêtes de lecture) En tant qu'équipe, je veux vérifier en base qu'aucune faille n'a servi, afin de
   corriger en sachant s'il y a des dégâts à réparer — fiche `docs/stories/SEC-01.md`
   - Acceptance : les 19 requêtes de lecture passées, compte rendu « rien d'anormal » ou liste
     des points trouvés envoyé à Stéphane ; aucune écriture en base.
@@ -35,21 +35,21 @@ appliquées par Claude juste avant la fusion, après relecture.
   s'exécuter sur mon téléphone, afin que ma session ne puisse pas être volée — `SEC-02.md`
   - Acceptance : aucune donnée dans un attribut `on...=` (test garde-fou) ; un id piégé ouvre
     sa fiche depuis la recherche et Favoris sans rien exécuter.
-- [ ] SEC-03 En tant que membre, je veux que retirer un produit ne détruise jamais l'historique
+- [x] SEC-03 (PR #192, 2026-10-25) En tant que membre, je veux que retirer un produit ne détruise jamais l'historique
   et qu'aucun compte ne puisse vider le catalogue, afin de garder les signaux de la communauté
   — `SEC-03.md` (migration 025)
   - Acceptance : « Retirer » = retrait doux restaurable ; DELETE refusé ; 30 écritures / heure /
     compte, 5 produits max par modification ; compte bloqué refusé ; produit retiré sans état
     public ni nouveau signal.
-- [ ] SEC-04 En tant que membre abonné, je veux que des faux abonnements ne puissent ni remplir
+- [x] SEC-04 (PR #193) En tant que membre abonné, je veux que des faux abonnements ne puissent ni remplir
   la base ni bloquer mes notifications — `SEC-04.md` (migration 026 + fonction push-notify)
   - Acceptance : seuls les vrais services push acceptés ; plafonds 200 / heure et 5 000 au total ;
     envoi par lots avec délai maximum ; abonnements morts effacés.
-- [ ] SEC-05 En tant qu'admin, je veux que la base impose date, note, statut et formats à l'ajout
+- [x] SEC-05 (PR #194) En tant qu'admin, je veux que la base impose date, note, statut et formats à l'ajout
   d'une fiche et contrôle le niveau de prix — `SEC-05.md` (migration 027)
   - Acceptance : limite de 5 ajouts par jour incontournable ; id, nom, adresse, coordonnées,
     emoji et prix bornés ; une seule fiche par modification de prix ; fuseau envoyé à l'ajout.
-- [ ] SEC-06 En tant qu'équipe, je veux fermer les petites failles restantes de la base — `SEC-06.md`
+- [x] SEC-06 (PR #195) En tant qu'équipe, je veux fermer les petites failles restantes de la base — `SEC-06.md`
   (migration 028)
   - Acceptance : envoi de photos fermé et bucket borné ; demo_backup protégée ; anciennes RPC
     retirées ; limite de 20 signaux / heure appliquée même en un appel ; préfixe `demo-` refusé ;
