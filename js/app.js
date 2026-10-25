@@ -7,12 +7,12 @@ import {
     AppState, Conversations, UserProfile, NotificationPrefs, NotificationQueue,
     EMBEDDED_DATA, SUPABASE_URL, SUPABASE_ANON_KEY,
     STORAGE_KEY, PROFILE_KEY, CONVERSATIONS_KEY,
-    NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY,
+    NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY, USER_DISTRIBUTORS_KEY,
     supabaseClient, setSupabaseClient, AddMode
 } from './state.js';
 
 import {
-    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -51,11 +51,12 @@ import {
 
 import { initSidePanel, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
-import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange, takeLoginReturn } from './auth.js';
+import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange, takeLoginReturn, LOGIN_RETURN_KEY } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
-import { initPushSettings, syncPushSubscription, disablePush, maybeHintHomeScreenFavorites } from './push.js';
+import { initPushSettings, syncPushSubscription, disablePush, maybeHintHomeScreenFavorites, ASKED_KEY as PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY } from './push.js';
+import { EDIT_HINT_KEY } from './fiche-edit.js';
 import { initAdmin, loadAdmin } from './admin.js';
 import { initAdditions } from './additions.js';
 import { initMyActivity, renderMyActivity } from './my-activity.js';
@@ -262,11 +263,22 @@ async function clearUserData() {
     if (!ok) return;
 
     await disablePush();   // EPIC-T25 : l'abonnement serveur part avec les donnees
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(CONVERSATIONS_KEY);
-    localStorage.removeItem(NOTIFICATION_PREFS_KEY);
-    localStorage.removeItem(NOTIFICATION_QUEUE_KEY);
+    // Tout ce que l'app garde pour la personne sur cet appareil (BUG-14, inventaire dans
+    // docs/stories/BUG-14.md). Restent : la session (« Se déconnecter » s'en charge) et le
+    // drapeau de test distrimatch_force_auth.
+    const userKeys = [
+        STORAGE_KEY, PROFILE_KEY, CONVERSATIONS_KEY, NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY,
+        USER_DISTRIBUTORS_KEY, PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY, LOGIN_RETURN_KEY, EDIT_HINT_KEY, GEO_OK_KEY
+    ];
+    try {
+        userKeys.forEach((key) => localStorage.removeItem(key));
+    } catch (e) {
+        console.warn('[DistriMatch] Stockage local indisponible :', e?.message || e);
+    }
+    resetDeviceId();
+    // Distributeurs restes seulement sur ce telephone : ils quittent aussi la carte
+    // (ceux envoyes a la base, en attente ou publies, restent)
+    AppState.distributors = AppState.distributors.filter((d) => !d.isLocalOnly);
     AppState.subscriptions = [];
     AppState.reports = 0;
     AppState.points = 0;
@@ -292,8 +304,9 @@ async function clearUserData() {
         confidence: 0
     });
     updateBadges();
+    updateNotificationsBadge();
     updateProfileStats();
-    updateMapMarkers();
+    updateMapMarkers(false);   // la carte garde son cadrage (BUG-14)
     updateConversationsList();
     closeChatModal();
     showToast('Données effacées', 'success');

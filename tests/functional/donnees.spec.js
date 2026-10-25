@@ -124,10 +124,23 @@ test.describe('15. Confirmation maison', () => {
         let nativeDialog = false;
         page.on('dialog', async (d) => { nativeDialog = true; await d.dismiss().catch(() => {}); });
 
-        await page.evaluate(() => {
-            localStorage.setItem('snackmatch_profile', JSON.stringify({ marker: 'e2e-confirm' }));
+        // BUG-14 : toutes les donnees de la personne sur cet appareil (inventaire : docs/stories/BUG-14.md)
+        const USER_KEYS = [
+            'snackmatch_user', 'snackmatch_profile', 'snackmatch_conversations', 'snackmatch_notification_prefs',
+            'snackmatch_notification_queue', 'snackmatch_user_distributors', 'snackmatch_device',
+            'distrimatch_push_asked', 'distrimatch_home_screen_seen', 'distrimatch_login_return', 'distrimatch_edit_hint_seen', 'distrimatch_geo_ok'
+        ];
+        const before = await page.evaluate(async (keys) => {
+            for (const k of keys) localStorage.setItem(k, JSON.stringify({ marker: 'e2e-confirm' }));
+            // snackmatch_user_distributors est une liste : un tableau valide (un objet ferait planter updateBadges)
+            localStorage.setItem('snackmatch_user_distributors', JSON.stringify([{ id: 'user-e2e-confirm', name: 'Fiche locale e2e', type: 'other', emoji: '🏪', lat: 43.49, lng: -1.47, products: [] }]));
+            localStorage.setItem('distrimatch_force_auth', '0');
+            const base = window.AppState.distributors[0];
+            window.AppState.distributors.push({ ...base, id: 'user-bug14-local', name: 'Local BUG-14', isLocalOnly: true, products: [] });
+            const { mainMap } = await import('./js/state.js');
             window.switchView('account');
-        });
+            return { zoom: mainMap.getZoom(), center: mainMap.getCenter() };
+        }, USER_KEYS);
         await page.waitForSelector('#account-view.view-active');
         await page.click('#clear-data-btn');
 
@@ -145,7 +158,24 @@ test.describe('15. Confirmation maison', () => {
         await expect(modal).toHaveClass(/active/);
         await page.click('#confirm-ok');
         await expect(modal).not.toHaveClass(/active/);
-        expect(await page.evaluate(() => localStorage.getItem('snackmatch_profile'))).toBeNull();
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Données effacées');
+
+        const after = await page.evaluate(async (keys) => {
+            const { mainMap } = await import('./js/state.js');
+            return {
+                left: keys.filter(k => localStorage.getItem(k) !== null),
+                forceAuth: localStorage.getItem('distrimatch_force_auth'),
+                localStill: window.AppState.distributors.some(d => d.id === 'user-bug14-local'),
+                zoom: mainMap.getZoom(),
+                center: mainMap.getCenter()
+            };
+        }, USER_KEYS);
+        expect(after.left).toEqual([]);
+        expect(after.forceAuth).toBe('0');
+        expect(after.localStill).toBe(false);
+        expect(after.zoom).toBe(before.zoom);
+        expect(after.center.lat).toBeCloseTo(before.center.lat, 4);
+        expect(after.center.lng).toBeCloseTo(before.center.lng, 4);
         expect(nativeDialog).toBe(false);
     });
 

@@ -134,7 +134,7 @@ function describeCodeError(err) {
 // retour autorisee chez Supabase) : sans ceci, on revenait sur l'accueil. La
 // fiche ouverte au moment de la demande est retenue sur l'appareil (1 h) et
 // rouverte au retour, comme un lien partage (?id=).
-const LOGIN_RETURN_KEY = 'distrimatch_login_return';
+export const LOGIN_RETURN_KEY = 'distrimatch_login_return';
 const LOGIN_RETURN_TTL = 60 * 60 * 1000;
 
 // Fiche en cours : ouverte, ou fermee il y a moins d'une minute (sur telephone,

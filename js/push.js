@@ -10,8 +10,8 @@ import { VAPID_PUBLIC_KEY } from './config.js';
 import { showToast, showActionToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScreenForPush, shouldHintHomeScreenFavorites } from './utils.js';
 import { confirmDialog } from './confirm-dialog.js';
 
-const ASKED_KEY = 'distrimatch_push_asked';
-const HOME_SCREEN_SEEN_KEY = 'distrimatch_home_screen_seen';   // BUG-04 : indice deja montre
+export const ASKED_KEY = 'distrimatch_push_asked';
+export const HOME_SCREEN_SEEN_KEY = 'distrimatch_home_screen_seen';   // BUG-04 : indice deja montre
 // Bornes de push_subscribe (migration 026) : au-dela, le serveur refuse tout l'abonnement.
 const PUSH_MAX_FAVORITES = 200;
 const PUSH_MAX_FOLLOWED = 30;
