@@ -100,7 +100,8 @@ async function loadDistributorsFromSupabase() {
 
         // EPIC-T21 : une fiche refusee n'est visible que dans « Mes ajouts » ; une fiche
         // en attente n'est lue (RLS) que par son auteur et l'admin
-        const distributors = data.map(mapDistributorRow).filter(d => d.reviewStatus !== 'rejected');
+        const rows = data.map(mapDistributorRow);
+        const distributors = rows.filter(d => d.reviewStatus !== 'rejected');
         // EPIC-T8 : la note affichee vient des vrais avis (vue distributor_ratings,
         // migration 016). Vue indisponible : on garde les colonnes de la fiche.
         if (!ratingsRes.error && Array.isArray(ratingsRes.data)) {
@@ -116,7 +117,9 @@ async function loadDistributorsFromSupabase() {
             const operated = new Set(operatorsRes.data.map(o => o.distributor_id));
             for (const d of distributors) d.hasOperator = operated.has(d.id);
         }
-        return distributors;
+        // BUG-07 : ids de TOUTES les fiches lues, refusees comprises : une copie locale
+        // de meme id doit quitter le telephone (loadDistributors)
+        return { distributors, knownIds: new Set(rows.map(d => d.id)) };
     } catch (e) {
         console.warn('[DistriMatch] Erreur chargement Supabase:', e.message);
         return null;
@@ -124,7 +127,8 @@ async function loadDistributorsFromSupabase() {
 }
 
 async function loadDistributors() {
-    const supabaseData = await loadDistributorsFromSupabase();
+    const remote = await loadDistributorsFromSupabase();
+    const supabaseData = remote ? remote.distributors : null;
     if (supabaseData) {
         AppState.distributors = supabaseData;
         AppState.typeConfig = EMBEDDED_DATA.typeConfig;
@@ -147,6 +151,17 @@ async function loadDistributors() {
     }
 
     let userDistributors = loadUserDistributors();
+    // BUG-07 : une copie locale dont l'id est connu de la base (en attente, publiee ou
+    // refusee) quitte le telephone : la base fait foi, une fiche refusee ne se voit
+    // plus que dans « Mes ajouts »
+    if (supabaseData && userDistributors.length > 0) {
+        const sentIds = userDistributors.filter((d) => remote.knownIds.has(d.id)).map((d) => d.id);
+        if (sentIds.length > 0) {
+            removeUserDistributors(sentIds);
+            userDistributors = userDistributors.filter((d) => !sentIds.includes(d.id));
+            console.log('[DistriMatch] Copies locales retirees (connues de la base):', sentIds.length);
+        }
+    }
     // EPIC-T9 : quand la base a repondu, une copie locale d'une machine deja
     // publiee (meme nom, a moins de 100 m, id different) est retiree du
     // telephone ; les machines vraiment locales sont reperees (isLocalOnly).
@@ -171,8 +186,14 @@ async function loadDistributors() {
             seenIds.add(d.id);
             return true;
         });
-        if (supabaseData) newUserDistributors.forEach((d) => { d.isLocalOnly = true; });
-        AppState.distributors = [...AppState.distributors, ...newUserDistributors];
+        // BUG-07 : une copie deja envoyee (reviewStatus pose a l'envoi) que la base ne
+        // renvoie pas (auteur deconnecte : fiche en attente illisible) reste cachee et
+        // gardee ; seule une copie jamais envoyee est « seulement sur ton telephone »
+        const shownUserDistributors = supabaseData
+            ? newUserDistributors.filter((d) => !d.reviewStatus)
+            : newUserDistributors;
+        if (supabaseData) shownUserDistributors.forEach((d) => { d.isLocalOnly = true; });
+        AppState.distributors = [...AppState.distributors, ...shownUserDistributors];
         console.log('[DistriMatch] Distributeurs utilisateur:', newUserDistributors.length, '/', userDistributors.length, '(doublons remote + internes ignores)');
     }
 

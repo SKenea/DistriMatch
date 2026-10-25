@@ -17,7 +17,7 @@ import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshRevi
 import { initFicheEdit, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
-import { locateOnMap, setSelectedPin } from './map.js';
+import { locateOnMap, setSelectedPin, updateMapMarkers } from './map.js';
 import { initFicheSheet, openFicheSheet, resetFicheSheet, isSheetLayout } from './fiche-sheet.js';
 import { goBackToMap } from './navigation.js';
 
@@ -808,6 +808,16 @@ async function publishCurrentLocalDistributor() {
     if (btn) btn.disabled = true;
     try {
         const res = await publishDistributor(d);
+        if (res.rejected) {
+            // BUG-07 : deja envoyee puis refusee par l'equipe : la copie quitte le
+            // telephone et la carte, le motif est dans « Mes ajouts »
+            removeUserDistributors([d.id]);
+            AppState.distributors = AppState.distributors.filter((x) => x.id !== d.id);
+            closeDistModal();
+            updateMapMarkers(false);
+            showToast('L’équipe n’a pas retenu ce distributeur : le détail est dans Compte, « Mes ajouts ».', 'warning');
+            return;
+        }
         if (!res.ok) {
             showToast(`Publication impossible, réessaie plus tard (code ${res.error?.code || '?'})`, 'error');
             return;

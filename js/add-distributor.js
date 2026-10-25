@@ -295,14 +295,26 @@ async function verifyUserOnSite(targetLat, targetLng, maxDistanceMeters = 30) {
     });
 }
 
+// BUG-07 : fiche deja en base sous cet id (23505 : envoi precedent dont la reponse
+// s'est perdue). Son auteur la relit (regle 022). En attente ou publiee = deja
+// envoyee : ok. Refusee = { rejected: true }. Illisible = id pris par une autre : echec.
+async function existingDistributorOutcome(id) {
+    const { data, error } = await supabaseClient.from('distributors').select('review_status').eq('id', id).limit(1);
+    if (error) throw error;
+    const status = data?.[0]?.review_status;
+    if (status === 'rejected') return { ok: false, rejected: true, error: null };
+    if (status) return { ok: true, error: null };
+    return { ok: false, error: { code: '23505', message: 'Identifiant deja pris' } };
+}
+
 // Garde anti double-soumission : le bouton "Ajouter" est async et reste
 // cliquable pendant les awaits (verifyUserOnSite, insert Supabase). Sans ce
 // verrou, 2 clics rapides lancent 2 confirmAddDistributorImpl() en parallele,
 // le check anti-doublon des 50m lisant AppState.distributors AVANT le 1er push
 // (race condition) -> N lignes contenu identique, ids differents.
-// Envoie une machine (et ses produits) a la base. Retour : { ok, error }.
-// Deja presente (meme id, 23505) = deja publiee : ok. Reutilise par la fiche
-// d'une machine locale (« Publier cette machine », EPIC-T9).
+// Envoie une machine (et ses produits) a la base. Retour : { ok, error, rejected? }.
+// Deja presente (meme id, 23505) : son etat est relu (existingDistributorOutcome, BUG-07).
+// Reutilise par la fiche d'une machine locale (« Publier cette machine », EPIC-T9).
 export async function publishDistributor(distributor) {
     if (!supabaseClient) return { ok: false, error: { message: 'Service indisponible' } };
     try {
@@ -326,6 +338,7 @@ export async function publishDistributor(distributor) {
             tz: Intl.DateTimeFormat().resolvedOptions().timeZone || null
         });
         if (error && error.code !== '23505') throw error;
+        if (error) return await existingDistributorOutcome(distributor.id);
         if (!error && (distributor.products || []).length > 0) {
             const { error: prodError } = await supabaseClient.from('products').insert(
                 distributor.products.map(p => ({ distributor_id: distributor.id, name: p.name, available: p.available !== false }))
@@ -439,12 +452,13 @@ async function confirmAddDistributorImpl() {
         }
     } else {
         newDistributor.isLocalOnly = true;
+        // BUG-07 : seule une fiche non envoyee est gardee sur le telephone ; une fiche
+        // envoyee est relue depuis la base (son auteur la lit, regle 022)
+        saveUserDistributor(newDistributor);
         showToast('Enregistrée sur ton téléphone seulement : publie-la depuis sa fiche quand le réseau revient', 'warning');
     }
 
     AddMode.photos = null;
-
-    saveUserDistributor(newDistributor);
 
     AppState.distributors.push(newDistributor);
 
