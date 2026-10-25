@@ -12,7 +12,7 @@ import {
 } from './state.js';
 
 import {
-    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -154,6 +154,15 @@ async function loadDistributors() {
     }
 
     let userDistributors = loadUserDistributors();
+    // BUG-02 : une fiche locale sans position valide (ajout annule pendant la
+    // verification de position, avant le correctif) bloquait la carte a chaque
+    // demarrage : elle est ecartee et retiree du telephone.
+    const invalidIds = userDistributors.filter((d) => !hasValidCoords(d)).map((d) => d.id);
+    if (invalidIds.length > 0) {
+        removeUserDistributors(invalidIds);
+        userDistributors = userDistributors.filter((d) => hasValidCoords(d));
+        console.warn('[DistriMatch] Fiches locales sans position retirees:', invalidIds.length);
+    }
     // BUG-07 : une copie locale dont l'id est connu de la base (en attente, publiee ou
     // refusee) quitte le telephone : la base fait foi, une fiche refusee ne se voit
     // plus que dans « Mes ajouts »
@@ -599,8 +608,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ils fusionnent dans le feed activite, rendu au changement d'onglet (pas la
     // vue par defaut), donc aucun besoin de bloquer l'init pour les attendre.
 
-    // Initialiser la carte
-    initMainMap();
+    // Initialiser la carte. BUG-02 : une erreur ici (Leaflet absent, pastille
+    // impossible) ne laisse plus le chargeur affiche ni l'app sans boutons.
+    try {
+        initMainMap();
+    } catch (e) {
+        console.error('[DistriMatch] Carte indisponible :', e);
+        showToast('La carte n’a pas pu s’afficher : recharge la page pour réessayer', 'error');
+    }
 
     // Masquer le loader des que la carte est prete
     const mapLoader = document.getElementById('map-loader');

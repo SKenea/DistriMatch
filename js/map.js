@@ -7,7 +7,7 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag, hasValidCoords } from './utils.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { isSheetLayout } from './fiche-sheet.js';
 
@@ -178,7 +178,8 @@ export function updateMapMarkers(fitBounds = true) {
     distributorMarkers.forEach(m => mainMap.removeLayer(m));
     const newMarkers = [];
 
-    const filteredDistributors = getFilteredDistributors();
+    // BUG-02 : jamais de pastille sans position (Leaflet leverait une TypeError)
+    const filteredDistributors = getFilteredDistributors().filter(hasValidCoords);
 
     filteredDistributors.forEach(d => {
         const isSubscribed = AppState.subscriptions.includes(d.id);

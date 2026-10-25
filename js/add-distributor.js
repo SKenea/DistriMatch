@@ -10,7 +10,7 @@ import {
 import {
     escapeHTML, showToast, calculateDistance,
     saveToLocalStorage, saveUserDistributor, saveProfile,
-    compressImage
+    compressImage, hasValidCoords
 } from './utils.js';
 import { updateMapMarkers } from './map.js';
 import { requireAuth } from './auth.js';
@@ -246,7 +246,12 @@ export async function uploadDistributorPhotos(distributorId, files) {
 // CONFIRMER / ANNULER
 // ============================================
 
+// BUG-02 : vrai pendant l'envoi a la base et l'enregistrement local (confirmAddDistributorImpl) ;
+// « Annuler » et « + » sont alors ignores, la fiche part telle quelle
+let isPublishing = false;
+
 export function cancelAddDistributor() {
+    if (isPublishing) return;
     if (AddMode.marker) {
         mainMap.removeLayer(AddMode.marker);
     }
@@ -365,6 +370,7 @@ export async function confirmAddDistributor() {
         await confirmAddDistributorImpl();
     } finally {
         AddMode.submitting = false;
+        isPublishing = false;
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Ajouter';
@@ -378,6 +384,16 @@ async function confirmAddDistributorImpl() {
     const addressInput = document.getElementById('new-dist-address');
 
     if (!typeSelect || !nameInput) return;
+
+    // BUG-02 : position et repere figes ici. Pendant l'attente du GPS, « Annuler »,
+    // « + » ou un glisser du repere changent AddMode : on ne le relit plus apres un await.
+    const lat = AddMode.lat;
+    const lng = AddMode.lng;
+    const marker = AddMode.marker;
+    if (!hasValidCoords({ lat, lng })) {
+        showToast('Place d’abord le repère sur la carte', 'error');
+        return;
+    }
 
     const type = typeSelect.value;
     const name = nameInput.value.trim();
@@ -404,7 +420,7 @@ async function confirmAddDistributorImpl() {
     // Verifier qu'aucun autre distributeur existe a < 50m du point de placement
     const DUPLICATE_RADIUS_M = 50;
     const nearbyExisting = AppState.distributors.find(d => {
-        const distKm = calculateDistance(AddMode.lat, AddMode.lng, d.lat, d.lng);
+        const distKm = calculateDistance(lat, lng, d.lat, d.lng);
         return distKm * 1000 < DUPLICATE_RADIUS_M;
     });
     if (nearbyExisting) {
@@ -413,8 +429,16 @@ async function confirmAddDistributorImpl() {
     }
 
     // Verifier que l'user est physiquement a < 30m du point de placement
-    const onSite = await verifyUserOnSite(AddMode.lat, AddMode.lng, 30);
+    const onSite = await verifyUserOnSite(lat, lng, 30);
     if (!onSite) return;
+    // BUG-02 : ajout annule pendant la verification (« Annuler », « + », nouvel ajout) : rien n'est enregistre
+    if (!AddMode.active || AddMode.marker !== marker) return;
+    // Repere deplace pendant la verification : la nouvelle position n'a ete controlee
+    // ni pour la presence sur place (30 m) ni pour le doublon (50 m)
+    if (AddMode.lat !== lat || AddMode.lng !== lng) {
+        showToast('Le repère a bougé : touche « Ajouter » pour vérifier ce nouvel emplacement', 'warning');
+        return;
+    }
 
     const typeInfo = DISTRIBUTOR_TYPES.find(t => t.id === type);
     const products = getProductsFromForm();
@@ -425,8 +449,8 @@ async function confirmAddDistributorImpl() {
         name: name,
         type: type,
         emoji: typeInfo?.emoji || '🏪',
-        lat: AddMode.lat,
-        lng: AddMode.lng,
+        lat: lat,
+        lng: lng,
         address: address || 'Adresse a compléter',
         city: 'A vérifier',
         rating: 5.0,
@@ -441,6 +465,8 @@ async function confirmAddDistributorImpl() {
 
     // EPIC-T9 : un echec d'envoi n'est plus avale. La machine reste sur le
     // telephone, marquee « locale », publiable plus tard depuis sa fiche.
+    // BUG-02 : a partir d'ici « Annuler » est ignore : la base a peut-etre deja la fiche
+    isPublishing = true;
     const published = await publishDistributor(newDistributor);
     if (published.ok) {
         // EPIC-T21 : la base met la fiche en attente ; l'admin la valide avant publication

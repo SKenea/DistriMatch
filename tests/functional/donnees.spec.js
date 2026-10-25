@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, routeEditWrites, kpiFixture, routeKpi } from './helpers.js';
+import { captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeSignals, routeEditWrites, kpiFixture, routeKpi, passWelcome } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -271,5 +271,96 @@ await expect(page.locator('#stats-demo-note')).toBeHidden();   // sans machines_
         await page.waitForSelector('#stats-view.view-active', { timeout: 3000 });
         await expect(page.locator('#stats-empty')).toContainText('Pas encore de données');
         await expect(page.locator('#stats-content')).toBeHidden();
+    });
+});
+
+// ============================================
+// AJOUT ANNULE ET DEMARRAGE ROBUSTE (BUG-02)
+// ============================================
+
+test.describe('Ajout annulé et démarrage robuste (BUG-02)', () => {
+    test('annuler pendant la vérification de position n\'enregistre rien', async ({ page }) => {
+        const NAME = 'ZZ-BUG02-ANNULE-' + Date.now();
+        // Aucune ecriture reelle : l'envoi a la base est intercepte et refuse
+        const writes = await routeEditWrites(page, { fail: { method: 'POST', table: 'distributors', status: 401, code: '42501' } });
+        await loginForTest(page);
+
+        // Emplacement libre (aucun distributeur a moins de 60 m) pres du centre de la carte
+        const spot = await page.evaluate(async () => {
+            const { mainMap } = await import('./js/state.js');
+            const { calculateDistance } = await import('./js/utils.js');
+            const c = mainMap.getCenter();
+            for (let k = 0; k < 50; k++) {
+                const lat = c.lat + k * 0.001;
+                const free = window.AppState.distributors.every((d) => !(calculateDistance(lat, c.lng, Number(d.lat), Number(d.lng)) * 1000 < 60));
+                if (free) return { lat, lng: c.lng };
+            }
+            return null;
+        });
+        expect(spot).not.toBeNull();
+
+        // GPS de verification (haute precision, maximumAge 0) mis en attente : le test decide quand il repond
+        await page.evaluate(() => {
+            window.__gpsWaiting = [];
+            const real = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+            navigator.geolocation.getCurrentPosition = function (ok, err, opts) {
+                if (opts && opts.enableHighAccuracy && opts.maximumAge === 0) { window.__gpsWaiting.push(ok); return; }
+                return real(ok, err, opts);
+            };
+        });
+
+        await page.click('#btn-add-distributor');
+        await page.waitForSelector('#placement-hint.visible', { timeout: 3000 });
+        await page.evaluate(async (s) => {
+            const { mainMap } = await import('./js/state.js');
+            mainMap.fire('click', { latlng: L.latLng(s.lat, s.lng) });
+        }, spot);
+        await page.waitForSelector('.add-distributor-popup', { timeout: 3000 });
+        await page.fill('#new-dist-name', NAME);
+        await page.click('#btn-confirm-add');
+        await page.waitForFunction(() => window.__gpsWaiting.length > 0, null, { timeout: 3000 });
+
+        // Pendant la verification : « Annuler »
+        await page.click('.add-distributor-popup .btn-cancel');
+        await expect(page.locator('.add-distributor-popup')).toHaveCount(0);
+
+        // Le GPS repond ensuite : sur place
+        await page.evaluate((s) => {
+            window.__gpsWaiting.splice(0).forEach((ok) => ok({ coords: { latitude: s.lat, longitude: s.lng, accuracy: 5 }, timestamp: Date.now() }));
+        }, spot);
+        await page.waitForFunction(() => window.AddMode.submitting === false, null, { timeout: 5000 });
+
+        expect(writes.filter((w) => w.table === 'distributors')).toHaveLength(0);
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('snackmatch_user_distributors') || '[]'));
+        expect(saved.filter((d) => d.name === NAME)).toHaveLength(0);
+        expect(await page.evaluate((n) => window.AppState.distributors.some((d) => d.name === n), NAME)).toBe(false);
+    });
+
+    test('une fiche locale sans position ne bloque pas le démarrage et est retirée', async ({ page }) => {
+        await page.evaluate(() => {
+            const base = { type: 'other', emoji: '📦', address: '', city: 'Test', rating: 0,
+                reviewCount: 0, status: 'verified', priceRange: '€', products: [], isUserAdded: true };
+            localStorage.setItem('snackmatch_user_distributors', JSON.stringify([
+                { ...base, id: 'user-bug02-null', name: 'ZZ-BUG02-SANS-POSITION', lat: null, lng: null },
+                { ...base, id: 'user-bug02-ok', name: 'ZZ-BUG02-OK', lat: 43.4931, lng: -1.4752 }
+            ]));
+        });
+        await page.reload();
+        await passWelcome(page);
+
+        // Le chargeur disparait (avant le correctif : il restait affiche, initMainMap levait)
+        await page.waitForFunction(() => {
+            const l = document.getElementById('map-loader');
+            return !l || l.classList.contains('hidden');
+        }, null, { timeout: 20000 });
+        // Les boutons repondent
+        await page.click('.bottom-nav [data-tab="favorites"]');
+        await page.waitForSelector('#subscriptions-view.view-active', { timeout: 3000 });
+
+        const ids = await page.evaluate(() => window.AppState.distributors.map((d) => d.id));
+        expect(ids).not.toContain('user-bug02-null');
+        expect(ids).toContain('user-bug02-ok');
+        const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('snackmatch_user_distributors') || '[]').map((d) => d.id));
+        expect(saved).toEqual(['user-bug02-ok']);
     });
 });
