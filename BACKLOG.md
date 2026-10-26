@@ -57,7 +57,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   - Acceptance : saisie conservée à la relecture ; un seul envoi sur double toucher.
 - [x] BUG-08 En tant que membre dans le navigateur du téléphone, je vois tout le bas de la carte
   — `BUG-08.md` (**vérification de Stéphane** sur téléphone)
-- [ ] BUG-09 En tant que membre, la recherche trouve « Œufs » quand je tape « oeufs » — `BUG-09.md`
+- [x] BUG-09 En tant que membre, la recherche trouve « Œufs » quand je tape « oeufs » — `BUG-09.md`
 - [ ] BUG-10 En tant que membre, « Centrer sur ma position » met les distances à jour — `BUG-10.md`
 
 ### EPIC-R1 Sécurité : fermer les failles de la revue de code (revue du 2026-10-21)

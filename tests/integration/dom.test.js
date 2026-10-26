@@ -1441,3 +1441,59 @@ describe('Tag « Démo » (isDemo)', () => {
         assert.equal(document.getElementById('stats-demo-note').hidden, true);
     });
 });
+
+// ============================================
+// RECHERCHE : ACCENTS, LIGATURE, ADRESSE VIDE (BUG-09)
+// ============================================
+
+const { performSearch } = await import('../../js/navigation.js');
+
+describe('Recherche : accents, ligature et adresse vide (BUG-09)', () => {
+    const base = { type: 'other', emoji: '📍', rating: 4, reviewCount: 0 };
+
+    beforeEach(() => {
+        if (!document.getElementById('search-results')) {
+            document.body.insertAdjacentHTML('beforeend', '<div id="search-results"></div>');
+        }
+        AppState.distributors = [
+            { ...base, id: 'oeufs-ligature', name: 'Ferme A', address: '1 Rue A', products: [{ name: 'Œufs fermiers' }] },
+            { ...base, id: 'oeufs-simple', name: 'Ferme B', address: '2 Rue B', products: [{ name: 'Oeufs bio (x6)' }] },
+            { ...base, id: 'creme', name: 'Laiterie', address: '3 Rue C', products: [{ name: 'Crème fraîche' }] },
+            { ...base, id: 'pain', name: 'Fournil', address: '4 Rue D', products: [{ name: 'Pain' }] }
+        ];
+    });
+
+    function resultIds() {
+        return [...document.querySelectorAll('#search-results .search-item-clean')].map(el => el.dataset.distId);
+    }
+
+    it('« oeufs » trouve « Œufs fermiers » et « Oeufs bio »', () => {
+        performSearch('oeufs');
+        assert.deepEqual(resultIds(), ['oeufs-ligature', 'oeufs-simple']);
+    });
+
+    it('« œufs » et « Œufs » trouvent aussi « Oeufs bio »', () => {
+        performSearch('œufs');
+        assert.deepEqual(resultIds(), ['oeufs-ligature', 'oeufs-simple']);
+        performSearch('Œufs');
+        assert.deepEqual(resultIds(), ['oeufs-ligature', 'oeufs-simple']);
+    });
+
+    it('« creme » trouve « Crème fraîche »', () => {
+        performSearch('creme');
+        assert.deepEqual(resultIds(), ['creme']);
+    });
+
+    it('un espace final (clavier du telephone) ne fait rien rater ; des espaces seuls = suggestions', () => {
+        performSearch('pain ');
+        assert.deepEqual(resultIds(), ['pain']);
+        performSearch('   ');
+        assert.ok(document.querySelector('#search-results .search-suggest-hint'), 'aide de la recherche vide attendue');
+    });
+
+    it('une fiche sans adresse (null) ne casse pas la recherche', () => {
+        AppState.distributors.push({ ...base, id: 'sans-adresse', name: 'Sans adresse', address: null, products: [{ name: 'Pain de campagne' }] });
+        assert.doesNotThrow(() => performSearch('pain'));
+        assert.deepEqual(resultIds(), ['pain', 'sans-adresse']);
+    });
+});
