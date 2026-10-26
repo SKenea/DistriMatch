@@ -46,14 +46,21 @@ export async function refreshMyAdditions() {
     }
     try {
         const [d, m] = await Promise.all([
-            supabaseClient.from('distributors').select('id, name, type, emoji, city, review_status, review_reason, author_read_at, created_at')
-                .eq('added_by', user.id).order('created_at', { ascending: false }),
+            // PRIV-01 (029) : auteur et motif ne se lisent plus dans la table ; la RPC rend
+            // les fiches du compte, de la plus recente a la plus ancienne
+            supabaseClient.rpc('my_distributors'),
             supabaseClient.from('distributor_review_messages').select('id, distributor_id, author, body, created_at').order('created_at', { ascending: true })
         ]);
         // Supabase renvoie ses erreurs sans les lever : les lire (BUG-12)
         if (d.error) throw d.error;
         if (m.error) throw m.error;
         mine = d.data || [];
+        // PRIV-01 : addedById ne vient plus de la table ; connexion sans rechargement
+        // (code recu par e-mail) : ses fiches deja chargees sont reconnues ici
+        const myIds = new Set(mine.map(f => f.id));
+        for (const f of [...AppState.distributors, ...(AppState.rejectedDistributors || [])]) {
+            if (myIds.has(f.id)) f.addedById = user.id;
+        }
         messages = (m.data || []).filter(x => mine.some(f => f.id === x.distributor_id));
         loadError = false;
     } catch (e) {

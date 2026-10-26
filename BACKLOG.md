@@ -29,7 +29,7 @@ medium (`/story <ID>`), une PR à la fois **dans cet ordre** : PRIV-01, PRIV-02,
 PRIV-06, PRIV-07, PRIV-04. Migrations 029 à 033 appliquées par Claude après relecture et essai
 avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
 
-- [ ] PRIV-01 En tant que membre, personne ne peut lire par l'API quel compte a ajouté ou modifié
+- [x] PRIV-01 En tant que membre, personne ne peut lire par l'API quel compte a ajouté ou modifié
   une fiche — `PRIV-01.md` (migration 029)
   - Acceptance : `added_by` / `modified_by` illisibles par l'API ; « Mes ajouts » et Mon profil
     passent par `my_distributors()` ; connexion par code reconnue sans rechargement.
