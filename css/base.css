@@ -136,6 +136,10 @@ body {
     line-height: 1.5;
     overflow: hidden;
     height: 100vh;
+    /* Zone reellement visible (BUG-08) : dans le navigateur du telephone, 100vh
+       compte aussi la place des barres du navigateur, qui restent affichees ici
+       (la page ne defile pas). 100vh reste en repli pour les anciens navigateurs. */
+    height: 100dvh;
 }
 
 /* ==========================================
@@ -324,6 +328,7 @@ body {
     padding: 1rem;
     overflow-y: auto;
     max-height: calc(100vh - 70px);
+    max-height: calc(100dvh - 70px);   /* zone visible, voir body (BUG-08) */
 }
 
 .search-item-clean {
@@ -362,6 +367,7 @@ body {
 .app-container {
     display: flex;
     height: calc(100vh - var(--nav-height));
+    height: calc(100dvh - var(--nav-height));   /* zone visible, voir body (BUG-08) */
     margin-top: var(--nav-height);
 }
 
