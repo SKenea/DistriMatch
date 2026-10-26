@@ -40,7 +40,7 @@ import { isQuietHours, canNotify, markNotified } from '../../js/notifications.js
 import { generateGreetingMessage } from '../../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
 import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY } from '../../js/events.js';
-import { setSupabaseClient } from '../../js/state.js';
+import { setSupabaseClient, DISTRIBUTOR_TYPES, EMBEDDED_DATA } from '../../js/state.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
 
@@ -765,6 +765,26 @@ describe('XSS : aucune donnee dans un attribut on...= (SEC-02)', () => {
             }
         }
         assert.deepEqual(offenders, [], `donnee dans un attribut on...= :\n${offenders.join('\n')}`);
+    });
+});
+
+// BUG-03 : les types vivent a trois endroits (CLAUDE.md) ; un oubli dans DISTRIBUTOR_TYPES
+// rendait « Produits agricoles » impossible a choisir a l'ajout et dans la console
+describe('types de distributeur coherents (BUG-03)', () => {
+    const root = new URL('../../', import.meta.url);
+    const typeIds = DISTRIBUTOR_TYPES.map(t => t.id);
+
+    it('chaque chip de filtre (sauf « Tous ») est un type proposable', () => {
+        const html = readFileSync(new URL('index.html', root), 'utf8');
+        const chips = [...html.matchAll(/class="filter-chip" data-type="([^"]+)"/g)].map(m => m[1]).filter(t => t !== 'all');
+        assert.ok(chips.length > 0, 'aucune chip de filtre trouvee dans index.html');
+        assert.deepEqual(chips.filter(t => !typeIds.includes(t)), [], 'chip sans type dans DISTRIBUTOR_TYPES');
+    });
+
+    it('chaque type proposable a sa config (EMBEDDED_DATA et data/distributors.json)', () => {
+        const data = JSON.parse(readFileSync(new URL('data/distributors.json', root), 'utf8'));
+        assert.deepEqual(typeIds.filter(id => !(id in EMBEDDED_DATA.typeConfig)), [], 'type sans EMBEDDED_DATA.typeConfig');
+        assert.deepEqual(typeIds.filter(id => !(id in data.typeConfig)), [], 'type sans typeConfig dans data/distributors.json');
     });
 });
 

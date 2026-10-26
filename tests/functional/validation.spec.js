@@ -110,6 +110,24 @@ test.describe('37. Validation des nouvelles fiches', () => {
         await expect(page.locator('#toast-container .toast.success')).toContainText('Fiche publiée');
     });
 
+    test('console : un type hors liste reste choisi, Publier ne le réécrit pas ; « Produits agricoles » proposé (BUG-03)', async ({ page }) => {
+        const log = await routeReviewApi(page, {
+            admin: true,
+            pending: [{ id: 'user-new', name: 'Type inconnu', type: 'type-hors-liste', emoji: '🥤', address: null, city: null, lat: 43.49, lng: -1.47,
+                created_at: minutesAgoIso(60), email: 'membre@example.test', products: [], unread: 0 }]
+        });
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('admin'));
+        await page.locator('#admin-pending .admin-request').click();
+        const select = page.locator('#admin-pending-form select[name="type"]');
+        await expect(select).toHaveValue('type-hors-liste');
+        await expect(select.locator('option[value="agricultural"]')).toHaveCount(1);
+        await page.click('#admin-pending-form button[type="submit"]');
+        await expect.poll(() => log.find(l => l.rpc === 'admin_review_distributor')?.body).toEqual({
+            p_id: 'user-new', p_decision: 'publish', p_name: null, p_type: null, p_emoji: null, p_lat: null, p_lng: null
+        });
+    });
+
     test('console : refuser sans motif', async ({ page }) => {
         const log = await routeReviewApi(page, {
             admin: true,
