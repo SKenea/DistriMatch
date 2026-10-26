@@ -160,6 +160,24 @@ test.describe('37. Validation des nouvelles fiches', () => {
         await expect(cards.nth(1).locator('.addition-thread-closed')).toHaveText('Ta fiche est publiée : cet échange est terminé. Tu peux la compléter directement depuis la fiche.');
     });
 
+    test('« Mes ajouts » : chargement en echec -> message et « Réessayer », jamais « pas encore ajouté » (BUG-12)', async ({ page }) => {
+        const mine = [{ id: 'user-a', name: 'Pizza de la gare', type: 'pizza', emoji: '🍕', city: 'Bayonne', review_status: 'pending', review_reason: null, author_read_at: minutesAgoIso(10), created_at: minutesAgoIso(200) }];
+        await routeReviewApi(page, { mine });
+        // Pose apres routeReviewApi : cette route passe en premier
+        let down = true;
+        await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && u.searchParams.has('added_by'),
+            r => r.fulfill(down ? json({ message: 'panne simulee' }, 500) : json(mine)));
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('account'));
+        await expect(page.locator('#account-additions-row')).toBeVisible();
+        await page.click('#account-additions-row');
+        await expect(page.locator('#my-additions-content')).toContainText('Impossible de charger tes ajouts pour l’instant.');
+        await expect(page.locator('#my-additions-content')).not.toContainText('pas encore ajouté');
+        down = false;
+        await page.click('#my-additions-content [data-additions-retry]');
+        await expect(page.locator('#my-additions-content .addition-card')).toHaveCount(1);
+    });
+
     test('console : « Nouveaux distributeurs », doublon signale, publier avec un nom corrige', async ({ page }) => {
         const near = await page.evaluate(() => {
             const d = window.AppState.distributors[0];

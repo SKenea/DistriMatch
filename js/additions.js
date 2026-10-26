@@ -15,6 +15,7 @@ import { switchView, registerViewCallback } from './navigation.js';
 
 let mine = [];          // fiches du compte (toutes, refusees comprises)
 let messages = [];      // fil de chacune
+let loadError = false;  // dernier chargement en echec (BUG-12)
 
 // Fil d'une fiche (membre ou console) : evenements centres, bulles sinon
 export function renderReviewThread(list, me = 'member') {
@@ -35,10 +36,11 @@ function unreadFor(d) {
 }
 
 export async function refreshMyAdditions() {
-    mine = [];
-    messages = [];
     const user = getCurrentUser();
     if (!isAuthenticated() || !supabaseClient || !user?.id) {
+        mine = [];
+        messages = [];
+        loadError = false;
         renderAccountRow();
         return;
     }
@@ -48,10 +50,15 @@ export async function refreshMyAdditions() {
                 .eq('added_by', user.id).order('created_at', { ascending: false }),
             supabaseClient.from('distributor_review_messages').select('id, distributor_id, author, body, created_at').order('created_at', { ascending: true })
         ]);
+        // Supabase renvoie ses erreurs sans les lever : les lire (BUG-12)
+        if (d.error) throw d.error;
+        if (m.error) throw m.error;
         mine = d.data || [];
         messages = (m.data || []).filter(x => mine.some(f => f.id === x.distributor_id));
+        loadError = false;
     } catch (e) {
-        /* hors ligne : rien */
+        console.warn('[DistriMatch] Mes ajouts indisponibles :', e?.message || e);
+        loadError = true;   // ce qui etait deja charge reste affiche
     }
     renderAccountRow();
 }
@@ -59,7 +66,7 @@ export async function refreshMyAdditions() {
 function renderAccountRow() {
     const row = document.getElementById('account-additions-row');
     if (!row) return;
-    row.hidden = !mine.length;
+    row.hidden = !mine.length && !loadError;
     const unread = mine.reduce((n, d) => n + unreadFor(d), 0);
     const pending = mine.filter(d => d.review_status === 'pending').length;
     const label = row.querySelector('.account-row-label');
@@ -72,7 +79,10 @@ function renderAdditionsView() {
     const box = document.getElementById('my-additions-content');
     if (!box) return;
     if (!mine.length) {
-        box.innerHTML = '<p class="admin-empty">Tu n’as pas encore ajouté de distributeur.</p>';
+        box.innerHTML = loadError
+            ? `<p class="admin-empty">Impossible de charger tes ajouts pour l’instant.</p>
+               <button type="button" class="btn-secondary-clean" data-additions-retry>Réessayer</button>`
+            : '<p class="admin-empty">Tu n’as pas encore ajouté de distributeur.</p>';
         return;
     }
     // Echanges ouverts a la main : ils restent ouverts apres un nouveau rendu (BUG-11)
@@ -121,6 +131,10 @@ export function initAdditions() {
     document.getElementById('account-additions-row')?.addEventListener('click', () => switchView('my-additions'));
     const view = document.getElementById('my-additions-view');
     view?.addEventListener('click', (e) => {
+        if (e.target.closest('[data-additions-retry]')) {
+            refreshMyAdditions().then(renderAdditionsView);
+            return;
+        }
         const open = e.target.closest('[data-open-fiche]');
         if (open && AppState.distributors.some(d => d.id === open.dataset.openFiche)) {
             window.openDistributorModal?.(open.dataset.openFiche);

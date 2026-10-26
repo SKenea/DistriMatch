@@ -657,6 +657,37 @@ test.describe('38. Mon activité et cohérence', () => {
         await expect(page.locator('#account-meta')).toHaveText('Connecté');
     });
 
+    test('membre : historique affiche, plus de « Rien pour l’instant » dessous (BUG-12)', async ({ page }) => {
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        await page.route('**/rest/v1/rpc/my_activity', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+            { kind: 'review', at: new Date(Date.now() - 60000).toISOString(), distributor_id: id, distributor_name: 'Test', product_name: null, state: '5', detail: null }
+        ]) }));
+        await page.evaluate(() => window.__testLogin());
+        await page.click('.bottom-nav [data-tab="activity"]');
+        await page.waitForSelector('#activity-view.view-active');
+        await expect(page.locator('#activity-list .activity-row')).toHaveCount(1);
+        await expect(page.locator('#activity-empty')).toBeHidden();
+    });
+
+    test('membre : historique indisponible -> message et « Réessayer » (BUG-12)', async ({ page }) => {
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        let down = true;
+        await page.route('**/rest/v1/rpc/my_activity', r => r.fulfill(down
+            ? { status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'panne simulee' }) }
+            : { status: 200, contentType: 'application/json', body: JSON.stringify([
+                { kind: 'review', at: new Date(Date.now() - 60000).toISOString(), distributor_id: id, distributor_name: 'Test', product_name: null, state: '5', detail: null }
+            ]) }));
+        await page.evaluate(() => window.__testLogin());
+        await page.click('.bottom-nav [data-tab="activity"]');
+        await page.waitForSelector('#activity-view.view-active');
+        await expect(page.locator('#activity-empty')).toContainText('Impossible de charger ton historique pour l’instant');
+        await expect(page.locator('#activity-empty')).not.toContainText('Rien pour l’instant');
+        down = false;
+        await page.click('#activity-retry');
+        await expect(page.locator('#activity-list .activity-row')).toHaveCount(1);
+        await expect(page.locator('#activity-empty')).toBeHidden();
+    });
+
     test('visiteur : « Mon activité » invite a se connecter ; accueil sans « sans compte » ni « machine »', async ({ page }) => {
         await page.click('.bottom-nav [data-tab="activity"]');
         await page.waitForSelector('#activity-view.view-active');
