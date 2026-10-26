@@ -48,7 +48,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   - Acceptance : le type est proposé ; test garde-fou de cohérence des types.
 - [x] BUG-06 En tant qu'admin, écrire au membre ne m'efface plus mes corrections — `BUG-06.md`
   - Acceptance : nom, type et position corrigés conservés jusqu'à « Publier ».
-- [ ] BUG-11 En tant que membre, mes messages dans « Mes ajouts » arrivent ou je sais que
+- [x] BUG-11 En tant que membre, mes messages dans « Mes ajouts » arrivent ou je sais que
   l'échange est terminé — `BUG-11.md`
   - Acceptance : champ seulement sur une fiche en attente ; fil ouvert après envoi ; pas de doublon.
 - [ ] BUG-12 En tant que membre, « Mon activité » et « Mes ajouts » ne mentent plus — `BUG-12.md`
