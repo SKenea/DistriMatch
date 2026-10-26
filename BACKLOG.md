@@ -46,7 +46,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   - Acceptance : toutes les clés de l'utilisateur effacées (liste justifiée), carte non recadrée.
 - [x] BUG-03 En tant que membre, je peux ajouter un distributeur « Produits agricoles » — `BUG-03.md`
   - Acceptance : le type est proposé ; test garde-fou de cohérence des types.
-- [ ] BUG-06 En tant qu'admin, écrire au membre ne m'efface plus mes corrections — `BUG-06.md`
+- [x] BUG-06 En tant qu'admin, écrire au membre ne m'efface plus mes corrections — `BUG-06.md`
   - Acceptance : nom, type et position corrigés conservés jusqu'à « Publier ».
 - [ ] BUG-11 En tant que membre, mes messages dans « Mes ajouts » arrivent ou je sais que
   l'échange est terminé — `BUG-11.md`

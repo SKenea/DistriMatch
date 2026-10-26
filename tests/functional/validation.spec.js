@@ -36,6 +36,23 @@ async function routeReviewApi(page, { admin = false, mine = [], messages = [], p
     return log;
 }
 
+// BUG-06 : glisse le repere de la mini-carte de 40 px ; rend la position posee (data-lat / data-lng)
+async function dragPendingPin(page) {
+    const pin = page.locator('#admin-pending-map .leaflet-marker-icon');
+    await expect(pin).toBeVisible();
+    await page.waitForTimeout(300);   // invalidateSize (50 ms) peut encore deplacer le repere
+    const box = await pin.boundingBox();
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 40, y + 40, { steps: 10 });
+    await page.mouse.up();
+    const map = page.locator('#admin-pending-map');
+    await expect(map).toHaveAttribute('data-lat', /\d/);
+    return { lat: Number(await map.getAttribute('data-lat')), lng: Number(await map.getAttribute('data-lng')) };
+}
+
 test.describe('37. Validation des nouvelles fiches', () => {
     test('fiche en attente (son auteur) : bandeau, rien a signaler, pas d’avis ni d’exploitant', async ({ page }) => {
         await routeReviewApi(page);
@@ -140,5 +157,62 @@ test.describe('37. Validation des nouvelles fiches', () => {
         await page.click('[data-admin-action="reject-fiche"]');
         await page.click('#admin-reject-fiche-form button[type="submit"]');
         await expect.poll(() => log.find(l => l.rpc === 'admin_review_distributor')?.body).toEqual({ p_id: 'user-new', p_decision: 'reject', p_reason: null });
+    });
+
+    test('console : écrire au membre garde le nom et la position corrigés (BUG-06)', async ({ page }) => {
+        const log = await routeReviewApi(page, {
+            admin: true,
+            pending: [{ id: 'user-new', name: 'Fiche à corriger', type: 'pizza', emoji: '🍕', address: '1 rue Test', city: 'Bayonne', lat: 43.49, lng: -1.47,
+                created_at: minutesAgoIso(60), email: 'membre@example.test', products: [], unread: 0 }]
+        });
+        // Fil simule : renvoie les messages deja postes (pose apres routeReviewApi, donc prioritaire)
+        await page.route(u => u.pathname.endsWith('/rest/v1/distributor_review_messages'), r => r.fulfill(json(
+            log.filter(l => l.rpc === 'post_review_message')
+                .map((l, i) => ({ id: i + 1, distributor_id: 'user-new', author: 'admin', body: l.body.p_body, created_at: new Date().toISOString() }))
+        )));
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('admin'));
+        await page.locator('#admin-pending .admin-request').click();
+        await page.fill('#admin-pending-form input[name="name"]', 'Pizza corrigée');
+        const moved = await dragPendingPin(page);
+
+        await page.fill('#admin-review-input', 'J’ai corrigé la position.');
+        await page.click('#admin-review-composer .op-send');
+        await expect(page.locator('#admin-detail .op-thread')).toContainText('J’ai corrigé la position.');
+        await expect(page.locator('#admin-pending-form input[name="name"]')).toHaveValue('Pizza corrigée');
+        await expect(page.locator('#admin-pending-map')).toHaveAttribute('data-lat', String(moved.lat));
+
+        await page.click('#admin-pending-form button[type="submit"]');
+        await expect.poll(() => log.find(l => l.rpc === 'admin_review_distributor')?.body).toEqual({
+            p_id: 'user-new', p_decision: 'publish', p_name: 'Pizza corrigée', p_type: null, p_emoji: null, p_lat: moved.lat, p_lng: moved.lng
+        });
+    });
+
+    test('console : quitter puis rouvrir la page Admin garde les corrections (BUG-06)', async ({ page }) => {
+        const log = await routeReviewApi(page, {
+            admin: true,
+            pending: [{ id: 'user-new', name: 'Fiche à corriger', type: 'pizza', emoji: '🍕', address: '1 rue Test', city: 'Bayonne', lat: 43.49, lng: -1.47,
+                created_at: minutesAgoIso(60), email: 'membre@example.test', products: [], unread: 0 }]
+        });
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('admin'));
+        await page.locator('#admin-pending .admin-request').click();
+        await page.fill('#admin-pending-form input[name="name"]', 'Pizza corrigée');
+        await page.selectOption('#admin-pending-form select[name="type"]', 'bakery');
+        const moved = await dragPendingPin(page);
+
+        // Marque l'ancien formulaire : on attend ensuite le formulaire reconstruit par loadAdmin
+        await page.evaluate(() => { document.getElementById('admin-pending-form').dataset.old = '1'; });
+        await page.evaluate(() => window.switchView('favorites'));
+        await page.evaluate(() => window.switchView('admin'));
+        await page.waitForSelector('#admin-pending-form:not([data-old])', { timeout: 5000 });
+        await expect(page.locator('#admin-pending-form input[name="name"]')).toHaveValue('Pizza corrigée');
+        await expect(page.locator('#admin-pending-form select[name="type"]')).toHaveValue('bakery');
+        await expect(page.locator('#admin-pending-map')).toHaveAttribute('data-lat', String(moved.lat));
+
+        await page.click('#admin-pending-form button[type="submit"]');
+        await expect.poll(() => log.find(l => l.rpc === 'admin_review_distributor')?.body).toEqual({
+            p_id: 'user-new', p_decision: 'publish', p_name: 'Pizza corrigée', p_type: 'bakery', p_emoji: '🥖', p_lat: moved.lat, p_lng: moved.lng
+        });
     });
 });
