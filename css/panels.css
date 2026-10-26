@@ -389,6 +389,11 @@
     gap: 0.5rem;
 }
 
+/* Etat vide masque par l'attribut hidden : le display: flex ci-dessus l'emporterait (BUG-12) */
+.empty-state[hidden] {
+    display: none;
+}
+
 .empty-icon {
     margin-bottom: 0.5rem;
     color: var(--text-muted);

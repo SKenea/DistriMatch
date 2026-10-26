@@ -12,6 +12,7 @@ import { escapeHTML, timeAgo, describeActivityItem } from './utils.js';
 import { isAuthenticated, requireAuth, onAuthChange } from './auth.js';
 
 let items = [];
+let loadError = false;   // dernier chargement en echec (BUG-12)
 let filter = 'all';
 const FILTERS = { all: null, signal: ['signal'], addition: ['addition'], review: ['review', 'operator'] };
 
@@ -40,6 +41,16 @@ function render() {
     if (filters) filters.hidden = false;
     const rows = visible();
     if (count) count.textContent = items.length ? String(items.length) : '';
+    // Echec du chargement sans historique deja affiche : le dire, ne pas montrer une liste vide (BUG-12)
+    if (loadError && !items.length) {
+        list.innerHTML = '';
+        empty.hidden = false;
+        empty.innerHTML = `<div class="empty-icon" aria-hidden="true">🕘</div>
+            <h3>Impossible de charger ton historique pour l’instant</h3>
+            <p>Vérifie ta connexion, puis réessaie.</p>
+            <button type="button" class="btn-primary-clean activity-retry" id="activity-retry">Réessayer</button>`;
+        return;
+    }
     empty.hidden = rows.length > 0;
     if (!rows.length) {
         empty.innerHTML = `<div class="empty-icon" aria-hidden="true">🕘</div>
@@ -67,9 +78,10 @@ export async function renderMyActivity() {
         const { data, error } = await supabaseClient.rpc('my_activity');
         if (error) throw error;
         items = data || [];
+        loadError = false;
     } catch (e) {
         console.warn('[DistriMatch] Historique indisponible :', e?.message || e);
-        items = [];
+        loadError = true;   // l'historique deja affiche reste affiche (BUG-12)
     }
     render();
 }
@@ -77,6 +89,7 @@ export async function renderMyActivity() {
 export function initMyActivity() {
     onAuthChange(() => {
         items = [];
+        loadError = false;
         if (document.getElementById('activity-view')?.classList.contains('view-active')) renderMyActivity();
     });
     document.querySelector('.activity-filters')?.addEventListener('click', (e) => {
@@ -94,6 +107,10 @@ export function initMyActivity() {
     view?.addEventListener('click', (e) => {
         if (e.target.closest('#activity-login')) {
             requireAuth();
+            return;
+        }
+        if (e.target.closest('#activity-retry')) {
+            renderMyActivity();
             return;
         }
         const row = e.target.closest('.activity-row[data-distributor-id]');
