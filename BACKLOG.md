@@ -55,7 +55,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   - Acceptance : pas de « Rien pour l'instant » sous l'historique ; erreur annoncée avec « Réessayer ».
 - [x] BUG-15 En tant que futur exploitant, ma saisie du SIRET ou du code n'est plus effacée — `BUG-15.md`
   - Acceptance : saisie conservée à la relecture ; un seul envoi sur double toucher.
-- [ ] BUG-08 En tant que membre dans le navigateur du téléphone, je vois tout le bas de la carte
+- [x] BUG-08 En tant que membre dans le navigateur du téléphone, je vois tout le bas de la carte
   — `BUG-08.md` (**vérification de Stéphane** sur téléphone)
 - [ ] BUG-09 En tant que membre, la recherche trouve « Œufs » quand je tape « oeufs » — `BUG-09.md`
 - [ ] BUG-10 En tant que membre, « Centrer sur ma position » met les distances à jour — `BUG-10.md`

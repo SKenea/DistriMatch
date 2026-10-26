@@ -2081,3 +2081,29 @@ describe('countMyAdditions (BUG-07)', () => {
         assert.equal(countMyAdditions(undefined, undefined, undefined), 0);
     });
 });
+
+// ============================================
+// TELEPHONE : HAUTEUR DE LA ZONE VISIBLE (BUG-08)
+// ============================================
+// Playwright ne simule pas la barre d'adresse du telephone : on verifie la regle CSS.
+// Chaque hauteur d'ecran de css/base.css a un repli en 100vh PUIS sa version en 100dvh.
+
+describe('Telephone : hauteur de la zone visible (BUG-08)', () => {
+    const css = readFileSync(new URL('../../css/base.css', import.meta.url), 'utf8');
+
+    function ruleBody(selector) {
+        const m = css.match(new RegExp(`^${selector.replace(/[.]/g, '\\.')}\\s*\\{([^}]*)\\}`, 'm'));
+        assert.ok(m, `regle ${selector} introuvable dans css/base.css`);
+        return m[1];
+    }
+
+    for (const [selector, prop] of [['body', 'height'], ['.app-container', 'height'], ['.search-results-clean', 'max-height']]) {
+        it(`${selector} : ${prop} en 100dvh, apres le repli 100vh`, () => {
+            const rule = ruleBody(selector);
+            const vh = rule.search(new RegExp(`(^|[;\\s])${prop}:[^;]*100vh`));
+            const dvh = rule.search(new RegExp(`(^|[;\\s])${prop}:[^;]*100dvh`));
+            assert.ok(vh >= 0, `${selector} : repli ${prop} en 100vh absent (vieux navigateurs)`);
+            assert.ok(dvh > vh, `${selector} : ${prop} en 100dvh absent ou place avant le repli 100vh`);
+        });
+    }
+});
