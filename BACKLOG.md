@@ -53,7 +53,7 @@ BUG-15, BUG-08, BUG-09, BUG-10.
   - Acceptance : champ seulement sur une fiche en attente ; fil ouvert après envoi ; pas de doublon.
 - [x] BUG-12 En tant que membre, « Mon activité » et « Mes ajouts » ne mentent plus — `BUG-12.md`
   - Acceptance : pas de « Rien pour l'instant » sous l'historique ; erreur annoncée avec « Réessayer ».
-- [ ] BUG-15 En tant que futur exploitant, ma saisie du SIRET ou du code n'est plus effacée — `BUG-15.md`
+- [x] BUG-15 En tant que futur exploitant, ma saisie du SIRET ou du code n'est plus effacée — `BUG-15.md`
   - Acceptance : saisie conservée à la relecture ; un seul envoi sur double toucher.
 - [ ] BUG-08 En tant que membre dans le navigateur du téléphone, je vois tout le bas de la carte
   — `BUG-08.md` (**vérification de Stéphane** sur téléphone)

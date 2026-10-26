@@ -282,7 +282,18 @@ export async function openOperatorRequest(requestId) {
     document.getElementById('operator-request-view')?.scrollTo?.(0, 0);
 }
 
-async function renderOperatorRequestView() {
+// Demande + etat affiches dans « Ma demande » : une relecture ne reconstruit la carte
+// « Ce qu'il te reste à faire » (et ses champs SIRET / code) que s'ils changent (BUG-15).
+// code_attempts n'y est pas : le message « Code incorrect » reste affiche.
+let renderedTodoKey = null;
+
+function todoKey(req) {
+    return `${req.id}|${req.status}|${req.code_sent_at || ''}`;
+}
+
+// options.keepTodo : relecture (minuteur, message envoye) qui garde la saisie si l'etat
+// n'a pas change
+async function renderOperatorRequestView(options = {}) {
     const view = document.getElementById('operator-request-content');
     const req = mine.requests.find(r => r.id === openRequestId);
     if (!view || !req) return;
@@ -290,7 +301,10 @@ async function renderOperatorRequestView() {
     const status = describeOperatorStatus(req.status);
     const messages = await loadOperatorMessages(req.id);
     if (openRequestId !== req.id) return;
-    view.innerHTML = `
+    // Meme etat qu'a l'ecran : seul le fil change, la saisie et le focus restent (BUG-15)
+    const thread = document.getElementById('op-thread');
+    if (options.keepTodo && thread && renderedTodoKey === todoKey(req)) thread.innerHTML = renderOperatorThread(req, messages, 'member');
+    else view.innerHTML = `
         <div class="op-head">
             <p class="op-head-sub">${escapeHTML(OPERATOR_RELATIONS[req.relation] || '')} · ${escapeHTML(d?.name || '')}</p>
             <span class="operator-status is-${status.tone}">${escapeHTML(status.label)}</span>
@@ -299,6 +313,7 @@ async function renderOperatorRequestView() {
         <section class="op-todo is-${req.status}" aria-labelledby="op-todo-title"><p class="op-todo-kicker" id="op-todo-title">Ce qu’il te reste à faire</p>${renderTodo(req)}</section>
         <h3 class="account-section-label op-thread-title">Échange avec l’équipe <span>réponse visible ici, sans e-mail</span></h3>
         <div class="op-thread" id="op-thread" aria-live="polite">${renderOperatorThread(req, messages, 'member')}</div>`;
+    renderedTodoKey = todoKey(req);
     document.getElementById('op-composer')?.removeAttribute('hidden');
     // Lu : on remet le compteur a zero
     if ((mine.unread.get(req.id) || 0) > 0 && supabaseClient) {
@@ -311,14 +326,23 @@ async function renderOperatorRequestView() {
 
 async function submitSiret(form) {
     const errorEl = document.getElementById('op-siret-error');
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn.disabled) return;   // envoi deja en cours (double toucher, Entree + bouton) : BUG-15
     const value = form.siret.value;
     if (!isValidSiret(value)) {
         errorEl.textContent = 'SIRET invalide : vérifie les 14 chiffres.';
         errorEl.hidden = false;
         return;
     }
-    const { error } = await supabaseClient.rpc('submit_operator_siret', { p_request_id: openRequestId, p_siret: value });
+    btn.disabled = true;
+    let error = null;
+    try {
+        ({ error } = await supabaseClient.rpc('submit_operator_siret', { p_request_id: openRequestId, p_siret: value }));
+    } catch (e) {
+        error = e;
+    }
     if (error) {
+        btn.disabled = false;
         errorEl.textContent = describeOperatorRequestError(error);
         errorEl.hidden = false;
         return;
@@ -330,19 +354,30 @@ async function submitSiret(form) {
 
 async function submitCode(form) {
     const errorEl = document.getElementById('op-code-error');
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn.disabled) return;   // essai deja en cours : un double toucher ne coute pas deux essais (BUG-15)
     const code = form.code.value.replace(/\D/g, '');
     if (code.length !== 5) {
         errorEl.textContent = 'Le code a 5 chiffres.';
         errorEl.hidden = false;
         return;
     }
-    const { data, error } = await supabaseClient.rpc('verify_operator_code', { p_request_id: openRequestId, p_code: code });
+    btn.disabled = true;
+    let data = null;
+    let error = null;
+    try {
+        ({ data, error } = await supabaseClient.rpc('verify_operator_code', { p_request_id: openRequestId, p_code: code }));
+    } catch (e) {
+        error = e;
+    }
     if (error) {
+        btn.disabled = false;
         errorEl.textContent = describeOperatorRequestError(error);
         errorEl.hidden = false;
         return;
     }
     if (!data?.ok) {
+        btn.disabled = false;
         errorEl.textContent = describeCodeResult(data);
         errorEl.hidden = false;
         form.code.value = '';
@@ -371,7 +406,7 @@ async function sendMemberMessage(form) {
         return;
     }
     form.body.value = '';
-    renderOperatorRequestView();
+    renderOperatorRequestView({ keepTodo: true });
 }
 
 // Les 5 cases suivent le champ unique (one-time-code)
@@ -385,6 +420,12 @@ function syncCodeBoxes(input) {
     });
 }
 
+// Relecture de « Ma demande » (minuteur des 30 s ; exportee pour les tests) : l'etat du
+// compte, puis le fil seul si l'etat de la demande n'a pas change (BUG-15)
+export function pollOperatorRequest() {
+    return refreshOperatorState().then(() => renderOperatorRequestView({ keepTodo: true }));
+}
+
 export function initOperators() {
     onAuthChange(() => refreshOperatorState());
     refreshOperatorState();
@@ -396,7 +437,7 @@ export function initOperators() {
                 clearInterval(pollTimer);
                 return;
             }
-            refreshOperatorState().then(renderOperatorRequestView);
+            pollOperatorRequest();
         }, 30000);
     });
     const box = document.getElementById('dist-operator');
