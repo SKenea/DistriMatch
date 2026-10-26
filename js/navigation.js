@@ -4,7 +4,7 @@
 
 import { AppState, Conversations, UserProfile, mainMap } from './state.js';
 import {
-    escapeHTML, formatDistance, updateImplicitProfile, getTopPreferredTypes, loadUserDistributors, getLevelInfo, countMyAdditions
+    escapeHTML, formatDistance, updateImplicitProfile, getTopPreferredTypes, loadUserDistributors, getLevelInfo, countMyAdditions, normalizeName
 } from './utils.js';
 import { getCurrentUser } from './auth.js';
 import { updateMapMarkers } from './map.js';
@@ -173,19 +173,22 @@ export function closeSearch() {
 
 export function performSearch(query) {
     const results = document.getElementById('search-results');
+    // Compare sans casse, accents, ligature ni espaces en trop (BUG-09) :
+    // « œufs », « Oeufs » et « oeufs » se trouvent l'un l'autre, « creme » trouve « Crème »
+    const q = normalizeName(query);
 
-    if (query.length < 2) {
+    if (q.length < 2) {
         renderSearchSuggestions();
         return;
     }
 
     updateImplicitProfile('search', { query });
-    const q = query.toLowerCase();
 
+    // normalizeName accepte null : une fiche sans adresse ne casse plus la recherche
     const matches = AppState.distributors.filter(d => {
-        const nameMatch = d.name.toLowerCase().includes(q);
-        const addressMatch = d.address.toLowerCase().includes(q);
-        const productMatch = d.products.some(p => p.name.toLowerCase().includes(q));
+        const nameMatch = normalizeName(d.name).includes(q);
+        const addressMatch = normalizeName(d.address).includes(q);
+        const productMatch = (d.products || []).some(p => normalizeName(p.name).includes(q));
         return nameMatch || addressMatch || productMatch;
     });
 
