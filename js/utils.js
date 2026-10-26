@@ -952,6 +952,15 @@ export function describeReviewError(error, status = 0, online = true) {
     return `Avis non publié, réessaie plus tard (code ${error?.code || status || '?'})`;
 }
 
+// PRIV-01 (029) : colonnes lues par l'app, ouvertes a l'API colonne par colonne.
+// Jamais select('*') sur distributors / products : une colonne non ouverte (added_by,
+// modified_by, reviewed_by, review_reason, author_read_at...) fait echouer TOUTE la
+// lecture (42501) et l'app retombe sur le JSON de demo. Nouvelle colonne a lire =
+// l'ouvrir d'abord par une migration (GRANT SELECT). L'auteur relit ses propres fiches
+// par la RPC my_distributors. Garde-fou : test unitaire « colonnes lues par l'app ».
+export const DISTRIBUTOR_PUBLIC_COLUMNS = 'id, name, type, emoji, address, city, lat, lng, rating, review_count, status, last_verified, price_range, is_user_added, is_demo, source, tz, opening_hours, review_status, created_at';
+export const PRODUCT_PUBLIC_COLUMNS = 'id, name, price, available';
+
 // Ligne Supabase (snake_case, produits imbriques) -> distributeur de l'app
 // (camelCase). isDemo vient de distributors.is_demo (migration 010) : true
 // = fiche du jeu de donnees factice ; absent (migration pas encore passee)

@@ -22,7 +22,7 @@ import {
     productToneRank, describeMachineNotice, productIconKey,
     describeMenuHeader, cleanProductName, isDuplicateProductName,
     suggestProducts, searchProductSuggestions, PRODUCT_SUGGESTIONS,
-    mapDistributorRow, diffFavoriteSignals,
+    mapDistributorRow, diffFavoriteSignals, DISTRIBUTOR_PUBLIC_COLUMNS, PRODUCT_PUBLIC_COLUMNS,
     describeOpeningHours, parseOpeningHours, isNearDistributor, describeNearbyNudge,
     validateOperatorRequest, describeOperatorRequestError, describeDistributorSummary,
     OPERATOR_RELATIONS, describeOperatorStatus, isValidSiret, formatSiret, countUnreadMessages, describeCodeResult, assessSirene,
@@ -803,6 +803,44 @@ describe('aucun territoire en dur dans index.html et manifest.json', () => {
 // ============================================
 // Le front lit is_demo, ne l'ecrit jamais. Absent (migration pas encore
 // passee) = reel : aucun tag ne s'affiche a tort.
+
+// PRIV-01 (029) : l'app ne lit que les colonnes ouvertes a l'API. Une colonne non ouverte
+// (ou un select('*')) fait echouer toute la lecture des fiches (42501) : l'app retombe
+// sur le JSON de demo pour tout le monde.
+describe('colonnes lues par l’app = colonnes ouvertes par la base (PRIV-01, 029)', () => {
+    const root = new URL('../../', import.meta.url);
+    const sql = readFileSync(new URL('supabase/029_private_contributors.sql', root), 'utf8');
+    const columns = (list) => list.split(',').map(c => c.trim()).filter(Boolean);
+    const granted = (table) => {
+        const m = sql.match(new RegExp(`grant select \\(([^)]*)\\)\\s+on ${table} to anon, authenticated`, 'i'));
+        assert.ok(m, `grant select (...) on ${table} introuvable dans 029`);
+        return columns(m[1]);
+    };
+    const PRIVATE = ['added_by', 'modified_by', 'reviewed_by', 'reviewed_at', 'review_reason', 'author_read_at', 'removed_by'];
+
+    it('distributors : chaque colonne lue est ouverte, aucune colonne privee, pas de « * »', () => {
+        const open = granted('distributors');
+        for (const c of columns(DISTRIBUTOR_PUBLIC_COLUMNS)) assert.ok(open.includes(c), `${c} lue mais non ouverte`);
+        for (const c of PRIVATE) {
+            assert.ok(!open.includes(c), `${c} ouverte`);
+            assert.ok(!columns(DISTRIBUTOR_PUBLIC_COLUMNS).includes(c), `${c} lue`);
+        }
+        assert.ok(!DISTRIBUTOR_PUBLIC_COLUMNS.includes('*'));
+    });
+
+    it('products : colonnes lues + distributor_id (imbrication) + removed_at (vue product_availability) ouvertes, aucune colonne privee', () => {
+        const open = granted('products');
+        for (const c of [...columns(PRODUCT_PUBLIC_COLUMNS), 'distributor_id', 'removed_at']) assert.ok(open.includes(c), `${c} non ouverte`);
+        for (const c of PRIVATE) assert.ok(!open.includes(c), `${c} ouverte`);
+    });
+
+    it('aucun select(\'*\') sur distributors ni products dans js/', () => {
+        for (const f of readdirSync(new URL('js/', root)).filter(f => f.endsWith('.js'))) {
+            const src = readFileSync(new URL(`js/${f}`, root), 'utf8');
+            assert.doesNotMatch(src, /from\('(distributors|products)'\)\s*\.select\(\s*['"`]\s*\*/, f);
+        }
+    });
+});
 
 describe('mapDistributorRow (ligne Supabase -> distributeur, isDemo)', () => {
     const row = (extra = {}) => ({

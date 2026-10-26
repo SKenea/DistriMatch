@@ -111,7 +111,7 @@ test.describe('33. Machines seulement locales', () => {
 
     test('copie locale d’une fiche refusée : quitte le téléphone, ni pastille ni bandeau (BUG-07)', async ({ page, context }) => {
         // Base simulee : la vraie reponse + la fiche refusee (son auteur la lit, regle 022)
-        await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && (u.searchParams.get('select') || '').startsWith('*'), async route => {
+        await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && (u.searchParams.get('select') || '').includes('products('), async route => {
             if (route.request().method() !== 'GET') return route.continue();
             const res = await route.fetch();
             const rows = await res.json();

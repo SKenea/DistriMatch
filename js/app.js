@@ -12,7 +12,7 @@ import {
 } from './state.js';
 
 import {
-    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId, DISTRIBUTOR_PUBLIC_COLUMNS, PRODUCT_PUBLIC_COLUMNS
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -91,17 +91,23 @@ function initSupabase() {
 async function loadDistributorsFromSupabase() {
     if (!supabaseClient) return null;
     try {
-        const [{ data, error }, ratingsRes, operatorsRes] = await Promise.all([
-            supabaseClient.from('distributors').select('*, products(id, name, price, available)'),
+        // PRIV-01 (029) : colonnes listees, jamais '*' (une colonne non ouverte ferait
+        // echouer toute la lecture) ; les fiches du compte viennent de my_distributors
+        const [{ data, error }, ratingsRes, operatorsRes, mineRes] = await Promise.all([
+            supabaseClient.from('distributors').select(`${DISTRIBUTOR_PUBLIC_COLUMNS}, products(${PRODUCT_PUBLIC_COLUMNS})`),
             supabaseClient.from('distributor_ratings').select('distributor_id, avis, moyenne'),
-            supabaseClient.from('distributor_operators').select('distributor_id')
+            supabaseClient.from('distributor_operators').select('distributor_id'),
+            supabaseClient.rpc('my_distributors')
         ]);
         if (error) throw error;
         if (!data || data.length === 0) return null;
 
+        // PRIV-01 : auteur, motif de refus et lecture du fil de SES fiches (vide pour un
+        // visiteur ; RPC en echec = aucune fiche reconnue comme sienne, rien ne casse)
+        const mine = new Map(!mineRes?.error && Array.isArray(mineRes?.data) ? mineRes.data.map(m => [m.id, m]) : []);
         // EPIC-T21 : une fiche refusee n'est visible que dans « Mes ajouts » ; une fiche
         // en attente n'est lue (RLS) que par son auteur et l'admin
-        const rows = data.map(mapDistributorRow);
+        const rows = data.map(r => mapDistributorRow(mine.has(r.id) ? { ...r, ...mine.get(r.id) } : r));
         const distributors = rows.filter(d => d.reviewStatus !== 'rejected');
         // BUG-07 : les fiches refusees restent des contributions (compteur de Mon profil,
         // moderation ulterieure) : gardees a part, hors carte et hors liste

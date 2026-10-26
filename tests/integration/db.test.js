@@ -530,6 +530,7 @@ describe('base : validation des nouvelles fiches (022)', { skip: SKIP }, () => {
         assert.equal(pub.result, 'Nom corrige itest|published|43.5');
         const rej = await probe(`${MAKE_ADMIN} ${AS_USER} ${ADD()};
             perform admin_review_distributor('itest-rev', 'reject');
+            reset role;   -- PRIV-01 (029) : review_reason ne se lit plus par l'API (l'auteur : my_distributors)
             r := (select review_status || '|' || coalesce(review_reason, '-') from distributors where id = 'itest-rev')
                 || '|' || (select body from distributor_review_messages where distributor_id = 'itest-rev' order by id desc limit 1)`);
         assert.ok(rej.reachedEnd, rej.message);
@@ -722,6 +723,7 @@ describe('base : ajout de fiche et niveau de prix (027, SEC-05)', { skip: SKIP }
                                       modified_by, last_verified, status, rating, review_count, tz)
             values ('itest-forge', 'Fiche itest', 'other', 43.49, -1.47, true, ${USER}, '2000-01-01', '2000-01-01',
                     v_other, now(), 'warning', 4.9, 999, 'Pas/Un_Fuseau');
+            reset role;   -- PRIV-01 (029) : modified_by ne se lit plus par l'API
             r := (select (created_at = now())::text || '|' || (updated_at = now())::text
                   || '|' || coalesce((modified_by = ${USER})::text, 'null') || '|' || coalesce(last_verified::text, 'null')
                   || '|' || status || '|' || rating::text || '|' || review_count::text || '|' || coalesce(tz, 'null')
@@ -1002,6 +1004,96 @@ describe('base : petites failles fermees (028)', { skip: SKIP }, () => {
             (select count(*)::int from pg_policies where schemaname = 'public' and tablename = 'distributor_photos' and cmd = 'INSERT') as ajout_photos,
             (select file_size_limit::int from storage.buckets where id = 'distributor-photos') as taille_max`);
         assert.deepEqual(r, { verrou: true, anon_report: false, auth_report: false, auth_vote: false, search_path_fixe: 3, envoi_photos: 0, ajout_photos: 0, taille_max: 2097152 });
+    });
+});
+
+// PRIV-01 (029) : le compte qui signale, modifie ou ajoute une fiche n'est plus lisible
+describe('base : auteurs des fiches et des produits illisibles (029)', { skip: SKIP }, () => {
+    // Retour en postgres SANS jeton (comme le SQL Editor)
+    const AS_POSTGRES = `perform set_config('request.jwt.claims', '', true); reset role;`;
+    const ADD = `insert into distributors (id, name, type, lat, lng, is_user_added, added_by) values ('itest-priv', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER})`;
+    const OTHER = `(select id from auth.users where id <> ${USER} order by created_at limit 1)`;
+    // Copie de DISTRIBUTOR_PUBLIC_COLUMNS (js/utils.js) ; produits : PRODUCT_PUBLIC_COLUMNS + distributor_id (imbrication)
+    const FRONT_DISTRIBUTOR_COLUMNS = 'id, name, type, emoji, address, city, lat, lng, rating, review_count, status, last_verified, price_range, is_user_added, is_demo, source, tz, opening_hours, review_status, created_at';
+    const FRONT_PRODUCT_COLUMNS = 'id, distributor_id, name, price, available';
+
+    it('ni un visiteur ni un compte ne lisent l’auteur, le moderateur ou le motif d’une fiche, ni l’auteur d’un produit (42501)', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            for (const col of ['added_by', 'modified_by', 'reviewed_by', 'reviewed_at', 'review_reason', 'author_read_at']) {
+                const p = await probe(`${role} perform ${col} from distributors limit 1`);
+                assert.equal(p.code, '42501', `distributors.${col}`);
+            }
+            for (const col of ['modified_by', 'removed_by']) {
+                const p = await probe(`${role} perform ${col} from products limit 1`);
+                assert.equal(p.code, '42501', `products.${col}`);
+            }
+            const star = await probe(`${role} perform * from distributors limit 1`);
+            assert.equal(star.code, '42501', 'select * refuse : l’app liste ses colonnes');
+        }
+    });
+
+    it('les colonnes lues par l’app, les produits et les vues d’etat restent lisibles', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            const p = await probe(`${role}
+                r := (select count(*) from (select ${FRONT_DISTRIBUTOR_COLUMNS} from distributors) d)::text
+                  || '|' || (select count(*) from (select ${FRONT_PRODUCT_COLUMNS} from products) p)::text
+                  || '|' || (select count(*) from product_availability)::text
+                  || '|' || (select count(*) from distributor_status)::text`);
+            assert.ok(p.reachedEnd, p.message);
+            const [fiches, produits] = p.result.split('|').map(Number);
+            assert.ok(fiches > 0, 'fiches');
+            assert.ok(produits > 0, 'produits');
+        }
+    });
+
+    it('ajouter un produit et relire son id (insert ... returning id, comme l’app) : accepte', async () => {
+        const p = await probe(`delete from product_edits where user_id = ${USER};
+            ${AS_USER} insert into products (distributor_id, name, available) values ('${DEMO}', 'Produit itest', true) returning id into v_pid;
+            r := (v_pid is not null)::text`, 'v_pid bigint;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true');
+    });
+
+    it('un signal rafraichit last_verified sans ecrire le compte dans modified_by', async () => {
+        const p = await probe(`delete from availability_signals where user_id = ${USER} and created_at > now() - interval '1 hour';
+            update distributors set modified_by = null where id = '${DEMO}';
+            ${AS_USER} perform ${signal('working')};
+            ${AS_POSTGRES}
+            r := (select coalesce(modified_by::text, 'null') || '|' || (last_verified = now())::text
+                  from distributors where id = '${DEMO}')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'null|true');
+    });
+
+    it('changer le niveau de prix garde son auteur dans le journal (lisible en SQL seulement)', async () => {
+        const p = await probe(`${AS_USER} update distributors set price_range = price_range where id = '${DEMO}';
+            ${AS_POSTGRES} r := (select (modified_by = ${USER})::text from distributors where id = '${DEMO}')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true');
+    });
+
+    it('l’auteur lit toujours sa fiche en attente (la regle de lecture compare added_by), un visiteur non', async () => {
+        const p = await probe(`${AS_USER} ${ADD}; v_mine := (select count(*) from distributors where id = 'itest-priv');
+            ${AS_ANON} r := v_mine::text || '|' || (select count(*) from distributors where id = 'itest-priv')::text`, 'v_mine int;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, '1|0');
+    });
+
+    it('my_distributors : l’auteur retrouve ses fiches, leur statut et le motif d’un refus ; un autre compte et un visiteur, rien', async () => {
+        const own = await probe(`${AS_USER} ${ADD};
+            ${AS_POSTGRES} update distributors set review_status = 'rejected', review_reason = 'Motif itest' where id = 'itest-priv';
+            ${AS_USER} r := (select review_status || '|' || coalesce(review_reason, '-') || '|' || (added_by = ${USER})::text
+                             from my_distributors() where id = 'itest-priv')`);
+        assert.ok(own.reachedEnd, own.message);
+        assert.equal(own.result, 'rejected|Motif itest|true');
+        const other = await probe(`${AS_USER} ${ADD};
+            ${AS_POSTGRES} update distributors set added_by = ${OTHER} where id = 'itest-priv';
+            ${AS_USER} r := (select count(*) from my_distributors() where id = 'itest-priv')::text`);
+        assert.ok(other.reachedEnd, other.message);
+        assert.equal(other.result, '0');
+        const anon = await probe(`${AS_USER} ${ADD}; ${AS_ANON} r := (select count(*) from my_distributors())::text`);
+        assert.ok(anon.reachedEnd, anon.message);
+        assert.equal(anon.result, '0');
     });
 });
 

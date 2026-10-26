@@ -22,7 +22,7 @@ async function routeReviewApi(page, { admin = false, mine = [], messages = [], p
     await page.route('**/rest/v1/rpc/my_operated_distributors', r => r.fulfill(json([])));
     await page.route(u => u.pathname.endsWith('/rest/v1/operator_requests'), r => r.fulfill(json([])));
     await page.route(u => u.pathname.endsWith('/rest/v1/operator_request_messages'), r => r.fulfill(json([])));
-    await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && u.searchParams.has('added_by'), r => r.fulfill(json(mine)));
+    await page.route('**/rest/v1/rpc/my_distributors', r => r.fulfill(json(mine)));   // PRIV-01 (029)
     await page.route(u => u.pathname.endsWith('/rest/v1/distributor_review_messages'), r => r.fulfill(json(messages)));
     await page.route('**/rest/v1/rpc/admin_operator_requests', r => r.fulfill(json([])));
     await page.route('**/rest/v1/rpc/admin_operators', r => r.fulfill(json([])));
@@ -76,6 +76,37 @@ test.describe('37. Validation des nouvelles fiches', () => {
         expect(id).toBeTruthy();
     });
 
+    // PRIV-01 (029) : l'auteur ne se lit plus dans la table ; l'app le reconnait par my_distributors
+    test('fiche en attente lue au chargement : son auteur est reconnu par my_distributors (PRIV-01)', async ({ page, context }) => {
+        await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && (u.searchParams.get('select') || '').includes('products('), async route => {
+            if (route.request().method() !== 'GET') return route.continue();
+            const res = await route.fetch();
+            const rows = await res.json();
+            rows.push({ ...rows[0], id: 'user-priv01', name: 'ZZ PRIV-01 en attente', lat: 43.3701, lng: -1.2701, review_status: 'pending', added_by: null, products: [] });
+            return route.fulfill({ response: res, json: rows });
+        });
+        await page.route('**/rest/v1/rpc/my_distributors', r => r.fulfill(json([
+            { id: 'user-priv01', name: 'ZZ PRIV-01 en attente', type: 'other', emoji: '📦', city: null, review_status: 'pending', review_reason: null, author_read_at: null, created_at: minutesAgoIso(5), added_by: TEST_USER }
+        ])));
+        await setupApp(page, context);   // rechargement : les fiches se lisent au chargement
+        await loginForTest(page);
+        await page.evaluate(() => window.openDistributorModal('user-priv01'));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await expect(page.locator('#dist-review-pending')).toBeVisible();
+        await expect(page.locator('#dist-review-pending-text')).toContainText('Visible seulement par toi');
+    });
+
+    // PRIV-01 : connexion sans rechargement (code par e-mail) -> ses fiches deja chargees sont reconnues
+    test('connexion sans rechargement : « Mes ajouts » reconnait ses fiches deja chargees (PRIV-01)', async ({ page }) => {
+        const id = await page.evaluate(() => window.AppState.distributors[0].id);
+        expect(await page.evaluate((x) => window.AppState.distributors.find(d => d.id === x).addedById || null, id)).toBeNull();
+        await routeReviewApi(page, {
+            mine: [{ id, name: 'Fiche du membre', type: 'pizza', emoji: '🍕', city: 'Bayonne', review_status: 'published', review_reason: null, author_read_at: minutesAgoIso(10), created_at: minutesAgoIso(200), added_by: TEST_USER }]
+        });
+        await loginForTest(page);   // onAuthChange -> refreshMyAdditions, sans recharger la page
+        await expect.poll(() => page.evaluate((x) => window.AppState.distributors.find(d => d.id === x).addedById, id)).toBe(TEST_USER);
+    });
+
     test('« Mes ajouts » : statuts, motif d’un refus, message a l’equipe', async ({ page }) => {
         const log = await routeReviewApi(page, {
             mine: [
@@ -124,7 +155,7 @@ test.describe('37. Validation des nouvelles fiches', () => {
         await expect(page.locator('#account-additions-row')).toBeVisible();
         // Attendre la relecture de « Mes ajouts » lancee a l'ouverture de la page : sinon le champ
         // peut etre rempli puis remplace par ce nouveau rendu (test instable)
-        const reloaded = page.waitForResponse(r => r.url().includes('/rest/v1/distributors') && r.url().includes('added_by'));
+        const reloaded = page.waitForResponse(r => r.url().includes('/rest/v1/rpc/my_distributors'));
         await page.click('#account-additions-row');
         await reloaded;
         const card = page.locator('#my-additions-content .addition-card').first();
@@ -165,7 +196,7 @@ test.describe('37. Validation des nouvelles fiches', () => {
         await routeReviewApi(page, { mine });
         // Pose apres routeReviewApi : cette route passe en premier
         let down = true;
-        await page.route(u => u.pathname.endsWith('/rest/v1/distributors') && u.searchParams.has('added_by'),
+        await page.route('**/rest/v1/rpc/my_distributors',
             r => r.fulfill(down ? json({ message: 'panne simulee' }, 500) : json(mine)));
         await loginForTest(page);
         await page.evaluate(() => window.switchView('account'));
