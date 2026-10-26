@@ -1093,3 +1093,46 @@ test.describe('Sécurité : identifiant piégé (SEC-02)', () => {
         expect(await page.evaluate((id) => [window.__pwned, window.AppState.subscriptions.includes(id)], EVIL)).toEqual([undefined, false]);
     });
 });
+
+// ============================================
+// 48. CENTRER SUR MA POSITION (BUG-10)
+// ============================================
+test.describe('48. Centrer sur ma position (BUG-10)', () => {
+    // Saint-Jean-de-Luz : une vingtaine de km de la position Bayonne de setupApp
+    const FAR = { latitude: 43.3881, longitude: -1.6631 };
+
+    async function distanceOf(page, id) {
+        return page.evaluate(x => window.AppState.distributors.find(d => d.id === x).distance, id);
+    }
+
+    // Le telephone a bouge, puis « Centrer sur ma position ». Clic DOM : sur grand ecran,
+    // la liste ou la fiche ouvertes peuvent recouvrir le bouton (on teste le recalcul, pas le clic).
+    async function moveAndCenter(page, context, id, before) {
+        await context.setGeolocation(FAR);
+        await page.evaluate(() => document.getElementById('center-map').click());
+        await page.waitForFunction(([x, b]) => {
+            const d = window.AppState.distributors.find(y => y.id === x);
+            return Math.abs(d.distance - b) > 1;
+        }, [id, before], { timeout: 10000 });
+        return page.evaluate(async (x) => {
+            const u = await import('./js/utils.js');
+            return u.formatDistance(window.AppState.distributors.find(d => d.id === x).distance);
+        }, id);
+    }
+
+    test('la liste ouverte affiche les distances depuis la nouvelle position', async ({ page, context }) => {
+        await page.evaluate(async () => { const g = await import('./js/gmaps-ui.js'); g.openSidePanelForType('all'); });
+        const id = await page.locator('#side-panel-list .side-panel-item').first().getAttribute('data-id');
+        const before = await distanceOf(page, id);
+        const expected = await moveAndCenter(page, context, id, before);
+        await expect(page.locator(`#side-panel-list .side-panel-item[data-id="${id}"] .side-panel-item-distance`)).toHaveText(expected);
+    });
+
+    test('la fiche ouverte affiche la distance depuis la nouvelle position', async ({ page, context }) => {
+        await openDistModal(page, 0);
+        const id = await page.evaluate(() => window.AppState.currentDistributor.id);
+        const before = await distanceOf(page, id);
+        const expected = await moveAndCenter(page, context, id, before);
+        await expect(page.locator('#dist-apropos-distance')).toHaveText(expected);
+    });
+});

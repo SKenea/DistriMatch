@@ -17,7 +17,7 @@ import { initReviews, loadReviewsForDistributor, renderRatingHeader, refreshRevi
 import { initFicheEdit, renderFicheProducts } from './fiche-edit.js';
 import { initOperators, renderOperatorSection } from './operators.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
-import { locateOnMap, setSelectedPin, updateMapMarkers } from './map.js';
+import { locateOnMap, setSelectedPin, updateMapMarkers, LOCATION_EVENT } from './map.js';
 import { initFicheSheet, openFicheSheet, resetFicheSheet, isSheetLayout } from './fiche-sheet.js';
 import { goBackToMap } from './navigation.js';
 
@@ -117,6 +117,8 @@ export function initSidePanel() {
     // EPIC-T19 : etat et stock arrives (ou signal envoye) -> la liste ouverte suit,
     // mise a jour SUR PLACE (EPIC-T23) : reconstruire les lignes perdait un toucher en cours
     document.addEventListener(SUMMARIES_EVENT, refreshSidePanelSummaries);
+    // BUG-10 : nouvelle position -> la liste et la fiche ouvertes affichent les nouvelles distances
+    document.addEventListener(LOCATION_EVENT, refreshDistances);
     const closeBtn = document.getElementById('side-panel-close');
     closeBtn?.addEventListener('click', closeSidePanel);
     document.getElementById('side-panel-list')?.addEventListener('click', handleSidePanelClick);
@@ -143,6 +145,20 @@ function refreshSidePanelSummaries() {
             state.innerHTML = `<span class="side-panel-item-state-word">${escapeHTML(summary.label)}</span>${summary.stock ? ` · ${escapeHTML(summary.stock)}` : ''}`;
         }
     });
+}
+
+// Position relue (« Centrer sur ma position », BUG-10) : d.distance est deja a jour
+// (sortByDistance, map.js). La liste ouverte est reconstruite (tranches de distance)
+// et la distance de la fiche ouverte est reecrite.
+function refreshDistances() {
+    if (document.getElementById('sidebar')?.classList.contains('open')) {
+        openSidePanelForFilters(currentFilter || []);
+    }
+    const d = AppState.currentDistributor;
+    const distanceEl = document.getElementById('dist-apropos-distance');
+    if (d && distanceEl && document.getElementById('dist-modal-overlay')?.classList.contains('active')) {
+        distanceEl.textContent = d.distance ? formatDistance(d.distance) : 'Distance non disponible';
+    }
 }
 
 export function openSidePanelForType(type) {

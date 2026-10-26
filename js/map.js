@@ -7,7 +7,7 @@ import {
     mainMap, setMainMap, distributorMarkers, setDistributorMarkers,
     userMarker, setUserMarker
 } from './state.js';
-import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag, hasValidCoords } from './utils.js';
+import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag, hasValidCoords, sortByDistance } from './utils.js';
 import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
 import { isSheetLayout } from './fiche-sheet.js';
 
@@ -317,6 +317,10 @@ function markerTitle(d) {
     return `${d.name} : ${s.label}${s.stock ? `, ${s.stock}` : ''}`;
 }
 
+// Position relue par « Centrer sur ma position » (BUG-10) : les distances sont deja
+// recalculees (sortByDistance) ; la liste et la fiche ouvertes suivent (gmaps-ui.js)
+export const LOCATION_EVENT = 'distrimatch:location';
+
 export function centerMapOnUser() {
     if (!mainMap) {
         showToast('Carte non initialisee', 'warning');
@@ -336,6 +340,8 @@ export function centerMapOnUser() {
 
             // Mettre a jour la position dans l'etat
             AppState.userLocation = { lat, lng };
+            // ... et les distances qui en dependent (liste, fiche, « Près de toi »), BUG-10
+            sortByDistance();
 
             // Mettre a jour le marker existant ou en creer un (ne PAS en creer un 2eme)
             if (userMarker) {
@@ -358,6 +364,7 @@ export function centerMapOnUser() {
             // Centrer la carte
             mainMap.setView([lat, lng], 15);
             showToast('Centre sur ta position', 'success');
+            document.dispatchEvent(new CustomEvent(LOCATION_EVENT));
         },
         (err) => {
             let msg = 'Position indisponible';
