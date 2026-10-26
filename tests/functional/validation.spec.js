@@ -101,6 +101,65 @@ test.describe('37. Validation des nouvelles fiches', () => {
         expect(log.some(l => l.rpc === 'mark_review_thread_read')).toBe(true);
     });
 
+    test('« Mes ajouts » : apres l’envoi, l’echange reste ouvert, montre le message, un seul envoi (BUG-11)', async ({ page }) => {
+        const messages = [{ id: 1, distributor_id: 'user-a', author: 'admin', body: 'Merci, on regarde.', created_at: minutesAgoIso(30) }];
+        await routeReviewApi(page, {
+            mine: [{ id: 'user-a', name: 'Pizza de la gare', type: 'pizza', emoji: '🍕', city: 'Bayonne', review_status: 'pending', review_reason: null, author_read_at: minutesAgoIso(10), created_at: minutesAgoIso(200) }],
+            messages
+        });
+        // Pose apres routeReviewApi : cette route passe en premier. Reponse lente (laisse le temps
+        // d'un second envoi) ; le message est ajoute au fil que le faux serveur renvoie ensuite.
+        const posts = [];
+        await page.route('**/rest/v1/rpc/post_review_message', async r => {
+            const body = r.request().postDataJSON();
+            posts.push(body);
+            await new Promise(res => setTimeout(res, 300));
+            messages.push({ id: messages.length + 1, distributor_id: body.p_distributor_id, author: 'member', body: body.p_body, created_at: new Date().toISOString() });
+            await r.fulfill(json(null));
+        });
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('account'));
+        // Ligne visible = relecture de la connexion terminee : la reponse attendue ci-dessous est
+        // bien celle de l'ouverture de la page
+        await expect(page.locator('#account-additions-row')).toBeVisible();
+        // Attendre la relecture de « Mes ajouts » lancee a l'ouverture de la page : sinon le champ
+        // peut etre rempli puis remplace par ce nouveau rendu (test instable)
+        const reloaded = page.waitForResponse(r => r.url().includes('/rest/v1/distributors') && r.url().includes('added_by'));
+        await page.click('#account-additions-row');
+        await reloaded;
+        const card = page.locator('#my-additions-content .addition-card').first();
+        const thread = card.locator('details.addition-thread');
+        expect(await thread.getAttribute('open')).toBeNull();   // rien de non lu : replie
+        await thread.locator('summary').click();
+        await card.locator('textarea').fill('12 rue de la gare.');
+        // Double toucher : deux envois coup sur coup
+        await card.locator('form.addition-composer').evaluate(f => { f.requestSubmit(); f.requestSubmit(); });
+        await expect(page.locator('#toast-container .toast.success')).toContainText('Message envoyé à l’équipe');
+        const after = page.locator('#my-additions-content .addition-card').first();
+        await expect(after.locator('details.addition-thread')).toHaveAttribute('open', '');
+        await expect(after.locator('.op-msg.is-mine')).toBeVisible();
+        await expect(after.locator('.op-msg.is-mine')).toContainText('12 rue de la gare.');
+        expect(posts).toHaveLength(1);
+    });
+
+    test('« Mes ajouts » : fiche publiee ou refusee, echange termine, pas de champ (BUG-11)', async ({ page }) => {
+        await routeReviewApi(page, {
+            mine: [
+                { id: 'user-b', name: 'Boulangerie test', type: 'bakery', emoji: '🥖', city: 'Anglet', review_status: 'rejected', review_reason: 'Doublon', author_read_at: minutesAgoIso(10), created_at: minutesAgoIso(3000) },
+                { id: 'user-c', name: 'Frites test', type: 'fries', emoji: '🍟', city: 'Biarritz', review_status: 'published', review_reason: null, author_read_at: minutesAgoIso(10), created_at: minutesAgoIso(4000) }
+            ]
+        });
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('account'));
+        await page.click('#account-additions-row');
+        const cards = page.locator('#my-additions-content .addition-card');
+        await expect(cards).toHaveCount(2);
+        await expect(page.locator('#my-additions-content form.addition-composer')).toHaveCount(0);
+        await expect(cards.nth(0)).toContainText('Motif : Doublon');
+        await expect(cards.nth(0).locator('.addition-thread-closed')).toHaveText('Cet échange est terminé.');
+        await expect(cards.nth(1).locator('.addition-thread-closed')).toHaveText('Ta fiche est publiée : cet échange est terminé. Tu peux la compléter directement depuis la fiche.');
+    });
+
     test('console : « Nouveaux distributeurs », doublon signale, publier avec un nom corrige', async ({ page }) => {
         const near = await page.evaluate(() => {
             const d = window.AppState.distributors[0];

@@ -75,6 +75,9 @@ function renderAdditionsView() {
         box.innerHTML = '<p class="admin-empty">Tu n’as pas encore ajouté de distributeur.</p>';
         return;
     }
+    // Echanges ouverts a la main : ils restent ouverts apres un nouveau rendu (BUG-11)
+    const openIds = new Set([...box.querySelectorAll('details.addition-thread[open]')]
+        .map(el => el.closest('.addition-card')?.dataset.distributorId));
     box.innerHTML = mine.map(d => {
         const s = describeReviewStatus(d.review_status);
         const thread = messages.filter(m => m.distributor_id === d.id);
@@ -87,14 +90,16 @@ function renderAdditionsView() {
             <p class="admin-request-meta">Ajouté le ${escapeHTML(formatWhen(d.created_at))}${d.city ? ` · ${escapeHTML(d.city)}` : ''}</p>
             ${d.review_status === 'rejected' && d.review_reason ? `<p class="addition-reason">Motif : ${escapeHTML(d.review_reason)}</p>` : ''}
             ${d.review_status !== 'rejected' ? `<button type="button" class="btn-secondary-clean" data-open-fiche="${escapeHTML(d.id)}">Voir la fiche</button>` : ''}
-            <details class="addition-thread"${unread ? ' open' : ''}>
+            <details class="addition-thread"${unread || openIds.has(d.id) ? ' open' : ''}>
                 <summary>Échange avec l’équipe${unread ? ` · ${unread} nouveau${unread > 1 ? 'x' : ''}` : ''}</summary>
                 <div class="op-thread">${renderReviewThread(thread, 'member')}</div>
-                <form class="op-composer addition-composer" data-distributor-id="${escapeHTML(d.id)}">
+                ${d.review_status === 'pending' ? `<form class="op-composer addition-composer" data-distributor-id="${escapeHTML(d.id)}">
                     <label class="sr-only" for="addition-input-${escapeHTML(d.id)}">Écrire à l’équipe</label>
                     <textarea id="addition-input-${escapeHTML(d.id)}" name="body" rows="1" maxlength="1000" placeholder="Écrire à l’équipe…"></textarea>
                     <button type="submit" class="op-send" aria-label="Envoyer">→</button>
-                </form>
+                </form>` : `<p class="admin-request-meta addition-thread-closed">${d.review_status === 'published'
+                    ? 'Ta fiche est publiée : cet échange est terminé. Tu peux la compléter directement depuis la fiche.'
+                    : 'Cet échange est terminé.'}</p>`}
             </details>
         </article>`;
     }).join('');
@@ -125,15 +130,24 @@ export function initAdditions() {
         e.preventDefault();
         const form = e.target.closest('.addition-composer');
         if (!form) return;
+        const btn = form.querySelector('button[type="submit"]');
+        // Verrou : un double toucher n'envoie qu'un message (BUG-11, modele d'operators.js)
+        if (btn.disabled) return;
         const body = form.body.value.trim();
         if (!body) return;
-        const { error } = await supabaseClient.rpc('post_review_message', { p_distributor_id: form.dataset.distributorId, p_body: body });
-        if (error) {
-            showToast(describeOperatorRequestError(error), 'error');
-            return;
+        btn.disabled = true;
+        try {
+            const { error } = await supabaseClient.rpc('post_review_message', { p_distributor_id: form.dataset.distributorId, p_body: body });
+            if (error) {
+                showToast(describeOperatorRequestError(error), 'error');
+                return;
+            }
+            form.body.value = '';
+            showToast('Message envoyé à l’équipe', 'success');
+            await refreshMyAdditions();
+            renderAdditionsView();
+        } finally {
+            btn.disabled = false;
         }
-        form.body.value = '';
-        await refreshMyAdditions();
-        renderAdditionsView();
     });
 }
