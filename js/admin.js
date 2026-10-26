@@ -33,6 +33,7 @@ let currentId = null;
 let pending = [];             // fiches en attente de validation (EPIC-T21)
 let currentPendingId = null;
 let pendingMap = null;        // mini-carte Leaflet du detail
+let pendingDraft = null;      // corrections non publiees { id, name, type, lat, lng } (BUG-06)
 const sireneCache = new Map();   // siret -> resultat (ou null)
 
 function formatDay(iso) {
@@ -147,6 +148,14 @@ function renderPending() {
     }).join('');
 }
 
+// BUG-06 : corrections en cours (nom, type, position) gardees hors du DOM, pour
+// survivre a un reaffichage du detail (message envoye, retour sur la page Admin).
+// null = pas corrige.
+function updatePendingDraft(id, changes) {
+    if (pendingDraft?.id !== id) pendingDraft = { id, name: null, type: null, lat: null, lng: null };
+    Object.assign(pendingDraft, changes);
+}
+
 async function showPendingDetail(id) {
     currentPendingId = id;
     currentId = null;
@@ -160,13 +169,17 @@ async function showPendingDetail(id) {
         .select('id, author, body, created_at').eq('distributor_id', id).order('created_at', { ascending: true });
     if (currentPendingId !== id) return;
     const dups = findNearbyDuplicates(f, AppState.distributors);
+    // BUG-06 : corrections en cours (brouillon) reprises si le detail est reaffiche
+    const draft = pendingDraft?.id === id ? pendingDraft : null;
+    const shownName = draft?.name ?? f.name;
+    const shownType = draft?.type ?? f.type;
     // BUG-03 : un type absent de la liste reste choisi ; sinon le menu tombait sur le
     // premier type (Pizza) et « Publier » sans y toucher reecrivait le type de la fiche
     const knownType = DISTRIBUTOR_TYPES.some(t => t.id === f.type);
     const currentType = f.type && !knownType
-        ? `<option value="${escapeHTML(f.type)}" selected>${escapeHTML(f.emoji || '📍')} ${escapeHTML(f.type)} (type actuel)</option>`
+        ? `<option value="${escapeHTML(f.type)}"${shownType === f.type ? ' selected' : ''}>${escapeHTML(f.emoji || '📍')} ${escapeHTML(f.type)} (type actuel)</option>`
         : '';
-    const types = currentType + DISTRIBUTOR_TYPES.map(t => `<option value="${t.id}"${t.id === f.type ? ' selected' : ''}>${t.emoji} ${escapeHTML(t.name)}</option>`).join('');
+    const types = currentType + DISTRIBUTOR_TYPES.map(t => `<option value="${t.id}"${t.id === shownType ? ' selected' : ''}>${t.emoji} ${escapeHTML(t.name)}</option>`).join('');
     detail.innerHTML = `
         <button type="button" class="admin-back" data-admin-back="1">← Retour à la console</button>
         <div class="admin-detail-head">
@@ -179,7 +192,7 @@ async function showPendingDetail(id) {
             <div class="admin-mini-map" id="admin-pending-map" role="img" aria-label="Position du distributeur (repère déplaçable)"></div>
             <p class="admin-source">Déplace le repère si la position est fausse.</p>
             <form id="admin-pending-form" class="op-todo-form">
-                <label class="operator-field">Nom<input type="text" name="name" maxlength="80" value="${escapeHTML(f.name)}"></label>
+                <label class="operator-field">Nom<input type="text" name="name" maxlength="80" value="${escapeHTML(shownName)}"></label>
                 <label class="operator-field">Type<select name="type" class="admin-select">${types}</select></label>
                 <button type="submit" class="btn-primary-clean">Publier</button>
             </form>
@@ -204,7 +217,8 @@ async function showPendingDetail(id) {
     mountPendingMap(f);
 }
 
-// Mini-carte : repere deplacable ; la position corrigee part a la publication
+// Mini-carte : repere deplacable ; la position corrigee part a la publication.
+// BUG-06 : une position deja corrigee (brouillon) est reprise au reaffichage.
 function mountPendingMap(f) {
     if (pendingMap) {
         pendingMap.remove();
@@ -212,13 +226,20 @@ function mountPendingMap(f) {
     }
     const el = document.getElementById('admin-pending-map');
     if (!el || typeof L === 'undefined' || !Number.isFinite(Number(f.lat))) return;
-    pendingMap = L.map(el, { zoomControl: true, attributionControl: true }).setView([f.lat, f.lng], 17);
+    const draft = pendingDraft?.id === f.id && Number.isFinite(pendingDraft.lat) ? pendingDraft : null;
+    const start = draft ? [draft.lat, draft.lng] : [f.lat, f.lng];
+    if (draft) {
+        el.dataset.lat = String(draft.lat);
+        el.dataset.lng = String(draft.lng);
+    }
+    pendingMap = L.map(el, { zoomControl: true, attributionControl: true }).setView(start, 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(pendingMap);
-    const marker = L.marker([f.lat, f.lng], { draggable: true, title: 'Position du distributeur' }).addTo(pendingMap);
+    const marker = L.marker(start, { draggable: true, title: 'Position du distributeur' }).addTo(pendingMap);
     marker.on('dragend', () => {
         const { lat, lng } = marker.getLatLng();
         el.dataset.lat = String(lat);
         el.dataset.lng = String(lng);
+        updatePendingDraft(f.id, { lat, lng });
     });
     setTimeout(() => pendingMap?.invalidateSize(), 50);
 }
@@ -254,6 +275,7 @@ async function publishPending(form) {
     }
     showToast('Fiche publiée : visible par tous', 'success');
     currentPendingId = null;
+    pendingDraft = null;
     loadAdmin();
 }
 
@@ -269,6 +291,7 @@ async function rejectPending(reason) {
     updateMapMarkers(false);
     showToast('Fiche refusée', 'success');
     currentPendingId = null;
+    pendingDraft = null;
     loadAdmin();
 }
 
@@ -412,6 +435,7 @@ async function showDetail(id) {
 function backToList() {
     currentId = null;
     currentPendingId = null;
+    pendingDraft = null;
     if (pendingMap) {
         pendingMap.remove();
         pendingMap = null;
@@ -585,6 +609,23 @@ function handleAdminClick(e) {
     if (revokeBtn) revoke(revokeBtn.closest('.admin-row'));
 }
 
+// BUG-06 : apres un message au membre, seul le fil est relu : le formulaire
+// « Publier » et la mini-carte gardent les corrections en cours
+async function refreshPendingThread(id) {
+    const { data: thread } = await supabaseClient.from('distributor_review_messages')
+        .select('id, author, body, created_at').eq('distributor_id', id).order('created_at', { ascending: true });
+    if (currentPendingId !== id) return;
+    const box = document.querySelector('#admin-detail .op-thread');
+    if (box) box.innerHTML = renderReviewThread(thread || [], 'admin');
+}
+
+// BUG-06 : nom ou type saisis dans le formulaire « Publier » -> brouillon
+function handleAdminInput(e) {
+    const form = e.target.closest('#admin-pending-form');
+    if (!form || !currentPendingId) return;
+    updatePendingDraft(currentPendingId, { name: form.name.value, type: form.type.value });
+}
+
 async function handleAdminSubmit(e) {
     e.preventDefault();
     if (e.target.id === 'admin-pending-form') {
@@ -605,7 +646,7 @@ async function handleAdminSubmit(e) {
             return;
         }
         e.target.body.value = '';
-        showPendingDetail(currentPendingId);
+        refreshPendingThread(currentPendingId);
         return;
     }
     if (e.target.id === 'admin-composer') {
@@ -637,4 +678,6 @@ export function initAdmin() {
     if (!view) return;
     view.addEventListener('click', handleAdminClick);
     view.addEventListener('submit', handleAdminSubmit);
+    view.addEventListener('input', handleAdminInput);
+    view.addEventListener('change', handleAdminInput);
 }
