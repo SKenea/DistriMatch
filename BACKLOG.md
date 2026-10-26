@@ -19,6 +19,38 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R2 Vie privée : ne plus exposer le compte (lot 2, revue du 2026-10-21)
+Objectif : l'API ne permet plus de relier un signal, un avis, une modification ou une visite à un
+compte ; la déconnexion et la suppression du compte effacent ce qu'elles promettent ; une page
+« Confidentialité » dit exactement ce que l'app enregistre. Valeur : la confiance des membres et
+la conformité (RGPD) avant le vrai pilote.
+Méthode : comme EPIC-R1, une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle
+medium (`/story <ID>`), une PR à la fois **dans cet ordre** : PRIV-01, PRIV-02, PRIV-03, PRIV-05,
+PRIV-06, PRIV-07, PRIV-04. Migrations 029 à 033 appliquées par Claude après relecture et essai
+avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
+
+- [ ] PRIV-01 En tant que membre, personne ne peut lire par l'API quel compte a ajouté ou modifié
+  une fiche — `PRIV-01.md` (migration 029)
+  - Acceptance : `added_by` / `modified_by` illisibles par l'API ; « Mes ajouts » et Mon profil
+    passent par `my_distributors()` ; connexion par code reconnue sans rechargement.
+- [ ] PRIV-02 En tant que membre, mon avis est vraiment anonyme — `PRIV-02.md` (migration 030)
+  - Acceptance : `reviews.user_id` illisible ; mon avis retrouvé par `my_review`.
+- [ ] PRIV-03 En tant que membre, les tables héritées ne donnent plus d'identifiant de compte
+  — `PRIV-03.md` (migration 031)
+  - Acceptance : `profiles`, `reports`, `votes`, photos fermés en lecture et en écriture à l'API.
+- [ ] PRIV-05 En tant que membre, la mesure d'audience ne me relie pas à mon compte
+  — `PRIV-05.md` (migration 032)
+  - Acceptance : identifiant de session (sessionStorage), `signal_envoye` à usage unique, signal
+    enregistré sans identifiant d'appareil, événements effacés après 13 mois.
+- [ ] PRIV-06 En tant que membre, me déconnecter efface ce qui relève de mon compte — `PRIV-06.md`
+  - Acceptance : abonnement app fermée détaché du compte, état admin / exploitant oublié.
+- [ ] PRIV-07 En tant que membre, je peux faire supprimer mon compte — `PRIV-07.md` (migration 033)
+  - Acceptance : suppression sans casser les fiches (clés en `SET NULL`), procédure écrite,
+    réabonnement sans compte retire le compte.
+- [ ] PRIV-04 En tant que visiteur, je lis une page « Confidentialité » claire et exacte
+  — `PRIV-04.md` (**décisions de Stéphane** : adresse de contact, responsable, texte)
+  - Acceptance : page dans l'app, liens à 4 endroits, phrase d'accueil exacte sur la position.
+
 ### EPIC-R3 Bugs visibles de la revue de code (lot 3, revue du 2026-10-21)
 Objectif : corriger ce que les membres rencontrent aujourd'hui (app bloquée, iPhone, console
 admin, recherche, saisies perdues). Valeur : une app fiable avant le vrai pilote.
