@@ -9,33 +9,33 @@
 import { test, expect } from '@playwright/test';
 import { setupApp, loginForTest } from './helpers.js';
 
-const TEST_UID = '00000000-0000-0000-0000-00000000e2e0';   // compte simule par window.__testLogin()
-
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
 });
 
 function fakeReviews(n) {
     return Array.from({ length: n }, (_, i) => ({
-        id: 1000 + i, user_id: null, author_name: `Auteur ${i + 1}`, rating: 1 + (i % 5),
+        id: 1000 + i, author_name: `Auteur ${i + 1}`, rating: 1 + (i % 5),   // PRIV-02 : l'API ne rend plus user_id
         body: i % 3 === 0 ? null : `Commentaire ${i + 1}`,
         created_at: new Date(Date.now() - (i + 1) * 86400000).toISOString(), updated_at: new Date().toISOString()
     }));
 }
 
 // Simule la table reviews : liste paginee (offset / limit + total dans
-// Content-Range), « mon avis » (filtre user_id), insertion, modification,
-// suppression. Retourne l'etat pour les verifications.
+// Content-Range), insertion, modification, suppression ; « mon avis » par la
+// RPC my_review (PRIV-02 : l'API ne rend plus user_id). Retourne l'etat pour
+// les verifications (calls : methode, corps, parametres de l'URL).
 async function routeReviews(page, { list = [], mine = null, rating = null, insertError = null } = {}) {
     const db = { list, mine, rating, calls: [] };
+    await page.route(url => url.pathname.endsWith('/rest/v1/rpc/my_review'), async route => {
+        db.calls.push({ method: 'RPC', body: route.request().postDataJSON?.() ?? null, search: '' });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.mine ? [db.mine] : []) });
+    });
     await page.route(url => url.pathname.endsWith('/rest/v1/reviews'), async route => {
         const req = route.request();
         const url = new URL(req.url());
         const method = req.method();
-        db.calls.push({ method, body: req.postDataJSON?.() ?? null });
-        if (method === 'GET' && url.searchParams.get('user_id')) {
-            return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(db.mine ? [db.mine] : []) });
-        }
+        db.calls.push({ method, body: req.postDataJSON?.() ?? null, search: url.search });
         if (method === 'GET') {
             const all = db.mine ? [db.mine, ...db.list] : db.list;
             const offset = Number(url.searchParams.get('offset') || 0);
@@ -52,7 +52,7 @@ async function routeReviews(page, { list = [], mine = null, rating = null, inser
         if (method === 'POST') {
             if (insertError) return route.fulfill({ status: insertError.status, contentType: 'application/json', body: JSON.stringify(insertError.body) });
             const b = req.postDataJSON();
-            db.mine = { id: 5000, user_id: TEST_UID, author_name: 'Membre DistriMatch', rating: b.rating, body: b.body, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+            db.mine = { id: 5000, author_name: 'Membre DistriMatch', rating: b.rating, body: b.body, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
             db.rating = { avis: db.list.length + 1, moyenne: b.rating };
             return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(db.mine) });
         }
@@ -137,7 +137,7 @@ test.describe('32. Avis', () => {
     });
 
     test('connecte : modifier puis supprimer son avis', async ({ page }) => {
-        const mine = { id: 5000, user_id: TEST_UID, author_name: 'Membre DistriMatch', rating: 5, body: 'Top', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+        const mine = { id: 5000, author_name: 'Membre DistriMatch', rating: 5, body: 'Top', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
         const db = await routeReviews(page, { list: fakeReviews(2), mine, rating: { avis: 3, moyenne: 3.3 } });
         await loginForTest(page);
         await openReviewsTab(page, { rating: 3.3, reviewCount: 3 });
@@ -156,6 +156,22 @@ test.describe('32. Avis', () => {
         await expect(page.locator('#dist-review-mine-title')).toHaveText('Donne ton avis');
         await expect(page.locator('#dist-review-delete')).toBeHidden();
         await expect(page.locator('#dist-review-body')).toHaveValue('');
+    });
+
+    // PRIV-02 : l'auteur d'un avis n'est plus lisible ; « Ton avis » vient de my_review et de l'id
+    test('PRIV-02 : la liste ne demande jamais l’auteur (user_id) ; « Ton avis » vient de my_review', async ({ page }) => {
+        const mine = { id: 5000, author_name: 'Membre DistriMatch', rating: 4, body: 'Le mien', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+        const db = await routeReviews(page, { list: fakeReviews(2), mine, rating: { avis: 3, moyenne: 3 } });
+        await loginForTest(page);
+        const id = await openReviewsTab(page, { rating: 3, reviewCount: 3 });
+        await expect(page.locator('#dist-reviews-list .review-item')).toHaveCount(3);
+        await expect(page.locator('#dist-reviews-list .review-item.is-mine')).toHaveCount(1);
+        await expect(page.locator('#dist-reviews-list .review-item.is-mine')).toContainText('Le mien');
+        await expect(page.locator('#dist-review-mine-title')).toHaveText('Ton avis');
+        const gets = db.calls.filter(c => c.method === 'GET');
+        expect(gets.length).toBeGreaterThan(0);
+        for (const c of gets) expect(c.search).not.toContain('user_id');
+        expect(db.calls.find(c => c.method === 'RPC').body).toEqual({ p_distributor_id: id });
     });
 
     test('refus de la base : le message dit la raison (deja un avis, trop d’avis)', async ({ page }) => {
