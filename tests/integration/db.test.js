@@ -1150,6 +1150,80 @@ describe('base : auteurs des fiches et des produits illisibles (029)', { skip: S
     });
 });
 
+// PRIV-03 (031) : tables heritees : plus aucun identifiant de compte lisible
+describe('base : tables heritees privees (031)', { skip: SKIP }, () => {
+    const OTHER = `(select id from auth.users where id <> ${USER} order by created_at limit 1)`;
+
+    it('un visiteur ne lit ni profiles, ni reports, ni votes (42501)', async () => {
+        for (const table of ['profiles', 'reports', 'votes']) {
+            const p = await probe(`${AS_ANON} perform count(*) from ${table}`);
+            assert.equal(p.reachedEnd, false, table);
+            assert.equal(p.code, '42501', table);
+        }
+    });
+
+    it('un compte ne lit que ses propres lignes de profiles, reports et votes', async () => {
+        const p = await probe(`
+            insert into profiles (id) values (${USER}) on conflict (id) do nothing;
+            insert into reports (user_id, distributor_id, report_type)
+              values (${USER}, '${DEMO}', 'itest'), (${OTHER}, '${DEMO}', 'itest');
+            insert into votes (user_id, report_id, vote_type)
+              select user_id, id, 'confirm' from reports where report_type = 'itest';
+            ${AS_USER}
+            r := json_build_object(
+                'mon_profil', (select count(*) from profiles where id = ${USER}),
+                'profils_autres', (select count(*) from profiles where id <> ${USER}),
+                'signalements_itest', (select count(*) from reports where report_type = 'itest'),
+                'signalements_autres', (select count(*) from reports where user_id <> ${USER}),
+                'votes_autres', (select count(*) from votes where user_id <> ${USER})
+            )::text`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.deepEqual(JSON.parse(p.result),
+            { mon_profil: 1, profils_autres: 0, signalements_itest: 1, signalements_autres: 0, votes_autres: 0 });
+    });
+
+    it('aucune ecriture directe dans profiles, reports, votes (42501)', async () => {
+        for (const write of [
+            `insert into reports (user_id, distributor_id, report_type) values (${USER}, '${DEMO}', 'itest')`,
+            `update profiles set points = 999999 where id = ${USER}`,
+            `insert into votes (user_id, report_id, vote_type) values (${USER}, 1, 'confirm')`
+        ]) {
+            const p = await probe(`${AS_USER} ${write}`);
+            assert.equal(p.reachedEnd, false, write);
+            assert.equal(p.code, '42501', write);
+        }
+    });
+
+    it('photos : ni user_id ni modified_by lisibles ; seulement les photos approuvees d’une fiche publiee', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            for (const col of ['user_id', 'modified_by']) {
+                const p = await probe(`${role} perform ${col} from distributor_photos limit 1`);
+                assert.equal(p.code, '42501', col);
+            }
+        }
+        const p = await probe(`
+            insert into distributor_photos (distributor_id, user_id, storage_path, status) values
+              ('${DEMO}', ${USER}, 'itest/approuvee.jpg', 'approved'),
+              ('${DEMO}', ${USER}, 'itest/en-attente.jpg', 'pending');
+            ${AS_USER} insert into distributors (id, name, type, lat, lng, is_user_added, added_by)
+              values ('itest-photo', 'Fiche itest', 'pizza', 43.49, -1.47, true, ${USER});
+            perform set_config('request.jwt.claims', '', true); reset role;
+            insert into distributor_photos (distributor_id, user_id, storage_path, status)
+              values ('itest-photo', ${USER}, 'itest/fiche-en-attente.jpg', 'approved');
+            ${AS_ANON}
+            r := (select string_agg(storage_path, ',' order by storage_path) from distributor_photos
+                   where storage_path like 'itest/%')`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'itest/approuvee.jpg');
+        const [r] = await query(`select
+            has_column_privilege('anon', 'public.distributor_photos', 'user_id', 'select') as anon_auteur,
+            has_column_privilege('authenticated', 'public.distributor_photos', 'modified_by', 'select') as auth_modif,
+            has_column_privilege('anon', 'public.distributor_photos', 'storage_path', 'select') as anon_chemin,
+            has_function_privilege('anon', 'public.distributor_is_published(text)', 'execute') as anon_publiee`);
+        assert.deepEqual(r, { anon_auteur: false, auth_modif: false, anon_chemin: true, anon_publiee: true });
+    });
+});
+
 describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
     before(async () => { /* les blocs precedents sont tous annules */ });
     it('aucune trace « itest » en base', async () => {
