@@ -404,3 +404,59 @@ test.describe('40b. Notifications app fermee sur iPhone', () => {
         await expect(modal).toContainText('Être prévenu même app fermée ?');
     });
 });
+
+// ============================================
+// 40c. NOTIFICATIONS APP FERMEE ET COMPTE (PRIV-06)
+// ============================================
+
+test.describe('40c. Notifications app fermee et compte (PRIV-06)', () => {
+    const ENDPOINT = 'https://push.test/abc';
+
+    // Abonnement simule, notifications accordees et actives ; RPC push interceptees
+    async function fakePush(page) {
+        const state = { calls: [], failUnsubscribe: false };
+        for (const fn of ['push_subscribe', 'push_unsubscribe']) {
+            await page.route(`**/rest/v1/rpc/${fn}`, async route => {
+                state.calls.push({ fn, endpoint: route.request().postDataJSON()?.p_endpoint });
+                if (fn === 'push_unsubscribe' && state.failUnsubscribe) {
+                    return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ code: 'XX000', message: 'indisponible' }) });
+                }
+                return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+            });
+        }
+        await page.evaluate(async (endpoint) => {
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+            const fakeSub = { endpoint, toJSON: () => ({ endpoint, keys: { p256dh: 'p256', auth: 'auth' } }), unsubscribe: async () => true };
+            navigator.serviceWorker.getRegistration = async () => ({ pushManager: { getSubscription: async () => fakeSub } });
+            const { NotificationPrefs } = await import('./js/state.js');
+            NotificationPrefs.push = true;
+        }, ENDPOINT);
+        return state;
+    }
+
+    test('deconnexion : l’abonnement est efface puis recree sans compte', async ({ page }) => {
+        const push = await fakePush(page);
+        await loginForTest(page);
+        await expect.poll(() => push.calls.length).toBeGreaterThan(0);   // synchro a la connexion
+        push.calls.length = 0;
+        await page.evaluate(() => window.switchView('account'));
+        await page.click('#account-auth-action');
+        await expect.poll(() => push.calls.some(c => c.fn === 'push_subscribe')).toBe(true);
+        expect(push.calls[0]).toEqual({ fn: 'push_unsubscribe', endpoint: ENDPOINT });
+        expect(push.calls.findIndex(c => c.fn === 'push_subscribe')).toBeGreaterThan(0);
+        await expect(page.locator('#account-auth-text')).toHaveText('Non connecté');
+    });
+
+    test('couper les notifications sans reponse du serveur : l’effacement est garde puis renvoye', async ({ page }) => {
+        const push = await fakePush(page);
+        push.failUnsubscribe = true;
+        await page.evaluate(async () => (await import('./js/push.js')).disablePush());
+        expect(push.calls.filter(c => c.fn === 'push_unsubscribe')[0]).toEqual({ fn: 'push_unsubscribe', endpoint: ENDPOINT });
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_push_pending_unsubscribe'))).toBe(ENDPOINT);
+        push.failUnsubscribe = false;
+        push.calls.length = 0;
+        expect(await page.evaluate(async () => (await import('./js/push.js')).retryPendingUnsubscribe())).toBe(true);
+        expect(push.calls).toEqual([{ fn: 'push_unsubscribe', endpoint: ENDPOINT }]);
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_push_pending_unsubscribe'))).toBeNull();
+    });
+});

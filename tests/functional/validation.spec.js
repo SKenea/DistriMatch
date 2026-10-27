@@ -324,3 +324,48 @@ test.describe('37. Validation des nouvelles fiches', () => {
         });
     });
 });
+
+// PRIV-06 : la deconnexion ne laisse rien du compte a l'ecran
+test.describe('37b. Deconnexion (PRIV-06)', () => {
+    test('admin deconnecte, console ouverte : retour a la carte, console videe, fiches en attente retirees', async ({ page }) => {
+        await routeReviewApi(page, {
+            admin: true,
+            pending: [{ id: 'user-new', name: 'Fiche en attente itest', type: 'pizza', emoji: '🍕', address: '1 rue Test', city: 'Bayonne', lat: 43.4935, lng: -1.4748,
+                created_at: minutesAgoIso(60), email: 'membre@example.test', products: ['Margherita'], unread: 0 }]
+        });
+        await loginForTest(page);
+        // Fiches lues grace au compte admin (RLS 022) : une en attente d'un autre membre, une refusee
+        await page.evaluate(() => {
+            const base = window.AppState.distributors[0];
+            window.AppState.distributors.push({ ...base, id: 'pending-other', name: 'Fiche en attente itest', reviewStatus: 'pending', addedById: 'autre-membre', products: [] });
+            window.AppState.rejectedDistributors = [{ ...base, id: 'rejected-other', reviewStatus: 'rejected' }];
+        });
+        await page.evaluate(() => window.switchView('admin'));
+        await page.locator('#admin-pending .admin-request').click();
+        await expect(page.locator('#admin-detail')).toContainText('membre@example.test');
+        await expect(page.locator('#admin-pending-map')).toBeVisible();
+        await page.evaluate(() => window.__testLogout());
+        await expect(page.locator('#admin-view')).not.toHaveClass(/view-active/);
+        await expect(page.locator('#admin-detail')).toBeEmpty();
+        await expect(page.locator('#admin-pending')).toBeEmpty();
+        await expect(page.locator('#admin-pending-map')).toHaveCount(0);
+        expect(await page.evaluate(() => ({
+            pending: window.AppState.distributors.some(d => d.id === 'pending-other'),
+            rejected: window.AppState.rejectedDistributors.length
+        }))).toEqual({ pending: false, rejected: 0 });
+    });
+
+    test('deconnexion sur « Mes ajouts » : retour a la carte, liste videe', async ({ page }) => {
+        await routeReviewApi(page, {
+            mine: [{ id: 'user-a', name: 'Pizza de la gare', type: 'pizza', emoji: '🍕', city: 'Bayonne', review_status: 'pending', review_reason: null, author_read_at: minutesAgoIso(100), created_at: minutesAgoIso(200) }]
+        });
+        await loginForTest(page);
+        await page.evaluate(() => window.switchView('account'));
+        await page.click('#account-additions-row');
+        await expect(page.locator('#my-additions-content .addition-card')).toHaveCount(1);
+        await page.evaluate(() => window.__testLogout());
+        await expect(page.locator('#my-additions-view')).not.toHaveClass(/view-active/);
+        await expect(page.locator('#my-additions-content')).toBeEmpty();
+        await expect(page.locator('#account-additions-row')).toBeHidden();
+    });
+});

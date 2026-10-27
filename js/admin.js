@@ -26,6 +26,7 @@ import { updateMapMarkers } from './map.js';
 import { renderReviewThread } from './additions.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { isAdminUser, whenOperatorStateReady, renderOperatorProgress, renderOperatorThread, loadOperatorMessages } from './operators.js';
+import { onAuthChange } from './auth.js';
 
 const SIRENE_URL = 'https://recherche-entreprises.api.gouv.fr/search';
 let requests = [];
@@ -673,7 +674,40 @@ async function handleAdminSubmit(e) {
     }
 }
 
+// PRIV-06 : deconnecte, la console ne garde rien (e-mails, SIRET, echanges, carte imprimee)
+function resetAdmin() {
+    requests = [];
+    pending = [];
+    currentId = null;
+    currentPendingId = null;
+    pendingDraft = null;
+    sireneCache.clear();
+    if (pendingMap) {   // avant de vider #admin-detail, qui la contient
+        pendingMap.remove();
+        pendingMap = null;
+    }
+    for (const id of ['admin-pending', 'admin-requests', 'admin-operators', 'admin-detail', 'operator-print-card']) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    }
+    for (const id of ['admin-pending-count', 'admin-requests-count']) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+    }
+    const detail = document.getElementById('admin-detail');
+    if (detail) detail.hidden = true;
+    const content = document.getElementById('admin-content');
+    if (content) content.hidden = true;
+    setStatus('');
+    const sheet = document.getElementById('admin-sheet');
+    if (sheet) {
+        sheet.hidden = true;
+        sheet.innerHTML = '';
+    }
+}
+
 export function initAdmin() {
+    onAuthChange((user) => { if (!user || user.is_anonymous) resetAdmin(); });
     const view = document.getElementById('admin-view');
     if (!view) return;
     view.addEventListener('click', handleAdminClick);

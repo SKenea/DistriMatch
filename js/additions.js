@@ -129,7 +129,14 @@ function renderAdditionsView() {
 }
 
 export function initAdditions() {
-    onAuthChange(() => refreshMyAdditions());
+    onAuthChange((user) => {
+        // PRIV-06 : deconnecte, la page ne garde rien du compte precedent
+        if (!user || user.is_anonymous) {
+            const box = document.getElementById('my-additions-content');
+            if (box) box.innerHTML = '';
+        }
+        refreshMyAdditions();
+    });
     refreshMyAdditions();
     registerViewCallback('my-additions', () => {
         renderAdditionsView();
