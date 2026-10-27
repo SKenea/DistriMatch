@@ -601,6 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadProfile();
     loadConversations();
     removeLegacyActivityFeed();   // ancien fil local (retire)
+    resetDeviceId();              // PRIV-05 : ancien identifiant d'appareil persistant (plus utilise)
     loadNotificationPrefs();
     loadNotificationQueue();
     // BUG-13 : un autre onglet change favoris ou reglages -> cet onglet relit sa memoire

@@ -15,7 +15,7 @@
 
 import { AppState, supabaseClient } from './state.js';
 import {
-    showToast, getDeviceId, buildAvailabilityPayload, describeRhythm, getFreshness,
+    showToast, SIGNAL_DEVICE_HASH, buildAvailabilityPayload, describeRhythm, getFreshness,
     resolveMachineStatus, resolveProductStatus, isBusinessSignalError, describeSignalError,
     describeFicheHero, describeMachineNotice, productToneRank, describeMenuHeader,
     isNearDistributor, describeNearbyNudge, isPrivateFiche
@@ -439,7 +439,7 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
         return;
     }
     const choices = productId !== null ? { [productId]: state } : {};
-    const payload = buildAvailabilityPayload(distributor.id, getDeviceId(), choices, machine);
+    const payload = buildAvailabilityPayload(distributor.id, SIGNAL_DEVICE_HASH, choices, machine);
     if (payload.p_product_signals.length === 0 && !payload.p_machine_state) return;
 
     isSending = true;

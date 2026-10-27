@@ -17,7 +17,7 @@ import {
     sortByDistance, updateImplicitProfile, getTopPreferredTypes,
     escapeHTML, saveStore, loadStore,
     saveUserDistributor, loadUserDistributors, getLevelInfo,
-    timeAgo, getFreshness, getDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, hasValidCoords, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
+    timeAgo, getFreshness, SIGNAL_DEVICE_HASH, DEVICE_ID_KEY, resetDeviceId, buildAvailabilityPayload, describeRhythm, centroidOf, hasValidCoords, resolveProductStatus, resolveMachineStatus, describeSignalError, isBusinessSignalError, describeFicheHero,
     describeRating, validateReview, describeReviewError, findLocalDuplicates, normalizeName,
     productToneRank, describeMachineNotice, productIconKey,
     describeMenuHeader, cleanProductName, isDuplicateProductName,
@@ -39,7 +39,7 @@ import {
 import { isQuietHours, canNotify, markNotified } from '../../js/notifications.js';
 import { generateGreetingMessage } from '../../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
-import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY } from '../../js/events.js';
+import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY, getSessionId, SESSION_ID_KEY } from '../../js/events.js';
 import { setSupabaseClient, DISTRIBUTOR_TYPES, EMBEDDED_DATA } from '../../js/state.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
@@ -108,14 +108,20 @@ describe('getFreshness / timeAgo (fraicheur distributeur)', () => {
 // SIGNAL DE DISPO EN UN TAP (UC11) - payload + identifiant d'appareil
 // ============================================
 
-describe('signal de dispo (UC11) : getDeviceId / buildAvailabilityPayload', () => {
+describe('signal de dispo (UC11) : SIGNAL_DEVICE_HASH / buildAvailabilityPayload', () => {
     const DEVICE = 'device-0123456789abcdef';
 
-    it('getDeviceId est stable entre deux appels et assez long pour la RPC (>= 16)', () => {
-        const a = getDeviceId();
-        const b = getDeviceId();
-        assert.equal(a, b);
-        assert.ok(a.length >= 16);
+    it('PRIV-05 : valeur fixe pour tous, acceptee par la RPC (16 a 128 caracteres, jamais « demo- »)', () => {
+        assert.equal(SIGNAL_DEVICE_HASH, 'distrimatch-account');
+        assert.ok(SIGNAL_DEVICE_HASH.length >= 16 && SIGNAL_DEVICE_HASH.length <= 128);
+        assert.ok(!SIGNAL_DEVICE_HASH.toLowerCase().startsWith('demo-'));
+    });
+
+    it('PRIV-05 : resetDeviceId efface l\'ancien identifiant persistant (snackmatch_device)', () => {
+        assert.equal(DEVICE_ID_KEY, 'snackmatch_device');
+        localStorage.setItem(DEVICE_ID_KEY, 'ancien-appareil-0123456789');
+        resetDeviceId();
+        assert.equal(localStorage.getItem(DEVICE_ID_KEY), null);
     });
 
     it('exclut les produits "pas regarde" et les ids non numeriques', () => {
@@ -163,9 +169,9 @@ function contrastRatio(a, b) {
 // ============================================
 // MESURE DU PILOTE (008) : buildEventArgs / rememberEntrySource / logEvent
 // ============================================
-// Les evenements passent par la RPC log_event et ne portent aucune donnee
-// personnelle ; un type inconnu n'est jamais envoye ; sans client Supabase
-// c'est un no-op silencieux : la mesure ne casse jamais l'app.
+// Les evenements passent par la RPC log_event et ne portent qu'un identifiant
+// de session (PRIV-05) ; un type inconnu n'est jamais envoye ; sans client
+// Supabase c'est un no-op silencieux : la mesure ne casse jamais l'app.
 
 describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', () => {
     beforeEach(() => { sessionStorage.clear(); setSupabaseClient(null); });
@@ -183,11 +189,41 @@ describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', (
         });
     });
 
-    it('l\'appareil est identifie par getDeviceId (aleatoire local), rien d\'autre ne part', () => {
+    it('PRIV-05 : la session est identifiee par getSessionId (sessionStorage), rien d\'autre ne part', () => {
         const args = buildEventArgs('fiche_ouverte', { distributorId: 'dist-002' });
-        assert.equal(args.p_device_hash, getDeviceId());
+        assert.equal(args.p_device_hash, getSessionId());
         assert.equal(args.p_distributor_id, 'dist-002');
         assert.deepEqual(Object.keys(args).sort(), ['p_device_hash', 'p_distributor_id', 'p_source', 'p_type']);
+    });
+
+    it('PRIV-05 : identifiant stable dans la session, nouveau a la session suivante, jamais en localStorage', () => {
+        const a = getSessionId();
+        assert.equal(getSessionId(), a);
+        assert.ok(a.length >= 16 && a.length <= 128);
+        assert.equal(sessionStorage.getItem(SESSION_ID_KEY), a);
+        assert.equal(localStorage.getItem('snackmatch_device'), null);
+        sessionStorage.clear();   // nouvelle session (onglet ou app rouverts)
+        const b = getSessionId();
+        assert.notEqual(b, a);
+        assert.ok(b.length >= 16);
+    });
+
+    it('PRIV-05 : signal_envoye ne porte pas l\'identifiant de la session', () => {
+        const args = buildEventArgs('signal_envoye', { distributorId: 'dist-002' });
+        assert.notEqual(args.p_device_hash, getSessionId());
+        assert.ok(args.p_device_hash.length >= 16);
+    });
+
+    it('PRIV-05 : sessionStorage bloque -> identifiant en memoire, stable le temps de la page', () => {
+        const saved = globalThis.sessionStorage;
+        globalThis.sessionStorage = { getItem() { throw new Error('bloque'); }, setItem() { throw new Error('bloque'); } };
+        try {
+            const a = getSessionId();
+            assert.ok(a.length >= 16);
+            assert.equal(getSessionId(), a);
+        } finally {
+            globalThis.sessionStorage = saved;
+        }
     });
 
     it('la source suit l\'origine de la session (&src=qr) ; une source explicite prime', () => {

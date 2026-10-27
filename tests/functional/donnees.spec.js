@@ -210,7 +210,7 @@ test.describe('15. Confirmation maison', () => {
 // remplace (le dernier handler enregistre gagne) pour lire ce qui part.
 
 test.describe('16. Mesure du pilote (log_event)', () => {
-    test('fiche_ouverte puis itineraire : un evenement chacun, meme appareil, source organic, aucune donnee personnelle', async ({ page }) => {
+    test('fiche_ouverte puis itineraire : un evenement chacun, meme session, source organic, aucun identifiant persistant', async ({ page }) => {
         const events = await captureEvents(page);
         const firstId = await page.evaluate(() => window.AppState.distributors[0].id);
         await page.evaluate(() => { window.open = () => null; });   // pas de vrai onglet Google Maps
@@ -219,11 +219,21 @@ test.describe('16. Mesure du pilote (log_event)', () => {
         await page.click('#dist-action-directions');
 
         await expect.poll(() => events.map(e => e.type)).toEqual(['fiche_ouverte', 'itineraire']);
-        const device = await page.evaluate(() => localStorage.getItem('snackmatch_device'));
+        // PRIV-05 : identifiant limite a la session (sessionStorage), plus rien en localStorage
+        const device = await page.evaluate(() => sessionStorage.getItem('distrimatch_session'));
+        expect(device?.length).toBeGreaterThanOrEqual(16);
+        expect(await page.evaluate(() => localStorage.getItem('snackmatch_device'))).toBeNull();
         for (const e of events) {
             expect(e).toMatchObject({ distributorId: firstId, source: 'organic', device });
             expect(Object.keys(e.raw).sort()).toEqual(['p_device_hash', 'p_distributor_id', 'p_source', 'p_type']);
         }
+    });
+
+    // PRIV-05 : l'ancien identifiant d'appareil persistant ne reste pas sur le telephone
+    test('l’ancien identifiant d’appareil (snackmatch_device) est efface a l’ouverture', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('snackmatch_device', 'ancien-appareil-0123456789'));
+        await page.reload();
+        await expect.poll(() => page.evaluate(() => localStorage.getItem('snackmatch_device')), { timeout: 15000 }).toBeNull();
     });
 
     // EPIC-T12 : modifier la fiche (renommer...) la re-rend sans la rouvrir : pas recomptee
