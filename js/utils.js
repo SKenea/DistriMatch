@@ -173,30 +173,19 @@ export function getFreshness(lastVerified, now = Date.now()) {
 // SIGNAL DE DISPO EN UN TAP (UC11)
 // ============================================
 
-// Identifiant d'appareil pour le rate limit des signaux : aleatoire, genere
-// une fois, garde en localStorage. Pas d'empreinte navigateur, pas d'IP,
-// aucune donnee personnelle. Memoise pour rester stable meme sans localStorage.
+// Signal de dispo (UC11) : la RPC confirm_availability attend encore un
+// p_device_hash de 16 a 128 caracteres, mais la base ne le garde plus
+// (PRIV-05, migration 032 : elle enregistre 'account') et la limite est par
+// compte (014). On envoie la meme valeur fixe pour tout le monde : elle ne
+// permet de reconnaitre ni un appareil ni une personne.
+export const SIGNAL_DEVICE_HASH = 'distrimatch-account';
+
+// Ancien identifiant d'appareil persistant (localStorage), envoye nulle part
+// depuis PRIV-05 : efface au demarrage (app.js) et par « Effacer mes
+// données » (BUG-14).
 export const DEVICE_ID_KEY = 'snackmatch_device';
-let memoDeviceId = null;
 
-export function getDeviceId() {
-    if (memoDeviceId) return memoDeviceId;
-    let id = null;
-    try { id = localStorage.getItem(DEVICE_ID_KEY); } catch (e) { /* localStorage indisponible */ }
-    if (!id || id.length < 16) {
-        id = (typeof crypto !== 'undefined' && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : `dev-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
-        try { localStorage.setItem(DEVICE_ID_KEY, id); } catch (e) { /* on garde l'id en memoire */ }
-    }
-    memoDeviceId = id;
-    return id;
-}
-
-// « Effacer mes données » (BUG-14) : l'identifiant d'appareil repart de zero,
-// un nouveau est tire au prochain besoin (getDeviceId)
 export function resetDeviceId() {
-    memoDeviceId = null;
     try { localStorage.removeItem(DEVICE_ID_KEY); } catch (e) { /* localStorage indisponible */ }
 }
 

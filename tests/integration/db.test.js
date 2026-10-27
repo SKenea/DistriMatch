@@ -1224,6 +1224,39 @@ describe('base : tables heritees privees (031)', { skip: SKIP }, () => {
     });
 });
 
+// PRIV-05 (032) : la mesure d'audience ne se relie plus a un compte
+describe('base : identifiant d’appareil plus enregistre avec les signaux (032)', { skip: SKIP }, () => {
+    it('un signal enregistre device_hash = « account », pas l’identifiant envoye', async () => {
+        const p = await probe(`${AS_USER} perform ${signal('working')};
+            reset role; select string_agg(device_hash, ',') into r from availability_signals
+             where distributor_id = '${DEMO}' and user_id = ${USER} and created_at = now()`);
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'account');
+    });
+
+    it('un device_hash « demo-… » reste refuse (22023)', async () => {
+        const p = await probe(`${AS_USER} perform confirm_availability('${DEMO}', 'demo-itest-000000002', '[]'::jsonb, 'empty')`);
+        assert.equal(p.reachedEnd, false, p.message);
+        assert.equal(p.code, '22023');
+    });
+
+    it('plus aucun ancien identifiant en base ; index retire', async () => {
+        const [r] = await query(`select
+            position('p_device_hash, v_user_id' in pg_get_functiondef('public.confirm_availability'::regproc)) = 0 as plus_enregistre,
+            (select count(*)::int from pg_indexes where schemaname = 'public' and indexname = 'idx_signals_device_recent') as index_appareil,
+            (select count(*)::int from availability_signals where device_hash not like 'demo-%' and device_hash <> 'account') as anciens_identifiants`);
+        assert.deepEqual(r, { plus_enregistre: true, index_appareil: 0, anciens_identifiants: 0 });
+    });
+
+    it('purge nocturne des evenements de plus de 13 mois (pg_cron)', async () => {
+        const rows = await query("select schedule, command, active from cron.job where jobname = 'distrimatch-events-purge'");
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].schedule, '45 3 * * *');
+        assert.match(rows[0].command, /delete from public\.events where created_at < now\(\) - interval '13 months'/);
+        assert.equal(rows[0].active, true);
+    });
+});
+
 describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
     before(async () => { /* les blocs precedents sont tous annules */ });
     it('aucune trace « itest » en base', async () => {
