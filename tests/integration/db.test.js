@@ -231,9 +231,11 @@ describe('base : avis (016)', { skip: SKIP }, () => {
     });
 
     it('avec un compte : avis depose, auteur et compte forces par la base', async () => {
-        const p = await probe(`${AS_USER} ${insertReview()};
-            select json_build_object('auteur', author_name, 'moi', user_id = auth.uid())::text into r
-              from reviews where distributor_id = '${DEMO}' and user_id = auth.uid()`);
+        // PRIV-02 (030) : user_id n'est plus lisible par le compte : relu en postgres
+        const p = await probe(`${AS_USER} ${insertReview()} returning id into v_id;
+            reset role;
+            select json_build_object('auteur', author_name, 'moi', user_id = ${USER})::text into r
+              from reviews where id = v_id`, 'v_id bigint;');
         assert.ok(p.reachedEnd, p.message);
         assert.deepEqual(JSON.parse(p.result), { auteur: 'Membre DistriMatch', moi: true });
     });
@@ -244,17 +246,19 @@ describe('base : avis (016)', { skip: SKIP }, () => {
     });
 
     it('on modifie et supprime son avis, jamais celui d\u2019un autre', async () => {
-        const p = await probe(`${AS_USER} ${insertReview(2)};
-            update reviews set rating = 5 where distributor_id = '${DEMO}' and user_id = auth.uid();
-            update reviews set rating = 1 where distributor_id = '${DEMO}' and user_id is null;
+        // PRIV-02 (030) : le compte vise son avis par son id (user_id illisible) ;
+        // les regles RLS « son propre avis » font le reste
+        const p = await probe(`${AS_USER} ${insertReview(2)} returning id into v_id;
+            update reviews set rating = 5 where id = v_id;
+            update reviews set rating = 1 where distributor_id = '${DEMO}' and id <> v_id;
             get diagnostics v_n = row_count;
             r := json_build_object(
-                'mien', (select rating from reviews where distributor_id = '${DEMO}' and user_id = auth.uid()),
+                'mien', (select rating from reviews where id = v_id),
                 'autres_modifies', v_n
             )::text;
-            delete from reviews where distributor_id = '${DEMO}' and user_id is null;
+            delete from reviews where distributor_id = '${DEMO}' and id <> v_id;
             get diagnostics v_n = row_count;
-            r := (r::jsonb || jsonb_build_object('autres_supprimes', v_n))::text`, 'v_n int;');
+            r := (r::jsonb || jsonb_build_object('autres_supprimes', v_n))::text`, 'v_n int; v_id bigint;');
         assert.ok(p.reachedEnd, p.message);
         assert.deepEqual(JSON.parse(p.result), { mien: 5, autres_modifies: 0, autres_supprimes: 0 });
     });
@@ -318,6 +322,53 @@ describe('base : avis (016)', { skip: SKIP }, () => {
             has_function_privilege('anon', 'public.seed_demo_reviews()', 'execute') as anon_seed,
             has_function_privilege('authenticated', 'public.seed_demo_reviews()', 'execute') as auth_seed`);
         assert.deepEqual(r, { auth_purge: false, anon_seed: false, auth_seed: false });
+    });
+});
+
+// PRIV-02 (030) : avis vraiment anonymes : l'API ne lit plus l'auteur d'un avis
+describe('base : avis anonymes (030)', { skip: SKIP }, () => {
+    it('personne ne lit l’auteur d’un avis (user_id) ni ne filtre par compte (42501)', async () => {
+        for (const role of [AS_ANON, AS_USER]) {
+            const who = await probe(`${role} perform user_id from reviews limit 1`);
+            assert.equal(who.code, '42501');
+            const filter = await probe(`${role} perform id from reviews where user_id is not null limit 1`);
+            assert.equal(filter.code, '42501');
+        }
+        const [r] = await query(`select
+            has_column_privilege('anon', 'public.reviews', 'user_id', 'select') as anon_auteur,
+            has_column_privilege('authenticated', 'public.reviews', 'user_id', 'select') as auth_auteur,
+            has_column_privilege('anon', 'public.reviews', 'body', 'select') as anon_texte`);
+        assert.deepEqual(r, { anon_auteur: false, auth_auteur: false, anon_texte: true });
+    });
+
+    it('un visiteur lit toujours les avis (sans l’auteur) et la note', async () => {
+        const p = await probe(`${AS_ANON}
+            r := (select count(*) from (select id, distributor_id, author_name, rating, body, created_at, updated_at
+                                          from reviews where distributor_id = '${DEMO}') x)::text
+              || '|' || (select avis from distributor_ratings where distributor_id = '${DEMO}')::text`);
+        assert.ok(p.reachedEnd, p.message);
+        const [lus, note] = p.result.split('|').map(Number);
+        assert.ok(lus > 0);
+        assert.equal(lus, note);
+    });
+
+    it('my_review : rend mon avis sur la fiche (sans user_id), rien ailleurs ; refuse sans compte', async () => {
+        const p = await probe(`${AS_USER} ${insertReview(3)} returning id into v_id;
+            r := (select json_build_object('meme', id = v_id, 'note', rating, 'auteur', author_name)::text from my_review('${DEMO}'))
+              || '|' || (select count(*) from my_review('${DEMO}'))::text
+              || '|' || (select count(*) from my_review('itest-aucune'))::text`, 'v_id bigint;');
+        assert.ok(p.reachedEnd, p.message);
+        const [mine, n, ailleurs] = p.result.split('|');
+        assert.deepEqual(JSON.parse(mine), { meme: true, note: 3, auteur: 'Membre DistriMatch' });
+        assert.equal(n, '1');
+        assert.equal(ailleurs, '0');
+        const anon = await probe(`${AS_ANON} perform * from my_review('${DEMO}')`);
+        assert.equal(anon.code, '42501');
+        const [f] = await query(`select
+            position('user_id' in pg_get_function_result('public.my_review(text)'::regprocedure)) = 0 as sans_auteur,
+            has_function_privilege('anon', 'public.my_review(text)', 'execute') as anon_exec,
+            has_function_privilege('authenticated', 'public.my_review(text)', 'execute') as auth_exec`);
+        assert.deepEqual(f, { sans_auteur: true, anon_exec: false, auth_exec: true });
     });
 });
 

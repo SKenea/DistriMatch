@@ -33,7 +33,7 @@ avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
   une fiche — `PRIV-01.md` (migration 029)
   - Acceptance : `added_by` / `modified_by` illisibles par l'API ; « Mes ajouts » et Mon profil
     passent par `my_distributors()` ; connexion par code reconnue sans rechargement.
-- [ ] PRIV-02 En tant que membre, mon avis est vraiment anonyme — `PRIV-02.md` (migration 030)
+- [x] PRIV-02 En tant que membre, mon avis est vraiment anonyme — `PRIV-02.md` (migration 030)
   - Acceptance : `reviews.user_id` illisible ; mon avis retrouvé par `my_review`.
 - [ ] PRIV-03 En tant que membre, les tables héritées ne donnent plus d'identifiant de compte
   — `PRIV-03.md` (migration 031)

@@ -8,7 +8,9 @@
  * distributor_ratings (migration 016), jamais des colonnes du seed.
  *
  * Securite portee par la base (016) : RLS, un avis par compte et par machine,
- * 10 avis / heure / compte, comptes bloques. Ce module ne bloque jamais
+ * 10 avis / heure / compte, comptes bloques. PRIV-02 (030) : l'API ne lit plus
+ * l'auteur (user_id) d'un avis ; « mon avis » vient de la RPC my_review et la
+ * liste reconnait le sien par son id. Ce module ne bloque jamais
  * l'ouverture de la fiche : lectures en fire-and-forget.
  */
 
@@ -21,7 +23,8 @@ import { isAuthenticated, getCurrentUser, requireAuth, promptReconnect } from '.
 import { confirmDialog } from './confirm-dialog.js';
 
 const PAGE_SIZE = 10;
-const COLUMNS = 'id, user_id, author_name, rating, body, created_at, updated_at';
+// PRIV-02 (030) : jamais user_id (illisible par l'API) ; memes colonnes que my_review()
+const COLUMNS = 'id, author_name, rating, body, created_at, updated_at';
 
 let state = freshState(null);
 
@@ -105,15 +108,13 @@ async function fetchMine() {
         return;
     }
     try {
-        const { data, error } = await supabaseClient
-            .from('reviews')
-            .select(COLUMNS)
-            .eq('distributor_id', distributorId)
-            .eq('user_id', uid)
-            .maybeSingle();
+        // PRIV-02 : la base retrouve l'avis du compte connecte (auth.uid()) ;
+        // 0 ou 1 ligne, sans .maybeSingle()
+        const { data: rows, error } = await supabaseClient.rpc('my_review', { p_distributor_id: distributorId });
         if (error) throw error;
         if (state.distributorId !== distributorId) return;
-        state.mine = data || null;
+        const data = Array.isArray(rows) ? rows[0] || null : null;
+        state.mine = data;
         state.draftRating = data ? data.rating : 0;
         const body = document.getElementById('dist-review-body');
         if (body) body.value = data?.body || '';
@@ -179,11 +180,12 @@ export function renderReviews() {
 
     const list = document.getElementById('dist-reviews-list');
     if (list) {
-        const uid = getCurrentUser()?.id;
+        // PRIV-02 : l'auteur n'est plus lisible ; son avis se reconnait a son id (my_review)
+        const mineId = authed && state.mine ? state.mine.id : null;
         list.innerHTML = state.items.map(rv => `
-            <li class="review-item${uid && rv.user_id === uid ? ' is-mine' : ''}">
+            <li class="review-item${mineId !== null && rv.id === mineId ? ' is-mine' : ''}">
                 <div class="review-head">
-                    <span class="review-author">${escapeHTML(rv.author_name || 'Membre DistriMatch')}${uid && rv.user_id === uid ? ' <span class="review-mine-tag">Ton avis</span>' : ''}</span>
+                    <span class="review-author">${escapeHTML(rv.author_name || 'Membre DistriMatch')}${mineId !== null && rv.id === mineId ? ' <span class="review-mine-tag">Ton avis</span>' : ''}</span>
                     <span class="review-time">${escapeHTML(timeAgo(new Date(rv.created_at).getTime()))}</span>
                 </div>
                 <div class="review-stars" role="img" aria-label="Note : ${Number(rv.rating)} sur 5">${generateStars(Number(rv.rating))}</div>
@@ -261,9 +263,11 @@ async function submitReview() {
     updateFormState();
     try {
         const editing = !!state.mine;
+        // PRIV-02 : pas de .select() apres l'ecriture (la ligne rendue n'etait pas lue) ;
+        // refreshAfterChange() relit la liste et my_review
         const res = await withSessionRetry(() => editing
-            ? supabaseClient.from('reviews').update(check.value).eq('id', state.mine.id).select(COLUMNS).single()
-            : supabaseClient.from('reviews').insert({ distributor_id: distributor.id, ...check.value }).select(COLUMNS).single());
+            ? supabaseClient.from('reviews').update(check.value).eq('id', state.mine.id)
+            : supabaseClient.from('reviews').insert({ distributor_id: distributor.id, ...check.value }));
         if (res.error) {
             reportError(res);
             if (res.error.code === '23505') await fetchMine();   // deja un avis : on le recharge pour le modifier
