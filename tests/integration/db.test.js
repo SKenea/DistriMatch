@@ -327,6 +327,8 @@ describe('base : avis (016)', { skip: SKIP }, () => {
 
 // PRIV-02 (030) : avis vraiment anonymes : l'API ne lit plus l'auteur d'un avis
 describe('base : avis anonymes (030)', { skip: SKIP }, () => {
+    const insertReview = (rating = 4, body = "'itest avis'") =>
+        `insert into reviews (distributor_id, rating, body) values ('${DEMO}', ${rating}, ${body})`;
     it('personne ne lit l’auteur d’un avis (user_id) ni ne filtre par compte (42501)', async () => {
         for (const role of [AS_ANON, AS_USER]) {
             const who = await probe(`${role} perform user_id from reviews limit 1`);
