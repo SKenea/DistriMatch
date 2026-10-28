@@ -42,7 +42,7 @@ avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
   — `PRIV-05.md` (migration 032)
   - Acceptance : identifiant de session (sessionStorage), `signal_envoye` à usage unique, signal
     enregistré sans identifiant d'appareil, événements effacés après 13 mois.
-- [ ] PRIV-06 En tant que membre, me déconnecter efface ce qui relève de mon compte — `PRIV-06.md`
+- [x] PRIV-06 En tant que membre, me déconnecter efface ce qui relève de mon compte — `PRIV-06.md`
   - Acceptance : abonnement app fermée détaché du compte, état admin / exploitant oublié.
 - [ ] PRIV-07 En tant que membre, je peux faire supprimer mon compte — `PRIV-07.md` (migration 033)
   - Acceptance : suppression sans casser les fiches (clés en `SET NULL`), procédure écrite,

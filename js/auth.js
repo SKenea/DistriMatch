@@ -10,9 +10,9 @@
 
 import { supabaseClient, AppState } from './state.js';
 import { showToast, escapeHTML } from './utils.js';
-import { getHcaptchaSitekey, isLocalhost } from './config.js';
+import { getHcaptchaSitekey, isLocalhost, SUPABASE_URL } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
-import { isStandalone } from './push.js';
+import { isStandalone, forgetPushAccount } from './push.js';
 
 // ============================================
 // ETAT AUTH
@@ -170,9 +170,27 @@ export function takeLoginReturn(now = Date.now()) {
 // DECONNEXION
 // ============================================
 
+// Cle de la session de supabase-js sur cet appareil (meme calcul que tests/e2e/session.mjs)
+const SESSION_STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+
 export async function signOut() {
     if (!supabaseClient) return;
-    await supabaseClient.auth.signOut();
+    // PRIV-06 : l'abonnement aux notifications quitte le compte AVANT la fin de session ;
+    // la synchronisation qui suit la deconnexion le recree sans compte (push.js)
+    await forgetPushAccount();
+    let error = null;
+    try {
+        ({ error } = await supabaseClient.auth.signOut());
+    } catch (e) {
+        error = e;
+    }
+    if (error) {
+        // PRIV-06 : sans reseau, supabase-js garde la session sur l'appareil (elle revenait
+        // au lancement suivant) : on l'efface ici. Elle reste ouverte cote serveur jusqu'a
+        // son expiration, mais plus rien ne la porte sur ce telephone.
+        console.warn('[Auth] Deconnexion sans reponse du serveur, session effacee sur cet appareil :', error?.message || error);
+        try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) { /* stockage bloque */ }
+    }
     currentUser = null;
     notifyAuthChange();
 }

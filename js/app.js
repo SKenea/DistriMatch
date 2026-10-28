@@ -55,7 +55,7 @@ import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuth
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
-import { initPushSettings, syncPushSubscription, disablePush, maybeHintHomeScreenFavorites, ASKED_KEY as PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY } from './push.js';
+import { initPushSettings, syncPushSubscription, disablePush, retryPendingUnsubscribe, maybeHintHomeScreenFavorites, ASKED_KEY as PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY } from './push.js';
 import { EDIT_HINT_KEY } from './fiche-edit.js';
 import { initAdmin, loadAdmin } from './admin.js';
 import { initAdditions } from './additions.js';
@@ -584,6 +584,25 @@ function handleSearchResultClick(e) {
     openDistributorModal(id);
 }
 
+// PRIV-06 : deconnecte (bouton, autre onglet, session expiree), plus rien du compte
+// precedent : ni ses pages (console admin, « Ma demande », « Mes ajouts »), ni les fiches
+// en attente ou refusees lues grace a lui (auteur ou admin, RLS 022). Chaque module vide
+// ses propres donnees (admin.js, operators.js, additions.js).
+const ACCOUNT_VIEW_IDS = ['admin-view', 'operator-request-view', 'my-additions-view'];
+
+function forgetAccountScreens(user) {
+    if (user && !user.is_anonymous) return;
+    if (ACCOUNT_VIEW_IDS.some((id) => document.getElementById(id)?.classList.contains('view-active'))) goBackToMap();
+    AppState.rejectedDistributors = [];
+    const kept = AppState.distributors.filter((d) => d.reviewStatus !== 'pending' || d.isLocalOnly);
+    if (kept.length === AppState.distributors.length) return;
+    const openId = document.getElementById('dist-modal-overlay')?.classList.contains('active') ? AppState.currentDistributor?.id : null;
+    AppState.distributors = kept;
+    if (openId && !kept.some((d) => d.id === openId)) document.getElementById('dist-modal-close')?.click();
+    updateMapMarkers(false);   // la carte garde son cadrage
+    if (document.getElementById('sidebar')?.classList.contains('open')) openSidePanelForFilters(AppState.activeFilters);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DistriMatch V8.0 - Supabase Edition - Initialisation...');
 
@@ -698,6 +717,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Notifications app fermee (EPIC-T25) : reglages + abonnement a jour
     initPushSettings();
     syncPushSubscription();
+    // PRIV-06 : un effacement d'abonnement reste en attente (hors ligne) est renvoye
+    retryPendingUnsubscribe();
+    window.addEventListener('online', retryPendingUnsubscribe);
     // iPhone, app de l'ecran d'accueil sans favori : indice une seule fois (BUG-04)
     maybeHintHomeScreenFavorites();
 
@@ -770,6 +792,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthChange(refreshFicheForAuth);
     // Le serveur ne notifie pas son propre signal : il connait le compte (EPIC-T25)
     onAuthChange(syncPushSubscription);
+    // PRIV-06 : deconnecte, plus rien du compte precedent a l'ecran ni en memoire
+    onAuthChange(forgetAccountScreens);
 
     // Menu deroulant avatar
     const avatarBtn = document.getElementById('profile-avatar-btn');

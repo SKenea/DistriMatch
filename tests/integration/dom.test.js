@@ -1497,3 +1497,35 @@ describe('Recherche : accents, ligature et adresse vide (BUG-09)', () => {
         assert.deepEqual(resultIds(), ['pain', 'sans-adresse']);
     });
 });
+
+// ============================================
+// DECONNEXION SANS RESEAU (PRIV-06)
+// ============================================
+
+const { signOut, getCurrentUser } = await import('../../js/auth.js');
+const { SUPABASE_URL: SUPABASE_URL_FOR_SESSION } = await import('../../js/config.js');
+
+describe('Deconnexion sans reseau (PRIV-06)', () => {
+    const SESSION_KEY = `sb-${new URL(SUPABASE_URL_FOR_SESSION).hostname.split('.')[0]}-auth-token`;
+    after(() => { setSupabaseClient(null); localStorage.removeItem(SESSION_KEY); });
+
+    it('le serveur ne repond pas : session effacee de l’appareil, visiteur', async () => {
+        localStorage.setItem(SESSION_KEY, '{"access_token":"itest"}');
+        let calls = 0;
+        setSupabaseClient({ auth: { signOut: async () => { calls++; return { error: { name: 'AuthRetryableFetchError', message: 'Failed to fetch' } }; } } });
+        window.__testLogin();
+        await signOut();
+        assert.equal(calls, 1);
+        assert.equal(localStorage.getItem(SESSION_KEY), null);
+        assert.equal(getCurrentUser(), null);
+    });
+
+    it('signOut qui leve une exception : meme resultat, aucune erreur remontee', async () => {
+        localStorage.setItem(SESSION_KEY, '{"access_token":"itest"}');
+        setSupabaseClient({ auth: { signOut: async () => { throw new TypeError('Failed to fetch'); } } });
+        window.__testLogin();
+        await signOut();
+        assert.equal(localStorage.getItem(SESSION_KEY), null);
+        assert.equal(getCurrentUser(), null);
+    });
+});

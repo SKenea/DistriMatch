@@ -83,6 +83,46 @@ export async function syncPushSubscription() {
     }
 }
 
+// PRIV-06 : push_subscribe garde le compte deja memorise (024, 026). A la deconnexion
+// (signOut, auth.js, AVANT la fin de session), on efface l'abonnement : la
+// synchronisation qui suit la deconnexion le recree sans compte.
+export async function forgetPushAccount() {
+    if (!supabaseClient || !isPushSupported() || !NotificationPrefs.push || permission() !== 'granted') return;
+    try {
+        const subscription = await currentSubscription();
+        if (!subscription) return;
+        const { error } = await supabaseClient.rpc('push_unsubscribe', { p_endpoint: subscription.endpoint });
+        if (error) throw error;
+    } catch (e) {
+        console.warn('[DistriMatch] Abonnement aux notifications encore lie au compte :', e?.message || e);
+    }
+}
+
+// PRIV-06 : effacement cote serveur pas confirme (hors ligne, projet en pause) : l'adresse
+// est gardee ici et renvoyee plus tard (retryPendingUnsubscribe). Cle volontairement hors
+// de la liste de « Effacer mes données » (app.js) : elle sert a finir l'effacement.
+export const PENDING_UNSUBSCRIBE_KEY = 'distrimatch_push_pending_unsubscribe';
+
+async function deleteOnServer(endpoint) {
+    if (!supabaseClient) return false;
+    try {
+        const { error } = await supabaseClient.rpc('push_unsubscribe', { p_endpoint: endpoint });
+        return !error;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Au demarrage et au retour du reseau : renvoie un effacement reste en attente
+export async function retryPendingUnsubscribe() {
+    let endpoint = null;
+    try { endpoint = localStorage.getItem(PENDING_UNSUBSCRIBE_KEY); } catch (e) { return false; }
+    if (!endpoint) return false;
+    if (!(await deleteOnServer(endpoint))) return false;
+    try { localStorage.removeItem(PENDING_UNSUBSCRIBE_KEY); } catch (e) { /* stockage bloque */ }
+    return true;
+}
+
 function showHomeScreenGuide() {
     return confirmDialog({
         title: 'Ajoute DistriMatch à ton écran d’accueil',
@@ -135,8 +175,13 @@ export async function disablePush() {
     try {
         const subscription = await currentSubscription();
         if (!subscription) return;
-        if (supabaseClient) await supabaseClient.rpc('push_unsubscribe', { p_endpoint: subscription.endpoint });
-        await subscription.unsubscribe();
+        const endpoint = subscription.endpoint;
+        // PRIV-06 : le resultat est lu ; un echec est retente plus tard
+        if (!(await deleteOnServer(endpoint))) {
+            try { localStorage.setItem(PENDING_UNSUBSCRIBE_KEY, endpoint); } catch (e) { /* stockage bloque */ }
+            console.warn('[DistriMatch] Abonnement pas encore efface sur le serveur : nouvel essai plus tard');
+        }
+        await subscription.unsubscribe();   // plus rien n'arrive sur ce telephone
     } catch (e) {
         console.warn('[DistriMatch] Desabonnement incomplet :', e?.message || e);
     }

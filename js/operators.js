@@ -273,7 +273,21 @@ function renderTodo(req) {
     }
 }
 
+// PRIV-06 : page « Ma demande » videe (deconnexion, ou avant d'ouvrir une demande :
+// jamais celle d'un autre compte, meme un instant) ; relecture des 30 s arretee
+function clearOperatorRequestView() {
+    openRequestId = null;
+    clearInterval(pollTimer);
+    renderedTodoKey = null;
+    const content = document.getElementById('operator-request-content');
+    if (content) content.innerHTML = '';
+    const input = document.getElementById('op-composer-input');
+    if (input) input.value = '';
+    document.getElementById('op-composer')?.setAttribute('hidden', '');
+}
+
 export async function openOperatorRequest(requestId) {
+    clearOperatorRequestView();
     openRequestId = Number(requestId);
     if (document.getElementById('dist-modal-overlay')?.classList.contains('active')) document.getElementById('dist-modal-close')?.click();
     switchView('operator-request');
@@ -427,7 +441,10 @@ export function pollOperatorRequest() {
 }
 
 export function initOperators() {
-    onAuthChange(() => refreshOperatorState());
+    onAuthChange((user) => {
+        if (!user || user.is_anonymous) clearOperatorRequestView();   // PRIV-06
+        refreshOperatorState();
+    });
     refreshOperatorState();
     registerViewCallback('operator-request', () => {
         clearInterval(pollTimer);

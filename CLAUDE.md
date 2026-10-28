@@ -114,7 +114,7 @@ Projet free-tier : s'il est en pause, les appels echouent en `ERR_NAME_NOT_RESOL
 
 ### Persistance localStorage
 
-Cles : `snackmatch_user` (abonnements/favoris, points ; migration auto `favorites` -> `subscriptions` dans `loadFromLocalStorage()`), `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`. Flag dev : `distrimatch_force_auth`.
+Cles : `snackmatch_user` (abonnements/favoris, points ; migration auto `favorites` -> `subscriptions` dans `loadFromLocalStorage()`), `snackmatch_profile`, `snackmatch_conversations`, `snackmatch_user_distributors`, `snackmatch_notification_prefs`, `snackmatch_notification_queue`. Flag dev : `distrimatch_force_auth`. `distrimatch_push_pending_unsubscribe` (PRIV-06) : adresse d'un abonnement aux notifications dont l'effacement serveur a echoue (hors ligne), renvoye au demarrage et au retour du reseau, gardee par « Effacer mes données » ; a la deconnexion, l'abonnement est efface puis recree sans compte, et la session locale est effacee meme sans reseau.
 
 ### Types de distributeurs
 
