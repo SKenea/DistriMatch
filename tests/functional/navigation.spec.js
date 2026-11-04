@@ -516,6 +516,58 @@ test.describe('23. Bouton retour', () => {
 });
 
 // ============================================
+// 23b. RETOUR : FERMER ET OUVRIR D'UN SEUL TOUCHER (CNX-01)
+// ============================================
+
+test.describe('23b. Retour : fermetures et ouvertures enchainees (CNX-01)', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    const layers = (page) => page.evaluate(() => window.__distrimatchLayers());
+    const historyLayer = (page) => page.evaluate(() => window.history.state?.layer ?? null);
+
+    test('depuis Favoris, le hamburger ouvre la liste ; retour la ferme, l’app reste', async ({ page }) => {
+        await page.evaluate(() => window.switchView('favorites'));
+        await expect(page.locator('#subscriptions-view')).toHaveClass(/view-active/);
+        await page.click('#sidebar-toggle');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        expect(await layers(page)).toEqual(['panel']);
+        await expect.poll(() => historyLayer(page)).toBe('panel');
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+        expect(await layers(page)).toEqual([]);
+        expect(await page.evaluate(() => !!window.AppState)).toBe(true);
+    });
+
+    test('croix de la liste sous une fiche : un seul retour ferme la fiche, aucune entree orpheline', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        expect(await layers(page)).toEqual(['panel', 'fiche']);
+        await page.evaluate(() => document.getElementById('side-panel-close').click());
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+        expect(await layers(page)).toEqual(['fiche']);
+        await page.goBack({ waitUntil: 'commit' }).catch(() => {});
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(await layers(page)).toEqual([]);
+        await expect.poll(() => historyLayer(page)).toBeNull();
+        expect(await page.evaluate(() => !!window.AppState)).toBe(true);
+    });
+
+    test('« Voir sur la carte » depuis la liste : fiche et liste fermees, plus aucune couche', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForSelector('#dist-modal-overlay.active');
+        await page.waitForSelector('#dist-action-locate:not([hidden])');
+        await page.evaluate(() => document.getElementById('dist-action-locate').click());
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+        expect(await layers(page)).toEqual([]);
+        await expect.poll(() => historyLayer(page)).toBeNull();
+    });
+});
+
+// ============================================
 // 27. FILTRES ET PANNEAU (audit UX-11/12)
 // ============================================
 // Fondu a droite des chips tant qu'il en reste hors ecran, rappel « Tous »
