@@ -208,6 +208,9 @@ export function renderFicheStatus() {
 export function checkNearbyForFiche(distributor) {
     nearbyFor = null;
     renderNearbyNudge();
+    // CNX-04 : jamais de demande de position avant l'ecran d'accueil (lien, QR) : la carte
+    // n'existe qu'apres le consentement ; app.js relance ce calcul a ce moment
+    if (!AppState.mapInitialized) return;
     if (!distributor || isPrivateFiche(distributor) || !isAuthenticated() || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
         if (AppState.currentDistributor?.id !== distributor.id) return;
