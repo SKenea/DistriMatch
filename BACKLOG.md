@@ -19,6 +19,41 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R4 Connexion, retour et liens (lot 4, revue du 2026-10-21)
+Objectif : le bouton retour ferme ce qui est à l'écran sans quitter l'app, la connexion ramène au
+bon endroit et ne réagit qu'à un vrai changement de compte, les liens et QR gardent une adresse
+propre et une mesure juste, les messages de connexion sont en français. Valeur : un parcours
+sans surprise sur téléphone avant le vrai pilote.
+Méthode : comme EPIC-R1, une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle
+medium (`/story <ID>`), une PR à la fois **dans cet ordre** (chaque fiche suppose la précédente
+fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : déconnexion sans réseau
+(PRIV-06), « Rien pour l'instant » sous l'historique (BUG-12).
+
+- [ ] CNX-01 En tant que membre sur téléphone, « retour » ferme la fiche ou la liste affichée
+  — `CNX-01.md` (story technique : `history.js`)
+  - Acceptance : fermer puis ouvrir dans le même toucher garde l'historique juste (Chromium,
+    WebKit, Firefox) ; croix de la liste sous une fiche sans entrée orpheline.
+- [ ] CNX-02 En tant que membre, la recherche, la fenêtre de connexion et Échap ferment ce qu'il
+  faut — `CNX-02.md`
+  - Acceptance : recherche et connexion sont des couches d'historique ; écouteurs retirés ; Échap
+    sur la liste sans entrée orpheline.
+- [ ] CNX-03 En tant que membre, le lien de connexion me ramène à ma fiche, et un lien expiré
+  est annoncé — `CNX-03.md`
+  - Acceptance : retour consommé seulement après une vraie connexion ; toast « Ce lien de
+    connexion a expiré ou a déjà servi : demande un nouveau lien. »
+- [ ] CNX-04 En tant que visiteur, aucune demande de position avant l'écran d'accueil — `CNX-04.md`
+- [ ] CNX-05 En tant que membre, l'app ne réagit qu'à un vrai changement de compte — `CNX-05.md`
+  - Acceptance : un SIGNED_IN répété n'efface plus mon avis en cours ; fiche ouverte par lien
+    mise à jour par une connexion dès l'ouverture.
+- [ ] CNX-06 En tant que Stéphane, l'origine « QR » ne compte que le scan — `CNX-06.md`
+  (**décision de Stéphane** : fenêtre de 2 h)
+  - Acceptance : adresse nettoyée avant la fiche ; source gardée au retour du lien ; signal
+    « via QR » seulement sur le distributeur scanné, dans les 2 h.
+- [ ] CNX-07 En tant que membre, les erreurs de connexion sont en français et les textes suivent
+  la règle du compte — `CNX-07.md` (**textes à valider par Stéphane**)
+- [ ] CNX-08 En tant que membre, le contrôle anti-robot s'affiche une seule fois et s'explique
+  s'il tarde — `CNX-08.md` (relecture par un modèle plus fort ; E2E après déploiement)
+
 ### EPIC-R2 Vie privée : ne plus exposer le compte (lot 2, revue du 2026-10-21)
 Objectif : l'API ne permet plus de relier un signal, un avis, une modification ou une visite à un
 compte ; la déconnexion et la suppression du compte effacent ce qu'elles promettent ; une page
