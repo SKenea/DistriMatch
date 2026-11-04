@@ -33,7 +33,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   — `CNX-01.md` (story technique : `history.js`)
   - Acceptance : fermer puis ouvrir dans le même toucher garde l'historique juste (Chromium,
     WebKit, Firefox) ; croix de la liste sous une fiche sans entrée orpheline.
-- [ ] CNX-02 En tant que membre, la recherche, la fenêtre de connexion et Échap ferment ce qu'il
+- [x] CNX-02 En tant que membre, la recherche, la fenêtre de connexion et Échap ferment ce qu'il
   faut — `CNX-02.md`
   - Acceptance : recherche et connexion sont des couches d'historique ; écouteurs retirés ; Échap
     sur la liste sans entrée orpheline.
