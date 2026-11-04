@@ -14,7 +14,7 @@ Rapport d'origine : https://claude.ai/artifact/T64CmaCdx8oEkXPUmc4Qx5
 | SEC | 1. Sécurité | SEC-02 plus aucune donnée dans un `onclick` |
 | PRIV | 2. Vie privée | |
 | BUG | 3. Bugs visibles | BUG-01 menu du profil derrière les pages |
-| NAV | 4. Connexion, retour et liens | |
+| CNX | 4. Connexion, retour et liens | CNX-01 retour : fermer puis ouvrir dans le même toucher |
 | NOTIF | 5. Notifications | |
 | A11Y | 6. Accessibilité | |
 | TEST | 7. Tests | |
