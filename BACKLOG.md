@@ -29,7 +29,7 @@ medium (`/story <ID>`), une PR à la fois **dans cet ordre** (chaque fiche suppo
 fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : déconnexion sans réseau
 (PRIV-06), « Rien pour l'instant » sous l'historique (BUG-12).
 
-- [ ] CNX-01 En tant que membre sur téléphone, « retour » ferme la fiche ou la liste affichée
+- [x] CNX-01 En tant que membre sur téléphone, « retour » ferme la fiche ou la liste affichée
   — `CNX-01.md` (story technique : `history.js`)
   - Acceptance : fermer puis ouvrir dans le même toucher garde l'historique juste (Chromium,
     WebKit, Firefox) ; croix de la liste sous une fiche sans entrée orpheline.
