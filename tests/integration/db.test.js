@@ -1257,6 +1257,89 @@ describe('base : identifiant d’appareil plus enregistre avec les signaux (032)
     });
 });
 
+// PRIV-07 (033) : un compte peut etre supprime (RGPD)
+describe('base : suppression d’un compte (033)', { skip: SKIP }, () => {
+    const ITEST_EMAIL = 'itest-suppression@distrimatch.test';
+    // Compte cree DANS la transaction annulee (modele de 015) ; v_new est declare par le test
+    const CREATE_USER = `insert into auth.users (
+            instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+            raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+            confirmation_token, email_change, email_change_token_new, recovery_token)
+        values ('00000000-0000-0000-0000-000000000000', v_new, 'authenticated', 'authenticated',
+            '${ITEST_EMAIL}', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(),
+            '', '', '', '');`;
+    const AS_NEW = `perform set_config('request.jwt.claims', json_build_object('sub', v_new, 'role', 'authenticated')::text, true); set local role authenticated;`;
+    // Retour en postgres SANS jeton : comme le SQL Editor (gardes et audit sans auteur)
+    const AS_POSTGRES = `perform set_config('request.jwt.claims', '', true); reset role;`;
+
+    it('plus aucune cle de public vers auth.users sans regle ON DELETE', async () => {
+        const [r] = await query(`select coalesce(string_agg(c.conrelid::regclass::text || '.' || c.conname, ', ' order by c.conname), '') as restantes
+            from pg_constraint c
+            where c.contype = 'f' and c.confrelid = 'auth.users'::regclass
+              and c.connamespace = 'public'::regnamespace and c.confdeltype not in ('n', 'c')`);
+        assert.equal(r.restantes, '');
+    });
+
+    it('un compte qui a ajoute une fiche, signale, change un prix, renomme un produit et signale un probleme se supprime ; ses contributions restent sans auteur', async () => {
+        const p = await probe(`${CREATE_USER}
+            select id into v_product from products where distributor_id = '${DEMO}' and removed_at is null order by id limit 1;
+            insert into reports (user_id, distributor_id, report_type) values (v_new, '${DEMO}', 'itest');
+            ${AS_NEW}
+            insert into distributors (id, name, type, lat, lng, is_user_added, added_by)
+            values ('itest-suppr', 'Fiche itest', 'pizza', 43.49, -1.47, true, v_new);
+            perform confirm_availability('${DEMO}', '${DEVICE}', jsonb_build_array(jsonb_build_object('product_id', v_product, 'state', 'available')), 'working');
+            -- Depuis PRIV-01 (029), seul un changement de prix pose encore distributors.modified_by
+            update distributors set price_range = price_range where id = '${DEMO}';
+            update products set name = name where id = v_product;
+            ${AS_POSTGRES}
+            v_before := json_build_object(
+                'fiche', (select added_by = v_new from distributors where id = 'itest-suppr'),
+                'demo_modifiee', (select modified_by = v_new from distributors where id = '${DEMO}'),
+                'produit', (select modified_by = v_new from products where id = v_product),
+                'signaux', (select count(*) from availability_signals where user_id = v_new),
+                'journal', (select count(*) from product_edits where user_id = v_new)
+            )::text;
+            -- Ids des signaux du compte (depuis PRIV-05, device_hash ne distingue plus les appareils)
+            v_signals := array(select id from availability_signals where user_id = v_new);
+            delete from auth.users where id = v_new;
+            r := v_before || '|' || json_build_object(
+                'fiche_reste', (select count(*) from distributors where id = 'itest-suppr' and added_by is null),
+                'demo_sans_auteur', (select modified_by is null from distributors where id = '${DEMO}'),
+                'produit_sans_auteur', (select modified_by is null from products where id = v_product),
+                'signaux_lies', (select count(*) from availability_signals where user_id = v_new),
+                'signaux_restes', (select count(*) from availability_signals where id = any(v_signals) and user_id is null),
+                'journal_lie', (select count(*) from product_edits where user_id = v_new),
+                'signalement_reste', (select count(*) from reports where report_type = 'itest' and user_id is null),
+                'profil', (select count(*) from profiles where id = v_new)
+            )::text`,
+            'v_new uuid := gen_random_uuid(); v_product bigint; v_before text; v_signals bigint[];');
+        assert.ok(p.reachedEnd, p.message);
+        const [before, after] = p.result.split('|').map(s => JSON.parse(s));
+        assert.deepEqual(before, { fiche: true, demo_modifiee: true, produit: true, signaux: 2, journal: 1 });
+        assert.deepEqual(after, {
+            fiche_reste: 1, demo_sans_auteur: true, produit_sans_auteur: true,
+            signaux_lies: 0, signaux_restes: 2, journal_lie: 0, signalement_reste: 1, profil: 0
+        });
+    });
+
+    it('push_subscribe sans compte retire le compte d’un abonnement existant (PRIV-06)', async () => {
+        const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/itest-033';
+        const sub = `push_subscribe('${ENDPOINT}', 'p256dh-itest', 'auth-itest', '{}', '{}', null, null, 'UTC')`;
+        const p = await probe(`${AS_USER} perform ${sub};
+            set local role postgres; v_avant := (select (user_id = ${USER})::text from push_subscriptions where endpoint = '${ENDPOINT}');
+            ${AS_ANON} perform ${sub};
+            set local role postgres;
+            r := v_avant || '|' || (select coalesce(user_id::text, 'null') from push_subscriptions where endpoint = '${ENDPOINT}')`, 'v_avant text;');
+        assert.ok(p.reachedEnd, p.message);
+        assert.equal(p.result, 'true|null');
+    });
+
+    it('rien n’est reste : aucun compte « itest-suppression »', async () => {
+        const [r] = await query(`select count(*)::int as n from auth.users where email = '${ITEST_EMAIL}'`);
+        assert.equal(r.n, 0);
+    });
+});
+
 describe('base : rien n’a ete ecrit par ces tests', { skip: SKIP }, () => {
     before(async () => { /* les blocs precedents sont tous annules */ });
     it('aucune trace « itest » en base', async () => {

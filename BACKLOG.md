@@ -44,7 +44,7 @@ avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
     enregistré sans identifiant d'appareil, événements effacés après 13 mois.
 - [x] PRIV-06 En tant que membre, me déconnecter efface ce qui relève de mon compte — `PRIV-06.md`
   - Acceptance : abonnement app fermée détaché du compte, état admin / exploitant oublié.
-- [ ] PRIV-07 En tant que membre, je peux faire supprimer mon compte — `PRIV-07.md` (migration 033)
+- [x] PRIV-07 En tant que membre, je peux faire supprimer mon compte — `PRIV-07.md` (migration 033)
   - Acceptance : suppression sans casser les fiches (clés en `SET NULL`), procédure écrite,
     réabonnement sans compte retire le compte.
 - [ ] PRIV-04 En tant que visiteur, je lis une page « Confidentialité » claire et exacte
