@@ -23,6 +23,7 @@ const VIEW_CONFIG = {
     admin:                   { id: 'admin-view',           onShow: null },
     'operator-request':      { id: 'operator-request-view', onShow: null },
     'my-additions':          { id: 'my-additions-view',    onShow: null },
+    privacy:                 { id: 'privacy-view',         onShow: null },
     activity:                { id: 'activity-view',        onShow: null },
     notifications:           { id: 'notifications-view',   onShow: null },
     'notification-settings': { id: 'notification-settings' }
@@ -71,6 +72,32 @@ export function switchTab(tabName) {
 
 export function goBackToMap() {
     switchTab('explore');
+}
+
+// ============================================
+// PAGE CONFIDENTIALITE (PRIV-04)
+// ============================================
+// Ouverte depuis l'accueil, la fenetre de connexion, la fiche (formulaire d'exploitant)
+// ou Compte. Elle passe au-dessus de tout (css/panels.css) : « Retour » rouvre la vue
+// d'ou l'on vient (Compte), sinon ferme la page seule et laisse en place l'accueil, la
+// fiche ou la fenetre de connexion restes dessous.
+let privacyReturn = null;   // { view: vue a rouvrir ou null, focus: element a refocaliser }
+
+export function openPrivacyView() {
+    const active = document.querySelector('.view-page.view-active');
+    const from = active ? Object.keys(VIEW_CONFIG).find(name => VIEW_CONFIG[name].id === active.id) : null;
+    if (from !== 'privacy') privacyReturn = { view: from || null, focus: document.activeElement };
+    switchView('privacy');
+    document.getElementById('privacy-view')?.scrollTo?.(0, 0);
+    document.getElementById('back-from-privacy')?.focus();
+}
+
+export function closePrivacyView() {
+    const back = privacyReturn || { view: null, focus: null };
+    privacyReturn = null;
+    if (back.view) switchView(back.view);
+    else goBackToMap();
+    if (back.focus && document.contains(back.focus) && typeof back.focus.focus === 'function') back.focus.focus();
 }
 
 // ============================================

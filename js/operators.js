@@ -139,6 +139,7 @@ function openClaimForm() {
             <label class="operator-field">Un mot pour l’équipe <span class="operator-optional">(facultatif)</span>
                 <textarea name="message" maxlength="500" rows="2"></textarea>
             </label>
+            <p class="operator-privacy"><button type="button" class="privacy-link" data-open-privacy>Ce que deviennent ces informations</button></p>
             <p class="operator-form-error" id="dist-operator-error" role="alert" hidden></p>
             <div class="operator-form-actions">
                 <button type="button" class="btn-secondary-clean" id="dist-operator-cancel">Annuler</button>

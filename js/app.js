@@ -21,7 +21,8 @@ import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
 
 import {
-    switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, closeSidebar, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats
+    switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, closeSidebar, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats,
+    openPrivacyView, closePrivacyView
 } from './navigation.js';
 
 import {
@@ -603,6 +604,12 @@ function forgetAccountScreens(user) {
     if (document.getElementById('sidebar')?.classList.contains('open')) openSidePanelForFilters(AppState.activeFilters);
 }
 
+// Lien « Confidentialité » touche, ou qu'il soit : accueil, fenetre de connexion,
+// formulaire d'exploitant, Compte (PRIV-04)
+function handlePrivacyLinkClick(e) {
+    if (e.target.closest('[data-open-privacy]')) openPrivacyView();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DistriMatch V8.0 - Supabase Edition - Initialisation...');
 
@@ -625,6 +632,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadNotificationQueue();
     // BUG-13 : un autre onglet change favoris ou reglages -> cet onglet relit sa memoire
     window.addEventListener('storage', handleStorageFromOtherTab);
+
+    // PRIV-04 : page Confidentialite. Poses AVANT l'attente de la geolocalisation, sinon
+    // le lien de l'accueil ne repondrait qu'apres le consentement
+    document.addEventListener('click', handlePrivacyLinkClick);
+    document.getElementById('back-from-privacy')?.addEventListener('click', closePrivacyView);
 
     // Charger les distributeurs en parallele de l'overlay geoloc :
     // ca permet a un deep link (?id=<distId>) d'ouvrir la modal AVANT

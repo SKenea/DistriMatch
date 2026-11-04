@@ -2181,3 +2181,37 @@ describe('Telephone : hauteur de la zone visible (BUG-08)', () => {
         });
     }
 });
+
+// PRIV-04 : page Confidentialite et phrase d'accueil exacte
+describe('Confidentialité (PRIV-04)', () => {
+    const root = new URL('../../', import.meta.url);
+    const html = readFileSync(new URL('index.html', root), 'utf8');
+
+    it('l’accueil ne promet plus « jamais partagée, jamais stockée »', () => {
+        assert.ok(!/jamais stock/i.test(html), 'index.html contient encore « jamais stockée »');
+        assert.ok(!/jamais partag/i.test(html), 'index.html contient encore « jamais partagée »');
+    });
+
+    it('la page contient les sept rubriques attendues, sans « tap » ni « machine », sans emplacement à remplir', () => {
+        const start = html.indexOf('id="privacy-view"');
+        assert.ok(start > 0, 'vue #privacy-view absente de index.html');
+        const page = html.slice(start, html.indexOf('PAGE TABLEAU DE BORD DU PILOTE', start));
+        const titles = [...page.matchAll(/<h3 class="account-section-label">([^<]+)<\/h3>/g)].map(m => m[1].trim());
+        assert.deepEqual(titles, ['Qui est responsable', 'Ta position', 'Ce que l’app enregistre, et pourquoi',
+            'Ce qui est public', 'Les services utilisés', 'Combien de temps', 'Tes droits']);
+        for (const s of ['Supabase', 'hCaptcha', 'OpenStreetMap', 'CNIL', '13 mois']) assert.ok(page.includes(s), `« ${s} » attendu`);
+        assert.ok(!/\btap\b|machine/i.test(page.replace(/<[^>]+>/g, ' ')), 'ni « tap » ni « machine »');
+        assert.ok(!/\[[A-ZÉ ]{6,}\]/.test(page), 'aucun emplacement entre crochets ne doit rester');
+        assert.ok(!/reste/i.test(page.replace(/<[^>]+>/g, ' ')), 'jamais « reste »');
+    });
+
+    it('un lien vers la page dans l’accueil, Compte, la connexion et la demande d’exploitant', () => {
+        const welcome = html.slice(html.indexOf('id="geoloc-overlay"'), html.indexOf('<!-- Navigation Top -->'));
+        const account = html.slice(html.indexOf('id="account-view"'), html.indexOf('id="privacy-view"'));
+        assert.ok(welcome.includes('data-open-privacy'), 'accueil');
+        assert.ok(account.includes('data-open-privacy'), 'Compte');
+        for (const f of ['js/auth.js', 'js/operators.js']) {
+            assert.ok(readFileSync(new URL(f, root), 'utf8').includes('data-open-privacy'), f);
+        }
+    });
+});

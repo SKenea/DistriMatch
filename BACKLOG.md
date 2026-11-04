@@ -47,7 +47,7 @@ avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
 - [x] PRIV-07 En tant que membre, je peux faire supprimer mon compte — `PRIV-07.md` (migration 033)
   - Acceptance : suppression sans casser les fiches (clés en `SET NULL`), procédure écrite,
     réabonnement sans compte retire le compte.
-- [ ] PRIV-04 En tant que visiteur, je lis une page « Confidentialité » claire et exacte
+- [x] PRIV-04 En tant que visiteur, je lis une page « Confidentialité » claire et exacte
   — `PRIV-04.md` (**décisions de Stéphane** : adresse de contact, responsable, texte)
   - Acceptance : page dans l'app, liens à 4 endroits, phrase d'accueil exacte sur la position.
 
