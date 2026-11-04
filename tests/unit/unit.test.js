@@ -2215,3 +2215,32 @@ describe('Confidentialité (PRIV-04)', () => {
         }
     });
 });
+
+// ============================================
+// LIEN DE CONNEXION REFUSE (CNX-03)
+// ============================================
+
+const { parseAuthLinkError } = await import('../../js/utils.js');
+
+describe('parseAuthLinkError (lien de connexion expire ou deja utilise, CNX-03)', () => {
+    it('erreur dans le fragment : code lu, fragment retire', () => {
+        assert.deepEqual(
+            parseAuthLinkError('https://exemple.test/DistriMatch/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired'),
+            { code: 'otp_expired', cleanUrl: 'https://exemple.test/DistriMatch/' }
+        );
+    });
+
+    it('erreur dans la query : seuls ses parametres sont retires', () => {
+        assert.deepEqual(
+            parseAuthLinkError('https://exemple.test/?id=dist-1&error=access_denied&error_code=otp_expired&error_description=x'),
+            { code: 'otp_expired', cleanUrl: 'https://exemple.test/?id=dist-1' }
+        );
+        assert.equal(parseAuthLinkError('https://exemple.test/?error=server_error').code, 'server_error');
+    });
+
+    it('retour normal du lien, adresse simple ou invalide : null', () => {
+        assert.equal(parseAuthLinkError('https://exemple.test/#access_token=abc&type=magiclink'), null);
+        assert.equal(parseAuthLinkError('https://exemple.test/?id=dist-1'), null);
+        assert.equal(parseAuthLinkError('pas une adresse'), null);
+    });
+});

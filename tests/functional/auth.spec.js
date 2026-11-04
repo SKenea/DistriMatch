@@ -5,7 +5,8 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { setupApp, openDistModal, loginForTest } from './helpers.js';
+import { readFileSync } from 'node:fs';
+import { setupApp, openDistModal, loginForTest, captureEvents, BASE_URL } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -168,6 +169,26 @@ test.describe('Fenetre de connexion rouverte (CNX-02)', () => {
 // RETOUR SUR LA FICHE APRES CONNEXION (2026-10-17)
 // ============================================
 
+// CNX-03 : le vrai retour du lien = l'app s'ouvre AVEC une session. Fausse session au
+// format supabase-js (fakeSession, plus bas) posee avant le chargement ; les lectures de
+// la base partent en anonyme (le faux jeton serait refuse et l'app retomberait sur le JSON).
+const SUPABASE_URL = readFileSync(new URL('../../js/config.js', import.meta.url), 'utf8').match(/SUPABASE_URL = '([^']+)'/)[1];
+const SESSION_KEY = `sb-${new URL(SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+
+async function openWithSession(context, path = '/') {
+    const page = await context.newPage();
+    await page.route('**/rest/v1/**', route => {
+        const headers = { ...route.request().headers() };
+        if (headers.apikey) headers.authorization = `Bearer ${headers.apikey}`;
+        return route.continue({ headers });
+    });
+    await captureEvents(page);   // apres la route generale : elle passe avant pour log_event
+    await page.route('**/auth/v1/user**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession('test@exemple.fr').user) }));
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [SESSION_KEY, JSON.stringify(fakeSession('test@exemple.fr'))]);
+    await page.goto(`${BASE_URL}${path}`);
+    return page;
+}
+
 test.describe('Connexion depuis une fiche', () => {
     test('le lien de connexion retient la fiche ouverte ; au retour, la fiche se rouvre', async ({ page, context }) => {
         await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
@@ -178,8 +199,7 @@ test.describe('Connexion depuis une fiche', () => {
         expect(saved?.id).toBe('dist-007');
 
         // Le lien ouvre l'adresse de base du site (comme Supabase) : la fiche revient
-        const back = await context.newPage();
-        await back.goto('http://localhost:8080/');
+        const back = await openWithSession(context);
         await back.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
         await expect(back.locator('#dist-modal-name')).toHaveText('Légumes Bio Cambo');
         expect(await back.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
@@ -190,6 +210,39 @@ test.describe('Connexion depuis une fiche', () => {
         await page.evaluate(() => localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'ancien', at: Date.now() })));
         await page.evaluate(async () => { await (await import('./js/auth.js')).sendMagicLink('test@exemple.fr', 'jeton'); });
         expect(await page.evaluate(() => localStorage.getItem('distrimatch_login_return'))).toBeNull();
+    });
+
+    test('chargement sans connexion : la fiche ne se rouvre pas, elle attend le vrai retour (CNX-03)', async ({ page, context }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'dist-007', at: Date.now() })));
+        const other = await context.newPage();
+        await captureEvents(other);
+        await other.goto(BASE_URL);
+        await other.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 50000 });
+        await other.waitForTimeout(1000);
+        await expect(other.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(JSON.parse(await other.evaluate(() => localStorage.getItem('distrimatch_login_return')))?.id).toBe('dist-007');
+    });
+
+    test('lien vers une autre fiche (?id=) : elle s’ouvre, la fiche retenue attend (CNX-03)', async ({ page, context }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'dist-007', at: Date.now() })));
+        const other = await openWithSession(context, '/?id=dist-005');
+        await other.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
+        await expect(other.locator('#dist-modal-name')).toHaveText('Plats Cuisinés Bayonne');
+        expect(JSON.parse(await other.evaluate(() => localStorage.getItem('distrimatch_login_return')))?.id).toBe('dist-007');
+    });
+
+    test('lien expire ou deja utilise : message, fenetre de connexion, fiche rouverte, adresse nettoyee (CNX-03)', async ({ page, context }) => {
+        await page.evaluate(() => {
+            localStorage.setItem('distrimatch_force_auth', '1');
+            localStorage.setItem('distrimatch_login_return', JSON.stringify({ id: 'dist-007', at: Date.now() }));
+        });
+        const back = await context.newPage();
+        await captureEvents(back);
+        await back.goto(`${BASE_URL}/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`);
+        await expect(back.locator('#toast-container .toast.warning')).toContainText('Ce lien de connexion a expiré ou a déjà servi', { timeout: 30000 });
+        await expect(back.locator('.auth-modal-overlay')).toBeVisible();
+        await expect(back.locator('#dist-modal-name')).toHaveText('Légumes Bio Cambo');
+        expect(back.url()).not.toContain('error');
     });
 });
 
@@ -206,8 +259,7 @@ test.describe('Connexion depuis une fiche, par le menu du profil', () => {
         await page.evaluate(async () => { await (await import('./js/auth.js')).sendMagicLink('test@exemple.fr', 'jeton'); });
         const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('distrimatch_login_return') || 'null'));
         expect(saved?.id).toBe('dist-005');
-        const back = await context.newPage();
-        await back.goto('http://localhost:8080/');
+        const back = await openWithSession(context);
         await back.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
         await expect(back.locator('#dist-modal-name')).toHaveText('Plats Cuisinés Bayonne');
     });

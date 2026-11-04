@@ -221,6 +221,28 @@ export function describeSignalError(error, status = 0, online = true) {
     return `Signal non envoyé, réessaie plus tard (code ${code})`;
 }
 
+// Retour d'un lien de connexion refuse par Supabase (expire, deja utilise) (CNX-03) :
+// #error=access_denied&error_code=otp_expired&error_description=... (ou dans la query).
+// Renvoie { code, cleanUrl } (adresse sans ces parametres), ou null.
+const AUTH_LINK_ERROR_PARAMS = ['error', 'error_code', 'error_description'];
+
+export function parseAuthLinkError(href) {
+    let url;
+    try {
+        url = new URL(href);
+    } catch (e) {
+        return null;
+    }
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const isError = (params) => !!(params.get('error') || params.get('error_code'));
+    const from = isError(hash) ? hash : (isError(url.searchParams) ? url.searchParams : null);
+    if (!from) return null;
+    const code = from.get('error_code') || from.get('error');
+    if (from === hash) url.hash = '';
+    else AUTH_LINK_ERROR_PARAMS.forEach((key) => url.searchParams.delete(key));
+    return { code, cleanUrl: url.toString() };
+}
+
 // Etats machine acceptes par la RPC confirm_availability (007 + 011)
 const MACHINE_STATES = ['empty', 'broken', 'working'];
 
