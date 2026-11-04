@@ -37,7 +37,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   faut — `CNX-02.md`
   - Acceptance : recherche et connexion sont des couches d'historique ; écouteurs retirés ; Échap
     sur la liste sans entrée orpheline.
-- [ ] CNX-03 En tant que membre, le lien de connexion me ramène à ma fiche, et un lien expiré
+- [x] CNX-03 En tant que membre, le lien de connexion me ramène à ma fiche, et un lien expiré
   est annoncé — `CNX-03.md`
   - Acceptance : retour consommé seulement après une vraie connexion ; toast « Ce lien de
     connexion a expiré ou a déjà servi : demande un nouveau lien. »

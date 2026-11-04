@@ -12,7 +12,7 @@ import {
 } from './state.js';
 
 import {
-    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId, DISTRIBUTOR_PUBLIC_COLUMNS, PRODUCT_PUBLIC_COLUMNS
+    showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId, DISTRIBUTOR_PUBLIC_COLUMNS, PRODUCT_PUBLIC_COLUMNS, parseAuthLinkError
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
@@ -52,7 +52,7 @@ import {
 
 import { initSidePanel, openSidePanelForFilters, closeSidePanel, initDistModal, openDistributorModal, openModalFromUrlParam, refreshFicheForAuth } from './gmaps-ui.js';
 
-import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange, takeLoginReturn, LOGIN_RETURN_KEY } from './auth.js';
+import { initAuth, getCurrentUser, isAuthenticated, requireAuth, signOut, onAuthChange, takeLoginReturn, LOGIN_RETURN_KEY, promptReconnect } from './auth.js';
 import { confirmDialog } from './confirm-dialog.js';
 import { FEATURES } from './config.js';
 import { startFavoritesWatch } from './favorites-watch.js';
@@ -613,6 +613,11 @@ function handlePrivacyLinkClick(e) {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DistriMatch V8.0 - Supabase Edition - Initialisation...');
 
+    // CNX-03 : lien de connexion refuse par Supabase (expire, deja utilise) : lu et retire
+    // de l'adresse AVANT supabase-js, qui le taisait ; message et nouvelle demande plus bas
+    const authLinkError = parseAuthLinkError(window.location.href);
+    if (authLinkError) window.history.replaceState(window.history.state, '', authLinkError.cleanUrl);
+
     // Initialiser Supabase
     initSupabase();
     // Mesure (008), fire-and-forget : ouverture de l'app et scan QR eventuel.
@@ -649,9 +654,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Si l'URL contient ?id=<distId>, ouvrir la modal des que les distributeurs
     // sont prets, sans attendre le consentement geoloc.
     // Retour du lien de connexion : la fiche ouverte a la demande est rouverte
-    // (auth.js, takeLoginReturn), par le meme chemin qu'un lien partage
-    const loginReturnId = takeLoginReturn();
-    if (loginReturnId && !new URLSearchParams(window.location.search).get('id')) {
+    // (auth.js, takeLoginReturn), par le meme chemin qu'un lien partage.
+    // CNX-03 : seulement si ce chargement EST le retour du lien (connecte, ou lien
+    // refuse) et que l'adresse ne vise pas deja une fiche ; sinon la cle attend.
+    const urlId = new URLSearchParams(window.location.search).get('id');
+    const loginReturnId = (!urlId && (isAuthenticated() || authLinkError)) ? takeLoginReturn() : null;
+    if (loginReturnId) {
         const url = new URL(window.location.href);
         url.searchParams.set('id', loginReturnId);
         window.history.replaceState(window.history.state, '', url);
@@ -659,6 +667,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const deepLinkId = new URLSearchParams(window.location.search).get('id');
     if (deepLinkId) {
         distributorsPromise.then(() => openModalFromUrlParam()).catch(() => {});
+    }
+    // CNX-03 : lien refuse et personne de connecte : on le dit et on propose un nouvel
+    // e-mail, apres la reouverture de la fiche (rappel enregistre apres le sien)
+    if (authLinkError && !isAuthenticated()) {
+        distributorsPromise.catch(() => {}).then(() => {
+            showToast('Ce lien de connexion a expiré ou a déjà servi : demande un nouveau lien.', 'warning');
+            promptReconnect();
+        });
     }
 
     // Attendre la geolocalisation via l'overlay
