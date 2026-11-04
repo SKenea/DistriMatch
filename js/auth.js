@@ -13,6 +13,7 @@ import { showToast, escapeHTML } from './utils.js';
 import { getHcaptchaSitekey, isLocalhost, SUPABASE_URL } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { isStandalone, forgetPushAccount } from './push.js';
+import { pushLayer, popLayer } from './history.js';
 
 // ============================================
 // ETAT AUTH
@@ -29,12 +30,19 @@ export function isAuthenticated() {
     return currentUser !== null && !currentUser.is_anonymous;
 }
 
+// Renvoie de quoi retirer l'ecouteur (CNX-02 : une fenetre de connexion fermee ne
+// reagit plus a la connexion suivante)
 export function onAuthChange(fn) {
     authListeners.push(fn);
+    return () => {
+        const i = authListeners.indexOf(fn);
+        if (i !== -1) authListeners.splice(i, 1);
+    };
 }
 
 function notifyAuthChange() {
-    authListeners.forEach(fn => {
+    // Copie : un ecouteur qui se retire pendant la boucle ne fait pas sauter le suivant
+    authListeners.slice().forEach(fn => {
         try { fn(currentUser); } catch (e) { console.error(e); }
     });
 }
@@ -339,17 +347,24 @@ function openEmailModal(onClose) {
     }
 
     const dialog = overlay.querySelector('.auth-modal');
+    let closed = false;
+    let stopAuthWatch = null;
     const close = (success = false) => {
+        if (closed) return;   // CNX-02 : une seule fermeture (croix, Echap, fond, retour, connexion)
+        closed = true;
         modalOpen = false;
+        stopAuthWatch?.();
         if (captchaWidgetId !== null && window.hcaptcha) {
             try { window.hcaptcha.reset(captchaWidgetId); } catch (e) {}
         }
         deactivateFocusTrap(dialog);
         overlay.remove();
+        popLayer('auth');   // fermee par l'UI : retire son entree (sans effet apres « retour »)
         onClose(success);
     };
 
     activateFocusTrap(dialog, () => close(false));
+    pushLayer('auth', () => close(false));   // CNX-02 : « retour » ferme la fenetre, pas la fiche dessous
     overlay.querySelector('.auth-modal-close').addEventListener('click', () => close(false));
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
 
@@ -428,10 +443,10 @@ function openEmailModal(onClose) {
         }
     });
 
-    // Si l'user clique deja sur le lien dans son email et revient, on ferme automatiquement
-    onAuthChange((user) => {
-        if (user && !user.is_anonymous && modalOpen) {
-            close(true);
-        }
+    // Connecte (lien ouvert dans un autre onglet, ou code) : CETTE fenetre se ferme.
+    // CNX-02 : l'ecouteur est retire a la fermeture ; avant, celui d'une fenetre deja
+    // fermee repondait a la place de la fenetre ouverte, qui restait affichee.
+    stopAuthWatch = onAuthChange((user) => {
+        if (user && !user.is_anonymous) close(true);
     });
 }

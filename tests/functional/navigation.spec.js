@@ -568,6 +568,79 @@ test.describe('23b. Retour : fermetures et ouvertures enchainees (CNX-01)', () =
 });
 
 // ============================================
+// 23c. RETOUR : RECHERCHE, CONNEXION, ECHAP (CNX-02)
+// ============================================
+
+test.describe('23c. Retour : recherche, connexion, Echap (CNX-02)', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+    const layers = (page) => page.evaluate(() => window.__distrimatchLayers());
+    const goBack = (page) => page.goBack({ waitUntil: 'commit' }).catch(() => {});
+
+    test('carte, loupe, retour : la recherche se ferme, l’app reste', async ({ page }) => {
+        await page.click('#search-toggle');
+        await expect(page.locator('#search-overlay')).toHaveClass(/active/);
+        expect(await layers(page)).toEqual(['search']);
+        await goBack(page);
+        await expect(page.locator('#search-overlay')).not.toHaveClass(/active/);
+        expect(await layers(page)).toEqual([]);
+        expect(await page.evaluate(() => !!window.AppState)).toBe(true);
+    });
+
+    test('Favoris, loupe, retour : la recherche se ferme, Favoris reste ; retour encore : la carte', async ({ page }) => {
+        await page.evaluate(() => window.switchView('favorites'));
+        await expect(page.locator('#subscriptions-view')).toHaveClass(/view-active/);
+        await page.click('#search-toggle');
+        await expect(page.locator('#search-overlay')).toHaveClass(/active/);
+        await goBack(page);
+        await expect(page.locator('#search-overlay')).not.toHaveClass(/active/);
+        await expect(page.locator('#subscriptions-view')).toHaveClass(/view-active/);
+        await goBack(page);
+        await expect(page.locator('#subscriptions-view')).not.toHaveClass(/view-active/);
+        expect(await layers(page)).toEqual([]);
+    });
+
+    test('un resultat de recherche ouvre la fiche avec sa propre entree ; retour la ferme', async ({ page }) => {
+        await page.click('#search-toggle');
+        await page.locator('#search-results .search-item-clean').first().click();
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        await expect(page.locator('#search-overlay')).not.toHaveClass(/active/);
+        expect(await layers(page)).toEqual(['fiche']);
+        await expect.poll(() => page.evaluate(() => window.history.state?.layer ?? null)).toBe('fiche');
+        await goBack(page);
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(await layers(page)).toEqual([]);
+    });
+
+    test('fiche, « Se connecter », retour : la fenetre se ferme, la fiche reste', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await openDistModal(page);
+        await page.evaluate(() => document.getElementById('dist-login-invite-btn').click());
+        await page.waitForSelector('.auth-modal-overlay');
+        expect(await layers(page)).toEqual(['fiche', 'auth']);
+        await goBack(page);
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(0);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        expect(await layers(page)).toEqual(['fiche']);
+        // Fermee par Echap : la fenetre retire sa propre entree, la fiche garde la sienne
+        await page.evaluate(() => document.getElementById('dist-login-invite-btn').click());
+        await page.waitForSelector('.auth-modal-overlay');
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(0);
+        await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
+        expect(await layers(page)).toEqual(['fiche']);
+    });
+
+    test('« Tous » puis Echap : liste fermee, puce eteinte, plus aucune couche', async ({ page }) => {
+        await page.click('.filter-chip[data-type="all"]');
+        await expect(page.locator('#sidebar')).toHaveClass(/open/);
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#sidebar')).not.toHaveClass(/open/);
+        await expect(page.locator('.filter-chip[data-type="all"]')).not.toHaveClass(/active/);
+        expect(await layers(page)).toEqual([]);
+    });
+});
+
+// ============================================
 // 27. FILTRES ET PANNEAU (audit UX-11/12)
 // ============================================
 // Fondu a droite des chips tant qu'il en reste hors ecran, rappel « Tous »

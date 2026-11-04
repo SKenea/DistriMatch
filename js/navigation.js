@@ -161,8 +161,18 @@ export function closeSidebar() {
 // RECHERCHE
 // ============================================
 
+// CNX-02 : la recherche est une couche d'historique ; « retour » la ferme (hideSearch)
+// au lieu de quitter l'app ou de fermer la page dessous.
+function hideSearch() {
+    document.getElementById('search-overlay').classList.remove('active');
+    document.getElementById('quick-search').value = '';
+    document.getElementById('search-results').innerHTML = '';
+}
+
 export function openSearch() {
-    document.getElementById('search-overlay').classList.add('active');
+    const overlay = document.getElementById('search-overlay');
+    if (!overlay.classList.contains('active')) pushLayer('search', hideSearch);
+    overlay.classList.add('active');
     renderSearchSuggestions();
     document.getElementById('quick-search').focus();
 }
@@ -192,10 +202,11 @@ function renderSearchSuggestions() {
         + (nearest.length ? `<p class="search-suggest-title">Près de toi</p>${nearest.map(searchItemHTML).join('')}` : '');
 }
 
+// Croix, Echap, resultat touche : cache la recherche et retire son entree d'historique
 export function closeSearch() {
-    document.getElementById('search-overlay').classList.remove('active');
-    document.getElementById('quick-search').value = '';
-    document.getElementById('search-results').innerHTML = '';
+    if (!document.getElementById('search-overlay')?.classList.contains('active')) return;
+    hideSearch();
+    popLayer('search');
 }
 
 export function performSearch(query) {

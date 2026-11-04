@@ -146,6 +146,25 @@ test.describe('10. Politique d\'authentification', () => {
 });
 
 // ============================================
+// FENETRE DE CONNEXION ROUVERTE (CNX-02)
+// ============================================
+
+test.describe('Fenetre de connexion rouverte (CNX-02)', () => {
+    test('fermee puis rouverte par « + » : la connexion ferme la seconde et lance l’ajout', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('distrimatch_force_auth', '1'));
+        await page.click('#btn-add-distributor');
+        await page.waitForSelector('.auth-modal-overlay');
+        await page.click('.auth-modal-close');
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(0);
+        await page.click('#btn-add-distributor');
+        await page.waitForSelector('.auth-modal-overlay');
+        await page.evaluate(() => window.__testLogin());
+        await expect(page.locator('.auth-modal-overlay')).toHaveCount(0);
+        await expect(page.locator('#btn-add-distributor')).toHaveClass(/active/);
+    });
+});
+
+// ============================================
 // RETOUR SUR LA FICHE APRES CONNEXION (2026-10-17)
 // ============================================
 

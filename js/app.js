@@ -21,7 +21,7 @@ import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
 
 import {
-    switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, closeSidebar, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats,
+    switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats,
     openPrivacyView, closePrivacyView
 } from './navigation.js';
 
@@ -778,7 +778,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             openSidePanelForFilters(AppState.activeFilters);
         }
     });
-    document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
+    document.getElementById('sidebar-overlay').addEventListener('click', closeSidePanel);
 
     // Boutons retour
     document.getElementById('back-from-subscriptions')?.addEventListener('click', goBackToMap);
@@ -928,9 +928,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') {
             closeSearch();
             closeChatModal();
-            closeSidebar();
             closeReportModal();
             switchTab('explore');
+            // CNX-02 : closeSidePanel retire la couche de la liste et eteint « Tous »
+            // (l'ancienne fermeture ne faisait ni l'un ni l'autre)
+            if (document.getElementById('sidebar')?.classList.contains('open')) closeSidePanel();
         }
     });
 
