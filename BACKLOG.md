@@ -41,7 +41,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   est annoncé — `CNX-03.md`
   - Acceptance : retour consommé seulement après une vraie connexion ; toast « Ce lien de
     connexion a expiré ou a déjà servi : demande un nouveau lien. »
-- [ ] CNX-04 En tant que visiteur, aucune demande de position avant l'écran d'accueil — `CNX-04.md`
+- [x] CNX-04 En tant que visiteur, aucune demande de position avant l'écran d'accueil — `CNX-04.md`
 - [ ] CNX-05 En tant que membre, l'app ne réagit qu'à un vrai changement de compte — `CNX-05.md`
   - Acceptance : un SIGNED_IN répété n'efface plus mon avis en cours ; fiche ouverte par lien
     mise à jour par une connexion dès l'ouverture.

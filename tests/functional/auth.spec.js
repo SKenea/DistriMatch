@@ -266,6 +266,48 @@ test.describe('Connexion depuis une fiche, par le menu du profil', () => {
 });
 
 // ============================================
+// COUP DE POUCE SUR PLACE ET ECRAN D'ACCUEIL (CNX-04)
+// ============================================
+
+test.describe('Coup de pouce sur place, fiche ouverte par un lien (CNX-04)', () => {
+    // Espion : lectures de position du coup de pouce (maximumAge 0), avec l'etat de la carte a ce moment
+    async function spyNearby(context) {
+        await context.addInitScript(() => {
+            window.__nearbyCalls = [];
+            const geo = navigator.geolocation;
+            const original = geo.getCurrentPosition.bind(geo);
+            geo.getCurrentPosition = (ok, ko, options) => {
+                if (options && options.maximumAge === 0) window.__nearbyCalls.push(!!(window.AppState && window.AppState.mapInitialized));
+                return original(ok, ko, options);
+            };
+        });
+    }
+
+    test('connecte, localisation jamais autorisee : aucune lecture de position avant l’accueil', async ({ browser }) => {
+        const context = await browser.newContext();
+        await spyNearby(context);
+        const page = await openWithSession(context, '/?id=dist-007');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        expect(await page.evaluate(async () => (await import('./js/auth.js')).isAuthenticated())).toBe(true);
+        await page.waitForTimeout(1500);
+        expect(await page.evaluate(() => window.__nearbyCalls)).toEqual([]);
+        expect(await page.evaluate(() => !document.getElementById('geoloc-overlay')?.classList.contains('hidden'))).toBe(true);
+        await context.close();
+    });
+
+    test('connecte, localisation deja autorisee : la position est lue une fois la carte prete', async ({ browser }) => {
+        const context = await browser.newContext({ permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        await spyNearby(context);
+        const page = await openWithSession(context, '/?id=dist-007');
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        await page.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 50000 });
+        await expect.poll(() => page.evaluate(() => window.__nearbyCalls.length)).toBeGreaterThan(0);
+        expect(await page.evaluate(() => window.__nearbyCalls.every(Boolean))).toBe(true);
+        await context.close();
+    });
+});
+
+// ============================================
 // CONNEXION PAR CODE RECU PAR E-MAIL (BUG-05)
 // ============================================
 

@@ -19,6 +19,7 @@ import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from 
 import { logEvent, rememberEntrySource } from './events.js';
 import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
+import { checkNearbyForFiche } from './availability.js';
 
 import {
     switchView, switchTab, goBackToMap, registerViewCallback, updateBadges, updateConversationsBadge, setFilter, openSearch, closeSearch, performSearch, initFilterChips, updateProfileStats,
@@ -713,6 +714,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('[DistriMatch] Carte indisponible :', e);
         showToast('La carte n’a pas pu s’afficher : recharge la page pour réessayer', 'error');
     }
+    // CNX-04 : fiche ouverte par un lien avant la carte : le coup de pouce sur place
+    // attendait le consentement (availability.js), il se calcule maintenant
+    if (document.getElementById('dist-modal-overlay')?.classList.contains('active')) checkNearbyForFiche(AppState.currentDistributor);
 
     // Masquer le loader des que la carte est prete
     const mapLoader = document.getElementById('map-loader');
