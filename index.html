@@ -41,7 +41,7 @@
     <!-- CSS decoupe en 5 modules. L'ordre EST IMPORTANT (cascade CSS). -->
     <link rel="stylesheet" href="css/base.css?v=39">
     <link rel="stylesheet" href="css/map.css?v=34">
-    <link rel="stylesheet" href="css/panels.css?v=42">
+    <link rel="stylesheet" href="css/panels.css?v=43">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=32">
     <link rel="stylesheet" href="css/overlays.css?v=74">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -100,7 +100,8 @@
             </button>
 
             <p id="geoloc-error" class="geoloc-error" style="display:none"></p>
-            <p class="geoloc-hint">Ta position est privée. Jamais partagée, jamais stockée.</p>
+            <p class="geoloc-hint">Ta position sert à centrer la carte et à calculer les distances, directement sur ton téléphone.</p>
+            <p class="geoloc-hint geoloc-privacy"><button type="button" class="privacy-link" data-open-privacy>Confidentialité</button></p>
         </div>
     </div>
     </div>
@@ -688,6 +689,13 @@
                     </span>
                     <svg class="account-row-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
+                <button class="account-row" id="account-privacy-row" data-open-privacy>
+                    <span class="account-row-main">
+                        <span class="account-row-icon" aria-hidden="true">🔒</span>
+                        <span class="account-row-label">Confidentialité</span>
+                    </span>
+                    <svg class="account-row-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
             </section>
 
             <!-- Reinitialisation : seule action destructive de la page -->
@@ -698,6 +706,93 @@
                     <button class="account-reset-btn" id="clear-data-btn">Effacer mes données</button>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <!-- PRIV-04 : page Confidentialite (js/navigation.js openPrivacyView / closePrivacyView ;
+         au-dessus de l'accueil, de la fiche et de la connexion : css/panels.css) -->
+    <div id="privacy-view" class="view-page view-hidden" inert>
+        <div class="page-header-inner">
+            <button class="back-btn" id="back-from-privacy" aria-label="Retour">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h2>Confidentialité</h2>
+        </div>
+        <div class="account-page privacy-page">
+            <p class="stats-intro">Ce que DistriMatch enregistre, pourquoi, et comment le consulter, le corriger ou l’effacer.</p>
+
+            <h3 class="account-section-label">Qui est responsable</h3>
+            <section class="account-card">
+                <p>DistriMatch est édité par Stéphane Kreckelbergh.</p>
+                <p>Pour toute question sur tes données, écris à <a href="mailto:projetstephanek@gmail.com">projetstephanek@gmail.com</a>.</p>
+            </section>
+
+            <h3 class="account-section-label">Ta position</h3>
+            <section class="account-card">
+                <p>Ta position sert à centrer la carte, à calculer les distances et à savoir si tu es devant un distributeur. Ces calculs se font sur ton téléphone : ta position n’est pas envoyée à DistriMatch.</p>
+                <p>Pour dessiner la carte, ton téléphone demande à OpenStreetMap les images du quartier affiché, comme toute carte en ligne.</p>
+                <p>Quand tu ajoutes un distributeur, c’est l’emplacement que tu poses sur la carte qui est enregistré.</p>
+            </section>
+
+            <h3 class="account-section-label">Ce que l’app enregistre, et pourquoi</h3>
+            <section class="account-card">
+                <ul>
+                    <li><strong>Ton adresse e-mail</strong>, si tu te connectes : pour t’envoyer le lien et le code de connexion. Pas de mot de passe.</li>
+                    <li><strong>Tes signaux</strong> (Dispo, Pas dispo, En service, Vide, En panne) : pour informer les autres membres. Ils sont liés à ton compte pour limiter les abus ; les autres membres ne voient pas qui a signalé (un exploitant vérifié signale sous l’étiquette « Info de l’exploitant »).</li>
+                    <li><strong>Tes avis</strong> (note et commentaire) : publiés sous le nom « Membre DistriMatch ».</li>
+                    <li><strong>Les distributeurs que tu ajoutes</strong> (nom, type, produits, emplacement) : l’équipe voit ton e-mail quand elle les valide, et tu peux échanger des messages avec elle à leur sujet.</li>
+                    <li><strong>Tes modifications de fiches</strong> (produits ajoutés, renommés ou retirés, niveau de prix) : enregistrées avec ton compte dans un journal que seule l’équipe consulte, pour corriger une erreur ou un abus.</li>
+                    <li><strong>Ta demande d’exploitant</strong> : ton lien avec le distributeur, le nom de l’entreprise, ton message, puis le SIRET et les messages échangés avec l’équipe. Ils servent à vérifier que l’entreprise exploite bien le distributeur ; l’équipe voit ton e-mail. Le code de vérification est envoyé à l’entreprise, par courrier à son adresse officielle ou par téléphone.</li>
+                    <li><strong>Les notifications app fermée</strong>, si tu les actives : l’adresse d’abonnement fournie par ton navigateur, tes favoris, tes produits suivis, tes heures calmes et ton fuseau horaire. Aucun compte n’est nécessaire ; si tu es connecté, ton compte y est rattaché pour ne pas te prévenir de tes propres signaux.</li>
+                    <li><strong>La mesure d’audience</strong> : ouverture de l’app ou d’une fiche, scan d’un QR code, signal envoyé, itinéraire demandé. Ces événements portent un identifiant tiré au hasard pour la visite, jamais enregistré avec ton compte. Ils servent à savoir si l’app est utile, distributeur par distributeur.</li>
+                    <li><strong>Sur ton téléphone</strong> : tes favoris, tes produits suivis, tes réglages et les notifications reçues (favoris, produits suivis et heures calmes partent aussi dans l’abonnement si tu actives les notifications app fermée).</li>
+                </ul>
+                <p>Le compte, les contributions et la vérification d’exploitant servent le service que tu demandes. La mesure d’audience et la limite contre les abus relèvent de l’intérêt légitime de DistriMatch à faire fonctionner l’app. Les notifications app fermée dépendent de ton accord, que tu retires dans les réglages des notifications.</p>
+            </section>
+
+            <h3 class="account-section-label">Ce qui est public</h3>
+            <section class="account-card">
+                <p>Tout le monde voit les fiches publiées, l’état des distributeurs, la dispo des produits et les avis, sous le nom « Membre DistriMatch ». Ton e-mail n’apparaît sur aucune fiche.</p>
+            </section>
+
+            <h3 class="account-section-label">Les services utilisés</h3>
+            <section class="account-card">
+                <ul>
+                    <li><strong>Supabase</strong> : la base de données et la connexion ; elle garde ce qui est décrit plus haut.</li>
+                    <li><strong>hCaptcha</strong> : vérifie que la connexion vient d’une personne ; son script se charge avec la page.</li>
+                    <li><strong>OpenStreetMap</strong> : les images de la carte.</li>
+                    <li><strong>GitHub Pages et Cloudflare Pages</strong> : hébergent le site.</li>
+                    <li><strong>unpkg et jsDelivr</strong> : fournissent la carte (Leaflet) et la liaison avec la base.</li>
+                    <li><strong>Le service de notification de ton navigateur</strong> (Google, Apple ou Mozilla) : transmet les notifications app fermée.</li>
+                    <li><strong>Google Maps</strong> : s’ouvre quand tu demandes un itinéraire, avec la position du distributeur.</li>
+                    <li><strong>L’annuaire des entreprises de l’État</strong> : l’équipe y vérifie l’entreprise d’une demande d’exploitant.</li>
+                </ul>
+                <p>Ces services reçoivent l’adresse IP de ton téléphone quand il les contacte. Certains sont établis hors de l’Union européenne.</p>
+            </section>
+
+            <h3 class="account-section-label">Combien de temps</h3>
+            <section class="account-card">
+                <ul>
+                    <li><strong>Ton compte, tes avis, ta demande d’exploitant et ses messages</strong> : tant que tu gardes ton compte ; ils sont effacés avec lui.</li>
+                    <li><strong>Tes signaux</strong> : gardés pour l’historique des distributeurs ; une fois ton compte supprimé, ils ne sont plus rattachés à personne.</li>
+                    <li><strong>Tes modifications de fiches</strong> : gardées dans ce journal ; une fois ton compte supprimé, elles ne sont plus rattachées à personne.</li>
+                    <li><strong>Les distributeurs que tu as ajoutés</strong>, et les messages échangés avec l’équipe à leur sujet : gardés, car ils servent à tous ; une fois ton compte supprimé, ils ne sont plus rattachés à personne.</li>
+                    <li><strong>L’abonnement aux notifications app fermée</strong> : jusqu’à ce que tu le coupes, ou 60 jours après sa dernière mise à jour.</li>
+                    <li><strong>La mesure d’audience</strong> : 13 mois.</li>
+                    <li><strong>Sur ton téléphone</strong> : jusqu’à « Effacer mes données », dans la page Compte.</li>
+                </ul>
+            </section>
+
+            <h3 class="account-section-label">Tes droits</h3>
+            <section class="account-card">
+                <p>Pour supprimer ton compte, écris à <a href="mailto:projetstephanek@gmail.com">projetstephanek@gmail.com</a> depuis l’adresse e-mail de ce compte. Ton e-mail, tes avis, ta demande d’exploitant et ses messages sont effacés ; tes signaux, tes modifications et les distributeurs que tu as ajoutés sont gardés, sans lien avec toi.</p>
+                <p>Tu peux aussi demander à consulter tes données, à les corriger, à les effacer, à les récupérer ou à en limiter l’usage, et t’opposer à leur utilisation : écris à <a href="mailto:projetstephanek@gmail.com">projetstephanek@gmail.com</a>.</p>
+                <p>Si tu estimes que tes droits ne sont pas respectés, tu peux adresser une réclamation à la CNIL : <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr</a>.</p>
+            </section>
+
+            <p class="stats-intro privacy-updated">Mise à jour : 4 novembre 2026</p>
         </div>
     </div>
 
@@ -1096,35 +1191,35 @@
     <script type="importmap">
     {
         "imports": {
-            "./js/app.js": "./js/app.js?v=112",
-            "./js/state.js": "./js/state.js?v=112",
-            "./js/fiche-edit.js": "./js/fiche-edit.js?v=112",
-            "./js/config.js": "./js/config.js?v=112",
-            "./js/utils.js": "./js/utils.js?v=112",
-            "./js/auth.js": "./js/auth.js?v=112",
-            "./js/focus-trap.js": "./js/focus-trap.js?v=112",
-            "./js/map.js": "./js/map.js?v=112",
-            "./js/navigation.js": "./js/navigation.js?v=112",
-            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=112",
-            "./js/distributor.js": "./js/distributor.js?v=112",
-            "./js/add-distributor.js": "./js/add-distributor.js?v=112",
-            "./js/chat.js": "./js/chat.js?v=112",
-            "./js/activity.js": "./js/activity.js?v=112",
-            "./js/notifications.js": "./js/notifications.js?v=112",
-            "./js/availability.js": "./js/availability.js?v=112",
-            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=112",
-            "./js/events.js": "./js/events.js?v=112",
-            "./js/stats.js": "./js/stats.js?v=112",
-            "./js/history.js": "./js/history.js?v=112",
-            "./js/favorites-watch.js": "./js/favorites-watch.js?v=112",
-            "./js/reviews.js": "./js/reviews.js?v=112",
-            "./js/operators.js": "./js/operators.js?v=112",
-            "./js/admin.js": "./js/admin.js?v=112",
-            "./js/summaries.js": "./js/summaries.js?v=112",
-            "./js/additions.js": "./js/additions.js?v=112",
-            "./js/push.js": "./js/push.js?v=112",
-            "./js/fiche-sheet.js": "./js/fiche-sheet.js?v=112",
-            "./js/my-activity.js": "./js/my-activity.js?v=112"
+            "./js/app.js": "./js/app.js?v=113",
+            "./js/state.js": "./js/state.js?v=113",
+            "./js/fiche-edit.js": "./js/fiche-edit.js?v=113",
+            "./js/config.js": "./js/config.js?v=113",
+            "./js/utils.js": "./js/utils.js?v=113",
+            "./js/auth.js": "./js/auth.js?v=113",
+            "./js/focus-trap.js": "./js/focus-trap.js?v=113",
+            "./js/map.js": "./js/map.js?v=113",
+            "./js/navigation.js": "./js/navigation.js?v=113",
+            "./js/gmaps-ui.js": "./js/gmaps-ui.js?v=113",
+            "./js/distributor.js": "./js/distributor.js?v=113",
+            "./js/add-distributor.js": "./js/add-distributor.js?v=113",
+            "./js/chat.js": "./js/chat.js?v=113",
+            "./js/activity.js": "./js/activity.js?v=113",
+            "./js/notifications.js": "./js/notifications.js?v=113",
+            "./js/availability.js": "./js/availability.js?v=113",
+            "./js/confirm-dialog.js": "./js/confirm-dialog.js?v=113",
+            "./js/events.js": "./js/events.js?v=113",
+            "./js/stats.js": "./js/stats.js?v=113",
+            "./js/history.js": "./js/history.js?v=113",
+            "./js/favorites-watch.js": "./js/favorites-watch.js?v=113",
+            "./js/reviews.js": "./js/reviews.js?v=113",
+            "./js/operators.js": "./js/operators.js?v=113",
+            "./js/admin.js": "./js/admin.js?v=113",
+            "./js/summaries.js": "./js/summaries.js?v=113",
+            "./js/additions.js": "./js/additions.js?v=113",
+            "./js/push.js": "./js/push.js?v=113",
+            "./js/fiche-sheet.js": "./js/fiche-sheet.js?v=113",
+            "./js/my-activity.js": "./js/my-activity.js?v=113"
         }
     }
     </script>

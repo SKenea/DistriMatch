@@ -266,6 +266,7 @@ function openEmailModal(onClose) {
             <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe : tu reçois un lien et un code par e-mail.</p>
             <form class="auth-modal-form">
                 <input type="email" placeholder="ton@email.com" required autofocus>
+                <p class="auth-modal-privacy"><button type="button" class="privacy-link" data-open-privacy>Ce que devient ton e-mail</button></p>
                 ${isLocalhost()
                     ? '<div class="auth-modal-dev-banner">Mode developpement — captcha desactive sur localhost</div>'
                     : `<div class="h-captcha" data-sitekey="${getHcaptchaSitekey()}" data-callback="onHcaptchaSuccess" data-expired-callback="onHcaptchaExpired"></div>`

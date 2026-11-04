@@ -1252,3 +1252,44 @@
 .favorite-row .btn-unsubscribe { flex: none; color: #BE123C; }
 .favorite-row .unread-indicator { position: absolute; top: 0.5rem; right: 3.5rem; background: var(--danger); color: #fff;
     font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+
+
+/* ============================================
+   PAGE CONFIDENTIALITE (PRIV-04)
+   ============================================ */
+/* Elle s'ouvre aussi depuis l'accueil (10000), la fiche (10500) et la fenetre de
+   connexion (11000) : elle passe au-dessus d'elles, plein ecran, sous la fenetre de
+   confirmation (11500) et les messages (--z-toast, 12000) */
+#privacy-view.view-page {
+    top: 0;
+    bottom: 0;
+    z-index: 11200;
+    padding-top: env(safe-area-inset-top, 0px);
+}
+.privacy-page .account-card { padding: 1rem 1.25rem; }
+.privacy-page .account-card p,
+.privacy-page .account-card li { font-size: 0.9rem; line-height: 1.55; color: var(--dark); }
+.privacy-page .account-card p { margin: 0 0 0.6rem; }
+.privacy-page .account-card p:last-child { margin-bottom: 0; }
+.privacy-page .account-card ul { margin: 0 0 0.6rem; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.privacy-page .account-card ul:last-child { margin-bottom: 0; }
+.privacy-page a { color: var(--primary-text); }
+.privacy-updated { margin-top: 1.5rem; }
+
+/* Lien « Confidentialité » (accueil, connexion, formulaire d'exploitant) : texte
+   souligne, cible de 44 px de haut (cibles tactiles) */
+.privacy-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0;
+    background: none;
+    border: none;
+    font: inherit;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.geoloc-hint.geoloc-privacy { margin-top: 0 !important; }
+.auth-modal-privacy,
+.operator-privacy { margin: 0; font-size: 0.85rem; color: #4B5563; }
