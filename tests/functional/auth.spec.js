@@ -429,3 +429,29 @@ test.describe('Connexion par code reçu par e-mail (BUG-05)', () => {
         await expect(page.locator('#auth-modal-code')).toBeFocused();
     });
 });
+
+// ============================================
+// TEXTES DE CONNEXION (CNX-07)
+// ============================================
+
+test.describe('Textes de connexion (CNX-07)', () => {
+    test('trop de demandes : le delai est dit en francais, sans « Erreur : »', async ({ page }) => {
+        await openLoginOnFiche(page);
+        // Pose apres openLoginOnFiche (qui repond 200) : cette route passe en premier
+        await page.route('**/auth/v1/otp**', route => route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ code: 429, error_code: 'over_email_send_rate_limit', msg: 'For security purposes, you can only request this after 52 seconds.' }) }));
+        await page.fill('.auth-modal-form input[type=email]', 'test@exemple.fr');
+        await page.locator('.auth-modal-form:not(.auth-modal-otp) .auth-modal-submit').click();
+        await expect(page.locator('.auth-modal-status')).toHaveText('Patiente encore 52 s avant de redemander un e-mail.');
+    });
+
+    test('fenetre de connexion et Compte : ni « suivre », ni « retrouver tes favoris »', async ({ page }) => {
+        await openLoginOnFiche(page);
+        await expect(page.locator('.auth-modal-subtitle')).toContainText('Pour signaler ce qui est dispo, donner ton avis');
+        await expect(page.locator('.auth-modal-subtitle')).not.toContainText('suivre');
+        await page.click('.auth-modal-close');
+        await page.evaluate(() => window.switchView('account'));
+        await expect(page.locator('#account-meta')).toHaveText('Connecte-toi pour signaler, donner ton avis et ajouter des distributeurs');
+        const html = await (await page.request.get('/')).text();
+        expect(html).toContain('<span id="account-meta">Connecte-toi pour signaler, donner ton avis et ajouter des distributeurs</span>');
+    });
+});

@@ -9,7 +9,7 @@
  */
 
 import { supabaseClient, AppState } from './state.js';
-import { showToast, escapeHTML } from './utils.js';
+import { showToast, escapeHTML, describeAuthError } from './utils.js';
 import { getHcaptchaSitekey, isLocalhost, SUPABASE_URL } from './config.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { isStandalone, forgetPushAccount } from './push.js';
@@ -275,7 +275,7 @@ function openEmailModal(onClose) {
                 </svg>
             </div>
             <h2 id="auth-modal-title">Ton email pour interagir</h2>
-            <p class="auth-modal-subtitle">Pour ajouter, modifier ou suivre un distributeur, on a besoin de ton email. Pas de mot de passe : tu reçois un lien et un code par e-mail.</p>
+            <p class="auth-modal-subtitle">Pour signaler ce qui est dispo, donner ton avis, ajouter un distributeur ou modifier une fiche, on a besoin de ton e-mail. Pas de mot de passe : tu reçois un lien et un code par e-mail.</p>
             <form class="auth-modal-form">
                 <input type="email" placeholder="ton@email.com" required autofocus>
                 <p class="auth-modal-privacy"><button type="button" class="privacy-link" data-open-privacy>Ce que devient ton e-mail</button></p>
@@ -411,7 +411,8 @@ function openEmailModal(onClose) {
         } catch (err) {
             status.style.display = 'block';
             status.className = 'auth-modal-status error';
-            status.textContent = `Erreur : ${err.message}`;
+            console.warn('[Auth] Envoi de l’e-mail refuse :', err?.status, err?.code, err?.message);
+            status.textContent = describeAuthError(err, navigator.onLine);   // CNX-07 : en francais
             // Reset captcha pour permettre une nouvelle tentative
             if (captchaWidgetId !== null && window.hcaptcha) {
                 try { window.hcaptcha.reset(captchaWidgetId); } catch (e) {}
