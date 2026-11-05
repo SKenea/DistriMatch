@@ -21,6 +21,9 @@ import { pushLayer, popLayer } from './history.js';
 
 let currentUser = null;
 const authListeners = [];
+// CNX-09 : vrai pendant la verification de la session et sa fermeture silencieuse
+// (pas de toast « Deconnecte » : le membre n'a rien demande)
+let silentSignOut = false;
 
 export function getCurrentUser() {
     return currentUser;
@@ -71,6 +74,8 @@ export async function initAuth() {
     try {
         const { data: { session } } = await supabaseClient.auth.getSession();
         currentUser = session?.user || null;
+        // CNX-09 : en tache de fond, jamais attendue (un Supabase injoignable ne gele pas l'app)
+        if (session) checkSessionWithServer();
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
             // CNX-05 : supabase-js reemet SIGNED_IN au retour sur l'onglet et TOKEN_REFRESHED
@@ -83,7 +88,7 @@ export async function initAuth() {
             console.log('[Auth] Event:', event, 'User:', currentUser?.email || 'anonyme/null');
             if (previousId === nextId) return;
             if (nextId && !currentUser.is_anonymous) showToast(`Connecté avec ${currentUser.email}`, 'success');
-            if (!nextId) showToast('Déconnecté', 'default');
+            if (!nextId && !silentSignOut) showToast('Déconnecté', 'default');
             notifyAuthChange();
         });
 
@@ -91,6 +96,52 @@ export async function initAuth() {
     } catch (e) {
         console.warn('[Auth] initAuth echoue:', e.message);
         return null;
+    }
+}
+
+// CNX-09 : getSession() ne lit que le stockage local. Le serveur est interroge une fois
+// au demarrage ; s'il refuse la session (fermee ailleurs, compte supprime...), l'app
+// passe en visiteur sans bruit. Sans reponse (reseau, hors ligne) : la session reste.
+const DEAD_SESSION_CODES = ['session_not_found', 'bad_jwt', 'user_not_found', 'refresh_token_not_found'];
+
+function isDeadSessionError(error) {
+    if (!error) return false;
+    return error.status === 401 || error.status === 403 || DEAD_SESSION_CODES.includes(error.code);
+}
+
+async function checkSessionWithServer() {
+    silentSignOut = true;   // supabase-js peut emettre SIGNED_OUT lui-meme sur ce refus
+    try {
+        const { error } = await supabaseClient.auth.getUser();
+        if (isDeadSessionError(error)) {
+            console.warn('[Auth] Session refusee par le serveur, deconnexion locale :', error.status, error.code);
+            await dropDeadSession();
+        }
+    } catch (e) {
+        console.warn('[Auth] Verification de la session impossible, session gardee :', e?.message || e);
+    } finally {
+        silentSignOut = false;
+    }
+}
+
+// Deconnexion locale sans toast ni appel au serveur (la session n'y existe plus, ou
+// l'appareil la refuse) ; les ecouteurs ne sont prevenus qu'une fois (CNX-05)
+export async function dropDeadSession() {
+    if (!supabaseClient) return;
+    const wasSilent = silentSignOut;
+    silentSignOut = true;
+    try {
+        try {
+            const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
+            if (error) throw error;
+        } catch (e) {
+            try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (err) { /* stockage bloque */ }
+        }
+        if (currentUser === null) return;
+        currentUser = null;
+        notifyAuthChange();
+    } finally {
+        silentSignOut = wasSilent;
     }
 }
 

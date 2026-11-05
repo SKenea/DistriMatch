@@ -24,7 +24,7 @@ import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
 import { rememberOwnSignal } from './favorites-watch.js';
 import { setSummaryFor } from './summaries.js';
-import { isAuthenticated, promptReconnect } from './auth.js';
+import { isAuthenticated, promptReconnect, dropDeadSession } from './auth.js';
 
 // Dernier signal par produit + dernier signal machine pour la fiche ouverte.
 let loaded = { distributorId: null, products: {}, status: null, rhythm: [] };
@@ -453,7 +453,11 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
             console.warn('[DistriMatch] Signal de dispo refuse :', status, error?.code, error?.message || error);
             showToast(describeSignalError(error, status, navigator.onLine), 'error');
             // Session morte : on propose de se reconnecter tout de suite
-            if (error?.code === '28000' || status === 401) promptReconnect();
+            // (CNX-09 : l'ecran passe d'abord en visiteur)
+            if (error?.code === '28000' || status === 401) {
+                await dropDeadSession();
+                promptReconnect();
+            }
             return;
         }
 
