@@ -22,14 +22,14 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Sitekey de test hCaptcha officielle (accepte partout, y compris localhost)
 export const HCAPTCHA_TEST_SITEKEY = '10000000-ffff-ffff-ffff-000000000001';
 
-// Sitekey prod DistriMatch (domaines autorises : skenea.github.io, distrimatch.pages.dev)
+// Sitekey prod DistriMatch (domaine autorise : skenea.github.io)
 export const HCAPTCHA_PROD_SITEKEY = 'ad886e32-4268-4bf4-b3fe-2b36fc528552';
 
 // ============================================
 // DOMAINES PROD (pour detection environnement)
 // ============================================
 
-export const PROD_HOSTNAMES = ['skenea.github.io', 'distrimatch.pages.dev'];
+export const PROD_HOSTNAMES = ['skenea.github.io'];
 
 // ============================================
 // FONCTIONNALITES (interrupteurs produit)

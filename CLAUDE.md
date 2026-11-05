@@ -15,7 +15,7 @@ Carte Leaflet + fiche distributeur style Google Maps + favoris qui notifient (ce
 - CDN charges dans `index.html` : Leaflet 1.9.4 (unpkg), `@supabase/supabase-js@2` (jsdelivr), hCaptcha
 - Supabase (Postgres + RLS + storage + auth magic link) ; localStorage pour l'etat purement local
 - PWA (manifest.json) ; service worker `sw.js` LIMITE AUX NOTIFICATIONS app fermee (EPIC-T25 : aucun cache, aucun gestionnaire fetch)
-- Deploiement : GitHub Pages (`skenea.github.io`) + `distrimatch.pages.dev` (voir `PROD_HOSTNAMES` dans `js/config.js`)
+- Deploiement : GitHub Pages seulement : https://skenea.github.io/DistriMatch/ (voir `PROD_HOSTNAMES` dans `js/config.js` ; `distrimatch.pages.dev` n'existe pas, retire le 2026-11-05)
 
 ## Commandes
 
