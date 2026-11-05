@@ -23,17 +23,39 @@ export const EVENT_TYPES = ['app_ouverte', 'fiche_ouverte', 'qr_scan', 'signal_e
 export const ENTRY_SOURCE_KEY = 'distrimatch_src';
 export const DEFAULT_SOURCE = 'organic';
 
-// Memorise l'origine de la visite (&src=qr) pour la session, avant tout
-// nettoyage d'URL. Retourne la source lue, ou null si l'URL n'en porte pas.
-export function rememberEntrySource(search) {
-    const src = new URLSearchParams(search || '').get('src');
+// CNX-06 : une arrivee par QR (&src=qr) vaut pour le distributeur scanne et pendant 2 h,
+// y compris dans l'onglet ouvert par le lien de connexion (localStorage, partage entre
+// onglets). Avant : la session de l'onglet entier, donc tout signal ulterieur, sur
+// n'importe quel distributeur, comptait « via QR » ; et l'onglet du lien la perdait.
+export const ENTRY_SOURCE_TTL = 2 * 60 * 60 * 1000;
+
+// Memorise l'origine de la visite avant tout nettoyage d'URL. Retourne la source
+// lue, ou null si l'URL n'en porte pas.
+export function rememberEntrySource(search, now = Date.now()) {
+    const params = new URLSearchParams(search || '');
+    const src = params.get('src');
     if (!src) return null;
-    try { sessionStorage.setItem(ENTRY_SOURCE_KEY, src); } catch (e) { /* sessionStorage indisponible */ }
+    try {
+        localStorage.setItem(ENTRY_SOURCE_KEY, JSON.stringify({ src, distributorId: params.get('id') || null, at: now }));
+    } catch (e) { /* stockage indisponible */ }
     return src;
 }
 
-export function getEntrySource() {
-    try { return sessionStorage.getItem(ENTRY_SOURCE_KEY) || DEFAULT_SOURCE; } catch (e) { return DEFAULT_SOURCE; }
+// Source d'un evenement : celle de l'arrivee si elle date de moins de 2 h et, pour un
+// evenement lie a un distributeur, si c'est celui du scan ; sinon 'organic'.
+export function getEntrySource(distributorId = null, now = Date.now()) {
+    try {
+        const entry = JSON.parse(localStorage.getItem(ENTRY_SOURCE_KEY) || 'null');
+        if (!entry?.src) return DEFAULT_SOURCE;
+        if (!(now - entry.at < ENTRY_SOURCE_TTL)) {
+            localStorage.removeItem(ENTRY_SOURCE_KEY);   // perimee : rien ne reste sur le telephone
+            return DEFAULT_SOURCE;
+        }
+        if (distributorId && entry.distributorId && distributorId !== entry.distributorId) return DEFAULT_SOURCE;
+        return entry.src;
+    } catch (e) {
+        return DEFAULT_SOURCE;
+    }
 }
 
 // Identifiant de la mesure (PRIV-05) : aleatoire, limite a la session de
@@ -74,7 +96,7 @@ export function buildEventArgs(type, { distributorId = null, source = null } = {
         p_type: type,
         p_device_hash: sessionId,
         p_distributor_id: distributorId || null,
-        p_source: source || getEntrySource()
+        p_source: source || getEntrySource(distributorId)
     };
 }
 

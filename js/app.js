@@ -16,7 +16,7 @@ import {
 } from './utils.js';
 
 import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
-import { logEvent, rememberEntrySource } from './events.js';
+import { logEvent, rememberEntrySource, ENTRY_SOURCE_KEY } from './events.js';
 import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
 import { checkNearbyForFiche } from './availability.js';
@@ -276,7 +276,7 @@ async function clearUserData() {
     // drapeau de test distrimatch_force_auth.
     const userKeys = [
         STORAGE_KEY, PROFILE_KEY, CONVERSATIONS_KEY, NOTIFICATION_PREFS_KEY, NOTIFICATION_QUEUE_KEY,
-        USER_DISTRIBUTORS_KEY, PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY, LOGIN_RETURN_KEY, EDIT_HINT_KEY, GEO_OK_KEY
+        USER_DISTRIBUTORS_KEY, PUSH_ASKED_KEY, HOME_SCREEN_SEEN_KEY, LOGIN_RETURN_KEY, EDIT_HINT_KEY, GEO_OK_KEY, ENTRY_SOURCE_KEY
     ];
     try {
         userKeys.forEach((key) => localStorage.removeItem(key));

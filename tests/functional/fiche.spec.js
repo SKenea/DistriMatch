@@ -570,8 +570,8 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
         await expect(page.locator('#dist-login-invite')).toBeInViewport();
 
-        const src = await page.evaluate(() => sessionStorage.getItem('distrimatch_src'));
-        expect(src).toBe('qr');
+        const src = await page.evaluate(() => JSON.parse(localStorage.getItem('distrimatch_src') || 'null'));
+        expect(src).toMatchObject({ src: 'qr', distributorId: firstId });
         expect(page.url()).not.toContain('confirm=');
         // Mesure : l'arrivee par QR compte app_ouverte + qr_scan + fiche_ouverte, source 'qr'
         await expect.poll(() => events.filter(e => e.source === 'qr').map(e => e.type).sort()).toEqual(['app_ouverte', 'fiche_ouverte', 'qr_scan']);
@@ -591,6 +591,24 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
         await expect(page.locator('#dist-login-invite')).toHaveClass(/is-highlighted/);
         await expect(page.locator('#dist-machine-choices')).toBeHidden();
+        await context.close();
+    });
+
+    test('fermer la fiche du QR puis recharger : adresse propre, la fiche ne revient pas, un seul scan (CNX-06)', async ({ browser }) => {
+        const context = await browser.newContext();
+        await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+        const page = await context.newPage();
+        const events = await captureEvents(page);
+        await page.goto(`${BASE_URL}/?id=dist-007&confirm=1&src=qr`);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        await page.click('#dist-modal-close');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        await expect.poll(() => page.url()).toBe(`${BASE_URL}/`);
+        await page.reload();
+        await page.waitForFunction(() => window.AppState?.distributors?.length > 0, null, { timeout: 50000 });
+        await page.waitForTimeout(1500);
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+        expect(events.filter(e => e.type === 'qr_scan')).toHaveLength(1);
         await context.close();
     });
 });

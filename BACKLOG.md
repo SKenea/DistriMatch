@@ -45,7 +45,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
 - [x] CNX-05 En tant que membre, l'app ne réagit qu'à un vrai changement de compte — `CNX-05.md`
   - Acceptance : un SIGNED_IN répété n'efface plus mon avis en cours ; fiche ouverte par lien
     mise à jour par une connexion dès l'ouverture.
-- [ ] CNX-06 En tant que Stéphane, l'origine « QR » ne compte que le scan — `CNX-06.md`
+- [x] CNX-06 En tant que Stéphane, l'origine « QR » ne compte que le scan — `CNX-06.md`
   (**décision de Stéphane** : fenêtre de 2 h)
   - Acceptance : adresse nettoyée avant la fiche ; source gardée au retour du lien ; signal
     « via QR » seulement sur le distributeur scanné, dans les 2 h.
