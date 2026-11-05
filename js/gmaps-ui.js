@@ -423,6 +423,14 @@ export function openModalFromUrlParam() {
     // la session avant le nettoyage de l'URL. Aucune donnee personnelle.
     const src = rememberEntrySource(window.location.search);
 
+    // Nettoyer l'URL pour eviter une re-ouverture au rafraichissement. CNX-06 : AVANT
+    // d'ouvrir la fiche, qui pousse sa propre entree d'historique avec l'adresse du
+    // moment ; nettoyee apres, l'entree de depart gardait ?id=...&src=qr, et fermer la
+    // fiche (retour a cette entree) puis recharger rouvrait la fiche et recomptait un scan.
+    if (window.history && window.history.replaceState) {
+        window.history.replaceState(window.history.state, '', window.location.pathname);
+    }
+
     if (AppState.distributors.find(d => d.id === id)) {
         modalOpenSource = src || 'organic';
         openDistributorModal(id);
@@ -431,11 +439,6 @@ export function openModalFromUrlParam() {
         if (params.get('confirm') === '1') focusSignalFromQr();
     } else {
         showToast('Distributeur introuvable', 'error');
-    }
-
-    // Nettoyer l'URL pour eviter une re-ouverture au rafraichissement
-    if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, '', window.location.pathname);
     }
 }
 

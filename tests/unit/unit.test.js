@@ -39,7 +39,7 @@ import {
 import { isQuietHours, canNotify, markNotified } from '../../js/notifications.js';
 import { generateGreetingMessage } from '../../js/chat.js';
 import { readFileSync, readdirSync } from 'node:fs';
-import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY, getSessionId, SESSION_ID_KEY } from '../../js/events.js';
+import { buildEventArgs, logEvent, rememberEntrySource, getEntrySource, EVENT_TYPES, ENTRY_SOURCE_KEY, ENTRY_SOURCE_TTL, getSessionId, SESSION_ID_KEY } from '../../js/events.js';
 import { setSupabaseClient, DISTRIBUTOR_TYPES, EMBEDDED_DATA } from '../../js/state.js';
 
 // Module bottomsheet.js a ete remplace par gmaps-ui.js (refonte UI Google Maps)
@@ -174,7 +174,7 @@ function contrastRatio(a, b) {
 // Supabase c'est un no-op silencieux : la mesure ne casse jamais l'app.
 
 describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', () => {
-    beforeEach(() => { sessionStorage.clear(); setSupabaseClient(null); });
+    beforeEach(() => { sessionStorage.clear(); localStorage.removeItem(ENTRY_SOURCE_KEY); setSupabaseClient(null); });
 
     it('type inconnu -> null (rien n\'est envoye)', () => {
         assert.equal(buildEventArgs('clic_random'), null);
@@ -231,13 +231,28 @@ describe('mesure du pilote : buildEventArgs / rememberEntrySource / logEvent', (
         assert.equal(getEntrySource(), 'organic');
         assert.equal(rememberEntrySource('?id=dist-001&confirm=1&src=qr'), 'qr');
         assert.equal(getEntrySource(), 'qr');
-        assert.equal(sessionStorage.getItem(ENTRY_SOURCE_KEY), 'qr');
+        assert.equal(JSON.parse(localStorage.getItem(ENTRY_SOURCE_KEY)).src, 'qr');
         assert.equal(buildEventArgs('qr_scan', { distributorId: 'dist-001' }).p_source, 'qr');
         assert.equal(buildEventArgs('itineraire', { source: 'organic' }).p_source, 'organic');
     });
 
     it('logEvent sans client Supabase : no-op silencieux', () => {
         assert.doesNotThrow(() => logEvent('app_ouverte'));
+    });
+
+    it('CNX-06 : « qr » vaut pour le distributeur scanne, 2 h, et dans l’onglet du lien de connexion', () => {
+        const t0 = Date.now();
+        assert.equal(rememberEntrySource('?id=dist-001&confirm=1&src=qr', t0), 'qr');
+        assert.equal(JSON.parse(localStorage.getItem(ENTRY_SOURCE_KEY)).distributorId, 'dist-001');
+        assert.equal(getEntrySource(null, t0 + 1000), 'qr');                 // app_ouverte de la meme visite
+        assert.equal(getEntrySource('dist-001', t0 + 1000), 'qr');
+        assert.equal(getEntrySource('dist-002', t0 + 1000), 'organic');      // autre distributeur
+        assert.equal(buildEventArgs('signal_envoye', { distributorId: 'dist-002' }).p_source, 'organic');
+        assert.equal(buildEventArgs('signal_envoye', { distributorId: 'dist-001' }).p_source, 'qr');
+        sessionStorage.clear();                                               // onglet ouvert par le lien de connexion
+        assert.equal(getEntrySource('dist-001', t0 + 1000), 'qr');
+        assert.equal(getEntrySource('dist-001', t0 + ENTRY_SOURCE_TTL + 1), 'organic');   // plus de 2 h
+        assert.equal(localStorage.getItem(ENTRY_SOURCE_KEY), null);           // perimee : effacee
     });
 
     it('logEvent appelle la RPC log_event en fire-and-forget, ignore les types inconnus et avale les erreurs', async () => {
