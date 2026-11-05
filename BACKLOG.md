@@ -53,6 +53,8 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   la règle du compte — `CNX-07.md` (**textes à valider par Stéphane**)
 - [x] CNX-08 En tant que membre, le contrôle anti-robot s'affiche une seule fois et s'explique
   s'il tarde — `CNX-08.md` (relecture par un modèle plus fort ; E2E après déploiement)
+- [x] CNX-09 En tant que membre, l'app ne m'affiche jamais connecté avec une session fermée par le serveur
+  Acceptance : vérification au démarrage, déconnexion silencieuse si la session est refusée, rien d'effacé sans réseau ; un signal refusé pour session morte passe aussi en déconnecté.
 
 ### EPIC-R2 Vie privée : ne plus exposer le compte (lot 2, revue du 2026-10-21)
 Objectif : l'API ne permet plus de relier un signal, un avis, une modification ou une visite à un

@@ -455,3 +455,41 @@ test.describe('Textes de connexion (CNX-07)', () => {
         expect(html).toContain('<span id="account-meta">Connecte-toi pour signaler, donner ton avis et ajouter des distributeurs</span>');
     });
 });
+
+// ============================================
+// SESSION VERIFIEE AU DEMARRAGE (CNX-09)
+// ============================================
+
+// Ouvre l'app avec une fausse session locale ; onUser repond a la verification du serveur
+async function openWithCheckedSession(context, onUser) {
+    const page = await context.newPage();
+    await page.route('**/rest/v1/**', route => {
+        const headers = { ...route.request().headers() };
+        if (headers.apikey) headers.authorization = `Bearer ${headers.apikey}`;
+        return route.continue({ headers });
+    });
+    await captureEvents(page);
+    await page.route('**/auth/v1/logout**', route => route.fulfill({ status: 204, body: '' }));
+    await page.route('**/auth/v1/user**', onUser);
+    await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [SESSION_KEY, JSON.stringify(fakeSession('test@exemple.fr'))]);
+    await page.goto(BASE_URL);
+    return page;
+}
+
+test.describe('Session verifiee au demarrage (CNX-09)', () => {
+    test('session fermee par le serveur : l\'app finit en visiteur, sans toast', async ({ page, context }) => {
+        const other = await openWithCheckedSession(context, route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: 'session_not_found', message: 'Session from session_id claim in JWT does not exist' }) }));
+        await expect(other.locator('#account-meta')).toHaveText('Connecte-toi pour signaler, donner ton avis et ajouter des distributeurs', { timeout: 30000 });
+        await other.waitForTimeout(1000);
+        await expect(other.locator('#toast-container .toast')).toHaveCount(0);
+        expect(await other.evaluate((k) => localStorage.getItem(k), SESSION_KEY)).toBeNull();
+    });
+
+    test('serveur injoignable : la session reste', async ({ page, context }) => {
+        const other = await openWithCheckedSession(context, route => route.abort());
+        await other.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 50000 });
+        await other.waitForTimeout(1500);
+        await expect(other.locator('#account-meta')).toHaveText('Connecté');
+        expect(await other.evaluate((k) => localStorage.getItem(k), SESSION_KEY)).not.toBeNull();
+    });
+});
