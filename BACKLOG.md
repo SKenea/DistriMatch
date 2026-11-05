@@ -51,7 +51,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
     « via QR » seulement sur le distributeur scanné, dans les 2 h.
 - [x] CNX-07 En tant que membre, les erreurs de connexion sont en français et les textes suivent
   la règle du compte — `CNX-07.md` (**textes à valider par Stéphane**)
-- [ ] CNX-08 En tant que membre, le contrôle anti-robot s'affiche une seule fois et s'explique
+- [x] CNX-08 En tant que membre, le contrôle anti-robot s'affiche une seule fois et s'explique
   s'il tarde — `CNX-08.md` (relecture par un modèle plus fort ; E2E après déploiement)
 
 ### EPIC-R2 Vie privée : ne plus exposer le compte (lot 2, revue du 2026-10-21)

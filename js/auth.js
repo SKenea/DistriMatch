@@ -136,6 +136,9 @@ function describeCodeError(err) {
     return 'Code incorrect ou expiré. Vérifie les chiffres, ou ferme cette fenêtre pour recevoir un nouveau code.';
 }
 
+// CNX-08 : script hCaptcha pas encore la au bout de 10 s (reseau lent, bloqueur)
+const CAPTCHA_SLOW_TEXT = 'Le contrôle anti-robot ne s’est pas chargé : vérifie ta connexion ou ton bloqueur de publicités, puis patiente un instant.';
+
 // ============================================
 // RETOUR SUR LA FICHE APRES CONNEXION (Stephane 2026-10-17)
 // ============================================
@@ -281,7 +284,7 @@ function openEmailModal(onClose) {
                 <p class="auth-modal-privacy"><button type="button" class="privacy-link" data-open-privacy>Ce que devient ton e-mail</button></p>
                 ${isLocalhost()
                     ? '<div class="auth-modal-dev-banner">Mode developpement — captcha desactive sur localhost</div>'
-                    : `<div class="h-captcha" data-sitekey="${getHcaptchaSitekey()}" data-callback="onHcaptchaSuccess" data-expired-callback="onHcaptchaExpired"></div>`
+                    : '<div class="auth-captcha"></div>'   // CNX-08 : rendu par tryRenderHcaptcha seulement (script en mode explicite)
                 }
                 <button type="submit" class="auth-modal-submit"${isLocalhost() ? '' : ' disabled'}>${sendLabel}</button>
             </form>
@@ -308,7 +311,7 @@ function openEmailModal(onClose) {
 
     const tryRenderHcaptcha = () => {
         if (isLocalhost()) return; // pas de captcha en dev
-        const captchaEl = overlay.querySelector('.h-captcha');
+        const captchaEl = overlay.querySelector('.auth-captcha');
         if (window.hcaptcha && captchaEl && !captchaEl.dataset.rendered) {
             try {
                 captchaWidgetId = window.hcaptcha.render(captchaEl, {
@@ -336,18 +339,25 @@ function openEmailModal(onClose) {
         }
     };
 
-    // Attendre que hCaptcha soit charge
+    // Attendre hCaptcha tant que la fenetre est ouverte (CNX-08 : plus d'abandon muet au
+    // bout de 10 s) ; au-dela de 10 s, on dit pourquoi le bouton reste grise
+    let captchaWait = null;
+    let captchaSlowTimer = null;
     if (window.hcaptcha) {
         tryRenderHcaptcha();
-    } else {
-        const interval = setInterval(() => {
-            if (window.hcaptcha) {
-                clearInterval(interval);
-                tryRenderHcaptcha();
-            }
+    } else if (!isLocalhost()) {
+        captchaWait = setInterval(() => {
+            if (!window.hcaptcha) return;
+            clearInterval(captchaWait);
+            clearTimeout(captchaSlowTimer);
+            if (status.textContent === CAPTCHA_SLOW_TEXT) status.style.display = 'none';
+            tryRenderHcaptcha();
         }, 200);
-        // Timeout au bout de 10s
-        setTimeout(() => clearInterval(interval), 10000);
+        captchaSlowTimer = setTimeout(() => {
+            status.style.display = 'block';
+            status.className = 'auth-modal-status error';
+            status.textContent = CAPTCHA_SLOW_TEXT;
+        }, 10000);
     }
 
     const dialog = overlay.querySelector('.auth-modal');
@@ -357,6 +367,8 @@ function openEmailModal(onClose) {
         if (closed) return;   // CNX-02 : une seule fermeture (croix, Echap, fond, retour, connexion)
         closed = true;
         modalOpen = false;
+        clearInterval(captchaWait);        // CNX-08
+        clearTimeout(captchaSlowTimer);
         stopAuthWatch?.();
         if (captchaWidgetId !== null && window.hcaptcha) {
             try { window.hcaptcha.reset(captchaWidgetId); } catch (e) {}
