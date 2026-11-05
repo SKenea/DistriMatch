@@ -42,7 +42,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   - Acceptance : retour consommé seulement après une vraie connexion ; toast « Ce lien de
     connexion a expiré ou a déjà servi : demande un nouveau lien. »
 - [x] CNX-04 En tant que visiteur, aucune demande de position avant l'écran d'accueil — `CNX-04.md`
-- [ ] CNX-05 En tant que membre, l'app ne réagit qu'à un vrai changement de compte — `CNX-05.md`
+- [x] CNX-05 En tant que membre, l'app ne réagit qu'à un vrai changement de compte — `CNX-05.md`
   - Acceptance : un SIGNED_IN répété n'efface plus mon avis en cours ; fiche ouverte par lien
     mise à jour par une connexion dès l'ouverture.
 - [ ] CNX-06 En tant que Stéphane, l'origine « QR » ne compte que le scan — `CNX-06.md`
