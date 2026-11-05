@@ -49,7 +49,7 @@ fusionnée) : CNX-01 à CNX-08. Aucune migration. Constats déjà corrigés : d�
   (**décision de Stéphane** : fenêtre de 2 h)
   - Acceptance : adresse nettoyée avant la fiche ; source gardée au retour du lien ; signal
     « via QR » seulement sur le distributeur scanné, dans les 2 h.
-- [ ] CNX-07 En tant que membre, les erreurs de connexion sont en français et les textes suivent
+- [x] CNX-07 En tant que membre, les erreurs de connexion sont en français et les textes suivent
   la règle du compte — `CNX-07.md` (**textes à valider par Stéphane**)
 - [ ] CNX-08 En tant que membre, le contrôle anti-robot s'affiche une seule fois et s'explique
   s'il tarde — `CNX-08.md` (relecture par un modèle plus fort ; E2E après déploiement)

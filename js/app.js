@@ -357,7 +357,7 @@ function refreshAuthUI(user = getCurrentUser()) {
         if (authed) {
             accountMeta.textContent = 'Connecté';   // EPIC-T22 : plus de niveau ni de points
         } else {
-            accountMeta.textContent = 'Connecte-toi pour contribuer et retrouver tes favoris';
+            accountMeta.textContent = 'Connecte-toi pour signaler, donner ton avis et ajouter des distributeurs';   // CNX-07 : favoris sans compte
         }
     }
 }

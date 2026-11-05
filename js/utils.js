@@ -221,6 +221,30 @@ export function describeSignalError(error, status = 0, online = true) {
     return `Signal non envoyé, réessaie plus tard (code ${code})`;
 }
 
+// E-mail de connexion non envoye (CNX-07) : message en francais, jamais le texte
+// anglais de Supabase. error : AuthApiError ({ status, code, message }) ou exception
+// reseau ; online : navigator.onLine. « e-mail » et non « lien » : l'app de l'ecran
+// d'accueil envoie un code.
+export function describeAuthError(error, online = true) {
+    const message = String(error?.message || error || '');
+    if (online === false || /failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
+        return 'Pas de réseau : l’e-mail n’est pas parti. Vérifie ta connexion et réessaie.';
+    }
+    if (error?.code === 'over_email_send_rate_limit' || error?.status === 429) {
+        const wait = message.match(/after (\d+) seconds?/i);
+        return wait
+            ? `Patiente encore ${wait[1]} s avant de redemander un e-mail.`
+            : 'Beaucoup de demandes en ce moment : réessaie dans quelques minutes.';
+    }
+    if (error?.code === 'captcha_failed' || /captcha/i.test(message)) {
+        return 'La vérification anti-robot n’a pas abouti : coche-la de nouveau.';
+    }
+    if (error?.code === 'email_address_invalid' || error?.code === 'validation_failed') {
+        return 'Cette adresse e-mail ne semble pas valide : vérifie-la.';
+    }
+    return `L’e-mail n’a pas pu partir : réessaie dans un moment (code ${error?.code || error?.status || '?'}).`;
+}
+
 // Retour d'un lien de connexion refuse par Supabase (expire, deja utilise) (CNX-03) :
 // #error=access_denied&error_code=otp_expired&error_description=... (ou dans la query).
 // Renvoie { code, cleanUrl } (adresse sans ces parametres), ou null.

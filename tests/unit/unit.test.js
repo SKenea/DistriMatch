@@ -2259,3 +2259,26 @@ describe('parseAuthLinkError (lien de connexion expire ou deja utilise, CNX-03)'
         assert.equal(parseAuthLinkError('pas une adresse'), null);
     });
 });
+
+// ============================================
+// E-MAIL DE CONNEXION NON ENVOYE (CNX-07)
+// ============================================
+
+const { describeAuthError } = await import('../../js/utils.js');
+
+describe('describeAuthError (e-mail de connexion non envoye, CNX-07)', () => {
+    it('trop de demandes : le delai lu dans le message, sinon un message general', () => {
+        assert.equal(describeAuthError({ status: 429, code: 'over_email_send_rate_limit', message: 'For security purposes, you can only request this after 52 seconds.' }), 'Patiente encore 52 s avant de redemander un e-mail.');
+        assert.equal(describeAuthError({ status: 429, code: 'over_email_send_rate_limit', message: 'Email rate limit exceeded' }), 'Beaucoup de demandes en ce moment : réessaie dans quelques minutes.');
+    });
+
+    it('reseau, captcha, adresse invalide, autre', () => {
+        assert.equal(describeAuthError(new TypeError('Failed to fetch')), 'Pas de réseau : l’e-mail n’est pas parti. Vérifie ta connexion et réessaie.');
+        assert.equal(describeAuthError({ status: 400, message: 'x' }, false), 'Pas de réseau : l’e-mail n’est pas parti. Vérifie ta connexion et réessaie.');
+        assert.equal(describeAuthError({ status: 400, code: 'captcha_failed', message: 'captcha protection: request disallowed' }), 'La vérification anti-robot n’a pas abouti : coche-la de nouveau.');
+        assert.equal(describeAuthError(new Error('Captcha requis')), 'La vérification anti-robot n’a pas abouti : coche-la de nouveau.');
+        assert.equal(describeAuthError({ status: 400, code: 'email_address_invalid', message: 'Email address is invalid' }), 'Cette adresse e-mail ne semble pas valide : vérifie-la.');
+        assert.equal(describeAuthError({ status: 500, code: 'unexpected_failure', message: 'Error sending magic link email' }), 'L’e-mail n’a pas pu partir : réessaie dans un moment (code unexpected_failure).');
+        assert.equal(describeAuthError(new Error('Supabase indisponible')), 'L’e-mail n’a pas pu partir : réessaie dans un moment (code ?).');
+    });
+});
