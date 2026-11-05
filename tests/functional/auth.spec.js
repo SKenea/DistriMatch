@@ -308,6 +308,27 @@ test.describe('Coup de pouce sur place, fiche ouverte par un lien (CNX-04)', () 
 });
 
 // ============================================
+// FICHE OUVERTE PAR UN LIEN AVANT L'ACCUEIL (CNX-05)
+// ============================================
+
+test.describe('Fiche ouverte par un lien avant la localisation (CNX-05)', () => {
+    test('connexion faite ailleurs : la fiche passe en mode membre sans attendre l’accueil', async ({ browser }) => {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await captureEvents(page);
+        await page.goto(`${BASE_URL}/?id=dist-007`);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
+        await expect(page.locator('#dist-login-invite')).toBeVisible();
+        await page.evaluate(() => window.__testLogin());
+        await expect(page.locator('#dist-login-invite')).toBeHidden();
+        await expect(page.locator('#dist-status-update')).not.toHaveAttribute('data-guest', '1');
+        // Toujours avant l'accueil : la localisation n'a pas ete demandee
+        expect(await page.evaluate(() => !document.getElementById('geoloc-overlay')?.classList.contains('hidden'))).toBe(true);
+        await context.close();
+    });
+});
+
+// ============================================
 // CONNEXION PAR CODE RECU PAR E-MAIL (BUG-05)
 // ============================================
 

@@ -651,6 +651,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser la modal des maintenant pour le deep link
     initDistModal();
+    // Etat auth : indicateur Compte + libelle Connexion/Deconnexion du menu + nom du hero
+    // profil (refreshAuthUI, aussi callback des vues profil/compte) et fiche ouverte
+    // (lecture / information, EPIC-T5). CNX-05 : branche AVANT l'attente de la
+    // geolocalisation, sinon une fiche ouverte par un lien (QR) ne basculait pas quand on
+    // se connectait dans un autre onglet avant d'accepter la localisation.
+    refreshAuthUI(getCurrentUser());
+    onAuthChange(refreshAuthUI);
+    onAuthChange(refreshFicheForAuth);
 
     // Si l'URL contient ?id=<distId>, ouvrir la modal des que les distributeurs
     // sont prets, sans attendre le consentement geoloc.
@@ -815,13 +823,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('back-from-stats')?.addEventListener('click', () => switchView('account'));
     document.getElementById('account-stats-row')?.addEventListener('click', () => switchView('stats'));
 
-    // Etat auth : indicateur Compte + libelle Connexion/Deconnexion du menu
-    // + nom du hero profil. refreshAuthUI() est aussi le callback des vues
-    // profil/compte (defini au niveau module plus bas).
-    refreshAuthUI(getCurrentUser());
-    onAuthChange(refreshAuthUI);
-    // Fiche ouverte : bascule lecture / information a la connexion (EPIC-T5)
-    onAuthChange(refreshFicheForAuth);
+    // Etat auth (refreshAuthUI, refreshFicheForAuth) : branche plus haut, apres initDistModal (CNX-05)
     // Le serveur ne notifie pas son propre signal : il connait le compte (EPIC-T25)
     onAuthChange(syncPushSubscription);
     // PRIV-06 : deconnecte, plus rien du compte precedent a l'ecran ni en memoire

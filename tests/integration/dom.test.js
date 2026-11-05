@@ -1529,3 +1529,40 @@ describe('Deconnexion sans reseau (PRIV-06)', () => {
         assert.equal(getCurrentUser(), null);
     });
 });
+
+// ============================================
+// EVENEMENTS DE SESSION REPETES (CNX-05)
+// ============================================
+
+const { initAuth, onAuthChange } = await import('../../js/auth.js');
+
+describe('Evenements de session repetes (CNX-05)', () => {
+    after(() => setSupabaseClient(null));
+
+    it('SIGNED_IN repete et TOKEN_REFRESHED du meme compte : ni toast ni ecouteur ; vrai changement : une fois', async () => {
+        let emit = null;
+        setSupabaseClient({ auth: {
+            getSession: async () => ({ data: { session: null } }),
+            onAuthStateChange: (cb) => { emit = cb; return { data: { subscription: { unsubscribe() {} } } }; }
+        } });
+        window.__testLogout();
+        await initAuth();
+        const seen = [];
+        const stop = onAuthChange((user) => seen.push(user?.id ?? null));
+        const container = document.getElementById('toast-container');
+        container.innerHTML = '';
+        const session = { user: { id: 'u-cnx05', email: 'cnx05@exemple.fr', is_anonymous: false } };
+        emit('SIGNED_IN', session);
+        emit('SIGNED_IN', session);
+        emit('TOKEN_REFRESHED', session);
+        assert.deepEqual(seen, ['u-cnx05']);
+        assert.equal(getCurrentUser().id, 'u-cnx05');
+        assert.equal(container.children.length, 1);
+        assert.equal(container.children[0].textContent, 'Connecté avec cnx05@exemple.fr');
+        emit('SIGNED_OUT', null);
+        assert.deepEqual(seen, ['u-cnx05', null]);
+        assert.equal(getCurrentUser(), null);
+        assert.equal(container.children[1].textContent, 'Déconnecté');
+        stop();
+    });
+});

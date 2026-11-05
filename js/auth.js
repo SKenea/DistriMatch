@@ -73,16 +73,17 @@ export async function initAuth() {
         currentUser = session?.user || null;
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
+            // CNX-05 : supabase-js reemet SIGNED_IN au retour sur l'onglet et TOKEN_REFRESHED
+            // toutes les heures. La session est gardee a jour, mais l'app (toast, fiche, avis,
+            // formulaires) n'est prevenue que si le compte change : sinon une saisie en cours
+            // etait effacee et le toast revenait a chaque retour dans l'app.
+            const previousId = currentUser?.id ?? null;
             currentUser = session?.user || null;
+            const nextId = currentUser?.id ?? null;
             console.log('[Auth] Event:', event, 'User:', currentUser?.email || 'anonyme/null');
-
-            if (event === 'SIGNED_IN' && !currentUser?.is_anonymous) {
-                showToast(`Connecte avec ${currentUser.email}`, 'success');
-            }
-            if (event === 'SIGNED_OUT') {
-                showToast('Deconnecte', 'default');
-            }
-
+            if (previousId === nextId) return;
+            if (nextId && !currentUser.is_anonymous) showToast(`Connecté avec ${currentUser.email}`, 'success');
+            if (!nextId) showToast('Déconnecté', 'default');
             notifyAuthChange();
         });
 
@@ -199,6 +200,9 @@ export async function signOut() {
         console.warn('[Auth] Deconnexion sans reponse du serveur, session effacee sur cet appareil :', error?.message || error);
         try { localStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) { /* stockage bloque */ }
     }
+    // CNX-05 : si le serveur a repondu, supabase-js a deja emis SIGNED_OUT (ecouteurs
+    // prevenus, currentUser a null) : une seule notification par vrai changement
+    if (currentUser === null) return;
     currentUser = null;
     notifyAuthChange();
 }
