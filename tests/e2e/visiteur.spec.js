@@ -126,4 +126,37 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
     });
 });
 
+// CNX-08 : le controle anti-robot est rendu une seule fois par l'app (mode explicite) ;
+// le bouton attend la case. Ne peut tourner que sur le site en ligne (captcha coupe en local).
+test.describe('E2E visiteur : connexion (CNX-08)', () => {
+    test('fenetre de connexion : un seul controle anti-robot, bouton grise tant qu’il n’est pas coche', async ({ page, context }) => {
+        const errors = [];
+        page.on('pageerror', e => errors.push(String(e)));
+        await openApp(page, context, `?id=${DEMO_ID}&confirm=1&src=qr`);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 60000 });
+        await page.evaluate(() => document.getElementById('dist-login-invite-btn').click());
+        await expect(page.locator('.auth-modal-overlay')).toBeVisible();
+        await expect(page.locator('.auth-modal .auth-captcha iframe')).toHaveCount(1, { timeout: 30000 });
+        await expect(page.locator('.auth-modal-form:not(.auth-modal-otp) .auth-modal-submit')).toBeDisabled();
+        expect(errors).toEqual([]);
+    });
+
+    test('controle anti-robot en retard : la fenetre le dit, puis l’affiche une seule fois', async ({ page, context }) => {
+        await context.grantPermissions(['geolocation']);
+        await context.setGeolocation({ latitude: 43.4929, longitude: -1.4748 });
+        await page.route('**/rest/v1/rpc/log_event', route => route.abort());   // pas de mesure d'audience
+        // Reseau lent : le script hCaptcha arrive 25 s apres la demande (rien n'est remplace)
+        await page.route(url => url.hostname === 'js.hcaptcha.com', async route => { await new Promise(r => setTimeout(r, 25000)); await route.continue(); });
+        // domcontentloaded : l'evenement load attendrait le script en retard
+        await page.goto(`./?id=${DEMO_ID}&confirm=1&nocache=${Date.now()}`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 60000 });
+        await page.evaluate(() => document.getElementById('dist-login-invite-btn').click());
+        await expect(page.locator('.auth-modal-status')).toContainText('Le contrôle anti-robot ne s’est pas chargé', { timeout: 15000 });
+        await expect(page.locator('.auth-modal .auth-captcha iframe')).toHaveCount(1, { timeout: 30000 });
+        await expect(page.locator('.auth-modal-status')).toBeHidden();
+        await page.waitForTimeout(1500);
+        await expect(page.locator('.auth-modal .auth-captcha iframe')).toHaveCount(1);
+    });
+});
+
 // Parcours connecte (vrai compte de test) : tests/e2e/connecte.spec.js

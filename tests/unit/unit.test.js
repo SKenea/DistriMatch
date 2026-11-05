@@ -2282,3 +2282,22 @@ describe('describeAuthError (e-mail de connexion non envoye, CNX-07)', () => {
         assert.equal(describeAuthError(new Error('Supabase indisponible')), 'L’e-mail n’a pas pu partir : réessaie dans un moment (code ?).');
     });
 });
+
+// ============================================
+// CONTROLE ANTI-ROBOT RENDU PAR L'APP SEULEMENT (CNX-08)
+// ============================================
+// Sur localhost le captcha est desactive : ce test lit les sources. Le rendu automatique
+// de hCaptcha (classe h-captcha + rappels globaux inexistants) bloquait le bouton d'envoi.
+
+describe('hCaptcha rendu par l’app seulement (CNX-08)', () => {
+    it('script en mode explicite, conteneur neutre sans rappels globaux', () => {
+        const projectRoot = new URL('../../', import.meta.url);
+        const index = readFileSync(new URL('index.html', projectRoot), 'utf8');
+        const auth = readFileSync(new URL('js/auth.js', projectRoot), 'utf8');
+        assert.ok(index.includes('https://js.hcaptcha.com/1/api.js?render=explicit'));
+        assert.ok(!auth.includes('data-callback'));
+        assert.ok(!auth.includes('class="h-captcha"'));
+        assert.ok(auth.includes('<div class="auth-captcha"></div>'));
+        assert.ok(auth.includes("overlay.querySelector('.auth-captcha')"));
+    });
+});
