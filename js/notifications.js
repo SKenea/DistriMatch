@@ -5,7 +5,7 @@
 import { AppState, NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES } from './state.js';
 import {
     calculateDistance, escapeHTML, showToast, timeAgo,
-    saveNotificationPrefs, saveNotificationQueue
+    saveNotificationPrefs, saveNotificationQueue, normalizeName
 } from './utils.js';
 import { switchView } from './navigation.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
@@ -404,7 +404,8 @@ function showNotificationBanner(notif) {
 
 export function followProduct(productName) {
     const normalized = productName.toLowerCase().trim();
-    if (!NotificationPrefs.followedProducts.includes(normalized)) {
+    // NOTIF-02 : « oeufs » et « Œufs » sont le meme produit suivi
+    if (!NotificationPrefs.followedProducts.some(p => normalizeName(p) === normalizeName(normalized))) {
         NotificationPrefs.followedProducts.push(normalized);
         saveNotificationPrefs();
         showToast(`Tu seras notifié pour "${productName}"`, 'success');

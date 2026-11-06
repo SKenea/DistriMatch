@@ -175,6 +175,8 @@ Object.defineProperty(globalThis, 'document', { value: dom.window.document, writ
 Object.defineProperty(globalThis, 'localStorage', { value: dom.window.localStorage, writable: true, configurable: true });
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, writable: true, configurable: true });
 Object.defineProperty(globalThis, 'HTMLElement', { value: dom.window.HTMLElement, writable: true, configurable: true });
+// Evenements de la page (distrimatch:summaries...) : ceux de jsdom, pas ceux de Node (NOTIF-02)
+Object.defineProperty(globalThis, 'CustomEvent', { value: dom.window.CustomEvent, writable: true, configurable: true });
 
 // Mock Leaflet
 globalThis.L = {
@@ -1564,5 +1566,107 @@ describe('Evenements de session repetes (CNX-05)', () => {
         assert.equal(getCurrentUser(), null);
         assert.equal(container.children[1].textContent, 'Déconnecté');
         stop();
+    });
+});
+
+// ============================================
+// ALERTES DES FAVORIS JUSTES, APP OUVERTE (NOTIF-02)
+// ============================================
+const { rememberOwnSignal, expectOwnSignal } = await import('../../js/favorites-watch.js');
+const { getDistributorSummary } = await import('../../js/summaries.js');
+const { followProduct } = await import('../../js/notifications.js');
+
+describe('Veille des favoris : alertes justes (NOTIF-02)', () => {
+    let tables;
+    let gate = null;   // promesse liberee a la main : un controle « en vol »
+    const read = (table) => (gate || Promise.resolve()).then(() => ({ data: tables[table] || [], error: null }));
+    const fakeClient = { from(table) { return { select() { return { in() { return read(table); } }; } }; } };
+    const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+    const tick = () => new Promise(r => setTimeout(r, 0));
+
+    after(() => {
+        setSupabaseClient(null);
+        AppState.subscriptions = [];
+        document.getElementById('subscriptions-view').classList.remove('view-active');
+    });
+
+    beforeEach(() => {
+        tables = { distributor_status: [], product_availability: [], products: [] };
+        gate = null;
+        setSupabaseClient(fakeClient);
+        AppState.subscriptions = ['dist-fav'];
+        AppState.distributors = [
+            { id: 'dist-fav', name: 'Pain du Coin', type: 'bakery', emoji: '🥖', address: 'Addr', products: [{ id: 7, name: 'Baguette', price: 1, available: true }] }
+        ];
+        AppState.typeConfig = { bakery: { label: 'Boulangerie', gradient: '' } };
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.quietHours.enabled = false;
+        NotificationPrefs.followedProducts = [];
+        NotificationPrefs.lastNotifications = {};
+        NotificationPrefs.lastSeenSignals = {};
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+    });
+
+    it('mon signal arrive pendant un controle deja parti : jamais notifie', async () => {
+        await checkFavoriteUpdates();   // 1er passage : etat memorise
+        let release;
+        gate = new Promise(r => { release = r; });
+        const running = checkFavoriteUpdates();   // controle parti avant la reponse de la RPC
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: minutesAgo(0) }];
+        rememberOwnSignal('dist-fav');            // la reponse arrive pendant la lecture
+        release();
+        await running;
+        gate = null;
+        await tick();
+        assert.equal(NotificationQueue.history.length, 0);
+        assert.equal(NotificationPrefs.lastSeenSignals['dist-fav'].machineState, 'empty');
+    });
+
+    it('mon signal lu par un controle avant la reponse de la RPC : jamais notifie', async () => {
+        await checkFavoriteUpdates();
+        expectOwnSignal('dist-fav');              // l'envoi commence
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'broken', created_at: minutesAgo(0) }];
+        await checkFavoriteUpdates();             // la base a deja le signal, la RPC n'a pas repondu
+        rememberOwnSignal('dist-fav');            // la reponse arrive ensuite
+        await tick();
+        assert.equal(NotificationQueue.history.length, 0);
+        assert.equal(NotificationPrefs.lastSeenSignals['dist-fav'].machineState, 'broken');
+        // Le signal suivant, d'un autre membre, notifie de nouveau
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: new Date(Date.now() + 1000).toISOString() }];
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.history.length, 1);
+    });
+
+    it('la page Favoris ouverte dit la meme chose que la notification', async () => {
+        document.getElementById('subscriptions-view').classList.add('view-active');
+        displaySubscriptions();
+        await checkFavoriteUpdates();
+        tables.distributor_status = [{ distributor_id: 'dist-fav', state: 'empty', created_at: new Date(Date.now() + 2000).toISOString() }];
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.history[0].type, 'empty');
+        assert.equal(getDistributorSummary(AppState.distributors[0]).state, 'empty');
+        assert.match(document.querySelector('#subscriptions-list .side-panel-item-state').textContent, /Vide/);
+        document.getElementById('subscriptions-view').classList.remove('view-active');
+    });
+
+    it('produit ajoute par un autre membre apres l’ouverture, suivi sans accent : « vu dispo »', async () => {
+        NotificationPrefs.followedProducts = ['oeufs'];
+        tables.products = [
+            { id: 7, name: 'Baguette', distributor_id: 'dist-fav' },
+            { id: 8, name: 'Œufs fermiers (x6)', distributor_id: 'dist-fav' }
+        ];
+        await checkFavoriteUpdates();
+        tables.product_availability = [{ distributor_id: 'dist-fav', product_id: 8, state: 'available', created_at: minutesAgo(2) }];
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.history.length, 1);
+        assert.equal(NotificationQueue.history[0].type, 'stock');
+        assert.match(NotificationQueue.history[0].message, /Œufs fermiers \(x6\) vu dispo chez Pain du Coin/);
+    });
+
+    it('suivre « Œufs » apres « oeufs » : un seul produit suivi', () => {
+        followProduct('oeufs');
+        followProduct('Œufs');
+        assert.deepEqual(NotificationPrefs.followedProducts, ['oeufs']);
     });
 });

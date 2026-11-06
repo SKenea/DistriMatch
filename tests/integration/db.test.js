@@ -1369,3 +1369,31 @@ describe('base : demo toujours vivante (017)', { skip: SKIP }, () => {
         assert.equal(rows[0].n, 0);
     });
 });
+
+// ============================================
+// SIGNAUX DE DEMO RECONNAISSABLES PAR L'APP (NOTIF-02, migration 034)
+// ============================================
+describe('base : signaux de demo reconnaissables sans device_hash (NOTIF-02, 034)', { skip: SKIP }, () => {
+    const lastStatus = `select state || ':' || is_demo_signal::text into r from distributor_status where distributor_id = '${DEMO}'`;
+    const insert = (hash) => `insert into availability_signals (distributor_id, product_id, state, source, weight, device_hash, created_at) values ('${DEMO}', null, 'broken', 'user', 0.8, '${hash}', now() + interval '1 minute')`;
+
+    it('un visiteur lit is_demo_signal : vrai pour un signal de demo, faux pour un vrai signal', async () => {
+        const demo = await probe(`${insert('demo-itest')}; ${AS_ANON} ${lastStatus}`);
+        assert.ok(demo.reachedEnd, demo.message);
+        assert.equal(demo.result, 'broken:true');
+        const real = await probe(`${insert('account')}; ${AS_ANON} ${lastStatus}`);
+        assert.ok(real.reachedEnd, real.message);
+        assert.equal(real.result, 'broken:false');
+    });
+
+    it('product_availability expose aussi is_demo_signal a un visiteur', async () => {
+        const p = await probe(`${AS_ANON} select count(*)::text into r from product_availability where is_demo_signal is not null`);
+        assert.ok(p.reachedEnd, p.message);
+    });
+
+    it('device_hash reste illisible par l’API (42501)', async () => {
+        const p = await probe(`${AS_ANON} select device_hash into r from availability_signals limit 1`);
+        assert.equal(p.reachedEnd, false);
+        assert.equal(p.code, '42501');
+    });
+});

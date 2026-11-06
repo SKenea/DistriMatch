@@ -423,6 +423,17 @@ export function normalizeName(name) {
         .replace(/\s+/g, ' ').trim();
 }
 
+// Produit suivi (NOTIF-02) : nom compare sans casse, accents ni ligature, et partiel
+// (« oeufs » suit « Œufs fermiers (x6) »). Meme regle que push-notify (NOTIF-01).
+export function matchesFollowedProduct(productName, followedProducts) {
+    const name = normalizeName(productName);
+    if (!name) return false;
+    return (followedProducts || []).some((followed) => {
+        const key = normalizeName(followed);
+        return key !== '' && name.includes(key);
+    });
+}
+
 // Machines ajoutees localement qui doublonnent une machine de la base : meme
 // nom (normalise) a moins de radiusM metres, et absentes de la base par leur id
 // (sinon la fusion par id s'en charge deja). EPIC-T9 : une copie locale d'une
@@ -1055,15 +1066,16 @@ function signalTime(row) {
 // et product_availability de la migration 007). Fonction pure.
 //   previous : { machineState, machineAt, products: { [productId]: { state, at } } } | undefined
 //   current  : { machine: row | null, products: [row] }
-//   options  : { now, followedProducts: ['pain', ...] (minuscules), productNames: { [productId]: nom } }
+//   options  : { now, followedProducts: ['pain', ...] (compares par matchesFollowedProduct), productNames: { [productId]: nom } }
 // Retour : { event, snapshot }. event = null ou { type, at, product? }, un seul par
 // passage, le plus important d'abord : broken > empty > stock (produit suivi vu
 // dispo) > restock (de nouveau dispo apres un vide, une panne ou un "vu absent").
 // Premier passage (previous absent) : on memorise sans rien notifier. Un signal
-// de plus de 24 h ne notifie pas.
+// de plus de 24 h ne notifie pas. Un signal de demo (is_demo_signal, NOTIF-02) est
+// memorise sans etre annonce, comme dans push-notify.
 export function diffFavoriteSignals(previous, current, options = {}) {
     const now = options.now ?? Date.now();
-    const followed = (options.followedProducts || []).map(p => String(p).toLowerCase().trim()).filter(Boolean);
+    const followed = options.followedProducts || [];
     const productNames = options.productNames || {};
     const machine = current?.machine || null;
     const rows = current?.products || [];
@@ -1085,8 +1097,9 @@ export function diffFavoriteSignals(previous, current, options = {}) {
     const alreadyBack = Object.values(previous.products || {})
         .some(p => p.state === 'available' && p.at > (previous.machineAt || 0));
     const machineWasDown = (previous.machineState === 'empty' || previous.machineState === 'broken') && !alreadyBack;
+    const machineDown = !!machine && (machine.state === 'empty' || machine.state === 'broken');
 
-    if (machine && snapshot.machineAt > (previous.machineAt || 0) && isFresh(snapshot.machineAt)) {
+    if (machine && !machine.is_demo_signal && snapshot.machineAt > (previous.machineAt || 0) && isFresh(snapshot.machineAt)) {
         if (machine.state === 'broken' || machine.state === 'empty') {
             candidates.push({ rank: machine.state === 'broken' ? 0 : 1, type: machine.state, at: snapshot.machineAt });
         } else if (machine.state === 'working' && machineWasDown) {
@@ -1098,12 +1111,12 @@ export function diffFavoriteSignals(previous, current, options = {}) {
     for (const row of rows) {
         const at = signalTime(row);
         const seen = (previous.products || {})[row.product_id];
-        if (row.state !== 'available' || at <= (seen?.at || 0) || !isFresh(at)) continue;
+        if (row.state !== 'available' || row.is_demo_signal || at <= (seen?.at || 0) || !isFresh(at)) continue;
         // Un "vu dispo" plus ancien que le dernier "vide / en panne" ne dit rien
-        if (at <= snapshot.machineAt) continue;
+        // (NOTIF-02 : un "en service" plus recent, lui, ne l'efface pas)
+        if (machineDown && at <= snapshot.machineAt) continue;
         const name = productNames[row.product_id] || '';
-        const lower = name.toLowerCase();
-        if (name && followed.some(f => lower.includes(f))) {
+        if (name && matchesFollowedProduct(name, followed)) {
             candidates.push({ rank: 2, type: 'stock', at, product: name });
         } else if (seen?.state === 'absent' || machineWasDown) {
             candidates.push({ rank: 3, type: 'restock', at, product: name });
