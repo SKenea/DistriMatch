@@ -14,8 +14,8 @@
  * injoignable ne produit ni erreur ni notification.
  */
 
-import { AppState, NotificationPrefs, supabaseClient } from './state.js';
-import { diffFavoriteSignals, saveNotificationPrefs } from './utils.js';
+import { AppState, NotificationPrefs, supabaseClient, NOTIFICATION_PREFS_KEY } from './state.js';
+import { diffFavoriteSignals, saveNotificationPrefs, loadStore } from './utils.js';
 import { canNotify, notifyFavoriteEvent } from './notifications.js';
 import { mergeSummaries } from './summaries.js';
 
@@ -79,6 +79,14 @@ export async function checkFavoriteUpdates(options = {}) {
         const machines = groupByDistributor(statusRes.data);
         const products = groupByDistributor(productsRes.data);
         if (!NotificationPrefs.lastSeenSignals) NotificationPrefs.lastSeenSignals = {};
+        // NOTIF-03 : un autre onglet de l'app a pu voir (et notifier, ou taire : son
+        // propre signal) ce changement pendant la lecture, avant que son evenement
+        // storage arrive ici (app.js, BUG-13). On repart de l'etat enregistre, juste
+        // avant de comparer : un changement = une seule notification.
+        const stored = loadStore(NOTIFICATION_PREFS_KEY);
+        if (stored && stored.lastSeenSignals && typeof stored.lastSeenSignals === 'object') {
+            Object.assign(NotificationPrefs.lastSeenSignals, stored.lastSeenSignals);
+        }
         const seen = NotificationPrefs.lastSeenSignals;
 
         for (const id of ids) {

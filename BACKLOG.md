@@ -39,7 +39,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   - Acceptance : jamais mon propre signal ; pas de signaux de démo ; page Favoris d'accord avec la
     notification ; « En service » n'efface pas « produit dispo » ; produits ajoutés après
     l'ouverture suivis ; accents ignorés.
-- [ ] NOTIF-03 En tant que membre, je veux une seule alerte par changement, afin de ne pas être
+- [x] NOTIF-03 En tant que membre, je veux une seule alerte par changement, afin de ne pas être
   dérangé deux fois — `NOTIF-03.md`
   - Acceptance : pas de doublon push serveur + veille app, ni entre deux onglets ; le délai
     d'1 h de la proximité ne bloque plus les favoris.
