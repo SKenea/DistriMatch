@@ -5,7 +5,7 @@
 // l'en-tete x-push-secret (secret partage, aussi range dans le Vault).
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, isInCooldown, isAllowedPushEndpoint, pushFailureAction, chunk } from './logic.js';
+import { decideBaseEvent, eventForSubscriber, buildPushMessage, isQuietTime, passesCooldown, isAllowedPushEndpoint, pushFailureAction, chunk, HISTORY_WINDOW_MS } from './logic.js';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false }
@@ -35,16 +35,20 @@ async function readOrThrow(step: string, request: any) {
     return data;
 }
 
-async function previousSignal(signal: any, productId: number | null) {
-    let query = supabase.from('availability_signals')
-        .select('product_id, state, created_at')
+// NOTIF-01 : les signaux du distributeur avant celui-ci, sur la fenetre utile
+// (24 h + 30 min), pour deduire l'etat affiche juste avant lui comme l'app et les
+// vues de la base (age du signal, regle de l'exploitant, produit vu dispo = en service).
+// Au plus 1000 lignes (plafond de l'API), tres au-dessus du reel (20 signaux / heure / compte).
+async function signalsBefore(signal: any) {
+    const since = new Date(new Date(signal.created_at).getTime() - HISTORY_WINDOW_MS).toISOString();
+    const data = await readOrThrow('signaux precedents', supabase.from('availability_signals')
+        .select('product_id, state, source, created_at')
         .eq('distributor_id', signal.distributor_id)
         .lt('created_at', signal.created_at)
+        .gte('created_at', since)
         .order('created_at', { ascending: false })
-        .limit(1);
-    query = productId == null ? query.is('product_id', null) : query.eq('product_id', productId);
-    const data = await readOrThrow('signal precedent', query);
-    return data?.[0] || null;
+        .limit(1000));
+    return data || [];
 }
 
 // Tous les abonnes qui ont ce distributeur en favori, page par page
@@ -91,15 +95,11 @@ async function sendOne(sub: any, payload: string, distributorId: string) {
 
 async function notifySignal(signalId: unknown) {
     const signal = await readOrThrow('signal', supabase.from('availability_signals')
-        .select('id, distributor_id, product_id, state, user_id, device_hash, created_at')
+        .select('id, distributor_id, product_id, state, source, user_id, device_hash, created_at')
         .eq('id', signalId).maybeSingle());
     if (!signal || String(signal.device_hash || '').startsWith('demo-')) return 0;
 
-    const [previousProduct, previousMachine] = await Promise.all([
-        signal.product_id == null ? null : previousSignal(signal, signal.product_id),
-        previousSignal(signal, null)
-    ]);
-    const base = decideBaseEvent(signal, previousProduct, previousMachine);
+    const base = decideBaseEvent(signal, await signalsBefore(signal));
     if (!base) return 0;
 
     const [distributor, product, subscriptions] = await Promise.all([
@@ -134,7 +134,7 @@ async function notifySignal(signalId: unknown) {
         }
         const lastSent = new Map((sentRows || []).map((r: any) => [r.subscription_id, r.sent_at]));
         const results = await Promise.allSettled(batch
-            .filter((t: any) => !isInCooldown(lastSent.get(t.sub.id)))
+            .filter((t: any) => passesCooldown(base, lastSent.get(t.sub.id)))
             .map((t: any) => sendOne(t.sub, JSON.stringify({
                 title: 'DistriMatch',
                 body: t.body,

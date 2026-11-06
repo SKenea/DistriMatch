@@ -1967,20 +1967,20 @@ describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
     const product = (state, min) => ({ product_id: 7, state, created_at: at(min) });
 
     it('etat : vide / en panne notifient une fois, en service seulement apres une panne', () => {
-        assert.deepEqual(decideBaseEvent(machine('empty', 5), null, machine('working', 1)), { type: 'empty' });
-        assert.equal(decideBaseEvent(machine('empty', 5), null, machine('empty', 1)), null);
-        assert.deepEqual(decideBaseEvent(machine('broken', 5), null, null), { type: 'broken' });
-        assert.deepEqual(decideBaseEvent(machine('working', 5), null, machine('broken', 1)), { type: 'working' });
-        assert.equal(decideBaseEvent(machine('working', 5), null, machine('working', 1)), null);
-        assert.equal(decideBaseEvent(machine('working', 5), null, null), null);
+        assert.deepEqual(decideBaseEvent(machine('empty', 5), [machine('working', 1)]), { type: 'empty' });
+        assert.equal(decideBaseEvent(machine('empty', 5), [machine('empty', 1)]), null);
+        assert.deepEqual(decideBaseEvent(machine('broken', 5), []), { type: 'broken' });
+        assert.deepEqual(decideBaseEvent(machine('working', 5), [machine('broken', 1)]), { type: 'working', back: true });
+        assert.equal(decideBaseEvent(machine('working', 5), [machine('working', 1)]), null);
+        assert.equal(decideBaseEvent(machine('working', 5), []), null);
     });
 
     it('produit : de nouveau dispo apres « Pas dispo » ou un distributeur vide ; rien pour « Pas dispo »', () => {
-        assert.deepEqual(decideBaseEvent(product('available', 9), product('absent', 2), null), { type: 'restock' });
-        assert.deepEqual(decideBaseEvent(product('available', 9), product('available', 1), machine('empty', 4)), { type: 'restock' });
-        assert.equal(decideBaseEvent(product('available', 9), product('available', 5), machine('empty', 1)), null);
-        assert.deepEqual(decideBaseEvent(product('available', 9), null, null), { type: 'available' });
-        assert.equal(decideBaseEvent(product('absent', 9), product('available', 1), null), null);
+        assert.deepEqual(decideBaseEvent(product('available', 9), [product('absent', 2)]), { type: 'restock' });
+        assert.deepEqual(decideBaseEvent(product('available', 9), [product('available', 1), machine('empty', 4)]), { type: 'restock', back: true });
+        assert.equal(decideBaseEvent(product('available', 9), [product('available', 5), machine('empty', 1)]), null);
+        assert.deepEqual(decideBaseEvent(product('available', 9), []), { type: 'available' });
+        assert.equal(decideBaseEvent(product('absent', 9), [product('available', 1)]), null);
     });
 
     it('« vu dispo » seulement pour un produit suivi ; les autres evenements pour tous', () => {
@@ -2018,6 +2018,97 @@ describe('Notifications app fermee : quel evenement (EPIC-T25)', () => {
         assert.equal(needsHomeScreenForPush(iphone, false), true);
         assert.equal(needsHomeScreenForPush(iphone, true), false);
         assert.equal(needsHomeScreenForPush('Mozilla/5.0 (Linux; Android 14) Chrome/120', false), false);
+    });
+});
+
+// ============================================
+// NOTIF-01 : notification app fermee = etat affiche sur la fiche
+// ============================================
+import { passesCooldown, displayedState, effectiveSignal, followKey, matchesFollowedProduct, SIGNAL_MAX_AGE_MS as PUSH_SIGNAL_MAX_AGE_MS } from '../../supabase/functions/push-notify/logic.js';
+import { SIGNAL_MAX_AGE_MS as APP_SIGNAL_MAX_AGE_MS } from '../../js/utils.js';
+
+describe('Notifications app fermee : l’etat affiche sur la fiche (NOTIF-01)', () => {
+    const H = 60;   // minutes
+    const at = (min) => new Date(Date.UTC(2026, 10, 2, 10) + min * 60000).toISOString();   // lundi 10:00 + min
+    const machine = (state, min, source = 'user') => ({ product_id: null, state, source, created_at: at(min) });
+    const product = (id, state, min, source = 'user') => ({ product_id: id, state, source, created_at: at(min) });
+
+    it('« Vide » lundi, produit vu « Dispo » jeudi, « Vide » vendredi : l’alerte part', () => {
+        assert.deepEqual(decideBaseEvent(machine('empty', 94 * H), [machine('empty', 0), product(1, 'available', 80 * H)]), { type: 'empty' });
+        assert.deepEqual(decideBaseEvent(machine('broken', 94 * H), [machine('broken', 0), product(1, 'available', 80 * H)]), { type: 'broken' });
+    });
+
+    it('produit suivi vu « Dispo » lundi puis vendredi : de nouveau une alerte ; deux fois le meme jour : une seule', () => {
+        assert.deepEqual(decideBaseEvent(product(2, 'available', 96 * H), [product(2, 'available', 0)]), { type: 'available' });
+        assert.equal(decideBaseEvent(product(2, 'available', 5 * H), [product(2, 'available', 0)]), null);
+    });
+
+    it('apres un « Vide », seul le premier produit revu dit « de nouveau dispo »', () => {
+        assert.deepEqual(decideBaseEvent(product(1, 'available', 60), [machine('empty', 0)]), { type: 'restock', back: true });
+        const second = decideBaseEvent(product(2, 'available', 120), [machine('empty', 0), product(1, 'available', 60)]);
+        assert.deepEqual(second, { type: 'available' });
+        assert.equal(eventForSubscriber(second, 'Pain', []), null);
+    });
+
+    it('regle de l’exploitant (020) : un membre qui le contredit moins de 30 min apres ne notifie pas', () => {
+        const owner = machine('working', 0, 'owner');
+        assert.equal(decideBaseEvent(machine('empty', 10), [owner]), null);
+        assert.deepEqual(decideBaseEvent(machine('empty', 40), [owner]), { type: 'empty' });
+        const ownerAbsent = product(3, 'absent', 0, 'owner');
+        assert.equal(decideBaseEvent(product(3, 'available', 10), [ownerAbsent]), null);
+        assert.deepEqual(decideBaseEvent(product(3, 'available', 40), [ownerAbsent]), { type: 'restock' });
+    });
+
+    it('anti-rafale : le retour « En service » passe toujours, le reste attend 30 min', () => {
+        const now = Date.parse(at(10));
+        const sentAt = at(0);
+        assert.equal(passesCooldown(decideBaseEvent(machine('working', 10), [machine('broken', 0)]), sentAt, now), true);
+        assert.equal(passesCooldown(decideBaseEvent(product(1, 'available', 10), [machine('empty', 0)]), sentAt, now), true);
+        assert.equal(passesCooldown({ type: 'empty' }, sentAt, now), false);
+        assert.equal(passesCooldown({ type: 'restock' }, sentAt, now), false);
+        assert.equal(passesCooldown({ type: 'empty' }, null, now), true);
+    });
+
+    it('produit suivi : sans casse ni accents, par morceau de nom', () => {
+        const cases = [
+            ['Œufs', ['oeufs'], true],
+            ['Oeufs fermiers (x6)', ['œufs'], true],
+            ['Pizza Margherita', ['pizza'], true],
+            ['Baguette tradition', ['BAGUETTE'], true],
+            ['Pâté basque', ['pate'], true],
+            ['Fromage de chèvre', ['fromage de chevre'], true],
+            ['Œufs', ['pain'], false],
+            ['Pain', [' ', ''], false],
+            ['', ['pain'], false]
+        ];
+        for (const [name, followed, expected] of cases) assert.equal(matchesFollowedProduct(name, followed), expected, `${name} / ${followed}`);
+        assert.deepEqual(eventForSubscriber({ type: 'available' }, 'Baguette tradition', ['baguette']), { type: 'stock', product: 'Baguette tradition' });
+        assert.deepEqual(eventForSubscriber({ type: 'restock' }, 'Baguette tradition', ['baguette']), { type: 'stock', product: 'Baguette tradition' });
+        assert.deepEqual(eventForSubscriber({ type: 'restock', back: true }, 'Pain', ['oeufs']), { type: 'restock', product: 'Pain' });
+    });
+
+    it('memes regles que la fiche : resolveMachineStatus / resolveProductStatus et normalizeName', () => {
+        assert.equal(PUSH_SIGNAL_MAX_AGE_MS, APP_SIGNAL_MAX_AGE_MS);
+        const now = Date.parse(at(30 * H));
+        const histories = [
+            [],
+            [machine('empty', 25 * H)],
+            [machine('empty', 25 * H), product(1, 'available', 26 * H)],
+            [product(1, 'available', 25 * H), machine('broken', 26 * H)],
+            [machine('empty', 2 * H)],
+            [machine('working', 29 * H, 'owner'), machine('empty', 29 * H + 10)],
+            [product(1, 'absent', 29 * H, 'owner'), product(1, 'available', 29 * H + 10)],
+            [product(1, 'available', 28 * H), product(2, 'absent', 29 * H)]
+        ];
+        for (const rows of histories) {
+            const status = effectiveSignal(rows.filter((r) => r.product_id == null));
+            const productRows = [1, 2].map((id) => effectiveSignal(rows.filter((r) => r.product_id === id))).filter(Boolean);
+            const fiche = resolveMachineStatus(status, productRows, null, now);
+            const shown = displayedState(rows, 1, now);
+            assert.equal(shown.machine, fiche.state, JSON.stringify(rows));
+            assert.equal(shown.product, resolveProductStatus(null, productRows.find((r) => r.product_id === 1) || null, fiche, now).tone, JSON.stringify(rows));
+        }
+        for (const text of ['Œufs', 'Pâté  basque ', 'CRÈME', 'Fromage de chèvre', 'Æble']) assert.equal(followKey(text), normalizeName(text));
     });
 });
 
