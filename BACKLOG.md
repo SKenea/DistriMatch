@@ -29,7 +29,7 @@ corrigés : menu de l'avatar derrière les pages (BUG-01), apostrophe d'un produ
 abonnés lus par pages et erreurs de la base vérifiées dans `push-notify` (SEC-04).
 Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
 
-- [ ] NOTIF-01 En tant que membre qui suit un favori, je veux que la notification app fermée dise
+- [x] NOTIF-01 En tant que membre qui suit un favori, je veux que la notification app fermée dise
   l'état affiché sur la fiche, afin de ne pas recevoir d'alerte fausse — `NOTIF-01.md`
   - Acceptance : état déduit comme les vues (âge, règle exploitant de 020) ; « de nouveau En
     service » jamais bloqué par l'anti-rafale ; produit suivi reconnu comme dans l'app (sans
