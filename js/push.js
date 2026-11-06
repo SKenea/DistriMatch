@@ -35,6 +35,12 @@ function permission() {
     return 'Notification' in window ? Notification.permission : 'unsupported';
 }
 
+// NOTIF-03 : notifications app fermee en service sur cet appareil. Le serveur previent
+// alors des changements de favoris : la veille de l'app (notifications.js) ne realerte pas.
+export function isPushActive() {
+    return isPushSupported() && NotificationPrefs.push === true && permission() === 'granted';
+}
+
 function readAsked() {
     try { return localStorage.getItem(ASKED_KEY) === '1'; } catch (e) { return false; }
 }
