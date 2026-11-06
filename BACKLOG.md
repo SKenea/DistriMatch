@@ -19,6 +19,48 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R5 Notifications justes, une seule fois, au bon moment (lot 5, revue du 2026-10-21)
+Objectif : une notification dit exactement ce que la fiche affiche, une seule fois, au bon
+moment ; l'abonnement app fermée reste fiable ; les réglages sont gardés. Valeur : un favori
+qui prévient vraiment, sans fausse alerte ni doublon, avant le vrai pilote.
+Méthode : comme EPIC-R1, une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle
+medium (`/story <ID>`), une PR à la fois **dans cet ordre** : NOTIF-01 à NOTIF-07. Constats déjà
+corrigés : menu de l'avatar derrière les pages (BUG-01), apostrophe d'un produit suivi (SEC-02),
+abonnés lus par pages et erreurs de la base vérifiées dans `push-notify` (SEC-04).
+Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
+
+- [ ] NOTIF-01 En tant que membre qui suit un favori, je veux que la notification app fermée dise
+  l'état affiché sur la fiche, afin de ne pas recevoir d'alerte fausse — `NOTIF-01.md`
+  - Acceptance : état déduit comme les vues (âge, règle exploitant de 020) ; « de nouveau En
+    service » jamais bloqué par l'anti-rafale ; produit suivi reconnu comme dans l'app (sans
+    accents, sous-chaîne).
+- [ ] NOTIF-02 En tant que membre, je veux que les alertes de mes favoris app ouverte soient
+  justes, afin de leur faire confiance — `NOTIF-02.md`
+  - Acceptance : jamais mon propre signal ; pas de signaux de démo ; page Favoris d'accord avec la
+    notification ; « En service » n'efface pas « produit dispo » ; produits ajoutés après
+    l'ouverture suivis ; accents ignorés.
+- [ ] NOTIF-03 En tant que membre, je veux une seule alerte par changement, afin de ne pas être
+  dérangé deux fois — `NOTIF-03.md`
+  - Acceptance : pas de doublon push serveur + veille app, ni entre deux onglets ; le délai
+    d'1 h de la proximité ne bloque plus les favoris.
+- [ ] NOTIF-04 En tant que membre, je veux une alerte de proximité quand j'arrive, afin d'être
+  prévenu au bon moment — `NOTIF-04.md`
+  - Acceptance : une alerte à l'entrée dans le rayon (pas toutes les heures) ; une seule par
+    appareil ; réglage appliqué tout de suite ; file des heures calmes délivrée à leur fin.
+- [ ] NOTIF-05 En tant que membre, je veux un abonnement app fermée fiable, afin de rester prévenu
+  — `NOTIF-05.md`
+  - Acceptance : abonnement recréé s'il a disparu, resynchronisé après coupure ; interrupteurs
+    cohérents ; permission demandée après un toucher seulement ; iPad reconnu.
+- [ ] NOTIF-06 En tant que membre, je veux que mes réglages soient gardés et les textes cohérents,
+  afin de comprendre mes notifications — `NOTIF-06.md` (**textes à valider par Stéphane**)
+  - Acceptance : minutes des heures calmes gardées, champ vide refusé ; réglages enregistrés sans
+    « Sauvegarder » ; vocabulaire Vide / En panne / En service, sans « Machine ».
+- [ ] NOTIF-07 En tant que membre, je veux des notifications bien affichées, afin de ne rien rater
+  ni perdre — `NOTIF-07.md`
+  - Acceptance : seuls les caches DistriMatch effacés ; nouvelle notification sonore ; toucher une
+    notification ne recharge pas la page ; bandeau annoncé aux lecteurs d'écran ; non lues
+    distinctes.
+
 ### EPIC-R4 Connexion, retour et liens (lot 4, revue du 2026-10-21)
 Objectif : le bouton retour ferme ce qui est à l'écran sans quitter l'app, la connexion ramène au
 bon endroit et ne réagit qu'à un vrai changement de compte, les liens et QR gardent une adresse
