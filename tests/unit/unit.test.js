@@ -2392,3 +2392,62 @@ describe('hCaptcha rendu par l’app seulement (CNX-08)', () => {
         assert.ok(auth.includes("overlay.querySelector('.auth-captcha')"));
     });
 });
+
+// ============================================
+// ALERTES DES FAVORIS JUSTES, APP OUVERTE (NOTIF-02)
+// ============================================
+// Alias : NOTIF-01 importe deja matchesFollowedProduct depuis push-notify/logic.js
+import { matchesFollowedProduct as matchesFollowedProductApp } from '../../js/utils.js';
+
+describe('NOTIF-02 : alertes des favoris app ouverte', () => {
+    const NOW = Date.parse('2026-09-21T12:00:00Z');
+    const at = (minutesAgo) => new Date(NOW - minutesAgo * 60000).toISOString();
+    const ts = (minutesAgo) => NOW - minutesAgo * 60000;
+    const machine = (state, minutesAgo) => ({ state, created_at: at(minutesAgo) });
+    const product = (id, state, minutesAgo) => ({ product_id: id, state, created_at: at(minutesAgo) });
+    const names = { 1: 'Baguette tradition', 2: 'Œufs fermiers (x6)' };
+
+    it('« En service » plus recent n’efface pas « de nouveau dispo » ni « produit suivi vu dispo »', () => {
+        const seen = { machineState: 'working', machineAt: ts(160), products: { 1: { state: 'absent', at: ts(300) } } };
+        const current = { machine: machine('working', 20), products: [product(1, 'available', 40)] };
+        assert.deepEqual(diffFavoriteSignals(seen, current, { now: NOW, productNames: names }).event,
+            { type: 'restock', at: ts(40), product: 'Baguette tradition' });
+        assert.deepEqual(diffFavoriteSignals(seen, current, { now: NOW, productNames: names, followedProducts: ['baguette'] }).event,
+            { type: 'stock', at: ts(40), product: 'Baguette tradition' });
+    });
+
+    it('produit suivi : accents, ligature et casse ignores, nom partiel accepte', () => {
+        assert.equal(matchesFollowedProductApp('Œufs', ['oeufs']), true);
+        assert.equal(matchesFollowedProductApp('Oeufs fermiers (x6)', ['œufs']), true);
+        assert.equal(matchesFollowedProductApp('Pizza Margherita', ['pizza']), true);
+        assert.equal(matchesFollowedProductApp('Baguette tradition', [' BAGUETTE ']), true);
+        assert.equal(matchesFollowedProductApp('Pâté basque', ['pate']), true);
+        assert.equal(matchesFollowedProductApp('Œufs', ['pain']), false);
+        assert.equal(matchesFollowedProductApp('', ['pain']), false);
+        assert.equal(matchesFollowedProductApp('Pain', ['', '  ']), false);
+        const current = { machine: null, products: [product(2, 'available', 5)] };
+        assert.deepEqual(diffFavoriteSignals({ machineState: null, machineAt: 0, products: {} }, current, { now: NOW, productNames: names, followedProducts: ['oeufs'] }).event,
+            { type: 'stock', at: ts(5), product: 'Œufs fermiers (x6)' });
+    });
+
+    it('produit suivi : meme reponse app ouverte et app fermee (push-notify, NOTIF-01)', () => {
+        const cases = [['Œufs', 'oeufs'], ['Oeufs fermiers (x6)', 'œufs'], ['Pizza Margherita', 'pizza'],
+            ['Baguette tradition', 'BAGUETTE'], ['Pâté basque', 'pate'], ['Œufs', 'pain']];
+        for (const [name, followed] of cases) {
+            const push = eventForSubscriber({ type: 'available' }, name, [followed]) !== null;
+            assert.equal(matchesFollowedProductApp(name, [followed]), push, `${name} / ${followed}`);
+        }
+    });
+
+    it('signal de demo : memorise, jamais annonce (comme push-notify)', () => {
+        const seen = { machineState: 'working', machineAt: ts(600), products: { 1: { state: 'absent', at: ts(600) } } };
+        const demoMachine = { ...machine('empty', 10), is_demo_signal: true };
+        const demoProduct = { ...product(1, 'available', 5), is_demo_signal: true };
+        const { event, snapshot } = diffFavoriteSignals(seen, { machine: demoMachine, products: [demoProduct] },
+            { now: NOW, productNames: names, followedProducts: ['baguette'] });
+        assert.equal(event, null);
+        assert.deepEqual(snapshot, { machineState: 'empty', machineAt: ts(10), products: { 1: { state: 'available', at: ts(5) } } });
+        // Un vrai signal (is_demo_signal faux ou absent) notifie toujours
+        assert.equal(diffFavoriteSignals(seen, { machine: { ...machine('empty', 10), is_demo_signal: false }, products: [] }, { now: NOW }).event.type, 'empty');
+    });
+});

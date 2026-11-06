@@ -17,6 +17,7 @@
 import { AppState, NotificationPrefs, supabaseClient } from './state.js';
 import { diffFavoriteSignals, saveNotificationPrefs } from './utils.js';
 import { canNotify, notifyFavoriteEvent } from './notifications.js';
+import { mergeSummaries } from './summaries.js';
 
 const WATCH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -27,6 +28,9 @@ let isStarted = false;
 // l'utilisateur vient lui-meme d'envoyer un signal (on ne notifie pas
 // quelqu'un de ce qu'il vient de dire, retour terrain 2026-09-25).
 const silentIds = new Set();
+// Machines ou un signal de l'utilisateur est en cours d'envoi (NOTIF-02) : un
+// controle deja parti peut lire ce signal avant la reponse de la RPC.
+const pendingOwnIds = new Set();
 
 function groupByDistributor(rows) {
     const groups = {};
@@ -57,11 +61,20 @@ export async function checkFavoriteUpdates(options = {}) {
     silentIds.clear();
     const sent = [];
     try {
-        const [statusRes, productsRes] = await Promise.all([
+        const [statusRes, productsRes, namesRes] = await Promise.all([
             supabaseClient.from('distributor_status').select('*').in('distributor_id', ids),
-            supabaseClient.from('product_availability').select('*').in('distributor_id', ids)
+            supabaseClient.from('product_availability').select('*').in('distributor_id', ids),
+            supabaseClient.from('products').select('id, name, distributor_id').in('distributor_id', ids)
         ]);
         if (statusRes.error || productsRes.error) return sent;
+        // NOTIF-02 : la page Favoris et la carte suivent l'etat lu ici
+        mergeSummaries(statusRes.data, productsRes.data, ids);
+        // NOTIF-02 : noms relus a chaque controle (produit ajoute ou renomme depuis
+        // l'ouverture) ; lecture en echec = noms du chargement
+        const freshNames = {};
+        for (const p of (namesRes.error ? [] : namesRes.data) || []) {
+            (freshNames[p.distributor_id] = freshNames[p.distributor_id] || {})[p.id] = p.name;
+        }
 
         const machines = groupByDistributor(statusRes.data);
         const products = groupByDistributor(productsRes.data);
@@ -76,14 +89,16 @@ export async function checkFavoriteUpdates(options = {}) {
 
             const productNames = {};
             for (const p of distributor.products || []) productNames[p.id] = p.name;
+            Object.assign(productNames, freshNames[id]);
 
             const { event, snapshot } = diffFavoriteSignals(
                 seen[id],
                 { machine: (machines[id] || [])[0] || null, products: products[id] || [] },
                 { followedProducts: NotificationPrefs.followedProducts, productNames }
             );
-            // Signal envoye par l'utilisateur lui-meme : on memorise, sans notifier
-            if (silent.has(id)) {
+            // Signal envoye par l'utilisateur lui-meme : on memorise, sans notifier.
+            // NOTIF-02 : aussi s'il a ete envoye pendant ce controle (ensembles en direct)
+            if (silent.has(id) || silentIds.has(id) || pendingOwnIds.has(id)) {
                 seen[id] = snapshot;
                 continue;
             }
@@ -118,8 +133,20 @@ export async function checkFavoriteUpdates(options = {}) {
 // Apres un signal envoye depuis la fiche : si la machine est en favori, son
 // nouvel etat devient l'etat vu, sans notification.
 export function rememberOwnSignal(distributorId) {
+    pendingOwnIds.delete(distributorId);
     if (!AppState.subscriptions.includes(distributorId)) return;
     checkFavoriteUpdates({ silentIds: [distributorId] });
+}
+
+// Avant l'envoi d'un signal (NOTIF-02) : tant que la RPC n'a pas repondu, un
+// controle qui lit deja ce signal le memorise sans notifier.
+export function expectOwnSignal(distributorId) {
+    if (distributorId) pendingOwnIds.add(distributorId);
+}
+
+// Envoi termine sans rememberOwnSignal (refus, erreur) : plus rien a taire.
+export function cancelOwnSignal(distributorId) {
+    pendingOwnIds.delete(distributorId);
 }
 
 export function startFavoritesWatch() {

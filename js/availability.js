@@ -22,7 +22,7 @@ import {
 } from './utils.js';
 import { markFicheEditUsed } from './fiche-edit.js';
 import { logEvent } from './events.js';
-import { rememberOwnSignal } from './favorites-watch.js';
+import { rememberOwnSignal, expectOwnSignal, cancelOwnSignal } from './favorites-watch.js';
 import { setSummaryFor } from './summaries.js';
 import { isAuthenticated, promptReconnect, dropDeadSession } from './auth.js';
 
@@ -447,6 +447,7 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
 
     isSending = true;
     setBusy(true);
+    expectOwnSignal(distributor.id);   // NOTIF-02 : jamais notifie de son propre signal
     try {
         const { data, error, status } = await confirmWithRefresh(payload);
         if (error) {
@@ -490,6 +491,7 @@ async function sendSignal({ productId = null, state = null, machine = null }) {
     } finally {
         isSending = false;
         setBusy(false);
+        cancelOwnSignal(distributor.id);   // apres rememberOwnSignal : sans effet
     }
 }
 

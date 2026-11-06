@@ -34,7 +34,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   - Acceptance : état déduit comme les vues (âge, règle exploitant de 020) ; « de nouveau En
     service » jamais bloqué par l'anti-rafale ; produit suivi reconnu comme dans l'app (sans
     accents, sous-chaîne).
-- [ ] NOTIF-02 En tant que membre, je veux que les alertes de mes favoris app ouverte soient
+- [x] NOTIF-02 En tant que membre, je veux que les alertes de mes favoris app ouverte soient
   justes, afin de leur faire confiance — `NOTIF-02.md`
   - Acceptance : jamais mon propre signal ; pas de signaux de démo ; page Favoris d'accord avec la
     notification ; « En service » n'efface pas « produit dispo » ; produits ajoutés après

@@ -33,6 +33,41 @@ export function setSummaryFor(distributorId, status, products) {
     notify([distributorId]);
 }
 
+function isNewerRow(a, b) {
+    return new Date(a.created_at).getTime() > new Date(b.created_at).getTime();
+}
+
+function summaryKey(entry) {
+    const s = entry.status;
+    const products = Object.keys(entry.products).sort()
+        .map(id => `${id}:${entry.products[id].state}@${entry.products[id].created_at}@${entry.products[id].source}`);
+    return `${s ? `${s.state}@${s.created_at}@${s.source}` : ''}|${products.join(',')}`;
+}
+
+// Veille des favoris (NOTIF-02) : etat frais de quelques fiches (lignes des vues
+// distributor_status / product_availability). Une ligne deja connue plus recente
+// (signal envoye, vue en retard) est gardee. Un seul evenement, et seulement si
+// quelque chose a change (chaque evenement redessine toutes les pastilles).
+export function mergeSummaries(statusRows, productRows, ids) {
+    const changed = [];
+    for (const id of ids || []) {
+        const before = raw.get(id) || { status: null, products: {} };
+        let status = (statusRows || []).find(row => row.distributor_id === id) || null;
+        if (before.status && (!status || isNewerRow(before.status, status))) status = before.status;
+        const products = { ...before.products };
+        for (const row of productRows || []) {
+            if (row.distributor_id !== id) continue;
+            const known = products[row.product_id];
+            if (!known || !isNewerRow(known, row)) products[row.product_id] = row;
+        }
+        const next = { status, products };
+        if (summaryKey(next) === summaryKey(before)) continue;
+        raw.set(id, next);
+        changed.push(id);
+    }
+    if (changed.length > 0) notify(changed);
+}
+
 export async function loadSignalSummaries() {
     if (!supabaseClient) return;
     const seq = ++loadSeq;
