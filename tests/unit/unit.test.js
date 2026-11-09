@@ -2500,3 +2500,25 @@ describe('diffGeofence : alerte de proximite a l’arrivee seulement (NOTIF-04)'
         assert.equal(r.inside, previous);
     });
 });
+
+// ============================================
+// IPAD RECONNU POUR LES NOTIFICATIONS APP FERMEE (NOTIF-05)
+// ============================================
+// Depuis iPadOS 13, Safari se presente comme un Mac : seul l'ecran tactile
+// (maxTouchPoints > 1) le distingue d'un vrai Mac (0).
+
+describe('iPad reconnu : guide écran d’accueil et indice (NOTIF-05)', () => {
+    const IPAD_AS_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
+
+    it('iPad qui se presente comme un Mac : guide hors ecran d’accueil ; un vrai Mac, non', () => {
+        assert.equal(needsHomeScreenForPush(IPAD_AS_MAC, false, 5), true);
+        assert.equal(needsHomeScreenForPush(IPAD_AS_MAC, true, 5), false);
+        assert.equal(needsHomeScreenForPush(IPAD_AS_MAC, false, 0), false);
+        assert.equal(needsHomeScreenForPush(IPAD_AS_MAC, false), false);
+    });
+
+    it('app de l’ecran d’accueil sur iPad, sans favori : indice ; sur un Mac, non', () => {
+        assert.equal(shouldHintHomeScreenFavorites(IPAD_AS_MAC, true, 0, false, 5), true);
+        assert.equal(shouldHintHomeScreenFavorites(IPAD_AS_MAC, true, 0, false, 0), false);
+    });
+});

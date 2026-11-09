@@ -27,8 +27,13 @@ export function isStandalone() {
         || (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches);
 }
 
+// NOTIF-05 : maxTouchPoints distingue l'iPad (Safari s'y presente comme un Mac)
+function touchPoints() {
+    return navigator.maxTouchPoints || 0;
+}
+
 export function pushNeedsHomeScreen() {
-    return needsHomeScreenForPush(navigator.userAgent, isStandalone());
+    return needsHomeScreenForPush(navigator.userAgent, isStandalone(), touchPoints());
 }
 
 function permission() {
@@ -71,22 +76,73 @@ export function subscriptionParams(subscription) {
 }
 
 async function sendToServer(subscription) {
-    if (!supabaseClient) return;
+    // NOTIF-05 : sans client (CDN bloque), rien n'est envoye : c'est un echec, pas un succes
+    if (!supabaseClient) throw new Error('Supabase indisponible');
     const { error } = NotificationPrefs.enabled
         ? await supabaseClient.rpc('push_subscribe', subscriptionParams(subscription))
         : await supabaseClient.rpc('push_unsubscribe', { p_endpoint: subscription.endpoint });
     if (error) throw error;
 }
 
-// Favoris, produits suivis, heures calmes ou compte changes : le serveur suit.
-export async function syncPushSubscription() {
-    if (!isPushSupported() || !NotificationPrefs.push || permission() !== 'granted') return;
-    try {
-        const subscription = await currentSubscription();
-        if (subscription) await sendToServer(subscription);
-    } catch (e) {
-        console.warn('[DistriMatch] Abonnement aux notifications non mis a jour :', e?.message || e);
+// NOTIF-05 : abonnement du navigateur, recree s'il a disparu (expire, permission
+// retiree puis rendue). La permission doit deja etre accordee.
+async function ensureSubscription() {
+    let registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+        registration = await navigator.serviceWorker.register('./sw.js');
+        await navigator.serviceWorker.ready;
     }
+    return await registration.pushManager.getSubscription()
+        || await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+}
+
+// NOTIF-05 : un envoi a la fois ; un appel pendant un envoi en relance un apres lui
+// (le dernier etat gagne). Un echec est retente au retour du reseau ou de l'onglet.
+let syncRunning = null;
+let syncAgain = false;
+let syncPending = false;
+
+// Favoris, produits suivis, heures calmes ou compte changes : le serveur suit.
+// Rend une promesse : true une fois le serveur a jour.
+export function syncPushSubscription() {
+    if (!isPushSupported() || !NotificationPrefs.push || permission() !== 'granted') return Promise.resolve(false);
+    if (syncRunning) {
+        syncAgain = true;
+        return syncRunning;
+    }
+    syncRunning = runPushSync();
+    return syncRunning;
+}
+
+async function runPushSync() {
+    await Promise.resolve();   // toujours asynchrone : syncRunning est pose avant la fin
+    let ok = false;
+    do {
+        syncAgain = false;
+        if (!NotificationPrefs.push || permission() !== 'granted') {
+            ok = true;   // coupe entre-temps : plus rien a envoyer
+            break;
+        }
+        try {
+            await sendToServer(await ensureSubscription());
+            ok = true;
+        } catch (e) {
+            ok = false;
+            console.warn('[DistriMatch] Abonnement aux notifications non mis a jour :', e?.message || e);
+        }
+    } while (syncAgain);
+    syncPending = !ok;
+    syncRunning = null;
+    refreshPushSettings();
+    return ok;
+}
+
+// Retour du reseau ou de l'onglet : renvoie une synchronisation qui a echoue
+function retryPendingSync() {
+    if (syncPending && document.visibilityState === 'visible') syncPushSubscription();
 }
 
 // PRIV-06 : push_subscribe garde le compte deja memorise (024, 026). A la deconnexion
@@ -132,7 +188,7 @@ export async function retryPendingUnsubscribe() {
 function showHomeScreenGuide() {
     return confirmDialog({
         title: 'Ajoute DistriMatch à ton écran d’accueil',
-        message: 'Sur iPhone, les notifications arrivent seulement depuis l’écran d’accueil : touche Partager, puis « Sur l’écran d’accueil ». Ouvre ensuite DistriMatch depuis cette icône et remets-y ton distributeur en favori : l’app de l’écran d’accueil a ses propres favoris.',
+        message: 'Sur iPhone et iPad, les notifications arrivent seulement depuis l’écran d’accueil : touche Partager, puis « Sur l’écran d’accueil ». Ouvre ensuite DistriMatch depuis cette icône et remets-y ton distributeur en favori : l’app de l’écran d’accueil a ses propres favoris.',
         confirmLabel: 'Compris',
         cancelLabel: 'Fermer',
         danger: false
@@ -156,19 +212,28 @@ export async function enablePush() {
             showToast('Notifications bloquées : tu peux les réactiver dans les réglages du navigateur', 'info');
             return false;
         }
-        const registration = await navigator.serviceWorker.register('./sw.js');
-        await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription()
-            || await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-            });
+        const subscription = await ensureSubscription();
+        // NOTIF-05 : demander a etre prevenu rallume les notifications coupees (sinon
+        // sendToServer desabonnerait) ; rien ne change si l'envoi echoue
+        const wasEnabled = NotificationPrefs.enabled;
+        NotificationPrefs.enabled = true;
+        try {
+            await sendToServer(subscription);
+        } catch (err) {
+            NotificationPrefs.enabled = wasEnabled;
+            throw err;
+        }
         NotificationPrefs.push = true;
         saveNotificationPrefs();
-        await sendToServer(subscription);
+        syncPending = false;
+        const general = document.getElementById('notif-enabled');
+        if (general) general.checked = true;
         showToast('C’est noté : tu seras prévenu même app fermée', 'success');
         return true;
     } catch (e) {
+        // NOTIF-05 : l'interrupteur dit la meme chose que le message
+        NotificationPrefs.push = false;
+        saveNotificationPrefs();
         console.warn('[DistriMatch] Activation des notifications impossible :', e?.message || e);
         showToast('Impossible d’activer les notifications pour le moment', 'error');
         return false;
@@ -178,7 +243,9 @@ export async function enablePush() {
 export async function disablePush() {
     NotificationPrefs.push = false;
     saveNotificationPrefs();
+    syncPending = false;
     try {
+        if (syncRunning) await syncRunning;   // NOTIF-05 : l'effacement part apres un envoi en cours
         const subscription = await currentSubscription();
         if (!subscription) return;
         const endpoint = subscription.endpoint;
@@ -199,6 +266,7 @@ export async function maybeOfferPush() {
         syncPushSubscription();
         return;
     }
+    if (!NotificationPrefs.enabled) return;   // NOTIF-05 : notifications coupees = pas d'invitation
     if (readAsked()) return;
     if (pushNeedsHomeScreen()) {
         markAsked();
@@ -223,7 +291,7 @@ export async function maybeOfferPush() {
 export function maybeHintHomeScreenFavorites() {
     let seen;
     try { seen = localStorage.getItem(HOME_SCREEN_SEEN_KEY) === '1'; } catch (e) { return; }
-    if (!shouldHintHomeScreenFavorites(navigator.userAgent, isStandalone(), AppState.subscriptions.length, seen)) return;
+    if (!shouldHintHomeScreenFavorites(navigator.userAgent, isStandalone(), AppState.subscriptions.length, seen, touchPoints())) return;
     try { localStorage.setItem(HOME_SCREEN_SEEN_KEY, '1'); } catch (e) { return; }
     showActionToast('Bienvenue dans l’app ! Touche le cœur de ton distributeur préféré pour le retrouver ici et activer ses notifications.', {
         actionLabel: 'OK',
@@ -237,14 +305,19 @@ export function refreshPushSettings() {
     const hint = document.getElementById('push-state');
     if (!toggle || !hint) return;
     const perm = isPushSupported() ? permission() : 'unsupported';
-    toggle.checked = Boolean(NotificationPrefs.push) && perm === 'granted';
+    // NOTIF-05 : notifications coupees = interrupteur eteint (le serveur est desabonne)
+    toggle.checked = Boolean(NotificationPrefs.push) && NotificationPrefs.enabled && perm === 'granted';
     toggle.disabled = perm === 'denied' || (perm === 'unsupported' && !pushNeedsHomeScreen());
     if (pushNeedsHomeScreen()) {
-        hint.textContent = 'Sur iPhone : ajoute d’abord DistriMatch à ton écran d’accueil (Partager, puis « Sur l’écran d’accueil »).';
+        hint.textContent = 'Sur iPhone et iPad : ajoute d’abord DistriMatch à ton écran d’accueil (Partager, puis « Sur l’écran d’accueil »).';
     } else if (perm === 'unsupported') {
         hint.textContent = 'Pas disponible sur ce navigateur.';
     } else if (perm === 'denied') {
         hint.textContent = 'Bloquées dans le navigateur : à réactiver dans ses réglages.';
+    } else if (!NotificationPrefs.enabled) {
+        hint.textContent = 'Notifications coupées : activer cet interrupteur les rallume.';
+    } else if (toggle.checked && syncPending) {
+        hint.textContent = 'Pas encore enregistré : nouvel essai au retour du réseau.';
     } else {
         hint.textContent = 'Tes favoris te préviennent, même si DistriMatch est fermé.';
     }
@@ -259,4 +332,7 @@ export function initPushSettings() {
         else await disablePush();
         refreshPushSettings();
     });
+    // NOTIF-05 : une synchronisation ratee (hors ligne, projet en pause) est renvoyee
+    window.addEventListener('online', retryPendingSync);
+    document.addEventListener('visibilitychange', retryPendingSync);
 }

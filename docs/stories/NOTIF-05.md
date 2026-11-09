@@ -92,7 +92,7 @@ le schéma `isChecking` / `rerunRequested` de `js/favorites-watch.js`.
 **Contrôles** (chaque commande doit trouver ce qui est indiqué, sinon s'arrêter ; un numéro de ligne
 différent n'est pas un échec) :
 ```bash
-git log --oneline master | grep -c "NOTIF-04"                                    # 1 ou plus (prérequis fusionné)
+grep -c "diffGeofence" js/notifications.js                                      # 1 ou plus (NOTIF-04 fusionnée)
 grep -c "if (subscription) await sendToServer(subscription);" js/push.js         # 1 (ligne 80)
 grep -c "if (!supabaseClient) return;" js/push.js                               # 1 (ligne 68, sendToServer)
 grep -c "const registration = await navigator.serviceWorker.register('./sw.js');" js/push.js   # 1 (ligne 153, enablePush)
@@ -435,7 +435,7 @@ contrôles ci-dessus passent peut-être quand même : l'étape échouera sur l'e
             // Demande paresseuse au 1er envoi
             requestNotificationPermission();
         }
-        if (supported && Notification.permission === 'granted') {
+        if (options.silent) {
     ```
     Après :
     ```js
@@ -443,8 +443,10 @@ contrôles ci-dessus passent peut-être quand même : l'étape échouera sur l'e
         // invitation du premier favori), sinon bandeau in-app. NOTIF-05 : jamais de
         // demande de permission ici (minuterie, sans toucher de l'utilisateur).
         const supported = typeof window !== 'undefined' && 'Notification' in window;
-        if (supported && Notification.permission === 'granted') {
+        if (options.silent) {
     ```
+    (NOTIF-03 : la suite `// Rien a afficher ...` puis `} else if (supported && Notification.permission === 'granted') {`
+    reste telle quelle.)
 
 12. **js/notifications.js** — supprimer `requestNotificationPermission`, devenue sans appelant. Avant :
     ```js
