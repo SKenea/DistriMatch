@@ -251,14 +251,10 @@ function sendNotification(notif, options = {}) {
     }
     saveNotificationQueue();
 
-    // Vraie notification navigateur si permission accordee, sinon bandeau
-    // in-app (fallback : zero regression si refus / non supporte).
+    // Vraie notification navigateur si la permission est DEJA accordee (reglages ou
+    // invitation du premier favori), sinon bandeau in-app. NOTIF-05 : jamais de
+    // demande de permission ici (minuterie, sans toucher de l'utilisateur).
     const supported = typeof window !== 'undefined' && 'Notification' in window;
-    if (supported && Notification.permission === 'default'
-        && NotificationPrefs.enabled) {
-        // Demande paresseuse au 1er envoi
-        requestNotificationPermission();
-    }
     if (options.silent) {
         // Rien a afficher : une seule alerte par changement
     } else if (supported && Notification.permission === 'granted') {
@@ -299,14 +295,6 @@ function sendNotification(notif, options = {}) {
 // ============================================
 // CENTRE DE NOTIFICATIONS (cloche)
 // ============================================
-
-export function requestNotificationPermission() {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'default') return;
-    try {
-        Notification.requestPermission();
-    } catch (e) { /* Safari ancien : API callback only, ignore */ }
-}
 
 export function getUnreadCount() {
     return NotificationQueue.history.filter(n => n.read === false).length;
@@ -526,6 +514,7 @@ export function saveNotificationSettingsFromUI() {
 
     saveNotificationPrefs();
     syncPushSubscription();
+    refreshPushSettings();   // NOTIF-05 : « Notifications activées » coupe aussi l'app fermee
     showToast('Paramètres sauvegardés', 'success');
 }
 

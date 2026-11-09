@@ -1546,16 +1546,23 @@ export function urlBase64ToUint8Array(base64) {
     return Uint8Array.from(raw, c => c.charCodeAt(0));
 }
 
+// iPhone / iPad. NOTIF-05 : depuis iPadOS 13, Safari se presente comme un Mac ;
+// l'ecran tactile le trahit (maxTouchPoints > 1, un vrai Mac renvoie 0).
+function isAppleMobile(userAgent, maxTouchPoints) {
+    const ua = String(userAgent || '');
+    return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && maxTouchPoints > 1);
+}
+
 // Sur iPhone / iPad, une page web ne recoit de notifications qu'une fois ajoutee
 // a l'ecran d'accueil (app « standalone »).
-export function needsHomeScreenForPush(userAgent, standalone) {
-    return /iPhone|iPad|iPod/i.test(String(userAgent || '')) && !standalone;
+export function needsHomeScreenForPush(userAgent, standalone, maxTouchPoints = 0) {
+    return isAppleMobile(userAgent, maxTouchPoints) && !standalone;
 }
 
 // App de l'ecran d'accueil sur iPhone (BUG-04) : son stockage est separe de Safari,
 // les favoris n'y sont pas. Indice une seule fois, seulement s'il n'y a aucun favori.
-export function shouldHintHomeScreenFavorites(userAgent, standalone, favoritesCount, alreadySeen) {
-    return /iPhone|iPad|iPod/i.test(String(userAgent || ''))
+export function shouldHintHomeScreenFavorites(userAgent, standalone, favoritesCount, alreadySeen, maxTouchPoints = 0) {
+    return isAppleMobile(userAgent, maxTouchPoints)
         && standalone === true && favoritesCount === 0 && !alreadySeen;
 }
 

@@ -510,3 +510,133 @@ test.describe('Une seule alerte par changement (NOTIF-03)', () => {
         await expect(page.locator('.notification-banner')).toHaveCount(0);
     });
 });
+
+// ============================================
+// 40d. ABONNEMENT APP FERMEE FIABLE (NOTIF-05)
+// ============================================
+
+test.describe('40d. Abonnement app fermee fiable (NOTIF-05)', () => {
+    const ENDPOINT = 'https://push.test/notif05';
+
+    // Permission accordee, navigateur simule (abonnement present ou disparu), RPC push interceptees
+    async function fakeBrowserPush(page, { existing }) {
+        const state = { calls: [], failSubscribe: false };
+        for (const fn of ['push_subscribe', 'push_unsubscribe']) {
+            await page.route(`**/rest/v1/rpc/${fn}`, async route => {
+                state.calls.push(fn);
+                if (fn === 'push_subscribe' && state.failSubscribe) {
+                    return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ code: 'XX000', message: 'indisponible' }) });
+                }
+                return route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+            });
+        }
+        // initPushSettings a tourne (ecouteurs du nouvel essai poses)
+        await page.waitForSelector('#push-enabled[data-wired="1"]', { state: 'attached', timeout: 50000 });
+        await page.evaluate(({ endpoint, existing }) => {
+            window.__subscribeCalls = 0;
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+            Notification.requestPermission = async () => 'granted';
+            const fakeSub = { endpoint, toJSON: () => ({ endpoint, keys: { p256dh: 'p256', auth: 'auth' } }), unsubscribe: async () => true };
+            let current = existing ? fakeSub : null;
+            const fakeReg = { pushManager: {
+                getSubscription: async () => current,
+                subscribe: async () => { window.__subscribeCalls++; current = fakeSub; return fakeSub; }
+            } };
+            navigator.serviceWorker.getRegistration = async () => fakeReg;
+            navigator.serviceWorker.register = async () => fakeReg;
+            Object.defineProperty(navigator.serviceWorker, 'ready', { configurable: true, value: Promise.resolve(fakeReg) });
+        }, { endpoint: ENDPOINT, existing });
+        return state;
+    }
+
+    async function turnOnPushToggle(page) {
+        await page.evaluate(() => {
+            const toggle = document.getElementById('push-enabled');
+            toggle.checked = true;
+            toggle.dispatchEvent(new Event('change'));
+        });
+    }
+
+    test('abonnement disparu dans le navigateur : recree puis envoye au serveur', async ({ page }) => {
+        const push = await fakeBrowserPush(page, { existing: false });
+        await page.evaluate(async () => {
+            const { NotificationPrefs } = await import('./js/state.js');
+            NotificationPrefs.push = true;
+            await (await import('./js/push.js')).syncPushSubscription();
+        });
+        expect(await page.evaluate(() => window.__subscribeCalls)).toBe(1);
+        expect(push.calls).toEqual(['push_subscribe']);
+    });
+
+    test('synchronisation ratee : nouvel essai au retour du reseau', async ({ page }) => {
+        const push = await fakeBrowserPush(page, { existing: true });
+        push.failSubscribe = true;
+        await page.evaluate(async () => {
+            const { NotificationPrefs } = await import('./js/state.js');
+            NotificationPrefs.push = true;
+            await (await import('./js/push.js')).syncPushSubscription();
+        });
+        expect(push.calls).toEqual(['push_subscribe']);
+        push.failSubscribe = false;
+        await page.evaluate(() => window.dispatchEvent(new Event('online')));
+        await expect.poll(() => push.calls.length).toBe(2);
+        expect(push.calls).toEqual(['push_subscribe', 'push_subscribe']);
+    });
+
+    test('activation refusee par le serveur : l’interrupteur reste eteint, comme le message', async ({ page }) => {
+        const push = await fakeBrowserPush(page, { existing: false });
+        push.failSubscribe = true;
+        await page.evaluate(async () => (await import('./js/notifications.js')).openNotificationSettings());
+        await page.waitForSelector('#notification-settings.view-active');
+        await turnOnPushToggle(page);
+        await expect(page.locator('.toast').last()).toContainText('Impossible d’activer les notifications');
+        await expect(page.locator('#push-enabled')).not.toBeChecked();
+        expect(await page.evaluate(async () => (await import('./js/state.js')).NotificationPrefs.push)).toBe(false);
+    });
+
+    test('notifications coupees : « Prévenu même app fermée » les rallume et abonne', async ({ page }) => {
+        const push = await fakeBrowserPush(page, { existing: false });
+        await page.evaluate(async () => {
+            const { NotificationPrefs } = await import('./js/state.js');
+            NotificationPrefs.enabled = false;
+            (await import('./js/notifications.js')).openNotificationSettings();
+        });
+        await page.waitForSelector('#notification-settings.view-active');
+        await expect(page.locator('#notif-enabled')).not.toBeChecked();
+        await expect(page.locator('#push-state')).toHaveText('Notifications coupées : activer cet interrupteur les rallume.');
+        await turnOnPushToggle(page);
+        await expect(page.locator('.toast').last()).toContainText('tu seras prévenu même app fermée');
+        expect(push.calls).toEqual(['push_subscribe']);
+        await expect(page.locator('#notif-enabled')).toBeChecked();
+        await expect(page.locator('#push-enabled')).toBeChecked();
+    });
+
+    test('notifications coupees : pas d’invitation au premier coeur', async ({ page }) => {
+        await page.evaluate(async () => {
+            localStorage.removeItem('distrimatch_push_asked');
+            // Chromium sans affichage repond « denied » : on simule « pas encore demande »
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+            const { NotificationPrefs } = await import('./js/state.js');
+            NotificationPrefs.enabled = false;
+        });
+        await favoriteDemo(page);
+        await page.waitForTimeout(500);
+        await expect(page.locator('#confirm-modal')).not.toHaveClass(/active/);
+        expect(await page.evaluate(() => localStorage.getItem('distrimatch_push_asked'))).toBeNull();
+    });
+
+    test('une notification de l’app ne demande jamais la permission : bandeau a la place', async ({ page }) => {
+        await page.evaluate(async () => {
+            window.__permissionAsks = 0;
+            Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+            Notification.requestPermission = async () => { window.__permissionAsks++; return 'default'; };
+            const { NotificationPrefs, AppState } = await import('./js/state.js');
+            NotificationPrefs.enabled = true;
+            NotificationPrefs.quietHours.enabled = false;   // le test doit passer aussi la nuit
+            const { notifyFavoriteEvent } = await import('./js/notifications.js');
+            notifyFavoriteEvent(AppState.distributors[0], { type: 'empty', at: Date.now() });
+        });
+        await expect(page.locator('.notification-banner').first()).toBeVisible();
+        expect(await page.evaluate(() => window.__permissionAsks)).toBe(0);
+    });
+});

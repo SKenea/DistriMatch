@@ -47,7 +47,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   prévenu au bon moment — `NOTIF-04.md`
   - Acceptance : une alerte à l'entrée dans le rayon (pas toutes les heures) ; une seule par
     appareil ; réglage appliqué tout de suite ; file des heures calmes délivrée à leur fin.
-- [ ] NOTIF-05 En tant que membre, je veux un abonnement app fermée fiable, afin de rester prévenu
+- [x] NOTIF-05 En tant que membre, je veux un abonnement app fermée fiable, afin de rester prévenu
   — `NOTIF-05.md`
   - Acceptance : abonnement recréé s'il a disparu, resynchronisé après coupure ; interrupteurs
     cohérents ; permission demandée après un toucher seulement ; iPad reconnu.
