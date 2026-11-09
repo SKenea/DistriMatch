@@ -4,7 +4,7 @@
 
 import { AppState, NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES } from './state.js';
 import {
-    calculateDistance, escapeHTML, showToast, timeAgo,
+    diffGeofence, escapeHTML, showToast, timeAgo,
     saveNotificationPrefs, saveNotificationQueue, normalizeName
 } from './utils.js';
 import { switchView } from './navigation.js';
@@ -61,68 +61,96 @@ function queueNotification(notification) {
     saveNotificationQueue();
 }
 
+// NOTIF-04 : au-dela de 12 h, une notification retenue ne sonne plus ; elle est rangee
+// non lue dans le centre (avant : perdue). Une alerte de proximite perimee est jetee.
+const QUEUE_ALERT_MAX_MS = 12 * 60 * 60 * 1000;
+
 export function processQueuedNotifications() {
-    if (isQuietHours()) return;
+    if (isQuietHours() || !NotificationQueue.pending.length) return;
 
     const pending = [...NotificationQueue.pending];
     NotificationQueue.pending = [];
 
+    let archived = false;
     pending.forEach(notif => {
-        if (Date.now() - notif.queuedAt < 12 * 60 * 60 * 1000) {
+        if (Date.now() - notif.queuedAt < QUEUE_ALERT_MAX_MS) {
             sendNotification(notif);
+        } else if (notif.type !== 'proximity' && NotificationPrefs.enabled) {
+            archiveNotification(notif);
+            archived = true;
         }
     });
 
     saveNotificationQueue();
+    if (!archived) return;
+    if (isNotificationsViewOpen()) openNotificationsView();
+    else updateNotificationsBadge();
+}
+
+// Rangee dans le centre, sans bandeau, son ni vibration
+function archiveNotification(notif) {
+    notif.read = false;
+    ensureNotificationId(notif);
+    NotificationQueue.history.unshift(notif);
+    if (NotificationQueue.history.length > 50) NotificationQueue.history.pop();
 }
 
 // ============================================
-// GEOFENCING
+// MINUTERIE : GEOFENCING ET FILE DES HEURES CALMES (NOTIF-04)
 // ============================================
 
+const NOTIFICATION_TICK_MS = 30000;
+let notificationTimer = null;
+// Dans le rayon ou non, par favori, au dernier passage ; null = pas de reference
+// (demarrage, onglet cache, reglage coupe, heures calmes) : la mesure suivante sert
+// de reference, sans alerte. Un rayon change dans les reglages = nouvelle reference.
+let geofenceInside = null;
+let geofenceRadius = null;
+
+// Une seule minuterie, posee au demarrage quels que soient les reglages : ils sont
+// relus a chaque passage (reactives, ou remis par "Effacer mes donnees", ils
+// s'appliquent sans redemarrer)
 export function startGeofenceMonitoring() {
-    if (!navigator.geolocation) {
-        console.log('Géolocalisation non supportée');
-        return;
-    }
-
-    if (!NotificationPrefs.enabled || !NotificationPrefs.geofence.enabled) {
-        console.log('Geofencing désactivé');
-        return;
-    }
-
-    setInterval(() => {
-        if (!NotificationPrefs.enabled || !NotificationPrefs.geofence.enabled) return;
-        if (isQuietHours()) return;
-
-        navigator.geolocation.getCurrentPosition(
-            checkNearbySubscriptions,
-            (err) => console.log('Erreur géoloc pour geofence:', err.message),
-            { enableHighAccuracy: false, timeout: 10000 }
-        );
-    }, 30000);
-
-    console.log('Surveillance geofence demarree');
+    if (notificationTimer) return;
+    notificationTimer = setInterval(notificationTick, NOTIFICATION_TICK_MS);
 }
 
+// Un passage, dans l'onglet visible seulement (un seul onglet agit) : la file des
+// heures calmes part si elles sont finies, puis la position est relue si l'alerte
+// de proximite est active
+export function notificationTick() {
+    const visible = document.visibilityState === 'visible';
+    if (visible) processQueuedNotifications();
+    const active = NotificationPrefs.enabled && NotificationPrefs.geofence.enabled && !isQuietHours();
+    if (!active || !visible || !navigator.geolocation) {
+        geofenceInside = null;
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        checkNearbySubscriptions,
+        (err) => console.log('Erreur géoloc pour geofence:', err.message),
+        { enableHighAccuracy: false, timeout: 10000 }
+    );
+}
+
+// Alerte a l'arrivee seulement (diffGeofence, utils.js). canNotify reste le garde-fou
+// entre deux fenetres visibles : la marque de l'autre onglet arrive par l'ecouteur
+// storage d'app.js (BUG-13)
 function checkNearbySubscriptions(position) {
-    const userLat = position.coords.latitude;
-    const userLng = position.coords.longitude;
-
-    AppState.subscriptions.forEach(id => {
-        const dist = AppState.distributors.find(d => d.id === id);
-        if (!dist) return;
-
-        const prefs = NotificationPrefs.perDistributor[id];
-        if (prefs && prefs.proximity === false) return;
-
-        const distance = calculateDistance(userLat, userLng, dist.lat, dist.lng);
-        const distanceMeters = distance * 1000;
-
-        if (distanceMeters <= NotificationPrefs.geofence.radius) {
-            if (canNotify(id, 'proximity')) {
-                triggerProximityNotification(dist, Math.round(distanceMeters));
-            }
+    const radius = NotificationPrefs.geofence.radius;
+    if (radius !== geofenceRadius) {
+        geofenceInside = null;
+        geofenceRadius = radius;
+    }
+    const favorites = AppState.subscriptions
+        .filter(id => NotificationPrefs.perDistributor[id]?.proximity !== false)
+        .map(id => AppState.distributors.find(d => d.id === id))
+        .filter(Boolean);
+    const { inside, entered } = diffGeofence(geofenceInside, favorites, position.coords, radius);
+    geofenceInside = inside;
+    entered.forEach(({ distributor, distanceMeters }) => {
+        if (canNotify(distributor.id, 'proximity')) {
+            triggerProximityNotification(distributor, distanceMeters);
         }
     });
 }
@@ -140,10 +168,8 @@ function triggerProximityNotification(distributor, distanceMeters) {
         timestamp: Date.now()
     };
 
-    if (isQuietHours()) {
-        queueNotification(notification);
-        return;
-    }
+    // NOTIF-04 : une arrivee ne se signale pas apres coup (plus de mise en file)
+    if (isQuietHours()) return;
 
     sendNotification(notification);
 }

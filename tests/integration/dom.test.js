@@ -1793,3 +1793,156 @@ describe('Une seule alerte par changement (NOTIF-03)', () => {
         assert.equal(NotificationQueue.history.length, 0);
     });
 });
+
+// ============================================
+// ALERTES DE PROXIMITE ET FILE DES HEURES CALMES (NOTIF-04)
+// ============================================
+// Minuterie posee meme reglage coupe ; chaque passage relit les reglages, vide la file
+// a la fin des heures calmes et n'alerte qu'a l'entree dans le rayon (onglet visible).
+
+const { notificationTick, startGeofenceMonitoring, notifyFavoriteEvent } = await import('../../js/notifications.js');
+
+describe('Alertes de proximite a l’arrivee et file des heures calmes (NOTIF-04)', () => {
+    const realNavigator = globalThis.navigator;
+    let position = null;
+    let visibility = 'visible';
+    let asked = 0;
+    function at(meters) {
+        return { coords: { latitude: 43.4929 + meters / 111195, longitude: -1.4748, accuracy: 20 } };
+    }
+    function tickAt(meters) {
+        position = at(meters);
+        notificationTick();
+    }
+    function proximityCount() {
+        return NotificationQueue.history.filter(function isProximity(n) { return n.type === 'proximity'; }).length;
+    }
+
+    beforeEach(() => {
+        asked = 0;
+        position = at(3000);
+        visibility = 'visible';
+        Object.defineProperty(globalThis, 'navigator', {
+            value: { geolocation: { getCurrentPosition(ok) { asked += 1; ok(position); } } },
+            writable: true, configurable: true
+        });
+        Object.defineProperty(document, 'visibilityState', { get: () => visibility, configurable: true });
+        AppState.subscriptions = ['dist-near'];
+        AppState.distributors = [{ id: 'dist-near', name: 'Pain du Coin', type: 'bakery', lat: 43.4929, lng: -1.4748, products: [] }];
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.quietHours = { enabled: false, start: 22, end: 8 };
+        NotificationPrefs.geofence = { enabled: false, radius: 1000 };
+        NotificationPrefs.perDistributor = {};
+        NotificationPrefs.lastNotifications = {};
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+        notificationTick();   // reglage coupe : efface la reference du test precedent
+        NotificationPrefs.geofence.enabled = true;
+    });
+
+    after(() => {
+        Object.defineProperty(globalThis, 'navigator', { value: realNavigator, writable: true, configurable: true });
+        delete document.visibilityState;
+        AppState.subscriptions = [];
+        document.querySelectorAll('.notification-banner').forEach(function removeBanner(b) { b.remove(); });
+    });
+
+    it('minuterie posee meme avec le reglage coupe au demarrage, une seule fois', () => {
+        const realSetInterval = globalThis.setInterval;
+        const delays = [];
+        globalThis.setInterval = function fakeSetInterval(fn, ms) { delays.push(ms); return 1; };
+        try {
+            NotificationPrefs.geofence.enabled = false;
+            startGeofenceMonitoring();
+            startGeofenceMonitoring();
+        } finally {
+            globalThis.setInterval = realSetInterval;
+        }
+        assert.deepEqual(delays, [30000]);
+    });
+
+    it('reglage reactive : alerte a l’arrivee, sans redemarrer', () => {
+        tickAt(3000);   // loin : reference
+        assert.equal(proximityCount(), 0);
+        tickAt(300);    // arrivee
+        assert.equal(proximityCount(), 1);
+        assert.equal(NotificationQueue.history[0].distributorId, 'dist-near');
+    });
+
+    it('deja dans le rayon : une seule alerte, pas une par heure', () => {
+        tickAt(3000);
+        tickAt(300);
+        NotificationPrefs.lastNotifications = {};   // delai d'1 h ecoule : seule l'entree compte
+        tickAt(250);
+        tickAt(200);
+        assert.equal(proximityCount(), 1);
+    });
+
+    it('sortir puis revenir : nouvelle alerte ; la limite du rayon ne fait pas de rafale', () => {
+        tickAt(3000);
+        tickAt(300);
+        tickAt(1050);   // dans la marge : toujours dedans
+        NotificationPrefs.lastNotifications = {};
+        tickAt(300);
+        assert.equal(proximityCount(), 1);
+        tickAt(1500);   // vraiment sorti
+        tickAt(300);
+        assert.equal(proximityCount(), 2);
+    });
+
+    it('ouverture deja pres du favori : aucune alerte', () => {
+        tickAt(300);
+        tickAt(300);
+        assert.equal(proximityCount(), 0);
+    });
+
+    it('onglet cache : position non demandee ; au retour, la premiere mesure sert de reference', () => {
+        tickAt(3000);
+        assert.equal(asked, 1);
+        visibility = 'hidden';
+        tickAt(300);
+        assert.equal(asked, 1);
+        visibility = 'visible';
+        tickAt(300);
+        assert.equal(asked, 2);
+        assert.equal(proximityCount(), 0);
+    });
+
+    it('heures calmes : la file part au passage qui suit leur fin, sans redemarrer', () => {
+        const hour = new Date().getHours();
+        NotificationPrefs.quietHours = { enabled: true, start: hour, end: (hour + 1) % 24 };
+        notifyFavoriteEvent(AppState.distributors[0], { type: 'empty', at: Date.now() });
+        assert.equal(NotificationQueue.pending.length, 1);
+        notificationTick();   // toujours en heures calmes : rien ne part
+        assert.equal(NotificationQueue.history.length, 0);
+        NotificationPrefs.quietHours.enabled = false;   // fin des heures calmes
+        notificationTick();
+        assert.equal(NotificationQueue.pending.length, 0);
+        assert.equal(NotificationQueue.history[0].type, 'empty');
+    });
+});
+
+describe('File des heures calmes : rien de perdu apres 12 h (NOTIF-04)', () => {
+    beforeEach(() => {
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.quietHours = { enabled: false, start: 22, end: 8 };
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+        document.querySelectorAll('.notification-banner').forEach(function removeBanner(b) { b.remove(); });
+    });
+
+    it('retenue plus de 12 h : rangee non lue dans le centre, sans bandeau ; proximite jetee', () => {
+        const old = Date.now() - 13 * 60 * 60 * 1000;
+        NotificationQueue.pending = [
+            { type: 'empty', distributorId: 'dist-near', distributorName: 'Pain du Coin', message: 'Pain du Coin vide', timestamp: old, queuedAt: old },
+            { type: 'proximity', distributorId: 'dist-near', distributorName: 'Pain du Coin', message: 'Pain du Coin proche', timestamp: old, queuedAt: old }
+        ];
+        processQueuedNotifications();
+        assert.equal(NotificationQueue.pending.length, 0);
+        assert.equal(NotificationQueue.history.length, 1);
+        assert.equal(NotificationQueue.history[0].type, 'empty');
+        assert.equal(NotificationQueue.history[0].read, false);
+        assert.equal(document.querySelectorAll('.notification-banner').length, 0);
+        assert.equal(document.getElementById('notifications-badge').textContent, '1');
+    });
+});
