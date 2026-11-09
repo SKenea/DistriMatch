@@ -460,3 +460,53 @@ test.describe('40c. Notifications app fermee et compte (PRIV-06)', () => {
         expect(await page.evaluate(() => localStorage.getItem('distrimatch_push_pending_unsubscribe'))).toBeNull();
     });
 });
+
+// ============================================
+// UNE SEULE ALERTE PAR CHANGEMENT (NOTIF-03)
+// ============================================
+
+test.describe('Une seule alerte par changement (NOTIF-03)', () => {
+    test('notifications app fermée actives : le changement d’un favori arrive au centre, sans seconde alerte', async ({ page, context }) => {
+        const signals = { status: [] };
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(signals.status) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), route =>
+            route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        // Permission accordee ; chaque notification systeme creee par l'app est comptee
+        await page.addInitScript(() => {
+            window.__systemNotifications = 0;
+            class CountingNotification {
+                constructor() { window.__systemNotifications += 1; }
+                close() {}
+            }
+            CountingNotification.permission = 'granted';
+            CountingNotification.requestPermission = () => Promise.resolve('granted');
+            window.Notification = CountingNotification;
+        });
+        // Notifications app fermee acceptees, heures calmes coupees (le test passe aussi la nuit)
+        await page.evaluate(() => localStorage.setItem('snackmatch_notification_prefs', JSON.stringify({
+            enabled: true, push: true, quietHours: { enabled: false, start: 22, end: 8 }
+        })));
+        await setupApp(page, context);
+
+        // NOTIF-02 : une fiche de demo ne notifie pas ; on prend la premiere comme vraie fiche
+        const id = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            d.isDemo = false;
+            return d.id;
+        });
+        await page.evaluate((distId) => window.toggleSubscription(distId), id);
+        await expect.poll(() => page.evaluate((distId) =>
+            !!JSON.parse(localStorage.getItem('snackmatch_notification_prefs')).lastSeenSignals?.[distId], id)).toBe(true);
+
+        // Quelqu'un signale le distributeur vide : le serveur a deja envoye la notification
+        signals.status = [{
+            distributor_id: id, state: 'empty', source: 'anon', weight: 0.5,
+            created_at: new Date(Date.now() - 5 * 60000).toISOString(), age_seconds: 300
+        }];
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await expect(page.locator('#notifications-badge')).toHaveText('1');
+        expect(await page.evaluate(() => window.__systemNotifications)).toBe(0);
+        await expect(page.locator('.notification-banner')).toHaveCount(0);
+    });
+});

@@ -664,6 +664,7 @@ describe('checkFavoriteUpdates (un favori notifie quand sa machine change)', () 
         NotificationPrefs.followedProducts = [];
         NotificationPrefs.lastNotifications = {};
         NotificationPrefs.lastSeenSignals = {};
+        localStorage.removeItem('snackmatch_notification_prefs');   // NOTIF-03 : l'etat vu se relit du stockage
         NotificationQueue.pending = [];
         NotificationQueue.history = [];
     });
@@ -1668,5 +1669,127 @@ describe('Veille des favoris : alertes justes (NOTIF-02)', () => {
         followProduct('oeufs');
         followProduct('Œufs');
         assert.deepEqual(NotificationPrefs.followedProducts, ['oeufs']);
+    });
+});
+
+// ============================================
+// UNE SEULE ALERTE PAR CHANGEMENT (NOTIF-03)
+// ============================================
+
+const { processQueuedNotifications, canNotify } = await import('../../js/notifications.js');
+
+describe('Une seule alerte par changement (NOTIF-03)', () => {
+    let tables;
+    let created;
+    let vibrations;
+    const fakeClient = {
+        from(table) {
+            return { select() { return { in() { return Promise.resolve({ data: tables[table] || [], error: null }); } }; } };
+        }
+    };
+    const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+    const emptySignal = () => [{ distributor_id: 'dist-fav', state: 'empty', created_at: minutesAgo(2) }];
+    // Notification systeme simulee : compte les alertes affichees
+    class FakeNotification {
+        constructor() { created += 1; }
+    }
+    FakeNotification.permission = 'granted';
+
+    // Notifications app fermee en service : permission accordee, push accepte, navigateur compatible
+    function setPushActive() {
+        window.Notification = FakeNotification;
+        globalThis.Notification = FakeNotification;
+        window.PushManager = function PushManager() {};
+        Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true });
+        NotificationPrefs.push = true;
+    }
+
+    // Retour au navigateur simule de depart (sans notification ni push)
+    function resetBrowser() {
+        delete window.Notification;
+        delete globalThis.Notification;
+        delete window.PushManager;
+        delete navigator.serviceWorker;
+        delete navigator.vibrate;
+    }
+
+    beforeEach(() => {
+        resetBrowser();
+        tables = { distributor_status: [], product_availability: [] };
+        created = 0;
+        vibrations = 0;
+        Object.defineProperty(navigator, 'vibrate', { value: () => { vibrations += 1; return true; }, configurable: true });
+        setSupabaseClient(fakeClient);
+        AppState.subscriptions = ['dist-fav'];
+        AppState.distributors = [
+            { id: 'dist-fav', name: 'Pain du Coin', type: 'bakery', emoji: '🥖', address: 'Addr', products: [{ id: 7, name: 'Baguette', price: 1, available: true }] }
+        ];
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.push = false;
+        NotificationPrefs.quietHours = { enabled: false, start: 22, end: 8 };
+        NotificationPrefs.followedProducts = [];
+        NotificationPrefs.lastNotifications = {};
+        NotificationPrefs.lastSeenSignals = {};
+        localStorage.removeItem('snackmatch_notification_prefs');
+        NotificationQueue.pending = [];
+        NotificationQueue.history = [];
+        document.getElementById('notifications-view').classList.remove('view-active');
+        document.querySelectorAll('.notification-banner').forEach((b) => b.remove());
+    });
+
+    after(() => { resetBrowser(); setSupabaseClient(null); AppState.subscriptions = []; });
+
+    it('app fermee deja prevenue : le changement va au centre, sans seconde alerte', async () => {
+        setPushActive();
+        await checkFavoriteUpdates();
+        tables.distributor_status = emptySignal();
+        const sent = await checkFavoriteUpdates();
+        assert.equal(sent.length, 1);
+        assert.equal(NotificationQueue.history.length, 1);
+        assert.equal(NotificationQueue.history[0].read, false);
+        assert.equal(document.getElementById('notifications-badge').textContent, '1');
+        assert.equal(created, 0, 'aucune notification systeme : le serveur l a deja envoyee');
+        assert.equal(document.querySelectorAll('.notification-banner').length, 0);
+        assert.equal(vibrations, 0);
+    });
+
+    it('app fermee deja prevenue pendant les heures calmes : rien en file, la ligne est au centre', async () => {
+        setPushActive();
+        NotificationPrefs.quietHours = { enabled: true, start: 0, end: 24 };
+        await checkFavoriteUpdates();
+        tables.distributor_status = emptySignal();
+        await checkFavoriteUpdates();
+        assert.equal(NotificationQueue.pending.length, 0);
+        assert.equal(NotificationQueue.history.length, 1);
+        assert.equal(created, 0);
+    });
+
+    it('alerte de proximite toute recente : le changement du favori part quand meme', async () => {
+        await checkFavoriteUpdates();
+        NotificationQueue.pending = [{ type: 'proximity', distributorId: 'dist-fav', distributorName: 'Pain du Coin', message: 'Pain du Coin est a 400m de toi', timestamp: Date.now(), queuedAt: Date.now() }];
+        processQueuedNotifications();
+        assert.equal(NotificationQueue.history[0].type, 'proximity');
+        tables.distributor_status = emptySignal();
+        const sent = await checkFavoriteUpdates();
+        assert.equal(sent.length, 1);
+        assert.equal(NotificationQueue.history[0].type, 'empty');
+        // Et l'inverse : un changement tout recent ne bloque pas la proximite
+        NotificationPrefs.lastNotifications = { 'dist-fav': Date.now() };
+        assert.equal(canNotify('dist-fav', 'proximity'), true);
+        assert.equal(canNotify('dist-fav'), false);
+    });
+
+    it('autre onglet : un changement deja traite n\'est pas notifie une seconde fois', async () => {
+        await checkFavoriteUpdates();
+        const stale = JSON.parse(JSON.stringify(NotificationPrefs.lastSeenSignals));
+        tables.distributor_status = emptySignal();
+        // L'autre onglet voit le changement, le notifie et l'enregistre
+        assert.equal((await checkFavoriteUpdates()).length, 1);
+        // Cet onglet a encore l'ancien etat en memoire (l'evenement storage n'est pas passe)
+        NotificationPrefs.lastSeenSignals = stale;
+        NotificationPrefs.lastNotifications = {};
+        NotificationQueue.history = [];
+        assert.deepEqual(await checkFavoriteUpdates(), []);
+        assert.equal(NotificationQueue.history.length, 0);
     });
 });

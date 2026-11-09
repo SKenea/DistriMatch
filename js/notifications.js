@@ -10,7 +10,7 @@ import {
 import { switchView } from './navigation.js';
 import { activateFocusTrap, deactivateFocusTrap } from './focus-trap.js';
 import { confirmDialog } from './confirm-dialog.js';
-import { syncPushSubscription, refreshPushSettings } from './push.js';
+import { syncPushSubscription, refreshPushSettings, isPushActive } from './push.js';
 
 // ============================================
 // HEURES CALMES ET COOLDOWN
@@ -29,16 +29,23 @@ export function isQuietHours() {
     return hour >= start && hour < end;
 }
 
-export function canNotify(distributorId) {
-    const lastNotif = NotificationPrefs.lastNotifications[distributorId];
+// NOTIF-03 : deux delais d'1 h distincts par distributeur. 'change' (vide, en panne,
+// produit dispo : cle = id, comme avant) et 'proximity' (cle 'proximity:<id>').
+// L'alerte de proximite, repetitive, ne retarde plus un changement de favori.
+function cooldownKey(distributorId, kind) {
+    return kind === 'proximity' ? `proximity:${distributorId}` : distributorId;
+}
+
+export function canNotify(distributorId, kind = 'change') {
+    const lastNotif = NotificationPrefs.lastNotifications[cooldownKey(distributorId, kind)];
     if (!lastNotif) return true;
 
     const hoursSince = (Date.now() - lastNotif) / (1000 * 60 * 60);
     return hoursSince >= 1;
 }
 
-export function markNotified(distributorId) {
-    NotificationPrefs.lastNotifications[distributorId] = Date.now();
+export function markNotified(distributorId, kind = 'change') {
+    NotificationPrefs.lastNotifications[cooldownKey(distributorId, kind)] = Date.now();
     saveNotificationPrefs();
 }
 
@@ -113,7 +120,7 @@ function checkNearbySubscriptions(position) {
         const distanceMeters = distance * 1000;
 
         if (distanceMeters <= NotificationPrefs.geofence.radius) {
-            if (canNotify(id)) {
+            if (canNotify(id, 'proximity')) {
                 triggerProximityNotification(dist, Math.round(distanceMeters));
             }
         }
@@ -166,6 +173,14 @@ export function notifyFavoriteEvent(distributor, event) {
     };
     if (event.product) notification.product = event.product;
 
+    // NOTIF-03 : notifications app fermee en service sur cet appareil : le serveur
+    // (push-notify) a deja alerte, heures calmes comprises. L'app garde la ligne du
+    // centre et la pastille, sans seconde alerte et sans file d'attente.
+    if (isPushActive()) {
+        sendNotification(notification, { silent: true });
+        return;
+    }
+
     if (isQuietHours()) {
         queueNotification(notification);
         return;
@@ -196,7 +211,9 @@ function isNotificationsViewOpen() {
     return !!document.getElementById('notifications-view')?.classList.contains('view-active');
 }
 
-function sendNotification(notif) {
+// options.silent (NOTIF-03) : centre et pastille seulement, sans notification systeme,
+// ni bandeau, ni vibration (la notification app fermee du serveur est deja arrivee).
+function sendNotification(notif, options = {}) {
     if (!NotificationPrefs.enabled) return;
 
     notif.read = false;
@@ -216,7 +233,9 @@ function sendNotification(notif) {
         // Demande paresseuse au 1er envoi
         requestNotificationPermission();
     }
-    if (supported && Notification.permission === 'granted') {
+    if (options.silent) {
+        // Rien a afficher : une seule alerte par changement
+    } else if (supported && Notification.permission === 'granted') {
         try {
             const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
             const n = new Notification(typeInfo.title, {
@@ -236,11 +255,11 @@ function sendNotification(notif) {
         showNotificationBanner(notif);
     }
 
-    if (navigator.vibrate) {
+    if (navigator.vibrate && !options.silent) {
         navigator.vibrate(200);
     }
 
-    markNotified(notif.distributorId);
+    markNotified(notif.distributorId, notif.type === 'proximity' ? 'proximity' : 'change');
     // Page Notifications ouverte : la liste suit en direct (retour terrain
     // 2026-09-25 : une liste figee faisait supprimer la mauvaise ligne).
     if (isNotificationsViewOpen()) {
