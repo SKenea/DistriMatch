@@ -7,7 +7,7 @@
 
 import { AppState, NotificationPrefs, supabaseClient } from './state.js';
 import { VAPID_PUBLIC_KEY } from './config.js';
-import { showToast, showActionToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScreenForPush, shouldHintHomeScreenFavorites } from './utils.js';
+import { quietHoursForServer, showToast, showActionToast, saveNotificationPrefs, urlBase64ToUint8Array, needsHomeScreenForPush, shouldHintHomeScreenFavorites } from './utils.js';
 import { confirmDialog } from './confirm-dialog.js';
 
 export const ASKED_KEY = 'distrimatch_push_asked';
@@ -62,15 +62,16 @@ async function currentSubscription() {
 
 export function subscriptionParams(subscription) {
     const { endpoint, keys } = subscription.toJSON();
-    const quiet = NotificationPrefs.quietHours;
+    // NOTIF-06 : heures entieres pour le serveur, plage qui couvre les minutes choisies
+    const quiet = quietHoursForServer(NotificationPrefs.quietHours);
     return {
         p_endpoint: endpoint,
         p_p256dh: keys.p256dh,
         p_auth: keys.auth,
         p_favorites: AppState.subscriptions.map(String).slice(0, PUSH_MAX_FAVORITES),
         p_followed: NotificationPrefs.followedProducts.slice(0, PUSH_MAX_FOLLOWED).map(p => String(p).slice(0, PUSH_MAX_PRODUCT_LENGTH)),
-        p_quiet_start: quiet.enabled ? quiet.start : null,
-        p_quiet_end: quiet.enabled ? quiet.end : null,
+        p_quiet_start: quiet.start,
+        p_quiet_end: quiet.end,
         p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     };
 }

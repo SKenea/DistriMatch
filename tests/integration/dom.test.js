@@ -685,7 +685,7 @@ describe('checkFavoriteUpdates (un favori notifie quand sa machine change)', () 
         const notif = NotificationQueue.history[0];
         assert.equal(notif.type, 'empty');
         assert.equal(notif.distributorId, 'dist-fav');
-        assert.match(notif.message, /Pain du Coin a été signalée vide/);
+        assert.match(notif.message, /Pain du Coin : signalé vide/);
         assert.equal(notif.read, false);
         assert.ok(Date.now() - notif.timestamp >= 39 * 60000, 'horodatage = celui du signal');
         assert.equal(document.getElementById('notifications-badge').textContent, '1');
@@ -1139,14 +1139,14 @@ describe('Centre de notifications', () => {
 
     it('une ligne ouvre la fiche de la machine (plus le chat) et porte l\'icone de son type', () => {
         NotificationQueue.history = [
-            { type: 'empty', distributorId: 'dist-x', message: 'X a été signalée vide', read: false, timestamp: Date.now() }
+            { type: 'empty', distributorId: 'dist-x', message: 'X : signalé vide', read: false, timestamp: Date.now() }
         ];
         openNotificationsView();
         const row = document.querySelector('#notifications-list .notif-item-open');
         assert.ok(row, 'ligne cliquable');
         assert.equal(row.tagName, 'BUTTON');
         assert.match(row.querySelector('.notif-item-icon').textContent, /🚫/);
-        assert.match(row.textContent, /Machine signalée vide/);
+        assert.match(row.textContent, /Distributeur signalé vide/);
 
         const opened = [];
         const previous = window.openDistributorModal;

@@ -129,7 +129,7 @@ test.describe('6. Chat inactif, favoris qui notifient', () => {
 
         // Le bandeau in-app mene a la fiche
         const banner = page.locator('.notification-banner');
-        await expect(banner).toContainText(`${dist.name} a été signalée vide`);
+        await expect(banner).toContainText(`${dist.name} : signalé vide`);
         await banner.locator('.notif-action').click();
         await page.waitForSelector('#dist-modal-overlay.active');
         await expect(page.locator('#dist-modal-name')).toHaveText(dist.name);
@@ -140,8 +140,8 @@ test.describe('6. Chat inactif, favoris qui notifient', () => {
         await page.waitForSelector('#notifications-view.view-active');
         const row = page.locator('#notifications-list .notif-item-open');
         await expect(row).toHaveCount(1);
-        await expect(row).toContainText('Machine signalée vide');
-        await expect(row).toContainText(`${dist.name} a été signalée vide`);
+        await expect(row).toContainText('Distributeur signalé vide');
+        await expect(row).toContainText(`${dist.name} : signalé vide`);
         await expect(row).toContainText('il y a 40 min');
 
         await row.click();
@@ -638,5 +638,50 @@ test.describe('40d. Abonnement app fermee fiable (NOTIF-05)', () => {
         });
         await expect(page.locator('.notification-banner').first()).toBeVisible();
         expect(await page.evaluate(() => window.__permissionAsks)).toBe(0);
+    });
+});
+
+// ============================================
+// 41. REGLAGES DES NOTIFICATIONS GARDES (NOTIF-06)
+// ============================================
+
+test.describe('41. Reglages des notifications gardes (NOTIF-06)', () => {
+    async function openSettings(page) {
+        await page.evaluate(async () => (await import('./js/notifications.js')).openNotificationSettings());
+        await page.waitForSelector('#notification-settings.view-active');
+    }
+
+    function storedPrefs(page) {
+        return page.evaluate(() => JSON.parse(localStorage.getItem('snackmatch_notification_prefs') || '{}'));
+    }
+
+    test('chaque réglage est gardé dès qu’on le change, minutes comprises, sans bouton', async ({ page }) => {
+        await openSettings(page);
+        await expect(page.locator('#notification-settings')).not.toContainText('Sauvegarder');
+        await page.locator('#notif-enabled').uncheck();
+        await page.fill('#quiet-start', '22:30');
+        await page.fill('#quiet-end', '07:45');
+        await page.click('#back-from-notif-settings');
+        const prefs = await storedPrefs(page);
+        expect(prefs.enabled).toBe(false);
+        expect(prefs.quietHours.start).toBe('22:30');
+        expect(prefs.quietHours.end).toBe('07:45');
+        await openSettings(page);
+        await expect(page.locator('#notif-enabled')).not.toBeChecked();
+        await expect(page.locator('#quiet-start')).toHaveValue('22:30');
+        await expect(page.locator('#quiet-end')).toHaveValue('07:45');
+    });
+
+    test('heure effacée : l’ancienne est gardée, jamais de valeur vide', async ({ page }) => {
+        await openSettings(page);
+        await page.fill('#quiet-start', '23:15');
+        await page.evaluate(() => {
+            const input = document.getElementById('quiet-start');
+            input.value = '';
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await expect(page.locator('.toast').last()).toContainText('Heure incomplète : on garde 23:15');
+        await expect(page.locator('#quiet-start')).toHaveValue('23:15');
+        expect((await storedPrefs(page)).quietHours.start).toBe('23:15');
     });
 });

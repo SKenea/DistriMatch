@@ -134,9 +134,9 @@ export function eventForSubscriber(base, productName, followedProducts) {
 export function buildPushMessage(distributorName, event) {
     const product = event.product || 'Un produit';
     switch (event.type) {
-        case 'broken': return `${distributorName} a été signalée en panne`;
-        case 'working': return `${distributorName} fonctionne de nouveau`;
-        case 'empty': return `${distributorName} a été signalée vide`;
+        case 'broken': return `${distributorName} : signalé en panne`;
+        case 'working': return `${distributorName} : de nouveau en service`;
+        case 'empty': return `${distributorName} : signalé vide`;
         case 'stock': return `${product} vu dispo chez ${distributorName}`;
         default: return `${product} de nouveau vu dispo chez ${distributorName}`;
     }
