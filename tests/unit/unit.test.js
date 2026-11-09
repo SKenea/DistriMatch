@@ -2451,3 +2451,52 @@ describe('NOTIF-02 : alertes des favoris app ouverte', () => {
         assert.equal(diffFavoriteSignals(seen, { machine: { ...machine('empty', 10), is_demo_signal: false }, products: [] }, { now: NOW }).event.type, 'empty');
     });
 });
+
+// ============================================
+// ALERTE DE PROXIMITE A L'ARRIVEE (NOTIF-04)
+// ============================================
+
+const { diffGeofence } = await import('../../js/utils.js');
+
+describe('diffGeofence : alerte de proximite a l’arrivee seulement (NOTIF-04)', () => {
+    const X = { id: 'x', name: 'Pain du Coin', lat: 43.4929, lng: -1.4748 };
+    function at(meters, accuracy = 20) {
+        return { latitude: 43.4929 + meters / 111195, longitude: -1.4748, accuracy };
+    }
+
+    it('sans reference (demarrage) : aucune alerte, la mesure devient la reference', () => {
+        const r = diffGeofence(null, [X], at(300), 1000);
+        assert.deepEqual(r.entered, []);
+        assert.deepEqual(r.inside, { x: true });
+    });
+
+    it('dehors puis dedans : une alerte, distance arrondie en metres', () => {
+        const r = diffGeofence({ x: false }, [X], at(300), 1000);
+        assert.equal(r.entered.length, 1);
+        assert.equal(r.entered[0].distributor.id, 'x');
+        assert.ok(Math.abs(r.entered[0].distanceMeters - 300) <= 1, `distance ${r.entered[0].distanceMeters}`);
+    });
+
+    it('deja dedans : pas de nouvelle alerte', () => {
+        assert.deepEqual(diffGeofence({ x: true }, [X], at(200), 1000).entered, []);
+    });
+
+    it('favori ajoute depuis la reference : pas d’alerte', () => {
+        const r = diffGeofence({}, [X], at(300), 1000);
+        assert.deepEqual(r.entered, []);
+        assert.deepEqual(r.inside, { x: true });
+    });
+
+    it('marge de sortie : a 1050 m l’etat d’avant est garde, a 1150 m on est sorti', () => {
+        assert.deepEqual(diffGeofence({ x: true }, [X], at(1050), 1000).inside, { x: true });
+        assert.deepEqual(diffGeofence({ x: false }, [X], at(1050), 1000).inside, { x: false });
+        assert.deepEqual(diffGeofence({ x: true }, [X], at(1150), 1000).inside, { x: false });
+    });
+
+    it('position moins precise que le rayon : ignoree, reference gardee', () => {
+        const previous = { x: false };
+        const r = diffGeofence(previous, [X], at(300, 1500), 1000);
+        assert.deepEqual(r.entered, []);
+        assert.equal(r.inside, previous);
+    });
+});

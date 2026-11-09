@@ -43,7 +43,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   dérangé deux fois — `NOTIF-03.md`
   - Acceptance : pas de doublon push serveur + veille app, ni entre deux onglets ; le délai
     d'1 h de la proximité ne bloque plus les favoris.
-- [ ] NOTIF-04 En tant que membre, je veux une alerte de proximité quand j'arrive, afin d'être
+- [x] NOTIF-04 En tant que membre, je veux une alerte de proximité quand j'arrive, afin d'être
   prévenu au bon moment — `NOTIF-04.md`
   - Acceptance : une alerte à l'entrée dans le rayon (pas toutes les heures) ; une seule par
     appareil ; réglage appliqué tout de suite ; file des heures calmes délivrée à leur fin.

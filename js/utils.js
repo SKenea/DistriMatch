@@ -1295,6 +1295,38 @@ export function describeNearbyNudge({ staleProducts = 0, productCount = 0, machi
 }
 
 // ============================================
+// ALERTE DE PROXIMITE A L'ARRIVEE (NOTIF-04)
+// ============================================
+// previous : { [id]: true si dans le rayon, false sinon } au passage d'avant, ou null
+// (aucune reference : demarrage, onglet cache, reglage coupe). Un distributeur absent
+// de previous (favori ajoute depuis) sert de reference, sans alerte. On n'alerte qu'au
+// passage dehors -> dedans ; on ne ressort qu'au-dela du rayon + une marge (GPS qui
+// oscille a la limite). Une position moins precise que le rayon ne compte pas.
+export const GEOFENCE_EXIT_MARGIN_M = 100;
+
+export function diffGeofence(previous, distributors, coords, radiusM) {
+    const accuracy = Number.isFinite(coords?.accuracy) ? coords.accuracy : 0;
+    if (!coords || ![coords.latitude, coords.longitude].every(Number.isFinite) || accuracy > radiusM) {
+        return { inside: previous, entered: [] };
+    }
+    const exitM = radiusM + Math.max(accuracy, GEOFENCE_EXIT_MARGIN_M);
+    const inside = {};
+    const entered = [];
+    for (const d of distributors) {
+        if (!hasValidCoords(d)) continue;
+        const meters = Math.round(calculateDistance(coords.latitude, coords.longitude, Number(d.lat), Number(d.lng)) * 1000);
+        const before = previous ? previous[d.id] : undefined;
+        if (meters <= radiusM) {
+            inside[d.id] = true;
+            if (before === false) entered.push({ distributor: d, distanceMeters: meters });
+        } else {
+            inside[d.id] = meters > exitM ? false : before === true;
+        }
+    }
+    return { inside, entered };
+}
+
+// ============================================
 // DEMANDE DE STATUT D'EXPLOITANT (EPIC-T18 / T20)
 // ============================================
 // Premier formulaire leger (021) : lien avec le distributeur, entreprise,
