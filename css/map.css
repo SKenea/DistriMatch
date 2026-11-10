@@ -126,6 +126,7 @@
     border: none;
     color: white;
     padding: 0.25rem 0.75rem;
+    min-height: 44px;   /* A11Y-02 : cible tactile */
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.8rem;
@@ -145,6 +146,7 @@
 .add-distributor-popup select,
 .add-distributor-popup input {
     width: 100%;
+    min-height: 44px;   /* A11Y-02 : cible tactile (36-37 px avant) */
     padding: 0.5rem;
     margin-bottom: 0.5rem;
     border: 1px solid var(--light);
@@ -160,6 +162,7 @@
 
 .popup-actions button {
     flex: 1;
+    min-height: 44px;   /* A11Y-02 : cible tactile (34 px avant) */
     padding: 0.5rem;
     border-radius: 8px;
     border: none;
@@ -207,6 +210,8 @@
 .btn-add-product-row {
     background: none;
     border: none;
+    min-height: 44px;   /* A11Y-02 : cible tactile (17 px avant) */
+    padding: 0 0.5rem;
     color: var(--primary-text);
     font-weight: 600;
     font-size: 0.8rem;
@@ -229,10 +234,11 @@
 }
 
 .product-remove-row {
-    width: 22px;
-    height: 22px;
+    /* A11Y-02 : zone de toucher 44 px (22 avant), la pastille visible reste un disque de 22 px */
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background: var(--light);
+    background: radial-gradient(circle, var(--light) 11px, transparent 11.5px);
     border: none;
     color: var(--gray);
     font-size: 14px;
