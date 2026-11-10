@@ -31,7 +31,7 @@ Méthode : comme EPIC-R5, une fiche par story dans `docs/stories/<ID>.md`, exéc
 medium (`/story <ID>`), une PR à la fois, dans l'ordre A11Y-01, A11Y-02, A11Y-03.
 Hors périmètre : refonte visuelle, essai avec un vrai lecteur d'écran.
 
-- [ ] A11Y-01 En tant que testeur dehors, je veux lire les messages, les aides et les commandes
+- [x] A11Y-01 En tant que testeur dehors, je veux lire les messages, les aides et les commandes
   pâles, afin de ne rater aucune information — `A11Y-01.md`
   - Acceptance : message orange à texte foncé (≥ 4,5:1) et affiché 5 s ; aides des réglages sans
     transparence (≥ 4,5:1) ; étoiles vides de l'avis en contour (≥ 3:1) ; interrupteur éteint cerné,

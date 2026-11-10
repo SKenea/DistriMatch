@@ -58,6 +58,9 @@ export function generateStars(rating) {
     return stars;
 }
 
+// A11Y-01 : 5 s pour lire un message (3 s ne suffisaient pas pour les plus longs)
+export const TOAST_DURATION_MS = 5000;
+
 export function showToast(message, type = 'default') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -74,7 +77,7 @@ export function showToast(message, type = 'default') {
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, TOAST_DURATION_MS);
 }
 
 // Toast avec une action (« Annuler », EPIC-T12) : reste `duration` ms, et tant

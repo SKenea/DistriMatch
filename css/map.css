@@ -93,8 +93,10 @@
     background: var(--primary-dark);
 }
 
+/* A11Y-01 : icone foncee sur l'orange (6,9:1) ; blanche, elle n'y faisait que 2,1:1 */
 .btn-add-distributor.active {
     background: var(--warning);
+    color: var(--dark);
 }
 
 /* Message mode placement */

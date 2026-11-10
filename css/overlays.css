@@ -841,11 +841,13 @@
     background: none;
     font-size: 1.9rem;
     line-height: 1;
-    color: var(--light-gray);
+    /* A11Y-01 : etoile vide = contour gris (5:1), etoile choisie = pleine ; avant, beige a 1,32:1 */
+    color: var(--white);
+    -webkit-text-stroke: 1.5px var(--text-muted);
     cursor: pointer;
     border-radius: 10px;
 }
-.review-star.is-on { color: #b45309; }
+.review-star.is-on { color: #b45309; -webkit-text-stroke: 0; }
 .review-star:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .review-body-input {
     width: 100%;

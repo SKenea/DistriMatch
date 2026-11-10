@@ -992,6 +992,77 @@ describe('a11y : contraste du texte secondaire (WCAG 1.4.3 AA)', () => {
     });
 });
 
+describe('A11Y-01 : lisible par tous (messages, aides, etoiles, interrupteurs)', () => {
+    const cssDir = new URL('../../css/', import.meta.url);
+    const base = readFileSync(new URL('base.css', cssDir), 'utf8');
+    // Ancre avant le nom : « --light » ne doit pas trouver « --primary-light »
+    const cssVar = (name) => base.match(new RegExp(`(?:^|[\\s;{])${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+    // Corps de la regle dont la liste de selecteurs contient exactement `selector` (commentaires retires)
+    function cssRule(file, selector) {
+        const css = readFileSync(new URL(file, cssDir), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        for (const chunk of css.split('}')) {
+            const open = chunk.lastIndexOf('{');
+            if (open === -1) continue;
+            const selectors = chunk.slice(0, open).split('{').pop().split(',').map(s => s.trim());
+            if (selectors.includes(selector)) return chunk.slice(open + 1);
+        }
+        return null;
+    }
+    function prop(body, name) {
+        const m = (body || '').match(new RegExp(`(?:^|[\\s;])${name}:\\s*([^;]+);`));
+        return m ? m[1].trim() : null;
+    }
+    // Couleur d'une valeur : var(--x) -> hex de base.css ; un hex reste tel quel
+    function hex(value) {
+        const v = (value || '').match(/var\((--[\w-]+)\)/);
+        return v ? cssVar(v[1]) : value;
+    }
+
+    it('message orange (.toast.warning) : texte >= 4,5:1 sur son fond', () => {
+        const body = cssRule('feed-and-nav.css', '.toast.warning');
+        assert.ok(body, '.toast.warning introuvable');
+        const ratio = contrastRatio(hex(prop(body, 'color')) || '#ffffff', hex(prop(body, 'background')));
+        assert.ok(ratio >= 4.5, `texte sur l'orange : ${ratio.toFixed(2)}:1 < 4.5`);
+    });
+
+    it('bouton « + » actif : icone >= 3:1 sur l\'orange', () => {
+        const body = cssRule('map.css', '.btn-add-distributor.active');
+        assert.ok(body, '.btn-add-distributor.active introuvable');
+        const ratio = contrastRatio(hex(prop(body, 'color')) || '#ffffff', hex(prop(body, 'background')));
+        assert.ok(ratio >= 3, `icone sur l'orange : ${ratio.toFixed(2)}:1 < 3`);
+    });
+
+    it('aides des reglages (.setting-hint) : sans opacite, >= 4,5:1 sur blanc et sur le fond gris', () => {
+        const body = cssRule('feed-and-nav.css', '.setting-hint');
+        assert.equal(prop(body, 'opacity'), null, 'opacity pale le texte');
+        for (const bg of ['--white', '--light']) {
+            const ratio = contrastRatio(hex(prop(body, 'color')), cssVar(bg));
+            assert.ok(ratio >= 4.5, `.setting-hint sur ${bg} : ${ratio.toFixed(2)}:1 < 4.5`);
+        }
+    });
+
+    it('etoile vide de l\'avis : contour >= 3:1 sur blanc ; etoile choisie pleine >= 3:1', () => {
+        const empty = cssRule('overlays.css', '.review-star');
+        const stroke = prop(empty, '-webkit-text-stroke');
+        assert.ok(stroke, 'etoile vide sans contour');
+        assert.ok(contrastRatio(hex(stroke), cssVar('--white')) >= 3, 'contour trop pale');
+        const on = cssRule('overlays.css', '.review-star.is-on');
+        assert.ok(contrastRatio(hex(prop(on, 'color')), cssVar('--white')) >= 3, 'etoile choisie trop pale');
+    });
+
+    it('interrupteur eteint : contour de piste >= 3:1 sur blanc, pastille >= 3:1 sur la piste', () => {
+        const SEL = '.setting-toggle input[type="checkbox"]';
+        const track = cssRule('feed-and-nav.css', SEL);
+        const ring = prop(track, 'box-shadow');
+        assert.ok(ring, 'piste eteinte sans contour');
+        assert.ok(contrastRatio(hex(ring), cssVar('--white')) >= 3, 'contour de piste trop pale');
+        const knobOff = cssRule('feed-and-nav.css', `${SEL}:not(:checked)::after`);
+        assert.ok(knobOff, 'pas de regle pour la pastille eteinte');
+        const ratio = contrastRatio(hex(prop(knobOff, 'background')), hex(prop(track, 'background')));
+        assert.ok(ratio >= 3, `pastille sur la piste : ${ratio.toFixed(2)}:1 < 3`);
+    });
+});
+
 // ============================================
 // CACHE-BUSTING - IMPORT MAP DE index.html
 // ============================================
