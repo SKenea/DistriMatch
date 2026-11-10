@@ -7,8 +7,9 @@
  * annulee, RIEN n'est ecrit en base.
  *
  * Roles simules : `set local role anon | authenticated` + claims JWT, comme
- * PostgREST. Le compte utilise est le plus ancien de auth.users (lecture de son
- * id seulement).
+ * PostgREST. Le compte utilise est un compte JETABLE cree au debut de chaque bloc
+ * (TST-02), annule avec le reste : les tests ne dependent plus de l'activite d'un
+ * vrai membre.
  *
  * Lancer : npm run test:integration (ou node --test tests/integration/db.test.js)
  * Prerequis : SUPABASE_ACCESS_TOKEN dans .env.local (API de gestion). Sans
@@ -29,10 +30,15 @@ const USER = 'v_uid';
 const AS_USER = `perform set_config('request.jwt.claims', json_build_object('sub', v_uid, 'role', 'authenticated')::text, true); set local role authenticated;`;
 const AS_ANON = `perform set_config('request.jwt.claims', '{"role":"anon"}', true); set local role anon;`;
 
+// TST-02 : compte jetable cree dans la transaction annulee (reprise de 015, sans
+// identite ni marque e2e) : aucun signal, avis, limite ou blocage d'un vrai membre
+// ne fausse plus un test. v_uid = son id (gen_random_uuid() dans probe).
+const NEW_ACCOUNT = `insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token) values ('00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated', 'itest-' || v_uid || '@distrimatch.test', '', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');`;
+
 // Execute un corps PL/pgSQL puis annule tout. Le corps peut poser `r` (texte)
 // comme resultat. Retour : { reachedEnd, code, message, result }.
 async function probe(body, declare = '') {
-    const sql = `do $$ declare r text; v_uid uuid := (select id from auth.users order by created_at limit 1); ${declare} begin ${body}; raise exception 'PROBE_END %', coalesce(r, ''); end $$;`;
+    const sql = `do $$ declare r text; v_uid uuid := gen_random_uuid(); ${declare} begin ${NEW_ACCOUNT} ${body}; raise exception 'PROBE_END %', coalesce(r, ''); end $$;`;
     const { ok, text } = await runSql(sql);
     assert.equal(ok, false, 'le bloc doit toujours se terminer par une exception (transaction annulee)');
     let message = text;
@@ -174,6 +180,29 @@ describe('base : fiches (010, 013)', { skip: SKIP }, () => {
         assert.equal(p.code, '42501');
     });
 
+    // TST-02 : un visiteur n'ecrit rien (la base refuse : 42501), personne ne supprime une fiche
+    it('un visiteur ne renomme pas un produit, n’ajoute, ne renomme ni ne deplace une fiche (42501)', async () => {
+        const cases = {
+            'renommer un produit': `update products set name = name where distributor_id = '${DEMO}'`,
+            'ajouter une fiche': `insert into distributors (id, name, type, lat, lng) values ('itest-anon', 'Fiche itest', 'other', 43.49, -1.47)`,
+            'renommer une fiche': `update distributors set name = name where id = '${DEMO}'`,
+            'deplacer une fiche': `update distributors set lat = lat where id = '${DEMO}'`
+        };
+        for (const [label, sql] of Object.entries(cases)) {
+            const p = await probe(`${AS_ANON} ${sql}`);
+            assert.equal(p.reachedEnd, false, label);
+            assert.equal(p.code, '42501', label);
+        }
+    });
+
+    it('ni un visiteur ni un compte ne suppriment une fiche (aucune ligne touchee)', async () => {
+        for (const [label, role] of [['visiteur', AS_ANON], ['compte', AS_USER]]) {
+            const p = await probe(`${role} delete from distributors where id = '${DEMO}'; get diagnostics v_n = row_count; r := v_n::text`, 'v_n int;');
+            assert.ok(p.reachedEnd, `${label} : ${p.message}`);
+            assert.equal(p.result, '0', label);
+        }
+    });
+
     it('une fiche ajoutee par un compte ne peut pas se declarer « demo » (010)', async () => {
         const p = await probe(`${AS_USER}
             insert into distributors (id, name, type, lat, lng, is_user_added, added_by, is_demo)
@@ -298,14 +327,21 @@ describe('base : avis (016)', { skip: SKIP }, () => {
         assert.ok(res.moyenne >= 1 && res.moyenne <= 5);
     });
 
-    it('demo : chaque fiche de demo a ses avis annonces, aucune fiche reelle n\u2019a d\u2019avis de demo', async () => {
-        const [r] = await query(`select
-            count(*) filter (where coalesce(x.avis, 0) <> d.review_count) as ecarts,
-            count(*) filter (where x.avis > 0 and abs(x.moyenne - d.rating) > 0.1) as moyennes_hors,
-            (select count(*) from reviews rv join distributors f on f.id = rv.distributor_id where not f.is_demo and rv.user_id is null) as demo_sur_reel
-            from distributors d left join distributor_ratings x on x.distributor_id = d.id
+    // TST-02 : seuls les avis de demo (user_id null) sont compares a review_count / rating :
+    // un avis de membre sur une fiche de demo (ajoute ici, annule) ne fausse plus le test
+    it('demo : chaque fiche de demo a ses avis annonces, aucune fiche reelle n’a d’avis de demo', async () => {
+        const p = await probe(`insert into reviews (distributor_id, user_id, rating) values ('${DEMO}', ${USER}, 1);
+            select json_build_object(
+                'ecarts', count(*) filter (where coalesce(x.avis, 0) <> d.review_count),
+                'moyennes_hors', count(*) filter (where x.avis > 0 and abs(x.moyenne - d.rating) > 0.1),
+                'demo_sur_reel', (select count(*) from reviews rv join distributors f on f.id = rv.distributor_id where not f.is_demo and rv.user_id is null)
+            )::text into r
+            from distributors d
+            left join (select distributor_id, count(*)::int as avis, round(avg(rating)::numeric, 1) as moyenne
+                         from reviews where user_id is null group by distributor_id) x on x.distributor_id = d.id
             where d.is_demo and d.review_count > 0 and d.rating >= 1`);
-        assert.deepEqual(r, { ecarts: 0, moyennes_hors: 0, demo_sur_reel: 0 });
+        assert.ok(p.reachedEnd, p.message);
+        assert.deepEqual(JSON.parse(p.result), { ecarts: 0, moyennes_hors: 0, demo_sur_reel: 0 });
     });
 
     it('purge_user_reviews efface les avis du compte', async () => {

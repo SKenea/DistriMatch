@@ -44,7 +44,7 @@ Hors périmètre : réécrire les suites de tests, changer de bibliothèque.
   - Acceptance : un signal du compte de test E2E ne déclenche aucune notification app fermée ;
     aucun test fonctionnel n'envoie de vrai `log_event` à la base (y compris les tests qui créent
     leur propre contexte de navigateur) ; un test le vérifie.
-- [ ] TST-02 En tant que Stéphane, je veux que les tests de la base restent justes quoi que fassent
+- [x] TST-02 En tant que Stéphane, je veux que les tests de la base restent justes quoi que fassent
   les testeurs, et qu'ils prouvent qu'un visiteur ne peut ni vider ni modifier une fiche, afin de
   ne jamais bloquer une correction sur une fausse alerte — `TST-02.md`
   - Acceptance : `db.test.js` agit avec un compte jetable créé dans la transaction annulée, plus
