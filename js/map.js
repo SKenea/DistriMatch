@@ -8,7 +8,7 @@ import {
     userMarker, setUserMarker
 } from './state.js';
 import { showToast, getFilteredDistributors, centroidOf, escapeHTML, pinsNear, zoomFromDrag, hasValidCoords, sortByDistance } from './utils.js';
-import { getDistributorSummary, renderStatusRing, SUMMARIES_EVENT } from './summaries.js';
+import { getDistributorSummary, renderStatusRing, renderStatusSign, SUMMARIES_EVENT } from './summaries.js';
 import { isSheetLayout } from './fiche-sheet.js';
 
 // ============================================
@@ -213,7 +213,8 @@ export function updateMapMarkers(fitBounds = true) {
 
 // EPIC-T19 (maquette 2-feuille) : emoji sur fond blanc, anneau de la couleur
 // de l'etat qui se remplit selon le stock, pointille gris sans info, pale
-// au-dela de 2 h ; le favori est un petit coeur (la couleur dit l'etat).
+// au-dela de 2 h ; le favori est un petit coeur (la couleur dit l'etat) ;
+// Vide / En panne : petit signe en bas a droite (A11Y-03)
 function createDistributorIcon(d, isSubscribed) {
     const summary = getDistributorSummary(d);
     const soft = summary.state !== 'unknown' && !summary.fresh;
@@ -223,7 +224,7 @@ function createDistributorIcon(d, isSubscribed) {
     const fav = isSubscribed ? '<span class="distributor-pin-fav" aria-hidden="true">♥</span>' : '';
     return L.divIcon({
         className: 'distributor-marker-container',
-        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}${isLocated ? ' is-located' : ''}${isSelected ? ' is-selected' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}</div>`,
+        html: `<div class="distributor-pin is-${summary.state}${soft ? ' is-soft' : ''}${pending ? ' is-pending' : ''}${isLocated ? ' is-located' : ''}${isSelected ? ' is-selected' : ''}">${renderStatusRing(summary, 'distributor-pin-ring')}<span class="distributor-pin-emoji" aria-hidden="true">${escapeHTML(d.emoji || '📍')}</span>${fav}${renderStatusSign(summary)}</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
         popupAnchor: [0, -24]

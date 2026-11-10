@@ -993,6 +993,27 @@ test.describe('36. Etat du distributeur : menu, pastille, liste', () => {
         await expect(page.locator('.distributor-pin.is-unknown .distributor-pin-ring circle[stroke-dasharray="5 4"]').first()).toBeVisible();
     });
 
+    test('A11Y-03 : carte, Vide porte « − » et En panne « ! », rien sur En service ni Pas d’info', async ({ page }) => {
+        const ids = await page.evaluate(() => window.AppState.distributors.slice(0, 3).map(d => d.id));
+        const statusRows = [
+            { distributor_id: ids[0], state: 'empty', source: 'user', created_at: minutesAgoIso(10) },
+            { distributor_id: ids[1], state: 'broken', source: 'user', created_at: minutesAgoIso(10) },
+            { distributor_id: ids[2], state: 'working', source: 'user', created_at: minutesAgoIso(10) }
+        ];
+        await page.route(url => url.pathname.endsWith('/rest/v1/distributor_status'), r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(statusRows) }));
+        await page.route(url => url.pathname.endsWith('/rest/v1/product_availability'), r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+        await page.evaluate(async () => { const m = await import('./js/summaries.js'); await m.loadSignalSummaries(); });
+        await expect(page.locator('.distributor-pin.is-empty .distributor-pin-sign')).toHaveText('−');
+        await expect(page.locator('.distributor-pin.is-broken .distributor-pin-sign')).toHaveText('!');
+        await expect(page.locator('.distributor-pin.is-working .distributor-pin-sign')).toHaveCount(0);
+        await expect(page.locator('.distributor-pin.is-unknown .distributor-pin-sign')).toHaveCount(0);
+        // en bas a droite de la pastille
+        const box = await page.locator('.distributor-pin.is-broken').boundingBox();
+        const sign = await page.locator('.distributor-pin.is-broken .distributor-pin-sign').boundingBox();
+        expect(sign.y).toBeGreaterThan(box.y + box.height / 2);
+        expect(sign.x).toBeGreaterThan(box.x + box.width / 2);
+    });
+
     test('liste : anneau autour de la vignette et « En service · 1 sur N dispo »', async ({ page }) => {
         const ids = await page.evaluate(() => {
             const ok = (p) => p && Number.isInteger(Number(p.id));

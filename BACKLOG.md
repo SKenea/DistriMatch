@@ -41,7 +41,7 @@ Hors périmètre : refonte visuelle, essai avec un vrai lecteur d'écran.
   - Acceptance : en 390 px, aucune cible sous 44 px en mode ajout (bandeau de placement, bulle,
     ligne produit), sur un produit suivi et sur le bandeau de notification ; sur ordinateur, le
     bandeau de notification passe au-dessus de la fiche ouverte.
-- [ ] A11Y-03 En tant que testeur qui distingue mal les couleurs, je veux reconnaître Vide et
+- [x] A11Y-03 En tant que testeur qui distingue mal les couleurs, je veux reconnaître Vide et
   En panne sur la carte, afin de savoir où aller sans ouvrir chaque fiche — `A11Y-03.md`
   (**forme du signe à valider par Stéphane sur capture** avant d'écrire la fiche)
   - Acceptance : un petit signe dans la pastille de la carte pour Vide et pour En panne, différents

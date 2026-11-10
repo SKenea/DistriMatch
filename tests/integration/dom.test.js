@@ -2054,3 +2054,25 @@ describe('Notifications bien affichées (NOTIF-07)', () => {
         NotificationQueue.history = [];
     });
 });
+
+// ============================================
+// PASTILLES : VIDE / EN PANNE SANS LA COULEUR (A11Y-03)
+// ============================================
+const { renderStatusSign } = await import('../../js/summaries.js');
+
+describe('A11Y-03 : signe de la pastille (Vide / En panne reconnaissables sans la couleur)', () => {
+    it('Vide « − », En panne « ! », caches aux lecteurs d\'ecran ; En service et Pas d\'info sans signe', () => {
+        assert.equal(typeof renderStatusSign, 'function', 'renderStatusSign absente de summaries.js');
+        const empty = renderStatusSign({ state: 'empty', fill: 1 });
+        const broken = renderStatusSign({ state: 'broken', fill: 1 });
+        assert.match(empty, /class="distributor-pin-sign is-empty"/);
+        assert.match(empty, />−</);
+        assert.match(broken, /class="distributor-pin-sign is-broken"/);
+        assert.match(broken, />!</);
+        assert.match(empty, /aria-hidden="true"/);
+        assert.match(broken, /aria-hidden="true"/);
+        assert.equal(renderStatusSign({ state: 'working', fill: 0.5 }), '');
+        assert.equal(renderStatusSign({ state: 'unknown', fill: 0 }), '');
+        assert.equal(renderStatusSign(null), '');
+    });
+});
