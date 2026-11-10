@@ -32,7 +32,7 @@ Méthode : une fiche par story dans `docs/stories/<ID>.md`, exécutée par un mo
 (`/story <ID>`), une PR à la fois, dans l'ordre SCR-01, TST-01, TST-02, TST-03.
 Hors périmètre : réécrire les suites de tests, changer de bibliothèque.
 
-- [ ] SCR-01 En tant que testeur, je veux que l'app utilise toujours la même version de ses
+- [x] SCR-01 En tant que testeur, je veux que l'app utilise toujours la même version de ses
   bibliothèques, afin qu'elle ne casse pas un soir sans que personne n'ait rien changé — `SCR-01.md`
   - Acceptance : supabase-js chargée en version exacte (plus `@2`) ; Leaflet (script et feuille de
     style) et supabase-js avec une empreinte d'intégrité et `crossorigin="anonymous"` ; un test

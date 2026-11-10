@@ -44,7 +44,7 @@
     <link rel="stylesheet" href="css/panels.css?v=43">
     <link rel="stylesheet" href="css/feed-and-nav.css?v=35">
     <link rel="stylesheet" href="css/overlays.css?v=76">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
 </head>
 <body>
     <!-- Overlay geolocalisation (pre-permission prompt). Accueil EPIC-T25 « Ton
@@ -1180,8 +1180,9 @@
     <div id="notification-banner-region" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- SCR-01 : versions exactes + empreinte d'integrite (pour changer de version : CLAUDE.md, Stack) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js" integrity="sha384-gnyZit14c5lnGcarmA166QQjjJXpucw25ogZXuwH3HxxY904zHkBqmxVpelsPorb" crossorigin="anonymous"></script>
     <script src="https://js.hcaptcha.com/1/api.js?render=explicit" async defer></script>
     <!-- Cache-busting des modules ES (voir CLAUDE.md, section Cache-busting).
          Un seul numero de version s'applique a app.js ET a tous ses imports via

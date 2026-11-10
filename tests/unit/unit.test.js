@@ -1125,6 +1125,40 @@ describe('cache-busting : import map de index.html', () => {
 });
 
 // ============================================
+// CDN : VERSIONS EXACTES ET EMPREINTES (SCR-01)
+// ============================================
+// Une bibliothèque en version flottante (@2) change sans commit ; une empreinte
+// sha384 garantit que le navigateur exécute le fichier testé. hCaptcha : exclu
+// (fichier sans version, une empreinte le casserait).
+
+describe('CDN : versions exactes et empreintes d\'integrite (SCR-01)', () => {
+    const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    const tags = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="(https:\/\/[^"]+)"[^>]*>/g)]
+        .filter(m => !m[1].startsWith('https://js.hcaptcha.com/'))
+        .filter(m => m[0].startsWith('<script') || /rel="stylesheet"/.test(m[0]))
+        .filter(m => !m[1].startsWith('https://fonts.googleapis.com/'));
+
+    it('index.html charge bien Leaflet et supabase-js depuis un CDN', () => {
+        const urls = tags.map(m => m[1]).join('\n');
+        assert.match(urls, /leaflet@/, 'Leaflet introuvable');
+        assert.match(urls, /@supabase\/supabase-js@/, 'supabase-js introuvable');
+    });
+
+    it('chaque bibliotheque externe a une version exacte x.y.z', () => {
+        for (const [, url] of tags) {
+            assert.match(url, /@\d+\.\d+\.\d+\//, `version flottante ou absente : ${url}`);
+        }
+    });
+
+    it('chaque bibliotheque externe a une empreinte sha384 et crossorigin="anonymous"', () => {
+        for (const [tag, url] of tags) {
+            assert.match(tag, /\bintegrity="sha384-[A-Za-z0-9+/=]{64}"/, `empreinte absente : ${url}`);
+            assert.match(tag, /\bcrossorigin="anonymous"/, `crossorigin absent : ${url}`);
+        }
+    });
+});
+
+// ============================================
 // UTILS - FONCTIONS PURES
 // ============================================
 
