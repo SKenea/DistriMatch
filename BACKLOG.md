@@ -19,6 +19,65 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R7 Tests et bibliothèques fiables pendant le POC (lots 7 Tests et 8 Scripts, revue du 2026-10-21)
+Objectif : pendant le POC, les tests ne dérangent pas les testeurs et ne faussent pas les chiffres,
+ils restent justes quoi que fassent les testeurs, ils couvrent les gestes clés, et l'app ne change
+pas toute seule quand une bibliothèque publie une nouvelle version.
+Valeur : des chiffres d'audience propres pour juger le POC, pas de notification parasite, pas de
+fausse alerte qui bloque une correction, pas de panne venue d'ailleurs.
+**Décision Stéphane 2026-11-10** : même tri que l'accessibilité, on ne garde que les 4 stories qui
+protègent le POC. Les autres constats des deux lots (38 au total) sont **mis de côté jusqu'après le
+POC** (liste ci-dessous) ; 2 sont sans objet.
+Méthode : une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle medium
+(`/story <ID>`), une PR à la fois, dans l'ordre SCR-01, TST-01, TST-02, TST-03.
+Hors périmètre : réécrire les suites de tests, changer de bibliothèque.
+
+- [ ] SCR-01 En tant que testeur, je veux que l'app utilise toujours la même version de ses
+  bibliothèques, afin qu'elle ne casse pas un soir sans que personne n'ait rien changé — `SCR-01.md`
+  - Acceptance : supabase-js chargée en version exacte (plus `@2`) ; Leaflet (script et feuille de
+    style) et supabase-js avec une empreinte d'intégrité et `crossorigin="anonymous"` ; un test
+    rapide échoue si une bibliothèque externe (hors hCaptcha) est flottante ou sans empreinte ;
+    CLAUDE.md dit comment changer de version (et cite la migration 034, absente de la liste).
+- [ ] TST-01 En tant que testeur abonné à une fiche, je veux ne recevoir que de vraies alertes, et
+  en tant que Stéphane je veux des chiffres d'audience sans visites de robots, afin de juger le POC
+  sur du réel — `TST-01.md`
+  - Acceptance : un signal du compte de test E2E ne déclenche aucune notification app fermée ;
+    aucun test fonctionnel n'envoie de vrai `log_event` à la base (y compris les tests qui créent
+    leur propre contexte de navigateur) ; un test le vérifie.
+- [ ] TST-02 En tant que Stéphane, je veux que les tests de la base restent justes quoi que fassent
+  les testeurs, et qu'ils prouvent qu'un visiteur ne peut ni vider ni modifier une fiche, afin de
+  ne jamais bloquer une correction sur une fausse alerte — `TST-02.md`
+  - Acceptance : `db.test.js` agit avec un compte jetable créé dans la transaction annulée, plus
+    avec le plus ancien vrai compte ; la cohérence des avis de démo ne compte que les avis de démo ;
+    de nouveaux tests montrent que l'anonyme ne peut ni insérer, ni modifier, ni retirer un produit,
+    ni modifier, ni supprimer une fiche.
+- [ ] TST-03 En tant que nouveau testeur, je veux que mon premier lancement et l'ajout d'un
+  distributeur marchent toujours, afin que le POC ne s'arrête pas dès le premier geste — `TST-03.md`
+  - Acceptance : un test fonctionnel couvre « Voir autour de moi » puis l'accord de localisation
+    jusqu'à la carte ; un test couvre l'ajout d'un distributeur par un membre (un seul envoi même en
+    touchant deux fois « Ajouter ») ; le test E2E « la carte se charge » échoue si les fiches ne
+    viennent pas de la vraie base.
+
+**À faire juste avant de purger la démo** (`purge_demo_data()`) : rendre les tests indépendants des
+fiches de démo (tests n° 8 : fonctionnels sur une fixture locale, E2E sur une fiche réelle de test,
+job de démo et avis de démo plus exigés), sinon toute la suite passe au rouge le jour de la purge.
+
+**Mis de côté jusqu'après le POC** (n° = constats du lot dans la revue ; T = Tests, S = Scripts) :
+- Tests qui vérifient mal ce qu'ils annoncent : délai de 50 s ignoré, sélecteur d'attente, assertions
+  toujours vraies, HTML de test au lieu d'index.html, annulation vérifiée trop tôt, renouvellement de
+  session non vérifié (T11, T24, T13, T14, T15, T22, T25).
+- Parcours non couverts : favori sans connexion, notifications app fermée (resynchro, désabonnement),
+  purge des favoris disparus, menu d'état mesuré en accessibilité, connexion par e-mail et vraie
+  déconnexion, favoris après rechargement, « Effacer mes données » complet, QR scanné connecté
+  (T4, T6, T7, T12, T23, T26, T27, T28).
+- Organisation des tests sur le site en ligne : nettoyage préalable, un seul worker, sondes de
+  sécurité (T9, T18, T20).
+- Scripts et outils : import OSM, `deploy-push.mjs` (secret et clé publique), `supabase-sql.mjs`
+  tronqué, `.mcp.json` en `@latest`, réglages Claude du projet (S3, S5, S9, S6, S7, S4).
+- Manifest verrouillé en portrait : accessibilité, avec les constats mis de côté d'EPIC-R6 (S2).
+
+**Sans objet** : boucle de la page 404 sur `distrimatch.pages.dev` (S8, S10), adresse retirée le 2026-11-05.
+
 ### EPIC-R6 Lisible et touchable par tous (lot 6 Accessibilité, revue du 2026-10-21)
 Objectif : tout ce qui s'affiche se lit, même au soleil ou avec une vue faible, tout ce qui se touche
 se touche du premier coup, et l'état d'un distributeur se reconnaît sur la carte sans la couleur.
