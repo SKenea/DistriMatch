@@ -2069,7 +2069,8 @@ button.product-row-main:focus-visible { outline: 2px solid var(--primary); outli
 }
 
 /* A11Y-03 : signe de l'etat sans la couleur (Vide « − », En panne « ! »), en bas a droite (le haut
-   est au coeur des favoris) ; meme rond que le coeur, couleurs de RING_COLORS (summaries.js) */
+   est au coeur des favoris) ; meme rond que le coeur ; rouge de RING_COLORS (summaries.js), orange plus fonce
+   (#C2410C) car le blanc sur #EA580C ne fait que 3,56:1, sous le 4,5:1 d'A11Y-01 */
 .distributor-pin-sign {
     position: absolute;
     bottom: -3px;
