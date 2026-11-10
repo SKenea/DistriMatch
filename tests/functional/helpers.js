@@ -26,6 +26,16 @@ export async function captureEvents(page, status = 200) {
     return events;
 }
 
+// TST-01 : tout navigateur cree par un test passe par ici (jamais browser.newContext
+// directement) : la mesure d'audience est bloquee pour tout le contexte, aucun
+// vrai evenement n'atteint la table events de production (test garde-fou dans
+// tests/unit/unit.test.js).
+export async function newTestContext(browser, options = {}) {
+    const context = await browser.newContext(options);
+    await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
+    return context;
+}
+
 // ============================================
 // HELPERS
 // ============================================
@@ -44,6 +54,9 @@ export async function passWelcome(page) {
 }
 
 export async function setupApp(page, context) {
+    // TST-01 : contexte entier (une page ouverte ensuite n'envoie rien non plus) ;
+    // captureEvents(page) garde la priorite pour cette page.
+    await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
     await captureEvents(page);
     // EPIC-T25 : pas d'invitation « même app fermée » au premier coeur, sauf
     // dans les tests qui la verifient (ils retirent la cle).

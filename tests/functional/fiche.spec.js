@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { BASE_URL, EVENTS_ROUTE, captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeEditWrites, routeSignals, minutesAgoIso, RHYTHM_ROUTE, kpiFixture, routeKpi, collectTextIssues, demoDistributorsFixture, routeDistributors } from './helpers.js';
+import { BASE_URL, EVENTS_ROUTE, captureEvents, setupApp, openDistModal, loginForTest, RPC_ROUTE, openSignalableFiche, signalFirstProduct, chooseMachineState, routeEditWrites, routeSignals, minutesAgoIso, RHYTHM_ROUTE, kpiFixture, routeKpi, collectTextIssues, demoDistributorsFixture, routeDistributors, newTestContext } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -554,7 +554,7 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
     test("visiteur : ouvre la fiche, l'encadre de connexion mis en avant, memorise la source, nettoie l'URL", async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
         const events = await captureEvents(page);
@@ -580,7 +580,7 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
     });
 
     test('QR en visiteur sur une machine sans produit : encadre de connexion, pas de boutons d\u2019etat', async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         await page.goto(BASE_URL);
@@ -595,7 +595,7 @@ test.describe('13bis. Deep link QR (&confirm=1&src=qr)', () => {
     });
 
     test('fermer la fiche du QR puis recharger : adresse propre, la fiche ne revient pas, un seul scan (CNX-06)', async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         const events = await captureEvents(page);
@@ -789,7 +789,7 @@ test.describe('26. Une chose depliee a la fois', () => {
 
 test.describe('31. Fiches de démonstration', () => {
     test('tag « Démo » dans le panneau, la fiche et « À propos » de la fiche fictive seulement ; lisible en 390 px', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         const page = await context.newPage();
         await routeDistributors(page, demoDistributorsFixture());
         await setupApp(page, context);

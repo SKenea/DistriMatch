@@ -1397,3 +1397,31 @@ describe('base : signaux de demo reconnaissables sans device_hash (NOTIF-02, 034
         assert.equal(p.code, '42501');
     });
 });
+
+// ============================================
+// NOTIFICATIONS APP FERMEE : LE COMPTE DE TEST E2E NE NOTIFIE PERSONNE (TST-01, 035)
+// ============================================
+// pg_net met chaque appel vers push-notify dans net.http_request_queue, dans la
+// transaction : on compte la file avant / apres chaque signal, puis tout est annule.
+describe('base : un signal du compte de test E2E ne part pas vers push-notify (TST-01, 035)', { skip: SKIP }, () => {
+    it('compte de test E2E : signal enregistre, aucun appel ; autre compte : un appel', async () => {
+        const p = await probe(`
+            select id into v_uid from auth.users where raw_app_meta_data->>'e2e' = 'true';
+            n0 := (select count(*) from net.http_request_queue);
+            ${AS_USER} a := ${signal('working')};
+            reset role;
+            n1 := (select count(*) from net.http_request_queue);
+            v_uid := (select id from auth.users where coalesce(raw_app_meta_data->>'e2e', '') <> 'true' order by created_at limit 1);
+            ${AS_USER} b := ${signal('broken')};
+            reset role;
+            n2 := (select count(*) from net.http_request_queue);
+            r := json_build_object('e2e', a->'inserted', 'autre', b->'inserted', 'appels_e2e', n1 - n0, 'appels_autre', n2 - n1)::text`,
+            'n0 int; n1 int; n2 int; a jsonb; b jsonb;');
+        assert.ok(p.reachedEnd, p.message);
+        const res = JSON.parse(p.result);
+        assert.equal(res.e2e, 1, 'le signal du compte de test est bien enregistre');
+        assert.equal(res.autre, 1, 'le signal de l’autre compte est bien enregistre');
+        assert.equal(res.appels_autre, 1, 'un signal ordinaire part vers push-notify (Vault en place)');
+        assert.equal(res.appels_e2e, 0, 'le signal du compte de test E2E ne doit notifier personne');
+    });
+});
