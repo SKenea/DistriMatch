@@ -4,6 +4,7 @@
 
 import { AppState, NotificationPrefs, NotificationQueue, NOTIFICATION_TYPES } from './state.js';
 import {
+    quietTimeToMinutes, formatQuietTime, resolveQuietRange, isInQuietRange,
     diffGeofence, escapeHTML, showToast, timeAgo,
     saveNotificationPrefs, saveNotificationQueue, normalizeName
 } from './utils.js';
@@ -19,14 +20,10 @@ import { syncPushSubscription, refreshPushSettings, isPushActive } from './push.
 export function isQuietHours() {
     if (!NotificationPrefs.quietHours.enabled) return false;
 
+    // NOTIF-06 : a la minute pres (« HH:MM » ou ancien nombre d'heures), valeur abimee = 22:00 / 08:00
     const now = new Date();
-    const hour = now.getHours();
-    const { start, end } = NotificationPrefs.quietHours;
-
-    if (start > end) {
-        return hour >= start || hour < end;
-    }
-    return hour >= start && hour < end;
+    const { start, end } = resolveQuietRange(NotificationPrefs.quietHours);
+    return isInQuietRange(start, end, now.getHours() * 60 + now.getMinutes());
 }
 
 // NOTIF-03 : deux delais d'1 h distincts par distributeur. 'change' (vide, en panne,
@@ -181,9 +178,9 @@ function triggerProximityNotification(distributor, distanceMeters) {
 export function buildFavoriteMessage(distributorName, event) {
     const product = event.product || 'Un produit';
     switch (event.type) {
-        case 'broken': return `${distributorName} a été signalée en panne`;
-        case 'working': return `${distributorName} fonctionne de nouveau`;
-        case 'empty': return `${distributorName} a été signalée vide`;
+        case 'broken': return `${distributorName} : signalé en panne`;
+        case 'working': return `${distributorName} : de nouveau en service`;
+        case 'empty': return `${distributorName} : signalé vide`;
         case 'stock': return `${product} vu dispo chez ${distributorName}`;
         default: return `${product} de nouveau vu dispo chez ${distributorName}`;
     }
@@ -482,14 +479,40 @@ function updateFollowedProductsList() {
 // PARAMETRES UI
 // ============================================
 
+// NOTIF-06 : chaque reglage est enregistre des qu'il change (plus de bouton « Sauvegarder » :
+// Retour ou Echap perdaient les changements). Ecouteurs poses une seule fois.
+const AUTO_SAVED_SETTINGS = ['notif-enabled', 'quiet-hours-enabled', 'quiet-start', 'quiet-end', 'geofence-enabled', 'geofence-radius'];
+
+function wireNotificationSettings(settingsView) {
+    if (settingsView.dataset.wired) return;
+    settingsView.dataset.wired = '1';
+    AUTO_SAVED_SETTINGS.forEach(function wireSetting(id) {
+        document.getElementById(id)?.addEventListener('change', function saveSetting() { saveNotificationSettingsFromUI(); });
+    });
+}
+
+// Heure « HH:MM » d'un champ, minutes comprises. Vide ou incomplete : l'heure precedente
+// revient dans le champ et on le dit (jamais de NaN enregistre ni envoye au serveur).
+function readQuietTimeInput(id, previousMinutes) {
+    const input = document.getElementById(id);
+    const minutes = quietTimeToMinutes(input.value);
+    if (minutes !== null) return formatQuietTime(minutes);
+    const kept = formatQuietTime(previousMinutes);
+    input.value = kept;
+    showToast(`Heure incomplète : on garde ${kept}`, 'info');
+    return kept;
+}
+
 export function openNotificationSettings() {
     const settingsView = document.getElementById('notification-settings');
     if (!settingsView) return;
+    wireNotificationSettings(settingsView);
 
     document.getElementById('notif-enabled').checked = NotificationPrefs.enabled;
     document.getElementById('quiet-hours-enabled').checked = NotificationPrefs.quietHours.enabled;
-    document.getElementById('quiet-start').value = `${String(NotificationPrefs.quietHours.start).padStart(2, '0')}:00`;
-    document.getElementById('quiet-end').value = `${String(NotificationPrefs.quietHours.end).padStart(2, '0')}:00`;
+    const quiet = resolveQuietRange(NotificationPrefs.quietHours);
+    document.getElementById('quiet-start').value = formatQuietTime(quiet.start);
+    document.getElementById('quiet-end').value = formatQuietTime(quiet.end);
     document.getElementById('geofence-enabled').checked = NotificationPrefs.geofence.enabled;
     document.getElementById('geofence-radius').value = NotificationPrefs.geofence.radius;
     document.getElementById('radius-value').textContent = `${NotificationPrefs.geofence.radius / 1000} km`;
@@ -504,10 +527,9 @@ export function saveNotificationSettingsFromUI() {
     NotificationPrefs.enabled = document.getElementById('notif-enabled').checked;
     NotificationPrefs.quietHours.enabled = document.getElementById('quiet-hours-enabled').checked;
 
-    const startTime = document.getElementById('quiet-start').value;
-    const endTime = document.getElementById('quiet-end').value;
-    NotificationPrefs.quietHours.start = parseInt(startTime.split(':')[0]);
-    NotificationPrefs.quietHours.end = parseInt(endTime.split(':')[0]);
+    const previous = resolveQuietRange(NotificationPrefs.quietHours);
+    NotificationPrefs.quietHours.start = readQuietTimeInput('quiet-start', previous.start);
+    NotificationPrefs.quietHours.end = readQuietTimeInput('quiet-end', previous.end);
 
     NotificationPrefs.geofence.enabled = document.getElementById('geofence-enabled').checked;
     NotificationPrefs.geofence.radius = parseInt(document.getElementById('geofence-radius').value);
@@ -515,7 +537,6 @@ export function saveNotificationSettingsFromUI() {
     saveNotificationPrefs();
     syncPushSubscription();
     refreshPushSettings();   // NOTIF-05 : « Notifications activées » coupe aussi l'app fermee
-    showToast('Paramètres sauvegardés', 'success');
 }
 
 export function updateRadiusDisplay() {

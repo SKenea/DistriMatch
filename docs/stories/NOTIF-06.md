@@ -107,7 +107,7 @@ l'ouverture des réglages par `(await import('./js/notifications.js')).openNotif
 
 **Contrôles** (chaque commande doit trouver ce qui est indiqué, sinon s'arrêter) :
 ```bash
-grep -c "    calculateDistance, escapeHTML, showToast, timeAgo," js/notifications.js           # 1
+grep -c "    diffGeofence, escapeHTML, showToast, timeAgo," js/notifications.js           # 1
 grep -c "    const { start, end } = NotificationPrefs.quietHours;" js/notifications.js           # 1 (isQuietHours)
 grep -c "    if (!settingsView) return;" js/notifications.js                                     # 1 (openNotificationSettings)
 grep -c "padStart(2, '0')}:00\`;" js/notifications.js                                           # 2
@@ -194,12 +194,12 @@ Si `grep -n "quietHours" js/*.js` montre une 12e ligne (par exemple une minuteri
 
 2. **js/notifications.js** — importer les nouvelles fonctions. Avant :
    ```js
-       calculateDistance, escapeHTML, showToast, timeAgo,
+       diffGeofence, escapeHTML, showToast, timeAgo,
    ```
    Après :
    ```js
        quietTimeToMinutes, formatQuietTime, resolveQuietRange, isInQuietRange,
-       calculateDistance, escapeHTML, showToast, timeAgo,
+       diffGeofence, escapeHTML, showToast, timeAgo,
    ```
 
 3. **js/notifications.js**, `isQuietHours` — comparer à la minute. Avant :

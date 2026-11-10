@@ -42,7 +42,7 @@ import {
 } from './activity.js';
 
 import {
-    startGeofenceMonitoring, processQueuedNotifications, openNotificationSettings, saveNotificationSettingsFromUI, updateRadiusDisplay, promptAddProductFollow, unfollowProduct, openNotificationsView, updateNotificationsBadge, clearAllNotifications
+    startGeofenceMonitoring, processQueuedNotifications, openNotificationSettings, updateRadiusDisplay, promptAddProductFollow, unfollowProduct, openNotificationsView, updateNotificationsBadge, clearAllNotifications
 } from './notifications.js';
 
 import {
@@ -395,7 +395,6 @@ window.switchView = switchView;
 // Notifications
 window.updateRadiusDisplay = updateRadiusDisplay;
 window.promptAddProductFollow = promptAddProductFollow;
-window.saveNotificationSettingsFromUI = saveNotificationSettingsFromUI;
 window.unfollowProduct = unfollowProduct;
 window.clearAllNotifications = clearAllNotifications;
 

@@ -2522,3 +2522,86 @@ describe('iPad reconnu : guide écran d’accueil et indice (NOTIF-05)', () => {
         assert.equal(shouldHintHomeScreenFavorites(IPAD_AS_MAC, true, 0, false, 0), false);
     });
 });
+
+// ============================================
+// REGLAGES ET TEXTES DES NOTIFICATIONS (NOTIF-06)
+// ============================================
+
+const { quietTimeToMinutes, formatQuietTime, resolveQuietRange, isInQuietRange, quietHoursForServer } = await import('../../js/utils.js');
+const { NOTIFICATION_TYPES } = await import('../../js/state.js');
+
+describe('Heures calmes a la minute (NOTIF-06)', () => {
+    it('« HH:MM » et ancien nombre d’heures acceptes ; vide, null, NaN refuses', () => {
+        assert.equal(quietTimeToMinutes('22:30'), 1350);
+        assert.equal(quietTimeToMinutes('07:45'), 465);
+        assert.equal(quietTimeToMinutes('22:30:00'), 1350);
+        assert.equal(quietTimeToMinutes(22), 1320);
+        for (const bad of ['', null, undefined, NaN, '24:00', '7:45', 23.5, 'abc']) assert.equal(quietTimeToMinutes(bad), null, String(bad));
+        assert.equal(formatQuietTime(465), '07:45');
+        assert.deepEqual(resolveQuietRange({ start: null, end: NaN }), { start: 1320, end: 480 });
+        assert.deepEqual(resolveQuietRange({ start: '22:30', end: 8 }), { start: 1350, end: 480 });
+    });
+
+    it('plage qui passe minuit, fin exclue', () => {
+        assert.equal(isInQuietRange(1350, 465, 1349), false);
+        assert.equal(isInQuietRange(1350, 465, 1350), true);
+        assert.equal(isInQuietRange(1350, 465, 464), true);
+        assert.equal(isInQuietRange(1350, 465, 465), false);
+        assert.equal(isInQuietRange(840, 960, 900), true);
+        assert.equal(isInQuietRange(600, 600, 600), false);
+    });
+
+    it('isQuietHours a la minute pres, et 22:00 - 08:00 si le reglage est abime', () => {
+        const saved = { ...NotificationPrefs.quietHours };
+        const at = (hour, minute) => { mock.timers.reset(); mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 8, hour, minute) }); };
+        try {
+            NotificationPrefs.quietHours = { enabled: true, start: '22:30', end: '07:45' };
+            at(22, 15); assert.equal(isQuietHours(), false);
+            at(22, 30); assert.equal(isQuietHours(), true);
+            at(7, 44); assert.equal(isQuietHours(), true);
+            at(7, 45); assert.equal(isQuietHours(), false);
+            NotificationPrefs.quietHours = { enabled: true, start: null, end: null };
+            at(23, 0); assert.equal(isQuietHours(), true);
+            at(9, 0); assert.equal(isQuietHours(), false);
+        } finally {
+            mock.timers.reset();
+            NotificationPrefs.quietHours = saved;
+        }
+    });
+
+    it('serveur : heures entieres qui couvrent la plage choisie, jamais de valeur vide', () => {
+        assert.deepEqual(quietHoursForServer({ enabled: true, start: '22:30', end: '07:45' }), { start: 22, end: 8 });
+        assert.deepEqual(quietHoursForServer({ enabled: true, start: 22, end: 8 }), { start: 22, end: 8 });
+        assert.deepEqual(quietHoursForServer({ enabled: true, start: '23:30', end: '23:50' }), { start: 23, end: 0 });
+        assert.deepEqual(quietHoursForServer({ enabled: true, start: null, end: 'x' }), { start: 22, end: 8 });
+        assert.deepEqual(quietHoursForServer({ enabled: false, start: '22:30', end: '07:45' }), { start: null, end: null });
+        const saved = { ...NotificationPrefs.quietHours };
+        try {
+            NotificationPrefs.quietHours = { enabled: true, start: '22:30', end: '07:45' };
+            const fakeSub = { toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'p', auth: 'a' } }) };
+            const params = subscriptionParams(fakeSub);
+            assert.equal(params.p_quiet_start, 22);
+            assert.equal(params.p_quiet_end, 8);
+        } finally {
+            NotificationPrefs.quietHours = saved;
+        }
+    });
+});
+
+describe('Textes des notifications : le vocabulaire de la fiche (NOTIF-06)', () => {
+    it('ni « machine », ni « fonctionne », ni « plein », ni « signalée »', () => {
+        const titles = Object.values(NOTIFICATION_TYPES).map(t => t.title);
+        const messages = ['empty', 'broken', 'working', 'stock', 'restock'].map(type => buildFavoriteMessage('La Ferme', { type, product: 'Œufs' }));
+        const index = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+        const start = index.indexOf('id="notifications-empty"');
+        const empty = index.slice(start, index.indexOf('</p>', start)).replace(/<[^>]+>/g, ' ');
+        for (const text of [...titles, ...messages, empty]) assert.doesNotMatch(text, /machine|fonctionne|plein|signalée/i, text);
+        assert.match(empty, /vide, en panne ou de nouveau en service/);
+        assert.equal(NOTIFICATION_TYPES.empty.title, 'Distributeur signalé vide');
+        assert.equal(NOTIFICATION_TYPES.working.title, 'De nouveau en service');
+        assert.equal(buildFavoriteMessage('La Ferme', { type: 'empty' }), 'La Ferme : signalé vide');
+        assert.equal(buildFavoriteMessage('La Ferme', { type: 'broken' }), 'La Ferme : signalé en panne');
+        assert.equal(buildFavoriteMessage('La Ferme', { type: 'working' }), 'La Ferme : de nouveau en service');
+        assert.equal(buildPushMessage('La Ferme', { type: 'working' }), 'La Ferme : de nouveau en service');
+    });
+});

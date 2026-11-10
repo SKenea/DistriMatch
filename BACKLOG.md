@@ -51,7 +51,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   — `NOTIF-05.md`
   - Acceptance : abonnement recréé s'il a disparu, resynchronisé après coupure ; interrupteurs
     cohérents ; permission demandée après un toucher seulement ; iPad reconnu.
-- [ ] NOTIF-06 En tant que membre, je veux que mes réglages soient gardés et les textes cohérents,
+- [x] NOTIF-06 En tant que membre, je veux que mes réglages soient gardés et les textes cohérents,
   afin de comprendre mes notifications — `NOTIF-06.md` (**textes à valider par Stéphane**)
   - Acceptance : minutes des heures calmes gardées, champ vide refusé ; réglages enregistrés sans
     « Sauvegarder » ; vocabulaire Vide / En panne / En service, sans « Machine ».

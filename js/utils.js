@@ -368,6 +368,48 @@ export function loadNotificationPrefs() {
     if (parsed) Object.assign(NotificationPrefs, parsed);
 }
 
+// Heures calmes (NOTIF-06). Une heure est « HH:MM » (valeur du champ des reglages) ou,
+// pour les reglages enregistres avant, un nombre d'heures entier (22). Rend les minutes
+// depuis minuit (0..1439), ou null si la valeur est absente ou abimee (null, NaN, texte).
+const QUIET_DEFAULT_START = 22 * 60;
+const QUIET_DEFAULT_END = 8 * 60;
+
+export function quietTimeToMinutes(value) {
+    if (typeof value === 'number') return Number.isInteger(value) && value >= 0 && value <= 23 ? value * 60 : null;
+    const match = /^(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(String(value ?? ''));
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    return hours <= 23 && minutes <= 59 ? hours * 60 + minutes : null;
+}
+
+export function formatQuietTime(minutes) {
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+// Debut et fin en minutes ; valeur abimee = 22:00 / 08:00 (valeurs par defaut).
+export function resolveQuietRange(quiet) {
+    return {
+        start: quietTimeToMinutes(quiet?.start) ?? QUIET_DEFAULT_START,
+        end: quietTimeToMinutes(quiet?.end) ?? QUIET_DEFAULT_END
+    };
+}
+
+// Vrai si minuteOfDay est dans [debut, fin[ ; la plage peut passer minuit ; debut = fin : jamais.
+export function isInQuietRange(startMinutes, endMinutes, minuteOfDay) {
+    if (startMinutes > endMinutes) return minuteOfDay >= startMinutes || minuteOfDay < endMinutes;
+    return minuteOfDay >= startMinutes && minuteOfDay < endMinutes;
+}
+
+// Le serveur (push-notify, migration 024) ne connait que des heures entieres : on lui envoie
+// la plage qui couvre celle choisie (debut a l'heure d'avant, fin a l'heure d'apres), pour ne
+// jamais notifier app fermee pendant les heures calmes. null / null = pas d'heures calmes.
+export function quietHoursForServer(quiet) {
+    if (!quiet?.enabled) return { start: null, end: null };
+    const { start, end } = resolveQuietRange(quiet);
+    return { start: Math.floor(start / 60), end: Math.ceil(end / 60) % 24 };
+}
+
 export function saveNotificationQueue() { saveStore(NOTIFICATION_QUEUE_KEY, NotificationQueue); }
 
 export function loadNotificationQueue() {

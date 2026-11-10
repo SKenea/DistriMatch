@@ -129,13 +129,13 @@ export function setSupabaseClient(client) { supabaseClient = client; }
 
 export const NOTIFICATION_TYPES = {
     proximity: { icon: '📍', title: 'Tu es proche !', template: '{name} est a {distance}m de toi' },
-    stock: { icon: '📦', title: 'Produit disponible !', template: '{product} est dispo chez {name}' },
+    stock: { icon: '📦', title: 'Produit suivi dispo', template: '{product} est dispo chez {name}' },
     promo: { icon: '🎉', title: 'Promo !', template: 'Offre speciale chez {name}' },
     // Changements sur une machine en favori (js/favorites-watch.js)
-    empty: { icon: '🚫', title: 'Machine signalée vide' },
-    broken: { icon: '⚠️', title: 'Machine signalée en panne' },
-    restock: { icon: '✅', title: 'De nouveau disponible' },
-    working: { icon: '✅', title: 'Machine de nouveau en service' }
+    empty: { icon: '🚫', title: 'Distributeur signalé vide' },
+    broken: { icon: '⚠️', title: 'Distributeur signalé en panne' },
+    restock: { icon: '✅', title: 'De nouveau dispo' },
+    working: { icon: '✅', title: 'De nouveau en service' }
 };
 
 export const GREETING_MESSAGES = {
