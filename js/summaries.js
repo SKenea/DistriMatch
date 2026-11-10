@@ -108,3 +108,13 @@ export function renderStatusRing(summary, className = 'status-ring') {
         : '';
     return `<svg class="${className}" viewBox="0 0 44 44" aria-hidden="true">${track}${fill}</svg>`;
 }
+
+// A11Y-03 : Vide et En panne se reconnaissent aussi sans la couleur (WCAG 1.4.1) : un petit
+// signe en bas a droite de la pastille de la carte (decision Stephane 2026-11-10). En service
+// et Pas d'info : rien (anneau qui se remplit, pointille). La liste ecrit deja le mot.
+const STATUS_SIGNS = { empty: '−', broken: '!' };
+
+export function renderStatusSign(summary) {
+    const sign = STATUS_SIGNS[summary?.state];
+    return sign ? `<span class="distributor-pin-sign is-${summary.state}" aria-hidden="true">${sign}</span>` : '';
+}
