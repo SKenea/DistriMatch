@@ -99,6 +99,61 @@ test.describe('14. Cibles tactiles >= 44 px', () => {
         });
         expect(hit).toBe(true);
     });
+    test('A11Y-02 : mode ajout, produit suivi et bandeau de notification sans cible sous 44 px (390 px)', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(300);
+        const violations = [];
+
+        // Mode ajout : bandeau de placement, puis bulle avec une ligne produit
+        await page.click('#btn-add-distributor');
+        await page.waitForSelector('#placement-hint.visible', { timeout: 3000 });
+        violations.push(...await collectSmallTargets(page, 'placement'));
+        await page.evaluate(async () => {
+            const { mainMap } = await import('./js/state.js');
+            mainMap.fire('click', { latlng: L.latLng(43.4935, -1.4740) });
+        });
+        await page.waitForSelector('.add-distributor-popup', { timeout: 3000 });
+        await page.click('.add-distributor-popup .btn-add-product-row');
+        violations.push(...await collectSmallTargets(page, 'bulle-ajout'));
+        await page.click('.add-distributor-popup .btn-cancel');
+
+        // Reglages avec un produit suivi
+        await page.evaluate(async () => { const n = await import('./js/notifications.js'); n.followProduct('Pizza'); });
+        await page.evaluate(() => window.switchView('account'));
+        await page.click('#account-notif-settings');
+        await page.locator('#followed-products-list .remove-btn').first().scrollIntoViewIfNeeded();
+        violations.push(...await collectSmallTargets(page, 'produit-suivi'));
+
+        // Bandeau de notification (repli sans notification systeme)
+        await page.evaluate(() => window.switchView('map'));
+        await page.evaluate(async () => {
+            const n = await import('./js/notifications.js');
+            n.showNotificationBanner({ type: 'empty', message: 'Test : signalé vide', distributorId: window.AppState.distributors[1].id });
+        });
+        await page.waitForSelector('.notification-banner.show', { timeout: 3000 });
+        violations.push(...await collectSmallTargets(page, 'bandeau'));
+
+        expect(violations, `cibles < 44px :\n${violations.join('\n')}`).toEqual([]);
+    });
+
+    test('A11Y-02 : sur ordinateur, le bandeau de notification passe au-dessus de la fiche ouverte', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await page.evaluate(() => window.openDistributorModal(window.AppState.distributors[0].id));
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await page.evaluate(async () => {
+            const n = await import('./js/notifications.js');
+            n.showNotificationBanner({ type: 'empty', message: 'Test : signalé vide', distributorId: window.AppState.distributors[1].id });
+        });
+        await page.waitForSelector('.notification-banner.show', { timeout: 3000 });
+        await page.waitForTimeout(400);   // fin de la glissade du bandeau (transition top 0.3 s)
+        const onTop = await page.evaluate(() => {
+            const b = document.querySelector('.notification-banner .notif-action');
+            const r = b.getBoundingClientRect();
+            const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return el === b || b.contains(el);
+        });
+        expect(onTop).toBe(true);
+    });
 });
 
 test.describe('19. Toasts visibles', () => {

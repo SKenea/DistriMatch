@@ -36,7 +36,7 @@ Hors périmètre : refonte visuelle, essai avec un vrai lecteur d'écran.
   - Acceptance : message orange à texte foncé (≥ 4,5:1) et affiché 5 s ; aides des réglages sans
     transparence (≥ 4,5:1) ; étoiles vides de l'avis en contour (≥ 3:1) ; interrupteur éteint cerné,
     pastille grise (≥ 3:1) ; icône du bouton « + » actif foncée (≥ 3:1).
-- [ ] A11Y-02 En tant que membre au doigt, je veux des boutons assez grands, afin de toucher le
+- [x] A11Y-02 En tant que membre au doigt, je veux des boutons assez grands, afin de toucher le
   bon du premier coup — `A11Y-02.md`
   - Acceptance : en 390 px, aucune cible sous 44 px en mode ajout (bandeau de placement, bulle,
     ligne produit), sur un produit suivi et sur le bandeau de notification ; sur ordinateur, le

@@ -334,7 +334,9 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    z-index: 10000;
+    /* A11Y-02 : au-dessus de la fiche (10500), sous la connexion (11000), la confirmation (11500)
+       et les toasts (--z-toast 12000) ; a 10000 il glissait sous le voile de la fiche */
+    z-index: 10600;
     transition: top 0.3s ease-out;
 }
 
@@ -374,6 +376,7 @@
     background: var(--primary-text);
     color: white;
     border: none;
+    min-height: 44px;   /* A11Y-02 : cible tactile (40 px avant) */
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-weight: 600;
@@ -394,6 +397,12 @@
     padding: 0;
     line-height: 1;
     flex-shrink: 0;
+    /* A11Y-02 : cible tactile 44 px (16 x 24 avant), la croix reste centree */
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .notification-banner .notif-close:hover {
@@ -728,6 +737,11 @@
     font-size: 1.2rem;
     padding: 0;
     line-height: 1;
+    /* A11Y-02 : cible tactile 44 px (13 x 19 avant) ; les marges negatives absorbent la marge
+       interieure de la pastille, qui grandit a peine */
+    min-width: 44px;
+    min-height: 44px;
+    margin: -0.5rem -0.75rem -0.5rem 0;
     opacity: 0.7;
     transition: opacity 0.2s;
 }
