@@ -191,4 +191,28 @@ test.describe('Retour avec la localisation autorisee', () => {
         await expect(page.locator('#geoloc-btn')).toBeVisible({ timeout: 15000 });
         await context.close();
     });
+
+    // TST-03 : le geste du premier lancement, joue de bout en bout. Localisation jamais
+    // autorisee (« demander ») : on simule seulement la reponse « Autoriser » du telephone.
+    test('premier lancement : « Voir autour de moi » puis accepter la localisation ouvre la carte', async ({ browser }) => {
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
+        await context.addInitScript(() => {
+            navigator.geolocation.getCurrentPosition = (ok) => setTimeout(() => ok({ coords: { latitude: 43.4929, longitude: -1.4748, accuracy: 10 } }), 50);
+        });
+        const page = await context.newPage();
+        await page.goto(BASE_URL);
+        const btn = page.locator('#geoloc-btn');
+        await expect(btn).toBeVisible({ timeout: 15000 });
+        expect(await page.evaluate(async () => (await navigator.permissions.query({ name: 'geolocation' })).state)).toBe('prompt');
+        // Le gestionnaire du bouton arrive apres une verification asynchrone : on retouche tant qu'il le faut
+        await expect(async () => {
+            await btn.click({ timeout: 1000 }).catch(() => {});
+            expect(await overlayGone(page)).toBe(true);
+        }).toPass({ timeout: 15000 });
+        await page.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 30000 });
+        await expect(page.locator('#main-map')).toBeVisible();
+        expect(await page.evaluate(() => ({ ok: localStorage.getItem('distrimatch_geo_ok'), loc: window.AppState.userLocation })))
+            .toEqual({ ok: '1', loc: { lat: 43.4929, lng: -1.4748 } });
+        await context.close();
+    });
 });
