@@ -106,12 +106,54 @@ test.describe('9. Dedup distributeurs', () => {
         expect(occurrences).toBe(1);
     });
 
-    test('le garde anti-double-submit existe sur AddMode', async ({ page }) => {
-        const hasGuard = await page.evaluate(
-            () => typeof window.AppState !== 'undefined'
-                && Object.prototype.hasOwnProperty.call(window.AddMode || {}, 'submitting')
-        );
-        expect(hasGuard).toBe(true);
+    // TST-03 : un vrai ajout, sans rien ecrire en base (envois interceptes). « Ajouter »
+    // appele deux fois dans la meme tache : le verrou AddMode.submitting lui-meme est teste.
+    test('ajout d’un distributeur : un seul envoi meme en appelant « Ajouter » deux fois, fiche en attente', async ({ page, context }) => {
+        await loginForTest(page);
+        // Point libre (a plus de 80 m de toute fiche, regle des 50 m) ; le telephone y est (regle des 30 m)
+        const spot = await page.evaluate(() => {
+            const rad = (x) => x * Math.PI / 180;
+            const meters = (a, b) => {
+                const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+                return 2 * 6371000 * Math.asin(Math.sqrt(h));
+            };
+            for (let k = 1; k < 300; k++) {
+                const p = { lat: 43.4929 + 0.0009 * k, lng: -1.4748 + 0.0007 * k };
+                if (window.AppState.distributors.every(d => meters(p, d) > 80)) return p;
+            }
+            return null;
+        });
+        expect(spot).not.toBeNull();
+        await context.setGeolocation({ latitude: spot.lat, longitude: spot.lng });
+        const posts = { distributors: [], products: [] };
+        await page.route(url => /\/rest\/v1\/(distributors|products)$/.test(url.pathname), async route => {
+            if (route.request().method() !== 'POST') return route.fallback();
+            const table = new URL(route.request().url()).pathname.endsWith('/products') ? 'products' : 'distributors';
+            posts[table].push(route.request().postDataJSON());
+            await new Promise(r => setTimeout(r, 300));
+            await route.fulfill({ status: 201, contentType: 'application/json', body: '' });
+        });
+        await page.click('#btn-add-distributor');
+        await expect(page.locator('#placement-hint')).toHaveClass(/visible/);
+        await page.evaluate(async (p) => {
+            const { mainMap } = await import('./js/state.js');
+            mainMap.fire('click', { latlng: window.L.latLng(p.lat, p.lng) });
+        }, spot);
+        await expect(page.locator('#new-dist-name')).toBeVisible();
+        await page.fill('#new-dist-name', 'Distributeur itest');
+        await page.evaluate(() => window.addProductRow());
+        await page.locator('#add-products-list .product-name-input').first().fill('Oeufs itest');
+        await page.evaluate(() => { window.confirmAddDistributor(); window.confirmAddDistributor(); });
+        await expect(page.locator('#toast-container')).toContainText('après validation', { timeout: 15000 });
+        expect(posts.distributors).toHaveLength(1);
+        expect(posts.distributors[0]).toMatchObject({ name: 'Distributeur itest', is_user_added: true, price_range: '€€' });
+        const id = posts.distributors[0].id;
+        expect(posts.products).toEqual([[{ distributor_id: id, name: 'Oeufs itest', available: true }]]);
+        const added = await page.evaluate((x) => {
+            const d = window.AppState.distributors.find(v => v.id === x);
+            return d ? { reviewStatus: d.reviewStatus, local: !!d.isLocalOnly } : null;
+        }, id);
+        expect(added).toEqual({ reviewStatus: 'pending', local: false });
     });
 });
 

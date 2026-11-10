@@ -40,7 +40,7 @@ async function passGeoloc(page) {
 }
 
 test.describe('E2E visiteur (site en ligne, vraie base)', () => {
-    test('la carte se charge avec les distributeurs de la vraie base', async ({ page, context }) => {
+    test('la carte se charge avec les distributeurs de la vraie base', async ({ page, context, request }) => {
         const errors = [];
         page.on('pageerror', e => errors.push(String(e)));
         await openApp(page, context);
@@ -48,6 +48,14 @@ test.describe('E2E visiteur (site en ligne, vraie base)', () => {
         const n = await page.evaluate(() => window.AppState.distributors.length);
         expect(n).toBeGreaterThan(1);
         await expect.poll(() => page.evaluate(() => document.querySelectorAll('.distributor-marker-container').length)).toBeGreaterThan(0);
+        // TST-03 : les fiches viennent bien de la base, pas du JSON de secours (base en pause,
+        // regle cassee) : memes identifiants que l'API (contexte neuf, aucune fiche locale)
+        const res = await request.get(`${SUPABASE_URL}/rest/v1/distributors?select=id`, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } });
+        expect(res.ok()).toBe(true);
+        const apiIds = (await res.json()).map(r => r.id).sort();
+        const appIds = await page.evaluate(() => window.AppState.distributors.map(d => d.id).sort());
+        expect(apiIds.length).toBeGreaterThan(1);
+        expect(appIds).toEqual(apiIds);
         expect(errors).toEqual([]);
     });
 

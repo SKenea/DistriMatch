@@ -51,7 +51,7 @@ Hors périmètre : réécrire les suites de tests, changer de bibliothèque.
     avec le plus ancien vrai compte ; la cohérence des avis de démo ne compte que les avis de démo ;
     de nouveaux tests montrent que l'anonyme ne peut ni insérer, ni modifier, ni retirer un produit,
     ni modifier, ni supprimer une fiche.
-- [ ] TST-03 En tant que nouveau testeur, je veux que mon premier lancement et l'ajout d'un
+- [x] TST-03 En tant que nouveau testeur, je veux que mon premier lancement et l'ajout d'un
   distributeur marchent toujours, afin que le POC ne s'arrête pas dès le premier geste — `TST-03.md`
   - Acceptance : un test fonctionnel couvre « Voir autour de moi » puis l'accord de localisation
     jusqu'à la carte ; un test couvre l'ajout d'un distributeur par un membre (un seul envoi même en
