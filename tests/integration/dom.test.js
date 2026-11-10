@@ -1946,3 +1946,93 @@ describe('File des heures calmes : rien de perdu apres 12 h (NOTIF-04)', () => {
         assert.equal(document.getElementById('notifications-badge').textContent, '1');
     });
 });
+
+// ============================================
+// NOTIFICATIONS BIEN AFFICHEES (NOTIF-07)
+// ============================================
+// Bandeau in-app (repli sans notification systeme) : annonce par une zone role="status",
+// garde tant qu'il est survole ou qu'il a le focus. Lignes non lues : repere visible et
+// « Nouveau : » dans le nom accessible.
+
+import { mock, afterEach } from 'node:test';
+const notif07 = await import('../../js/notifications.js');
+
+describe('Notifications bien affichées (NOTIF-07)', () => {
+    beforeEach(() => {
+        document.querySelectorAll('.notification-banner').forEach((b) => b.remove());
+        if (!document.getElementById('notification-banner-region')) {
+            // Meme zone que dans index.html (presente des le chargement)
+            const region = document.createElement('div');
+            region.id = 'notification-banner-region';
+            region.setAttribute('role', 'status');
+            region.setAttribute('aria-live', 'polite');
+            region.setAttribute('aria-atomic', 'true');
+            document.body.appendChild(region);
+        }
+    });
+    afterEach(() => mock.timers.reset());
+
+    it('le bandeau est pose dans la zone annoncee, icone masquee, boutons sans envoi de formulaire', () => {
+        notif07.showNotificationBanner({ type: 'empty', distributorId: 'dist-x', message: 'Pain du Coin a été signalée vide' });
+        const banner = document.querySelector('#notification-banner-region .notification-banner');
+        assert.ok(banner, 'bandeau dans la zone role="status"');
+        assert.equal(banner.querySelector('.notif-icon').getAttribute('aria-hidden'), 'true');
+        assert.equal(banner.querySelector('.notif-action').type, 'button');
+        assert.equal(banner.querySelector('.notif-close').type, 'button');
+        assert.equal(banner.querySelector('.notif-close').getAttribute('onclick'), null);
+        banner.querySelector('.notif-close').click();
+        assert.equal(banner.isConnected, false, 'la croix retire le bandeau');
+    });
+
+    it('le bandeau reste affiché tant qu’il a le focus, puis part', () => {
+        mock.timers.enable({ apis: ['setTimeout'] });
+        notif07.showNotificationBanner({ type: 'empty', distributorId: 'dist-x', message: 'Pain du Coin a été signalée vide' });
+        const banner = document.querySelector('.notification-banner');
+        banner.querySelector('.notif-action').focus();
+        mock.timers.tick(20000);
+        assert.ok(banner.isConnected && banner.classList.contains('show'), 'toujours affiché tant que le focus est dedans');
+        banner.querySelector('.notif-action').blur();
+        // Deux pas de 7 s : expiration, puis retrait 300 ms plus tard (minuterie posee pendant le pas)
+        mock.timers.tick(7000);
+        mock.timers.tick(7000);
+        assert.equal(banner.isConnected, false, 'retiré une fois le focus parti');
+    });
+
+    it('notification système de l’app : même tag que le serveur et renotify', () => {
+        const created = [];
+        class FakeNotification {
+            constructor(title, options) { created.push({ title, options }); }
+            close() {}
+        }
+        FakeNotification.permission = 'granted';
+        globalThis.Notification = FakeNotification;
+        window.Notification = FakeNotification;
+        NotificationPrefs.enabled = true;
+        NotificationPrefs.quietHours.enabled = false;
+        NotificationPrefs.lastNotifications = {};
+        try {
+            notif07.notifyFavoriteEvent({ id: 'dist-x', name: 'Pain du Coin' }, { type: 'empty', at: Date.now() });
+        } finally {
+            delete globalThis.Notification;
+            delete window.Notification;
+        }
+        assert.equal(created.length, 1);
+        assert.equal(created[0].options.tag, 'distrimatch-dist-x');
+        assert.equal(created[0].options.renotify, true);
+        NotificationQueue.history = [];
+    });
+
+    it('une ligne non lue se distingue : classe unread et « Nouveau : » en tête du nom accessible', () => {
+        NotificationQueue.history = [
+            { id: 'n-new', type: 'empty', distributorId: 'dist-x', message: 'A vide', read: false, timestamp: Date.now() },
+            { id: 'n-old', type: 'empty', distributorId: 'dist-y', message: 'B vide', read: true, timestamp: Date.now() }
+        ];
+        openNotificationsView();
+        const rows = document.querySelectorAll('#notifications-list .notif-item');
+        assert.ok(rows[0].classList.contains('unread'));
+        assert.match(rows[0].querySelector('.notif-item-open').getAttribute('aria-label'), /^Nouveau : /);
+        assert.ok(!rows[1].classList.contains('unread'));
+        assert.doesNotMatch(rows[1].querySelector('.notif-item-open').getAttribute('aria-label'), /Nouveau/);
+        NotificationQueue.history = [];
+    });
+});

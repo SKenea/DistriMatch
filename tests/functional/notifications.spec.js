@@ -685,3 +685,31 @@ test.describe('41. Reglages des notifications gardes (NOTIF-06)', () => {
         expect((await storedPrefs(page)).quietHours.start).toBe('23:15');
     });
 });
+
+// ============================================
+// NOTIF-07. TOUCHER UNE NOTIFICATION APP FERMEE, APP DEJA OUVERTE
+// ============================================
+// sw.js ne recharge plus l'onglet ouvert : il le met au premier plan et lui poste
+// { type: 'distrimatch:open', id }. On simule ce message (aucun service worker en local).
+
+test.describe('NOTIF-07. Notification touchée, app déjà ouverte', () => {
+    test('le message du service worker ouvre la fiche sans recharger la page', async ({ page }) => {
+        const dist = await page.evaluate(() => {
+            const d = window.AppState.distributors[0];
+            return { id: d.id, name: d.name };
+        });
+        await page.evaluate(() => { window.__notif07SamePage = true; });   // perdu si la page se recharge
+        await page.evaluate((id) => navigator.serviceWorker.dispatchEvent(
+            new MessageEvent('message', { data: { type: 'distrimatch:open', id } })), dist.id);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await expect(page.locator('#dist-modal-name')).toHaveText(dist.name);
+        expect(await page.evaluate(() => window.__notif07SamePage === true)).toBe(true);
+    });
+
+    test('distributeur inconnu : message « Distributeur introuvable », aucune fiche', async ({ page }) => {
+        await page.evaluate(() => navigator.serviceWorker.dispatchEvent(
+            new MessageEvent('message', { data: { type: 'distrimatch:open', id: 'dist-inconnu-notif07' } })));
+        await expect(page.locator('#toast-container')).toContainText('Distributeur introuvable');
+        await expect(page.locator('#dist-modal-overlay')).not.toHaveClass(/active/);
+    });
+});
