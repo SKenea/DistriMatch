@@ -2826,3 +2826,33 @@ describe('Bandeau annonce et lignes non lues visibles (NOTIF-07)', () => {
         assert.ok(css.includes('.notif-item.unread .notif-item-body strong::before'), 'pastille avant le titre');
     });
 });
+
+// ============================================
+// TESTS FONCTIONNELS : AUCUN VRAI EVENEMENT D'AUDIENCE (TST-01)
+// ============================================
+// La table events de production sert a juger le POC : un navigateur de test
+// ne doit jamais y envoyer de log_event.
+
+describe('tests fonctionnels : aucun vrai log_event vers la base (TST-01)', () => {
+    const dir = new URL('../functional/', import.meta.url);
+    const helpers = readFileSync(new URL('helpers.js', dir), 'utf8');
+
+    it('newTestContext existe et bloque log_event pour tout le contexte', () => {
+        assert.match(helpers, /export async function newTestContext\(browser, options = \{\}\) \{[\s\S]*?context\.route\(EVENTS_ROUTE,/,
+            'newTestContext absente de tests/functional/helpers.js');
+    });
+
+    it('aucun fichier de tests fonctionnels n\'appelle browser.newContext directement', () => {
+        for (const f of readdirSync(dir).filter(n => n.endsWith('.spec.js'))) {
+            const src = readFileSync(new URL(f, dir), 'utf8');
+            assert.doesNotMatch(src, /browser\.newContext\(/,
+                `${f} : browser.newContext() laisse partir la mesure d'audience, utiliser newTestContext(browser, ...)`);
+        }
+    });
+
+    it('setupApp bloque log_event au niveau du contexte, avant d\'ouvrir l\'app', () => {
+        const setup = helpers.slice(helpers.indexOf('export async function setupApp'));
+        assert.match(setup.slice(0, setup.indexOf('page.goto')), /context\.route\(EVENTS_ROUTE,/,
+            'setupApp ne bloque log_event que pour la page');
+    });
+});

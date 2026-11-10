@@ -38,7 +38,7 @@ Hors périmètre : réécrire les suites de tests, changer de bibliothèque.
     style) et supabase-js avec une empreinte d'intégrité et `crossorigin="anonymous"` ; un test
     rapide échoue si une bibliothèque externe (hors hCaptcha) est flottante ou sans empreinte ;
     CLAUDE.md dit comment changer de version (et cite la migration 034, absente de la liste).
-- [ ] TST-01 En tant que testeur abonné à une fiche, je veux ne recevoir que de vraies alertes, et
+- [x] TST-01 En tant que testeur abonné à une fiche, je veux ne recevoir que de vraies alertes, et
   en tant que Stéphane je veux des chiffres d'audience sans visites de robots, afin de juger le POC
   sur du réel — `TST-01.md`
   - Acceptance : un signal du compte de test E2E ne déclenche aucune notification app fermée ;

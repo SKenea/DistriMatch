@@ -5,7 +5,7 @@
  * Serveur simule la ou il le faut (voir helpers.js). Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { BASE_URL, EVENTS_ROUTE, setupApp, overlayGone } from './helpers.js';
+import { BASE_URL, EVENTS_ROUTE, setupApp, overlayGone, newTestContext } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -45,7 +45,7 @@ test.describe('1bis. Deep link sans consentement geoloc', () => {
 
     test('lien partage ouvre la modal meme avant clic geoloc', async ({ browser }) => {
         // Nouveau context vierge : pas de permission geoloc accordee
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));   // aucun vrai evenement
         const page = await context.newPage();
 
@@ -83,7 +83,7 @@ test.describe('22. Geolocalisation obligatoire', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
     test('plus de « Voir la carte sans me localiser » ; un refus laisse l\'ecran avec « Réessayer »', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         // Refus simule : l'API de geolocalisation repond PERMISSION_DENIED
         await context.addInitScript(() => {
@@ -105,7 +105,7 @@ test.describe('22. Geolocalisation obligatoire', () => {
     });
 
     test('deep link QR sans geoloc : la fiche s\'ouvre, la fermer ramene l\'ecran de geolocalisation', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         await page.goto(BASE_URL);
@@ -130,7 +130,7 @@ test.describe('30. Ecran d\'accueil', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
     test('« Ton distributeur préféré te prévient. » : favori, notification, ni « tap », ni « reste », ni territoire (EPIC-T24/T25)', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         await page.goto(BASE_URL);
@@ -159,7 +159,7 @@ test.describe('Retour avec la localisation autorisee', () => {
     test.beforeEach(async () => { /* override : pas de setupApp */ });
 
     test('localisation deja autorisee : pas d accueil, directement la carte', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
         const page = await context.newPage();
         await page.goto(BASE_URL);
         await page.waitForFunction(() => window.AppState?.mapInitialized === true, null, { timeout: 30000 });
@@ -170,7 +170,7 @@ test.describe('Retour avec la localisation autorisee', () => {
     });
 
     test('lien vers une fiche, localisation autorisee : fermer la fiche montre la carte, pas l accueil', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 }, permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
         const page = await context.newPage();
         await page.goto(BASE_URL + '?id=dist-007');
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 30000 });
@@ -184,7 +184,7 @@ test.describe('Retour avec la localisation autorisee', () => {
     });
 
     test('sans autorisation : l accueil reste, meme si l appareil avait autorise avant', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         await context.addInitScript(() => localStorage.setItem('distrimatch_geo_ok', '1'));
         const page = await context.newPage();
         await page.goto(BASE_URL);

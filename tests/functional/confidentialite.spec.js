@@ -7,13 +7,13 @@
  * saisie comprise. La base est simulee la ou il le faut. Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { BASE_URL, EVENTS_ROUTE, setupApp, loginForTest, openSignalableFiche } from './helpers.js';
+import { BASE_URL, EVENTS_ROUTE, setupApp, loginForTest, openSignalableFiche, newTestContext } from './helpers.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
 test.describe('49. Confidentialité (PRIV-04)', () => {
     test('accueil : le lien ouvre la page avant la localisation, Retour et retour du téléphone ramènent l’accueil', async ({ browser }) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const context = await newTestContext(browser, { viewport: { width: 390, height: 844 } });
         await context.route(EVENTS_ROUTE, route => route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }));
         const page = await context.newPage();
         await page.goto(BASE_URL);

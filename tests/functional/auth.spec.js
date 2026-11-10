@@ -6,7 +6,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { setupApp, openDistModal, loginForTest, captureEvents, BASE_URL } from './helpers.js';
+import { setupApp, openDistModal, loginForTest, captureEvents, BASE_URL, newTestContext } from './helpers.js';
 
 test.beforeEach(async ({ page, context }) => {
     await setupApp(page, context);
@@ -284,7 +284,7 @@ test.describe('Coup de pouce sur place, fiche ouverte par un lien (CNX-04)', () 
     }
 
     test('connecte, localisation jamais autorisee : aucune lecture de position avant l’accueil', async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         await spyNearby(context);
         const page = await openWithSession(context, '/?id=dist-007');
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
@@ -296,7 +296,7 @@ test.describe('Coup de pouce sur place, fiche ouverte par un lien (CNX-04)', () 
     });
 
     test('connecte, localisation deja autorisee : la position est lue une fois la carte prete', async ({ browser }) => {
-        const context = await browser.newContext({ permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
+        const context = await newTestContext(browser, { permissions: ['geolocation'], geolocation: { latitude: 43.4929, longitude: -1.4748 } });
         await spyNearby(context);
         const page = await openWithSession(context, '/?id=dist-007');
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 50000 });
@@ -313,7 +313,7 @@ test.describe('Coup de pouce sur place, fiche ouverte par un lien (CNX-04)', () 
 
 test.describe('Fiche ouverte par un lien avant la localisation (CNX-05)', () => {
     test('connexion faite ailleurs : la fiche passe en mode membre sans attendre l’accueil', async ({ browser }) => {
-        const context = await browser.newContext();
+        const context = await newTestContext(browser);
         const page = await context.newPage();
         await captureEvents(page);
         await page.goto(`${BASE_URL}/?id=dist-007`);
