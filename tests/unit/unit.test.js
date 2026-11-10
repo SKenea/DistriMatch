@@ -2605,3 +2605,119 @@ describe('Textes des notifications : le vocabulaire de la fiche (NOTIF-06)', () 
         assert.equal(buildPushMessage('La Ferme', { type: 'working' }), 'La Ferme : de nouveau en service');
     });
 });
+
+// ============================================
+// SERVICE WORKER ET AFFICHAGE DES NOTIFICATIONS (NOTIF-07)
+// ============================================
+// sw.js tourne dans un contexte isole (node:vm) avec un faux navigateur : caches de
+// l'origine partages par tous les projets de skenea.github.io, alerte au remplacement
+// (renotify), toucher sans recharger l'onglet ouvert.
+
+import vm from 'node:vm';
+
+describe('Service worker : caches, alerte et toucher (NOTIF-07)', () => {
+    const SCOPE = 'https://skenea.github.io/DistriMatch/';
+    const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
+
+    function loadServiceWorker({ cacheKeys = [], windows = [] } = {}) {
+        const handlers = {};
+        const calls = { deleted: [], shown: [], opened: [] };
+        const self = {
+            addEventListener(type, fn) { handlers[type] = fn; },
+            skipWaiting() {},
+            registration: {
+                scope: SCOPE,
+                showNotification(title, options) { calls.shown.push({ title, options }); return Promise.resolve(); }
+            },
+            clients: {
+                claim: () => Promise.resolve(),
+                matchAll: () => Promise.resolve(windows),
+                openWindow(url) { calls.opened.push(url); return Promise.resolve(null); }
+            }
+        };
+        const caches = {
+            keys: () => Promise.resolve([...cacheKeys]),
+            delete(key) { calls.deleted.push(key); return Promise.resolve(true); }
+        };
+        vm.runInNewContext(source, { self, caches, URL });
+        function dispatch(type, event) {
+            let done = Promise.resolve();
+            handlers[type]({ ...event, waitUntil(p) { done = p; } });
+            return done;
+        }
+        return { dispatch, calls };
+    }
+
+    function fakeTab(url) {
+        return {
+            url, frameType: 'top-level', focused: false, messages: [], navigated: [],
+            focus() { this.focused = true; return Promise.resolve(this); },
+            postMessage(msg) { this.messages.push({ ...msg }); },
+            navigate(to) { this.navigated.push(to); return Promise.resolve(this); }
+        };
+    }
+
+    function clickEvent(url) {
+        return { notification: { close() {}, data: { url } } };
+    }
+
+    it('activation : seuls les caches DistriMatch sont effaces, pas ceux des autres projets', async () => {
+        const sw = loadServiceWorker({ cacheKeys: ['autre-projet-v1', 'workbox-precache-v2', 'distrimatch-v1', 'snackmatch-static'] });
+        await sw.dispatch('activate', {});
+        assert.deepEqual(sw.calls.deleted, ['distrimatch-v1', 'snackmatch-static']);
+    });
+
+    it('notification du meme favori : elle remplace l’ancienne et sonne de nouveau (renotify)', async () => {
+        const sw = loadServiceWorker();
+        const payload = { title: 'DistriMatch', body: 'Pain du Coin a été signalée vide', url: './?id=dist-007', tag: 'distrimatch-dist-007' };
+        await sw.dispatch('push', { data: { json: () => payload, text: () => JSON.stringify(payload) } });
+        assert.equal(sw.calls.shown[0].options.tag, 'distrimatch-dist-007');
+        assert.equal(sw.calls.shown[0].options.renotify, true);
+    });
+
+    it('contenu illisible : notification affichee sans tag et sans renotify (pas d’erreur)', async () => {
+        const sw = loadServiceWorker();
+        await sw.dispatch('push', { data: { json: () => { throw new SyntaxError('x'); }, text: () => 'texte brut' } });
+        assert.equal(sw.calls.shown.length, 1);
+        assert.equal(sw.calls.shown[0].options.body, 'texte brut');
+        assert.equal(sw.calls.shown[0].options.tag, undefined);
+        assert.equal(sw.calls.shown[0].options.renotify, false);
+    });
+
+    it('toucher une notification, onglet DistriMatch ouvert : premier plan + message, sans rechargement', async () => {
+        const tab = fakeTab(`${SCOPE}?x=1`);
+        const sw = loadServiceWorker({ windows: [tab] });
+        await sw.dispatch('notificationclick', clickEvent('./?id=dist-007'));
+        assert.equal(tab.focused, true);
+        assert.deepEqual(tab.navigated, [], 'aucune navigation = aucun rechargement');
+        assert.deepEqual(tab.messages, [{ type: 'distrimatch:open', id: 'dist-007' }]);
+        assert.deepEqual(sw.calls.opened, []);
+    });
+
+    it('toucher une notification, aucun onglet DistriMatch : nouvelle fenetre sur la fiche', async () => {
+        const other = fakeTab('https://skenea.github.io/AutreProjet/');
+        const sw = loadServiceWorker({ windows: [other] });
+        await sw.dispatch('notificationclick', clickEvent('./?id=dist-007'));
+        assert.deepEqual(sw.calls.opened, [`${SCOPE}?id=dist-007`]);
+        assert.equal(other.focused, false);
+        assert.deepEqual(other.messages, []);
+    });
+});
+
+describe('Bandeau annonce et lignes non lues visibles (NOTIF-07)', () => {
+    const root = new URL('../../', import.meta.url);
+
+    it('index.html : zone role="status" du bandeau presente des le chargement', () => {
+        const html = readFileSync(new URL('index.html', root), 'utf8');
+        assert.ok(html.includes('<div id="notification-banner-region" role="status" aria-live="polite" aria-atomic="true"></div>'));
+    });
+
+    it('css : une ligne non lue n’a pas le fond de la page (var(--light))', () => {
+        const css = readFileSync(new URL('css/feed-and-nav.css', root), 'utf8');
+        const block = css.match(/\.notif-item\.unread\s*\{([^}]*)\}/);
+        assert.ok(block, 'regle .notif-item.unread presente');
+        assert.ok(!block[1].includes('var(--light)'), 'meme fond que la page');
+        assert.ok(block[1].includes('var(--white)'));
+        assert.ok(css.includes('.notif-item.unread .notif-item-body strong::before'), 'pastille avant le titre');
+    });
+});

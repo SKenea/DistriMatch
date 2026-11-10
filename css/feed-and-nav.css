@@ -415,9 +415,22 @@
     border-bottom: none;
 }
 
+/* NOTIF-07 : la page a deja le fond var(--light) ; une ligne non lue ressort en blanc,
+   avec une pastille avant le titre (pas seulement une couleur de fond) */
 .notif-item.unread {
-    background: var(--light);
+    background: var(--white);
     border-radius: 8px;
+}
+
+.notif-item.unread .notif-item-body strong::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--primary-text);
+    vertical-align: middle;
 }
 
 .notif-item-icon {

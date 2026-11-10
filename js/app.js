@@ -604,6 +604,24 @@ function forgetAccountScreens(user) {
     if (document.getElementById('sidebar')?.classList.contains('open')) openSidePanelForFilters(AppState.activeFilters);
 }
 
+// NOTIF-07 : notification app fermee touchee alors que l'app est deja ouverte : sw.js poste
+// { type: 'distrimatch:open', id } au lieu de recharger l'onglet (une saisie en cours est
+// gardee). On attend les distributeurs (onglet tout juste ouvert), comme un lien direct.
+function listenNotificationClicks(distributorsReady) {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.addEventListener('message', function openFicheFromNotification(event) {
+        const data = event.data;
+        if (!data || data.type !== 'distrimatch:open' || typeof data.id !== 'string') return;
+        distributorsReady.catch(() => {}).then(function openWhenReady() {
+            if (!AppState.distributors.some((d) => d.id === data.id)) {
+                showToast('Distributeur introuvable', 'error');
+                return;
+            }
+            openDistributorModal(data.id);
+        });
+    });
+}
+
 // Lien « Confidentialité » touche, ou qu'il soit : accueil, fenetre de connexion,
 // formulaire d'exploitant, Compte (PRIV-04)
 function handlePrivacyLinkClick(e) {
@@ -650,6 +668,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialiser la modal des maintenant pour le deep link
     initDistModal();
+    listenNotificationClicks(distributorsPromise);   // NOTIF-07
     // Etat auth : indicateur Compte + libelle Connexion/Deconnexion du menu + nom du hero
     // profil (refreshAuthUI, aussi callback des vues profil/compte) et fiche ouverte
     // (lecture / information, EPIC-T5). CNX-05 : branche AVANT l'attente de la

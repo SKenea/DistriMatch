@@ -257,10 +257,14 @@ function sendNotification(notif, options = {}) {
     } else if (supported && Notification.permission === 'granted') {
         try {
             const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
+            // NOTIF-07 : meme tag que la notification du serveur (distrimatch-<id>) ; une notification
+            // qui remplace celle du meme favori sonne / vibre aussi (renotify, jamais sans tag)
+            const tag = notif.distributorId ? `distrimatch-${notif.distributorId}` : '';
             const n = new Notification(typeInfo.title, {
                 body: notif.message,
                 icon: 'images/icon-192.png',
-                tag: notif.distributorId
+                tag,
+                renotify: Boolean(tag)
             });
             n.onclick = () => {
                 window.focus();
@@ -342,9 +346,11 @@ function renderNotificationsList() {
     list.innerHTML = items.map((n) => {
         ensureNotificationId(n);
         const typeInfo = NOTIFICATION_TYPES[n.type] || NOTIFICATION_TYPES.proximity;
+        // NOTIF-07 : une ligne non lue se voit (fond blanc + pastille, css) et s'entend (« Nouveau : »)
+        const unreadLabel = n.read ? '' : 'Nouveau : ';
         return `
             <div class="notif-item ${n.read ? '' : 'unread'}">
-                <button type="button" class="notif-item-open" data-distributor-id="${escapeHTML(String(n.distributorId ?? ''))}" aria-label="${escapeHTML(`${typeInfo.title} : ${n.message || ''}. Ouvrir la fiche`)}">
+                <button type="button" class="notif-item-open" data-distributor-id="${escapeHTML(String(n.distributorId ?? ''))}" aria-label="${escapeHTML(`${unreadLabel}${typeInfo.title} : ${n.message || ''}. Ouvrir la fiche`)}">
                     <span class="notif-item-icon" aria-hidden="true">${typeInfo.icon}</span>
                     <span class="notif-item-body">
                         <strong>${escapeHTML(typeInfo.title)}</strong>
@@ -392,40 +398,67 @@ export function openNotificationsView() {
     updateNotificationsBadge();
 }
 
-function showNotificationBanner(notif) {
+// NOTIF-07 : le bandeau (repli sans notification systeme) est pose dans la zone
+// #notification-banner-region (role="status", index.html) pour etre annonce aux lecteurs
+// d'ecran ; il reste 7 s, et tant qu'il est survole ou qu'il a le focus (motif de
+// showActionToast, utils.js). Retire alors qu'il avait le focus : le focus revient ou il etait.
+export const BANNER_DURATION = 7000;
+
+export function showNotificationBanner(notif) {
     const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.proximity;
+    const region = document.getElementById('notification-banner-region') || document.body;
+    const previousFocus = document.activeElement;
 
     const banner = document.createElement('div');
     banner.className = 'notification-banner';
     banner.innerHTML = `
-        <span class="notif-icon">${typeInfo.icon}</span>
+        <span class="notif-icon" aria-hidden="true">${typeInfo.icon}</span>
         <div class="notif-content">
-            <strong>${typeInfo.title}</strong>
+            <strong>${escapeHTML(typeInfo.title)}</strong>
             <p>${escapeHTML(notif.message)}</p>
         </div>
-        <button class="notif-action">
+        <button type="button" class="notif-action">
             Voir
         </button>
-        <button class="notif-close" aria-label="Fermer la notification" onclick="this.closest('.notification-banner').remove();">&times;</button>
+        <button type="button" class="notif-close" aria-label="Fermer la notification">&times;</button>
     `;
 
-    document.body.appendChild(banner);
+    region.appendChild(banner);
     const distributorId = String(notif.distributorId);
+    let removed = false;
+    let timer = null;
+
+    function removeBanner() {
+        if (removed) return;
+        removed = true;
+        clearTimeout(timer);
+        const hadFocus = banner.contains(document.activeElement);
+        banner.remove();
+        if (hadFocus && previousFocus && previousFocus.isConnected && typeof previousFocus.focus === 'function') {
+            previousFocus.focus();
+        }
+    }
+
+    function armBanner() {
+        clearTimeout(timer);
+        timer = setTimeout(function expireBanner() {
+            if (banner.matches(':hover') || banner.contains(document.activeElement)) {
+                armBanner();
+                return;
+            }
+            banner.classList.remove('show');
+            setTimeout(removeBanner, 300);
+        }, BANNER_DURATION);
+    }
+
     banner.querySelector('.notif-action').addEventListener('click', function openFromBanner() {
         window.openDistributorModal(distributorId);
-        banner.remove();
+        removeBanner();
     });
+    banner.querySelector('.notif-close').addEventListener('click', removeBanner);
 
     setTimeout(() => banner.classList.add('show'), 10);
-
-    setTimeout(() => {
-        if (banner.parentNode) {
-            banner.classList.remove('show');
-            setTimeout(() => {
-                if (banner.parentNode) banner.remove();
-            }, 300);
-        }
-    }, 5000);
+    armBanner();
 }
 
 // ============================================

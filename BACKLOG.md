@@ -55,7 +55,7 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   afin de comprendre mes notifications — `NOTIF-06.md` (**textes à valider par Stéphane**)
   - Acceptance : minutes des heures calmes gardées, champ vide refusé ; réglages enregistrés sans
     « Sauvegarder » ; vocabulaire Vide / En panne / En service, sans « Machine ».
-- [ ] NOTIF-07 En tant que membre, je veux des notifications bien affichées, afin de ne rien rater
+- [x] NOTIF-07 En tant que membre, je veux des notifications bien affichées, afin de ne rien rater
   ni perdre — `NOTIF-07.md`
   - Acceptance : seuls les caches DistriMatch effacés ; nouvelle notification sonore ; toucher une
     notification ne recharge pas la page ; bandeau annoncé aux lecteurs d'écran ; non lues
