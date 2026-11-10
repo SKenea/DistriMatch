@@ -38,8 +38,10 @@
     background: var(--danger);
 }
 
+/* A11Y-01 : texte fonce sur l'orange (6,9:1) ; le blanc n'y faisait que 2,1:1, illisible au soleil */
 .toast.warning {
     background: var(--warning);
+    color: var(--dark);
 }
 
 /* Desktop : la nav est une pilule a 16 px du bas, le toast passe au-dessus */
@@ -560,7 +562,10 @@
     height: 32px;
     appearance: none;
     -webkit-appearance: none;
-    background: var(--light-gray);
+    /* A11Y-01 : eteint = piste claire cernee (5:1) et pastille grise, comme les interrupteurs
+       Material ; avant, piste beige a 1,32:1 sur la carte blanche */
+    background: var(--light);
+    box-shadow: inset 0 0 0 2px var(--text-muted);
     border-radius: 16px;
     position: relative;
     cursor: pointer;
@@ -570,6 +575,13 @@
 
 .setting-toggle input[type="checkbox"]:checked {
     background: var(--primary);
+    box-shadow: none;
+}
+
+/* A11Y-01 : pastille grise sur la piste claire (4,6:1) quand l'interrupteur est eteint */
+.setting-toggle input[type="checkbox"]:not(:checked)::after {
+    background: var(--text-muted);
+    box-shadow: none;
 }
 
 .setting-toggle input[type="checkbox"]::after {
@@ -676,11 +688,11 @@
 }
 
 /* Setting Hint */
+/* A11Y-01 : sans opacite, --gray fait 6,3:1 sur blanc (3,96:1 avec l'opacite 0.8) */
 .setting-hint {
     font-size: 0.8rem;
     color: var(--gray);
     margin: 0.5rem 0 0 0;
-    opacity: 0.8;
 }
 
 /* Followed Products */

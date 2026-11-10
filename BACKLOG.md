@@ -19,6 +19,48 @@
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
 
+### EPIC-R6 Lisible et touchable par tous (lot 6 Accessibilité, revue du 2026-10-21)
+Objectif : tout ce qui s'affiche se lit, même au soleil ou avec une vue faible, tout ce qui se touche
+se touche du premier coup, et l'état d'un distributeur se reconnaît sur la carte sans la couleur.
+Valeur : moins de messages ratés et de touchers manqués pendant le POC, pour tous les testeurs.
+**Décision Stéphane 2026-11-10** : on fait un POC, donc on ne garde que les 3 stories qui touchent
+tous les utilisateurs. Les 22 autres constats du lot (clavier, lecteur d'écran) sont **mis de côté
+jusqu'après le POC** (liste ci-dessous). Les 25 constats ont été revérifiés sur `master` 68ddedf le
+2026-11-10 : aucun n'était corrigé.
+Méthode : comme EPIC-R5, une fiche par story dans `docs/stories/<ID>.md`, exécutée par un modèle
+medium (`/story <ID>`), une PR à la fois, dans l'ordre A11Y-01, A11Y-02, A11Y-03.
+Hors périmètre : refonte visuelle, essai avec un vrai lecteur d'écran.
+
+- [x] A11Y-01 En tant que testeur dehors, je veux lire les messages, les aides et les commandes
+  pâles, afin de ne rater aucune information — `A11Y-01.md`
+  - Acceptance : message orange à texte foncé (≥ 4,5:1) et affiché 5 s ; aides des réglages sans
+    transparence (≥ 4,5:1) ; étoiles vides de l'avis en contour (≥ 3:1) ; interrupteur éteint cerné,
+    pastille grise (≥ 3:1) ; icône du bouton « + » actif foncée (≥ 3:1).
+- [ ] A11Y-02 En tant que membre au doigt, je veux des boutons assez grands, afin de toucher le
+  bon du premier coup — `A11Y-02.md`
+  - Acceptance : en 390 px, aucune cible sous 44 px en mode ajout (bandeau de placement, bulle,
+    ligne produit), sur un produit suivi et sur le bandeau de notification ; sur ordinateur, le
+    bandeau de notification passe au-dessus de la fiche ouverte.
+- [ ] A11Y-03 En tant que testeur qui distingue mal les couleurs, je veux reconnaître Vide et
+  En panne sur la carte, afin de savoir où aller sans ouvrir chaque fiche — `A11Y-03.md`
+  (**forme du signe à valider par Stéphane sur capture** avant d'écrire la fiche)
+  - Acceptance : un petit signe dans la pastille de la carte pour Vide et pour En panne, différents
+    l'un de l'autre ; couleurs et anneau inchangés ; la liste (qui écrit déjà le mot) ne change pas.
+
+**Mis de côté jusqu'après le POC** (n° = constats du lot dans la revue) :
+- Connexion au lecteur d'écran : champ e-mail sans nom, envoi et erreurs non annoncés (0, 19).
+- Piège à focus de la fiche (Maj+Tab) et focus perdu après un signal, un prix, un renommage (20, 23).
+- « Annuler » d'un retrait ou d'un renommage hors d'atteinte, fiche ouverte (16).
+- Liste, résultats de recherche et favoris en `div` non activables au clavier (1, 17).
+- Recherche et liste fermées encore atteignables ; recherche en `autofocus` (8, 2).
+- Accueil pas en vraie fenêtre ; erreur de localisation non annoncée (2, 12).
+- États sélectionnés non annoncés : filtres, onglets de la fiche, barre du bas (10, 22).
+- Noms accessibles figés : ligne d'état, prix, étiquette produit en visiteur (9, 18).
+- Noms des compteurs (cloche, Favoris, Activité) et des réglages (distance, heures) (9, 11).
+- Menus du profil et « N distributeurs ici » sans flèches ni Échap (4, 21).
+- Contours de focus invisibles ; focus caché sous la fiche à mi-hauteur (6, 24).
+- Ajouter un distributeur au clavier, champs nommés, consigne annoncée (15).
+
 ### EPIC-R5 Notifications justes, une seule fois, au bon moment (lot 5, revue du 2026-10-21)
 Objectif : une notification dit exactement ce que la fiche affiche, une seule fois, au bon
 moment ; l'abonnement app fermée reste fiable ; les réglages sont gardés. Valeur : un favori

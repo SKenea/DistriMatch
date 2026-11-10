@@ -295,6 +295,24 @@ describe('showToast', () => {
         showToast('Info neutre');
         assert.equal(container.children[0].getAttribute('role'), null);
     });
+
+    it('A11Y-01 : un toast reste 5 s (le temps de le lire), puis disparait', () => {
+        const container = document.getElementById('toast-container');
+        container.innerHTML = '';
+        mock.timers.enable({ apis: ['setTimeout'] });
+        try {
+            showToast('Enregistrée sur ton téléphone seulement', 'warning');
+            const toast = container.lastElementChild;
+            mock.timers.tick(4900);
+            assert.ok(!toast.style.animation, 'le toast commence a disparaitre avant 5 s');
+            mock.timers.tick(200);
+            assert.match(String(toast.style.animation), /fadeOut/, 'le toast doit commencer a disparaitre a 5 s');
+            mock.timers.tick(400);
+            assert.equal(container.children.length, 0, 'le toast est retire apres le fondu');
+        } finally {
+            mock.timers.reset();
+        }
+    });
 });
 
 // ============================================
