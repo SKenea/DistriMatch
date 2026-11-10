@@ -329,8 +329,6 @@ describe('base : avis (016)', { skip: SKIP }, () => {
 
     // TST-02 : seuls les avis de demo (user_id null) sont compares a review_count / rating :
     // un avis de membre sur une fiche de demo (ajoute ici, annule) ne fausse plus le test
-    // TST-02 : seuls les avis de demo (user_id null) sont compares a review_count / rating :
-    // un avis de membre sur une fiche de demo (ajoute ici, annule) ne fausse plus le test
     it('demo : chaque fiche de demo a ses avis annonces, aucune fiche reelle n’a d’avis de demo', async () => {
         const p = await probe(`insert into reviews (distributor_id, user_id, rating) values ('${DEMO}', ${USER}, 1);
             select json_build_object(
