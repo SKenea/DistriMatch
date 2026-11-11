@@ -230,6 +230,12 @@ avec `rollback;` (PRIV-01 : fusion du front d'abord, migration 029 ensuite).
 - [x] PRIV-04 En tant que visiteur, je lis une page « Confidentialité » claire et exacte
   — `PRIV-04.md` (**décisions de Stéphane** : adresse de contact, responsable, texte)
   - Acceptance : page dans l'app, liens à 4 endroits, phrase d'accueil exacte sur la position.
+- [ ] PRIV-08 En tant que visiteur, je veux que l'app ne contacte hCaptcha que si j'ouvre la connexion,
+  afin de ne pas confier mon adresse internet à un service dont je n'ai pas besoin — `PRIV-08.md`
+  (**décision Stéphane 2026-11-11** : à faire tout de suite, pendant le POC)
+  - Acceptance : aucun appel à hCaptcha au chargement ni en ouvrant une fiche ; script demandé à la
+    première ouverture de la fenêtre de connexion (une fois, redemandé après un échec), jamais en local ;
+    case affichée comme avant (E2E CNX-08) ; page Confidentialité exacte (hCaptcha, GitHub Pages seul).
 
 ### EPIC-R3 Bugs visibles de la revue de code (lot 3, revue du 2026-10-21)
 Objectif : corriger ce que les membres rencontrent aujourd'hui (app bloquée, iPhone, console
