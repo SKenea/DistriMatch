@@ -155,7 +155,7 @@ test.describe('E2E visiteur : connexion (CNX-08)', () => {
         await page.route('**/rest/v1/rpc/log_event', route => route.abort());   // pas de mesure d'audience
         // Reseau lent : le script hCaptcha arrive 25 s apres la demande (rien n'est remplace)
         await page.route(url => url.hostname === 'js.hcaptcha.com', async route => { await new Promise(r => setTimeout(r, 25000)); await route.continue(); });
-        // domcontentloaded : l'evenement load attendrait le script en retard
+        // PRIV-08 : le script hCaptcha n'est demande qu'a l'ouverture de la connexion (retard compte de la)
         await page.goto(`./?id=${DEMO_ID}&confirm=1&nocache=${Date.now()}`, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('#dist-modal-overlay.active', { timeout: 60000 });
         await page.evaluate(() => document.getElementById('dist-login-invite-btn').click());

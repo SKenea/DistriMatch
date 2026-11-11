@@ -2490,11 +2490,51 @@ describe('hCaptcha rendu par l’app seulement (CNX-08)', () => {
         const projectRoot = new URL('../../', import.meta.url);
         const index = readFileSync(new URL('index.html', projectRoot), 'utf8');
         const auth = readFileSync(new URL('js/auth.js', projectRoot), 'utf8');
-        assert.ok(index.includes('https://js.hcaptcha.com/1/api.js?render=explicit'));
+        assert.ok(auth.includes("'https://js.hcaptcha.com/1/api.js?render=explicit'"));   // PRIV-08 : demande par auth.js
         assert.ok(!auth.includes('data-callback'));
         assert.ok(!auth.includes('class="h-captcha"'));
         assert.ok(auth.includes('<div class="auth-captcha"></div>'));
         assert.ok(auth.includes("overlay.querySelector('.auth-captcha')"));
+    });
+});
+
+// ============================================
+// HCAPTCHA CONTACTE SEULEMENT A L'OUVERTURE DE LA CONNEXION (PRIV-08)
+// ============================================
+// Un visiteur qui ne se connecte pas ne doit jamais contacter hCaptcha : plus de script
+// dans index.html, auth.js le demande a l'ouverture de la fenetre de connexion.
+const { loadHcaptchaScript } = await import('../../js/auth.js');
+
+describe('hCaptcha seulement à l’ouverture de la connexion (PRIV-08)', () => {
+    const projectRoot = new URL('../../', import.meta.url);
+
+    it('index.html ne charge plus hCaptcha', () => {
+        const index = readFileSync(new URL('index.html', projectRoot), 'utf8');
+        assert.ok(!index.includes('hcaptcha.com'), 'index.html ne doit plus demander hCaptcha');
+    });
+
+    it('un seul script demandé, redemandé après un échec', () => {
+        const added = [];
+        const doc = {
+            createElement: (tag) => ({ tag, remove() { this.removed = true; } }),
+            head: { appendChild: (el) => { added.push(el); return el; } }
+        };
+        loadHcaptchaScript(doc);
+        loadHcaptchaScript(doc);
+        assert.equal(added.length, 1, 'une seule demande');
+        assert.equal(added[0].tag, 'script');
+        assert.equal(added[0].src, 'https://js.hcaptcha.com/1/api.js?render=explicit');
+        assert.equal(added[0].async, true);
+        added[0].onerror();
+        assert.equal(added[0].removed, true, 'balise en échec retirée');
+        loadHcaptchaScript(doc);
+        assert.equal(added.length, 2, 'redemandé après un échec');
+    });
+
+    it('la fenêtre de connexion le demande, hors localhost seulement', () => {
+        const auth = readFileSync(new URL('js/auth.js', projectRoot), 'utf8');
+        const modal = auth.slice(auth.indexOf('function openEmailModal('));
+        assert.match(modal, /\} else if \(!isLocalhost\(\)\) \{\s*loadHcaptchaScript\(\);/);
     });
 });
 

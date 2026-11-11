@@ -190,6 +190,26 @@ function describeCodeError(err) {
 // CNX-08 : script hCaptcha pas encore la au bout de 10 s (reseau lent, bloqueur)
 const CAPTCHA_SLOW_TEXT = 'Le contrôle anti-robot ne s’est pas chargé : vérifie ta connexion ou ton bloqueur de publicités, puis patiente un instant.';
 
+// PRIV-08 : le script hCaptcha n'est plus dans index.html. Il est demande a la premiere
+// ouverture de la fenetre de connexion : un visiteur qui ne se connecte pas ne contacte
+// jamais hCaptcha. Une seule demande ; apres un echec (reseau, bloqueur), la prochaine
+// ouverture le redemande (la fenetre ouverte affiche deja CAPTCHA_SLOW_TEXT au bout de 10 s).
+export const HCAPTCHA_SCRIPT_URL = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+let hcaptchaScript = null;
+
+export function loadHcaptchaScript(doc = document) {
+    if (hcaptchaScript) return;
+    const script = doc.createElement('script');
+    script.src = HCAPTCHA_SCRIPT_URL;
+    script.async = true;
+    script.onerror = () => {
+        script.remove();
+        if (hcaptchaScript === script) hcaptchaScript = null;
+    };
+    doc.head.appendChild(script);
+    hcaptchaScript = script;
+}
+
 // ============================================
 // RETOUR SUR LA FICHE APRES CONNEXION (Stephane 2026-10-17)
 // ============================================
@@ -397,6 +417,7 @@ function openEmailModal(onClose) {
     if (window.hcaptcha) {
         tryRenderHcaptcha();
     } else if (!isLocalhost()) {
+        loadHcaptchaScript();   // PRIV-08 : demande seulement maintenant (deja demande : rien)
         captchaWait = setInterval(() => {
             if (!window.hcaptcha) return;
             clearInterval(captchaWait);

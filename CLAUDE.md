@@ -12,7 +12,7 @@ Carte Leaflet + fiche distributeur style Google Maps + favoris qui notifient (ce
 ## Stack
 
 - HTML5, CSS3, Vanilla JavaScript ES modules - **pas de framework, pas de build system**
-- CDN charges dans `index.html` : Leaflet 1.9.4 (unpkg), `@supabase/supabase-js@2.119.0` (jsdelivr), hCaptcha. Versions EXACTES + empreinte `integrity` sha384 + `crossorigin="anonymous"` (SCR-01, test rapide `CDN : versions exactes`) ; hCaptcha sans empreinte (fichier sans version). Changer de version = modifier l'URL ET recalculer l'empreinte : `curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A`, sinon le navigateur refuse le fichier et l'app retombe sur le JSON
+- CDN charges dans `index.html` : Leaflet 1.9.4 (unpkg), `@supabase/supabase-js@2.119.0` (jsdelivr). Versions EXACTES + empreinte `integrity` sha384 + `crossorigin="anonymous"` (SCR-01, test rapide `CDN : versions exactes`) ; hCaptcha n'est PAS dans `index.html` : `loadHcaptchaScript()` (auth.js) le demande a la premiere ouverture de la fenetre de connexion, jamais en local (PRIV-08), sans empreinte (fichier sans version). Changer de version = modifier l'URL ET recalculer l'empreinte : `curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A`, sinon le navigateur refuse le fichier et l'app retombe sur le JSON
 - Supabase (Postgres + RLS + storage + auth magic link) ; localStorage pour l'etat purement local
 - PWA (manifest.json) ; service worker `sw.js` LIMITE AUX NOTIFICATIONS app fermee (EPIC-T25 : aucun cache, aucun gestionnaire fetch)
 - Deploiement : GitHub Pages seulement : https://skenea.github.io/DistriMatch/ (voir `PROD_HOSTNAMES` dans `js/config.js` ; `distrimatch.pages.dev` n'existe pas, retire le 2026-11-05)
