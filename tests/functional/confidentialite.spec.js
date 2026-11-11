@@ -7,7 +7,7 @@
  * saisie comprise. La base est simulee la ou il le faut. Lancer : npm run test:functional
  */
 import { test, expect } from '@playwright/test';
-import { BASE_URL, EVENTS_ROUTE, setupApp, loginForTest, openSignalableFiche, newTestContext } from './helpers.js';
+import { BASE_URL, EVENTS_ROUTE, setupApp, loginForTest, openSignalableFiche, newTestContext, openDistModal } from './helpers.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
@@ -74,5 +74,19 @@ test.describe('49. Confidentialité (PRIV-04)', () => {
         await expect(page.locator('#privacy-view')).not.toHaveClass(/view-active/);
         await expect(page.locator('#dist-modal-overlay')).toHaveClass(/active/);
         await expect(page.locator('#dist-operator-form input[name="company"]')).toHaveValue('Ferme Exemple');
+    });
+});
+
+// PRIV-08 : hCaptcha n'est contacte qu'a l'ouverture de la connexion (en local, jamais)
+test.describe('50. hCaptcha seulement à la connexion (PRIV-08)', () => {
+    test('aucun appel à hCaptcha au chargement ni en ouvrant une fiche', async ({ page, context }) => {
+        const calls = [];
+        page.on('request', req => {
+            if (new URL(req.url()).hostname.endsWith('hcaptcha.com')) calls.push(req.url());
+        });
+        await setupApp(page, context);
+        await openDistModal(page);
+        await page.waitForTimeout(500);
+        expect(calls).toEqual([]);
     });
 });
