@@ -7,6 +7,11 @@ qu'un modèle en effort « medium » la mène au bout **sans rien deviner**.
 
 Rapport d'origine : https://claude.ai/artifact/T64CmaCdx8oEkXPUmc4Qx5
 
+**Exécuter une fiche** : `/executer-fiche <ID>` (skill SKENEA, commune à tous les projets : elle lit
+ce README pour les règles du projet). Plusieurs à la suite, fusion comprise : `/auto` (borné aux
+fiches, voir `.claude/skills/auto/SKILL.md`). Dépôt distant : `github`
+(`git pull github master`, `git push -u github <branche>`).
+
 ## Préfixes
 
 | Préfixe | Lot | Exemple |

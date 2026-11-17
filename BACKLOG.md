@@ -1,13 +1,14 @@
 # Backlog DistriMatch
 
-> Liste prioritisee des items a traiter en autonomie via `/auto`.
+> Liste prioritisee. `/auto` n'y traite que les stories qui ont leur fiche `docs/stories/<ID>.md`
+> (EPIC-O1) ; les autres se font a la main ou attendent leur fiche.
 > Plus haut = plus prioritaire. Marque `- [x]` quand un item est fait.
 > Ajoute des **acceptance criteria** clairs sous chaque item pour eviter l'ambiguite.
 > Le cap produit est dans `docs/STRATEGIE.md`. Les chantiers qui en decoulent sont
 > listes dans "Chantiers strategie" et montent en priorite une fois cadres avec Stephane.
 
 ## En cours
-<!-- Le skill /auto y place l'item actuellement traite -->
+<!-- /auto ne s'en sert plus : la PR de chaque fiche porte l'etat (EPIC-O1) -->
 
 ## Priorite haute
 
@@ -18,6 +19,41 @@
      /auto 6) et les 7 tickets Priorite normale le meme jour (PR #116 a #122, session
      /auto 7). Backlog /auto VIDE : prochaines etapes = les 4 decisions de « A clarifier »
      puis les chantiers strategie (import OSM en premier), a cadrer avec Stephane. -->
+
+### EPIC-O1 Outils de Claude justes et bornés, alignés sur SKENEA (Stéphane, 2026-11-17) ✅ PR chore/outils-claude
+Objectif : dans DistriMatch, Claude ne s'appuie que sur des outils à jour, ceux de SKENEA
+(`SKENEA/Capitalisation`) quand ils existent, et le mode autonome reste dans un couloir défini.
+Valeur : plus de consignes périmées (SnackMatch V4.5, un seul `app.js`) qui égarent Claude ; un
+`/auto` qu'on laisse tourner seul sans risque pour les testeurs ni pour la vraie base.
+Hors périmètre : le code de l'app ; `.claude/settings.json` (réglages locaux de Stéphane).
+
+- [x] OUT-01 En tant que Stéphane, je veux le niveau de rigueur et les outils SKENEA utiles écrits dans
+  `CLAUDE.md`, afin que Claude applique les bons objectifs dès le démarrage.
+  - Acceptance : niveau **B** (outil perso suivi, POC avec testeurs ; `SKENEA/Capitalisation/plan.md`) ;
+    outils SKENEA cités (`/executer-fiche`, agent `relecteur`, `/revue-fonctionnelle`, `/deps`) ; la
+    ligne sur `/auto` dit ce qu'il traite.
+- [x] OUT-02 En tant que Stéphane, je veux retirer les skills et les agents qui décrivent SnackMatch
+  V4.5, afin que Claude ne suive plus une architecture qui n'existe plus.
+  - Acceptance : `.claude/skills/` `vanilla-js-ui`, `leaflet-mapping`, `localstorage-data` et
+    `.claude/agents/` (14 fichiers, sans en-tête : jamais chargés) supprimés ; plus aucun
+    « SnackMatch » dans `.claude/`.
+- [x] OUT-03 En tant que Stéphane, je veux exécuter les fiches avec `/executer-fiche` (SKENEA), afin de
+  n'entretenir qu'une version de la méthode.
+  - Acceptance : `.claude/skills/story/` supprimé ; `docs/stories/README.md` nomme `/executer-fiche <ID>`
+    et le dépôt distant `github` ; essai en session neuve : la skill lit le README des fiches et
+    s'arrête sur une fiche absente.
+- [x] OUT-04 En tant que Stéphane, je veux un `/auto` borné, afin de le laisser tourner seul.
+  - Acceptance :
+    - ne traite que les stories non cochées qui ont leur fiche `docs/stories/<ID>.md`, dans l'ordre du
+      backlog, N au plus (5 par défaut) ; écarte, avec la raison, une fiche qui touche `supabase/`,
+      `scripts/`, `.claude/` ou un `.env*`, qui demande une relecture par un modèle plus fort, ou dont
+      le prérequis manque ;
+    - chaque fiche suit `/executer-fiche` (contrôles, test qui échoue d'abord, étapes exactes) ;
+    - fusion seulement si le diff reste dans les fichiers de la fiche (+ `index.html`, `BACKLOG.md`) et
+      que `npm test` et `npm run test:functional` sont verts ; puis build Pages suivi et
+      `npm run test:e2e` en ligne ; un échec : retour arrière par PR, puis arrêt du cycle ;
+    - lancé exprès seulement (pas de déclenchement par Claude) ; `/auto à blanc` liste les fiches
+      retenues et écartées sans rien exécuter ; essai en session neuve.
 
 ### EPIC-R7 Tests et bibliothèques fiables pendant le POC (lots 7 Tests et 8 Scripts, revue du 2026-10-21)
 Objectif : pendant le POC, les tests ne dérangent pas les testeurs et ne faussent pas les chiffres,
@@ -1343,7 +1379,7 @@ Reformulation validee par Stephane le 2026-09-25. Livre le 2026-09-25 (migration
      retiree). Open Graph : fait (PR #41). -->
 
 ## A clarifier (auto-ajoutes par /auto)
-<!-- Le skill /auto place ici les items ambigus qu'il n'a pas pu traiter -->
+<!-- Items ambigus a cadrer avec Stephane ; /auto les cite dans son rapport (EPIC-O1) -->
 
 - [ ] UX : skeleton loading dans le panneau lateral pendant le tri par distance
   - Note /auto 2026-05-04 : le tri actuel est synchrone (<1ms) car les distances
