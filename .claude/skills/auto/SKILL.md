@@ -1,127 +1,61 @@
 ---
 name: auto
-description: Lance un cycle autonome qui traite les items de BACKLOG.md (haut → bas) jusqu'a la limite indiquee (5 par defaut). Pour chaque item : implementation + tests unit/DOM/e2e + commit + PR + merge auto + deploy + smoke test prod + update backlog. S'arrete sur echec critique. Termine avec un rapport final detaille.
+description: Cycle autonome borné — enchaîne les stories du BACKLOG.md qui ont leur fiche d'exécution (docs/stories/<ID>.md), N au plus (5 par défaut) ; chaque fiche suivie comme /executer-fiche, fusion seulement si tout est vert et le diff reste dans la fiche, puis suivi du déploiement Pages et E2E en ligne ; retour arrière et arrêt au premier échec. « à blanc » liste ce qui serait fait sans rien exécuter.
+argument-hint: "[N] [à blanc]"
+disable-model-invocation: true
 ---
 
-# /auto — Cycle autonome DistriMatch
+# /auto — cycle autonome borné (DistriMatch)
 
-L'utilisateur invoque `/auto [N]` (N = nombre max d'items, defaut 5) pour te laisser tourner en autonomie 1-2h.
+Arguments : `$ARGUMENTS` — un nombre N (5 par défaut) et/ou « à blanc ».
 
-## Etapes a executer immediatement
+Le couloir : `/auto` n'exécute que ce qu'une fiche a déjà décidé. Tout le reste attend Stéphane.
+Pendant le cycle, aucune question : un doute arrête le cycle et va au rapport.
 
-### Phase 1 — Verification setup
+## 1. Choisir les fiches (rien n'est modifié)
 
-1. Lire `BACKLOG.md` a la racine du repo
-2. Compter les items non-faits dans "Priorite haute" puis "Priorite normale"
-3. Si **0 items** : afficher un toast "Aucun item dans le backlog" et STOP
-4. Si **items sans acceptance criteria** : les noter dans "A clarifier" et passer aux suivants
+1. Sauf « à blanc » (qui lit les fichiers tels quels) : `git checkout master && git pull github master`.
+   Lire `docs/stories/README.md`, puis `BACKLOG.md`
+   (« Priorite haute » puis « Priorite normale », de haut en bas).
+2. Une story est **retenue** si elle n'est pas cochée et que sa fiche `docs/stories/<ID>.md` existe.
+   Elle est **écartée**, avec sa raison, si :
+   - elle n'a pas de fiche (la faire écrire d'abord : `SKENEA/Capitalisation/workflows/fiche-dexecution.md`) ;
+   - sa fiche fait modifier un fichier sous `supabase/`, `scripts/`, `.claude/`, ou un `.env*` (vraie
+     base, déploiement, réglages : Claude principal et Stéphane) ;
+   - sa fiche demande une relecture par un modèle plus fort avant fusion ;
+   - son prérequis n'est ni fusionné ni retenu avant elle.
+3. Garder les N premières retenues. **À blanc** : afficher les retenues (ordre, branche, fichiers
+   touchés) et les écartées (raison), puis s'arrêter là.
 
-### Phase 2 — Cycle par item
+## 2. Pour chaque fiche retenue, une à la fois
 
-Pour chaque item (max N items), execute le pipeline suivant. **Arret immediat** sur tout echec non-flaky.
+1. **Exécuter la fiche** : lire `~/.claude/skills/executer-fiche/SKILL.md` et en suivre les étapes 1 à 8
+   (contrôles, test qui échoue d'abord, étapes exactes, vérifications dont `npm test` et
+   `npm run test:functional`, PR). Un STOP de cette procédure arrête tout le cycle.
+2. **Diff borné** : `git diff --name-only master...HEAD` ne contient que les fichiers de la fiche, plus
+   `index.html` (versions `?v=`) et `BACKLOG.md`. Sinon : PR laissée ouverte, arrêt du cycle.
+3. **Fusion** : `gh pr merge <N> --merge --delete-branch`, puis `git checkout master && git pull github master`.
+4. **Déploiement** : `gh api repos/SKenea/DistriMatch/pages/builds/latest` jusqu'à `built` ;
+   `errored` → retour arrière.
+5. **En ligne** : `npm run test:e2e` (site en ligne, sans écriture hors du compte E2E) ; un échec qui se
+   répète → retour arrière.
+6. **Une ligne** : `✓ <ID> — PR #N, test <nom>, en ligne`.
 
-```
-1. PICK
-   - Marquer l'item dans la section "## En cours" du BACKLOG.md
-   - Lire les acceptance criteria
+**Retour arrière** : `git checkout -b revert/<ID>`, `git revert -m 1 <commit de fusion>`,
+`git push -u github revert/<ID>`, PR, fusion, suivi du build Pages, puis arrêt du cycle.
 
-2. UNDERSTAND
-   - Si scope ambigu : lancer 1-3 Explore agents en parallele
-   - Sinon : lecture directe des fichiers concernes
+## 3. Arrêt du cycle
 
-3. IMPLEMENT
-   - Modifications minimales (KISS, pas d'over-engineering)
-   - Pas de feature creep
+- N fiches livrées, ou plus aucune retenue.
+- Un STOP de la fiche, un diff hors fiche, un build Pages en erreur, un E2E en échec (après retour arrière).
 
-4. TESTS UNITAIRES + INTEGRATION
-   - `npm run test:unit` puis `npm run test:integration` (DOM + vraie base, transactions annulees)
-   - Si echec : fix + reessai (1 fois max)
-   - Si echec persistant : STOP + rapport
+## 4. Rapport final
 
-5. TESTS FONCTIONNELS (navigateur, serveur 8080 lance a part)
-   - `npm run test:functional`
-   - Tolerer flaky (retry deja configure)
-   - Si echec non-flaky : STOP + rapport
-   - Apres le deploiement Pages (etape suivi deploy) : `npm run test:e2e` sur le site en ligne
+Livrées (ID, PR, commit) ; écartées (raison) ; arrêt (étape, sortie de la commande) ; état de `master`
+et du site en ligne (https://skenea.github.io/DistriMatch/).
 
-6. VERIF VISUELLE (si UI changee)
-   - Playwright headed : navigate http://localhost:8080 + screenshot
-   - Verifier visuellement (au moins absence d'erreur console)
+## Jamais
 
-7. COMMIT + PUSH + PR
-   - git checkout -b <feat|fix>/<slug>
-   - git commit avec Co-Authored-By: Claude
-   - git push -u github
-   - gh pr create
-   - gh pr merge --merge --delete-branch (auto-merge si tests OK)
-
-8. DEPLOY MONITOR
-   - Monitor `gh api repos/SKenea/DistriMatch/pages/builds` jusqu'a status=built
-   - Si errored : STOP + revert + rapport
-
-9. SMOKE TEST PROD
-   - Playwright navigate https://skenea.github.io/DistriMatch/
-   - Screenshot + check console errors
-   - Si erreur critique : ROLLBACK (revert merge commit) + rapport
-
-10. UPDATE BACKLOG
-    - Retirer l'item de "## En cours"
-    - Ajouter dans "## Done" : `- [x] YYYY-MM-DD Description (PR #N, commit abc1234)`
-
-11. RAPPORT 1-LIGNE
-    - Format : "✓ Item X — N tests OK, PR #M, deploye en Z sec"
-```
-
-### Phase 3 — Conditions d'arret
-
-Stoppe immediatement et passe au rapport final si :
-
-- N items completes (limite atteinte)
-- Test echoue 2 fois de suite (meme apres fix)
-- Build GitHub Pages errored
-- Smoke test prod casse → ROLLBACK puis stop
-- Item ambigu (pas d'acceptance criteria) → skip + log dans "A clarifier"
-- Backlog vide → stop
-
-### Phase 4 — Rapport final
-
-Produit un message recapitulatif au format :
-
-```markdown
-## Session autonome — YYYY-MM-DD HH:MM
-
-### Items completes (N)
-1. [PR #X] Description courte — commit 1234abc — built en Ys
-2. ...
-
-### Items skip (raison)
-- [item] : criteres ambigus, deplace dans "A clarifier"
-
-### Regressions / nouveaux items detectes
-- [decrire si applicable]
-
-### Etat final
-- Tests : XX unit/DOM + YY e2e (FF flaky toleres)
-- Prod : https://skenea.github.io/DistriMatch/ (commit XYZ)
-- Branche : master a jour
-
-### Pour la prochaine session
-- (suggestions auto-detectees)
-```
-
-## Garde-fous absolus
-
-JAMAIS :
-- `git push --force` ou `--force-with-lease`
-- Suppression d'une branche distante non-mergee
-- Modification de `.claude/settings.json` (config user)
-- Commit de secrets (.env, service_role keys, hCaptcha secret)
-- Bypass des tests (`--no-verify`, etc.)
-- Commit direct sur master sans PR
-
-## Communication pendant le cycle
-
-- **Pas de question pendant le cycle** sauf STOP critique
-- **Update todo list** apres chaque etape importante via TodoWrite
-- **Notifications minimales** : 1 ligne par item complete
-- **Rapport final detaille** uniquement a la fin
+`--force`, `--no-verify`, commit sur `master`, fusion d'une PR ouverte hors de ce cycle,
+`node scripts/supabase-sql.mjs`, `node scripts/deploy-push.mjs`, `node scripts/import-osm.mjs`, du SQL
+sur la vraie base, une modification de `.claude/`, le commit d'un secret.

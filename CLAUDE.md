@@ -9,6 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Nom officiel : DistriMatch.** "SnackMatch" est l'ancien nom : ne plus l'employer (code, UI, doc, commits). Il subsiste volontairement dans les cles localStorage `snackmatch_*` (les renommer sans migration effacerait les donnees des utilisateurs) et dans le remote GitLab.
 Carte Leaflet + fiche distributeur style Google Maps + favoris qui notifient (centre de notifications) + contributions communautaires (ajout, produits, photos, signalements) via Supabase. Le chatbot par distributeur est **inactif** (`FEATURES.chat = false` dans `js/config.js`, code conserve).
 
+## Niveau de rigueur et outils de Claude
+
+- Niveau : **B** (outil perso suivi : POC en ligne avec des testeurs, sans client ; voir `SKENEA/Capitalisation/plan.md` et `objectifs.md`).
+- `/auto [N] [à blanc]` : cycle autonome borné, seulement les stories qui ont leur fiche `docs/stories/<ID>.md` (`.claude/skills/auto/SKILL.md`). Lancé par Stéphane seulement.
+- Outils SKENEA (globaux, tenus dans `SKENEA/Capitalisation`) : `/executer-fiche <ID>` exécute une fiche sans improviser ; agent `relecteur` (relecture à froid) ; `/revue-fonctionnelle` ; `/deps` (ES modules : `madge` et `knip`).
+
 ## Stack
 
 - HTML5, CSS3, Vanilla JavaScript ES modules - **pas de framework, pas de build system**
@@ -166,7 +172,7 @@ UC11 : **decision Stephane 2026-09-25 (EPIC-T5) : informer est un privilege de c
 ## Workflow
 
 - Remotes : `github` (SKenea/DistriMatch : PR, merge, GitHub Pages) et `origin` (GitLab, historique). Branches `feat/...`, `fix/...`, commits conventionnels.
-- `BACKLOG.md` : backlog priorise avec acceptance criteria, consomme par le skill `/auto` (implementation -> `npm test` -> e2e -> PR -> merge -> suivi deploy Pages).
+- `BACKLOG.md` : backlog priorise avec acceptance criteria ; `/auto` n'y traite que les stories qui ont leur fiche d'execution (fiche -> tests -> PR -> fusion si tout est vert et le diff dans la fiche -> suivi Pages -> E2E en ligne ; retour arriere et arret au premier echec).
 - `docs/STRATEGIE.md` : le cap produit (fraicheur horodatee = le produit, producteur passif, signal de dispo par produit anonyme en un tap). Y trancher toute hesitation d'implementation ; le backlog en decoule.
 
 ## Points d'attention
