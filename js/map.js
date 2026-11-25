@@ -239,6 +239,15 @@ function openFromMap(d) {
     if (window.openDistributorModal) window.openDistributorModal(d.id);   // bottom sheet (pattern Google Maps)
 }
 
+// NOTIF-08 : notification touchee, app ouverte : meme ouverture que depuis la carte.
+// Retour : false si la carte n'existe pas encore (fiche ouverte seule par l'appelant).
+export function openDistributorOnMap(id) {
+    const d = AppState.distributors.find(x => x.id === id);
+    if (!d || !mainMap || !AppState.mapInitialized) return false;
+    openFromMap(d);
+    return true;
+}
+
 // EPIC-T26 : sur telephone, la fiche couvre le bas de l'ecran (58 %) : on centre
 // la pastille dans la partie de carte qui reste visible au-dessus.
 const SHEET_RATIO = 0.64;

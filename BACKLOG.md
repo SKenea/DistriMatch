@@ -161,6 +161,13 @@ Hors périmètre : nouvelles fonctionnalités (temps réel, e-mail).
   - Acceptance : seuls les caches DistriMatch effacés ; nouvelle notification sonore ; toucher une
     notification ne recharge pas la page ; bandeau annoncé aux lecteurs d'écran ; non lues
     distinctes.
+- [x] NOTIF-08 En tant que membre, je veux qu'une notification touchée m'amène sur la carte avec
+  la fiche devant, afin de voir où est le distributeur (essai de Stéphane, 2026-11-25)
+  - Acceptance : app déjà ouverte sur une page (Réglages, Favoris, Activité, Compte...) ou sur la
+    recherche / la liste : toucher la notification ferme cette page, l'onglet Explorer redevient
+    actif, la carte est centrée sur le distributeur et sa fiche s'ouvre devant ; une autre fiche
+    ouverte est remplacée (saisie en cours abandonnée, comme depuis la carte) ; carte pas encore
+    prête : la fiche s'ouvre seule, comme avant. Hors périmètre : liens partagés et QR codes.
 
 ### EPIC-R4 Connexion, retour et liens (lot 4, revue du 2026-10-21)
 Objectif : le bouton retour ferme ce qui est à l'écran sans quitter l'app, la connexion ramène au
