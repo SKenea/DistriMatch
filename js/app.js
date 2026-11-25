@@ -15,7 +15,7 @@ import {
     showToast, getUserLocation, sortByDistance, loadFromLocalStorage, loadProfile, loadConversations, loadNotificationPrefs, loadNotificationQueue, loadUserDistributors, saveUserDistributor, mapDistributorRow, findLocalDuplicates, removeUserDistributors, saveToLocalStorage, hasValidCoords, resetDeviceId, DISTRIBUTOR_PUBLIC_COLUMNS, PRODUCT_PUBLIC_COLUMNS, parseAuthLinkError
 } from './utils.js';
 
-import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut } from './map.js';
+import { initMainMap, updateMapMarkers, centerMapOnUser, zoomIn, zoomOut, openDistributorOnMap } from './map.js';
 import { logEvent, rememberEntrySource, ENTRY_SOURCE_KEY } from './events.js';
 import { loadStats } from './stats.js';
 import { openLayers } from './history.js';
@@ -617,7 +617,11 @@ function listenNotificationClicks(distributorsReady) {
                 showToast('Distributeur introuvable', 'error');
                 return;
             }
-            openDistributorModal(data.id);
+            // NOTIF-08 : retour a la carte (page, recherche, liste fermees), fiche devant
+            closeSearch();
+            if (document.getElementById('sidebar')?.classList.contains('open')) closeSidePanel();
+            switchTab('explore');
+            if (!openDistributorOnMap(data.id)) openDistributorModal(data.id);
         });
     });
 }

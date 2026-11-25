@@ -706,6 +706,36 @@ test.describe('NOTIF-07. Notification touchée, app déjà ouverte', () => {
         expect(await page.evaluate(() => window.__notif07SamePage === true)).toBe(true);
     });
 
+    // NOTIF-08 : depuis une page (ici les reglages des notifications), retour a la carte
+    test('depuis une page : la page se ferme, Explorer actif, carte centrée, fiche devant', async ({ page }) => {
+        const dist = await page.evaluate(() => {
+            const d = window.AppState.distributors[1];
+            return { id: d.id, name: d.name, lat: d.lat, lng: d.lng };
+        });
+        await page.evaluate(() => window.switchView('notification-settings'));
+        await expect(page.locator('#notification-settings')).toHaveClass(/view-active/);
+        await page.evaluate((id) => navigator.serviceWorker.dispatchEvent(
+            new MessageEvent('message', { data: { type: 'distrimatch:open', id } })), dist.id);
+        await page.waitForSelector('#dist-modal-overlay.active', { timeout: 5000 });
+        await expect(page.locator('#dist-modal-name')).toHaveText(dist.name);
+        await expect(page.locator('#notification-settings')).toHaveClass(/view-hidden/);
+        await expect(page.locator('.view-page.view-active')).toHaveCount(0);
+        await expect(page.locator('.nav-tab[data-tab="explore"]')).toHaveClass(/active/);
+        // La carte est centree sur le distributeur : sa pastille (mise en avant) est dans la carte
+        await page.waitForTimeout(500);
+        const pinInMap = await page.evaluate(() => {
+            const pin = document.querySelector('.distributor-pin.is-selected');
+            const map = document.getElementById('main-map');
+            if (!pin || !map) return false;
+            const p = pin.getBoundingClientRect();
+            const m = map.getBoundingClientRect();
+            const x = p.left + p.width / 2;
+            const y = p.top + p.height / 2;
+            return x > m.left && x < m.right && y > m.top && y < m.bottom;
+        });
+        expect(pinInMap).toBe(true);
+    });
+
     test('distributeur inconnu : message « Distributeur introuvable », aucune fiche', async ({ page }) => {
         await page.evaluate(() => navigator.serviceWorker.dispatchEvent(
             new MessageEvent('message', { data: { type: 'distrimatch:open', id: 'dist-inconnu-notif07' } })));
