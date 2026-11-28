@@ -5,8 +5,10 @@ description: Lance un cycle autonome qui traite les stories de BACKLOG.md (haut 
 
 # /auto — Cycle autonome DistriMatch (E5, 28/11/2026)
 
-`/auto [N]` (N = nombre max de stories, defaut 5). Regles globales appliquees : « Orchestration et
-economie de tokens » et « Preuve et tests honnetes » de `~/.claude/CLAUDE.md`.
+`/auto [N]` (N = nombre max de stories, defaut 5). Version DistriMatch de la skill generique
+`/cycle-autonome` (Capitalisation, workflow `cycle-autonome`) : meme methode, avec ici les commandes,
+Pages et Supabase du projet ; en cas d'ecart, ce fichier l'emporte. Regles globales : « Orchestration
+et economie de tokens » et « Preuve et tests honnetes » de `~/.claude/CLAUDE.md`.
 
 **Qui fait quoi**
 - **Toi (Opus)** : choisir la story, ecrire la fiche, verifier la preuve, relire le diff, decider.
