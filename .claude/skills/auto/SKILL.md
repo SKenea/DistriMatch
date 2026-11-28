@@ -1,127 +1,105 @@
 ---
 name: auto
-description: Lance un cycle autonome qui traite les items de BACKLOG.md (haut → bas) jusqu'a la limite indiquee (5 par defaut). Pour chaque item : implementation + tests unit/DOM/e2e + commit + PR + merge auto + deploy + smoke test prod + update backlog. S'arrete sur echec critique. Termine avec un rapport final detaille.
+description: Lance un cycle autonome qui traite les stories de BACKLOG.md (haut → bas) jusqu'a la limite indiquee (5 par defaut). Opus orchestre ; pour chaque story, une fiche ecrite par Opus, codee par un sous-agent Sonnet neuf, preuve rouge puis vert verifiee par Opus, double revue, PR fusionnee dans `dev`. Jamais de fusion dans `master` (= prod) : une PR `dev` -> `master` est ouverte pour Stephane a la fin.
 ---
 
-# /auto — Cycle autonome DistriMatch
+# /auto — Cycle autonome DistriMatch (E5, 28/11/2026)
 
-L'utilisateur invoque `/auto [N]` (N = nombre max d'items, defaut 5) pour te laisser tourner en autonomie 1-2h.
+`/auto [N]` (N = nombre max de stories, defaut 5). Regles globales appliquees : « Orchestration et
+economie de tokens » et « Preuve et tests honnetes » de `~/.claude/CLAUDE.md`.
 
-## Etapes a executer immediatement
+**Qui fait quoi**
+- **Toi (Opus)** : choisir la story, ecrire la fiche, verifier la preuve, relire le diff, decider.
+  Tu ne codes que ce qui est plus court a faire qu'a decrire (une ligne, un `?v=`).
+- **Sonnet** (`Agent`, `model: "sonnet"`, un agent NEUF par story) : code et tests, sur fiche.
+- **Haiku** (`Agent`, `subagent_type: "Explore"` ou `model: "haiku"`) : chercher ou sont les choses,
+  quand la story touche du code que tu ne connais pas.
+- Deux echecs du meme agent sur la meme story : relancer avec le modele au-dessus (`opus`), une fois.
 
-### Phase 1 — Verification setup
+**Branches** : tout part de `dev` et revient dans `dev`. `master` = GitHub Pages = prod : Claude n'y
+fusionne JAMAIS, n'y pousse jamais.
 
-1. Lire `BACKLOG.md` a la racine du repo
-2. Compter les items non-faits dans "Priorite haute" puis "Priorite normale"
-3. Si **0 items** : afficher un toast "Aucun item dans le backlog" et STOP
-4. Si **items sans acceptance criteria** : les noter dans "A clarifier" et passer aux suivants
+## Phase 1 — Preparation
 
-### Phase 2 — Cycle par item
+1. `git fetch github` ; `git checkout dev && git pull github dev` (absente : STOP, la creer est une
+   decision de Stephane).
+2. Lire `BACKLOG.md` : stories non cochees, haut -> bas. Sans criteres d'acceptation verifiables :
+   noter dans « A clarifier », passer a la suivante. Aucune : STOP.
 
-Pour chaque item (max N items), execute le pipeline suivant. **Arret immediat** sur tout echec non-flaky.
+## Phase 2 — Pour chaque story (max N)
 
 ```
-1. PICK
-   - Marquer l'item dans la section "## En cours" du BACKLOG.md
-   - Lire les acceptance criteria
+1. FICHE (toi)
+   - Lire seulement les fichiers concernes (Grep + lignes utiles ; Explore/haiku si inconnu).
+   - Ecrire docs/stories/<ID>.md au gabarit de docs/stories/README.md : fichiers a toucher,
+     controles « avant de coder », etapes exactes, TEST ATTENDU (fichier, nom, raison d'echec
+     attendue), commandes de verification CIBLEES, criteres de reussite.
+     Une fiche existe deja : la relire et la completer si elle laisse deviner quelque chose.
 
-2. UNDERSTAND
-   - Si scope ambigu : lancer 1-3 Explore agents en parallele
-   - Sinon : lecture directe des fichiers concernes
+2. EXECUTION (Sonnet, agent neuf)
+   - Prompt : « Execute /story <ID> en partant de la branche dev ; base de la PR : dev. »
+     plus le chemin de la fiche, rien d'autre (pas l'historique de la session).
+   - Il rend : statut (FAIT / FAIT AVEC RESERVES / BESOIN DE CONTEXTE / BLOQUE), PR, extraits rouge
+     et vert. BESOIN DE CONTEXTE : completer la fiche, relancer un agent neuf. BLOQUE : STOP story.
 
-3. IMPLEMENT
-   - Modifications minimales (KISS, pas d'over-engineering)
-   - Pas de feature creep
+3. PREUVE (toi, jamais sur parole)
+   - `gh pr diff <N> --name-only` puis lire le diff des fichiers de code et de test.
+   - Rouge : sur la branche de la PR (le code y est commite), remettre le code d'avant
+     `git checkout dev -- <fichiers de code seulement>`, lancer le test CIBLE : il doit ECHOUER pour
+     la raison de la fiche ; puis `git checkout HEAD -- <memes fichiers>`, relancer : il PASSE.
+     Sorties lues ; `git status` propre a la fin.
+   - Test retouche pour passer, assertion relachee, `skip`, valeur recopiee : refus, story renvoyee.
 
-4. TESTS UNITAIRES + INTEGRATION
-   - `npm run test:unit` puis `npm run test:integration` (DOM + vraie base, transactions annulees)
-   - Si echec : fix + reessai (1 fois max)
-   - Si echec persistant : STOP + rapport
+4. DOUBLE REVUE (toi)
+   - Conformite : chaque critere d'acceptation tenu, avec sa preuve ; rien en plus.
+   - Qualite : `/code-review` sur la PR ; recevoir ses retours selon la skill `revue` (verifier avant
+     d'appliquer). Correctifs : par un agent Sonnet neuf sur la meme branche, puis preuve a nouveau.
 
-5. TESTS FONCTIONNELS (navigateur, serveur 8080 lance a part)
-   - `npm run test:functional`
-   - Tolerer flaky (retry deja configure)
-   - Si echec non-flaky : STOP + rapport
-   - Apres le deploiement Pages (etape suivi deploy) : `npm run test:e2e` sur le site en ligne
+5. TESTS AVANT FUSION
+   - `npm test` (rapide). Si la base ou une migration change : `npm run test:integration`.
+   - `npm run test:functional` en arriere-plan (serveur 8080 lance a part), ou seulement le fichier du
+     domaine touche si la story est locale a un ecran.
+   - Echec non instable deux fois : STOP + rapport. Une migration SQL n'est JAMAIS appliquee a la
+     vraie base dans /auto : la story s'arrete avant, et le dit.
+   - UI changee : capture Playwright localhost (iPhone), regardee par toi.
 
-6. VERIF VISUELLE (si UI changee)
-   - Playwright headed : navigate http://localhost:8080 + screenshot
-   - Verifier visuellement (au moins absence d'erreur console)
+6. FUSION DANS dev
+   - Verifier `gh pr view <N> --json baseRefName` = "dev". Sinon : STOP.
+   - `gh pr merge <N> --merge --delete-branch`.
+   - Cocher la story dans BACKLOG.md (sur dev, commit `docs(backlog): ...`, PR vers dev si besoin).
 
-7. COMMIT + PUSH + PR
-   - git checkout -b <feat|fix>/<slug>
-   - git commit avec Co-Authored-By: Claude
-   - git push -u github
-   - gh pr create
-   - gh pr merge --merge --delete-branch (auto-merge si tests OK)
-
-8. DEPLOY MONITOR
-   - Monitor `gh api repos/SKenea/DistriMatch/pages/builds` jusqu'a status=built
-   - Si errored : STOP + revert + rapport
-
-9. SMOKE TEST PROD
-   - Playwright navigate https://skenea.github.io/DistriMatch/
-   - Screenshot + check console errors
-   - Si erreur critique : ROLLBACK (revert merge commit) + rapport
-
-10. UPDATE BACKLOG
-    - Retirer l'item de "## En cours"
-    - Ajouter dans "## Done" : `- [x] YYYY-MM-DD Description (PR #N, commit abc1234)`
-
-11. RAPPORT 1-LIGNE
-    - Format : "✓ Item X — N tests OK, PR #M, deploye en Z sec"
+7. RAPPORT 1 LIGNE : « ✓ <ID> — rouge/vert verifie, N tests OK, PR #M fusionnee dans dev »
 ```
 
-### Phase 3 — Conditions d'arret
+## Phase 3 — Fin de cycle
 
-Stoppe immediatement et passe au rapport final si :
+1. S'il y a eu au moins une fusion : ouvrir (ou mettre a jour) UNE PR `dev` -> `master` avec la liste
+   des stories, les tests lances et ce que Stephane doit regarder. **Ne pas la fusionner.**
+2. Rapport final (ci-dessous). Apres la fusion par Stephane seulement, et sur sa demande : suivre le
+   deploiement Pages (`gh api repos/SKenea/DistriMatch/pages/builds/latest`), puis `npm run test:e2e`.
 
-- N items completes (limite atteinte)
-- Test echoue 2 fois de suite (meme apres fix)
-- Build GitHub Pages errored
-- Smoke test prod casse → ROLLBACK puis stop
-- Item ambigu (pas d'acceptance criteria) → skip + log dans "A clarifier"
-- Backlog vide → stop
+## Conditions d'arret
 
-### Phase 4 — Rapport final
+N stories faites ; test en echec deux fois ; agent BLOQUE deux fois ; preuve rouge impossible ;
+story ambigue (-> « A clarifier ») ; backlog vide ; toute action qui toucherait la prod ou la base.
 
-Produit un message recapitulatif au format :
+## Rapport final
 
 ```markdown
 ## Session autonome — YYYY-MM-DD HH:MM
-
-### Items completes (N)
-1. [PR #X] Description courte — commit 1234abc — built en Ys
-2. ...
-
-### Items skip (raison)
-- [item] : criteres ambigus, deplace dans "A clarifier"
-
-### Regressions / nouveaux items detectes
-- [decrire si applicable]
-
-### Etat final
-- Tests : XX unit/DOM + YY e2e (FF flaky toleres)
-- Prod : https://skenea.github.io/DistriMatch/ (commit XYZ)
-- Branche : master a jour
-
-### Pour la prochaine session
-- (suggestions auto-detectees)
+### Stories fusionnees dans dev (N)
+1. [PR #X] <ID> — preuve rouge/vert — tests : ...
+### Non faites (raison)
+### PR dev -> master pour Stephane : #Y (a fusionner pour mettre en prod)
+### Points a regarder
 ```
 
 ## Garde-fous absolus
 
-JAMAIS :
-- `git push --force` ou `--force-with-lease`
-- Suppression d'une branche distante non-mergee
-- Modification de `.claude/settings.json` (config user)
-- Commit de secrets (.env, service_role keys, hCaptcha secret)
-- Bypass des tests (`--no-verify`, etc.)
-- Commit direct sur master sans PR
+JAMAIS : fusionner ou pousser dans `master` ; `--force`, `--no-verify` ; supprimer une branche distante
+non fusionnee ; modifier `.claude/settings.json` ; committer un secret (.env*, service_role, secret
+hCaptcha) ; SQL sur la vraie base, `scripts/deploy-push.mjs`, `scripts/import-osm.mjs`.
 
-## Communication pendant le cycle
+## Communication
 
-- **Pas de question pendant le cycle** sauf STOP critique
-- **Update todo list** apres chaque etape importante via TodoWrite
-- **Notifications minimales** : 1 ligne par item complete
-- **Rapport final detaille** uniquement a la fin
+Pas de question pendant le cycle sauf STOP. Une ligne par story. Le rapport detaille a la fin.

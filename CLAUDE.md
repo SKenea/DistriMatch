@@ -166,6 +166,7 @@ UC11 : **decision Stephane 2026-09-25 (EPIC-T5) : informer est un privilege de c
 ## Workflow
 
 - Remotes : `github` (SKenea/DistriMatch : PR, merge, GitHub Pages) et `origin` (GitLab, historique). Branches `feat/...`, `fix/...`, commits conventionnels.
+- Branches (E5, 2026-11-28) : toute story part de `dev` et sa PR vise `dev` ; `/auto` fusionne dans `dev` seulement. `master` = GitHub Pages = prod : seul Stephane fusionne `dev` -> `master` (PR ouverte par `/auto` en fin de cycle).
 - `BACKLOG.md` : backlog priorise avec acceptance criteria, consomme par le skill `/auto` (implementation -> `npm test` -> e2e -> PR -> merge -> suivi deploy Pages).
 - `docs/STRATEGIE.md` : le cap produit (fraicheur horodatee = le produit, producteur passif, signal de dispo par produit anonyme en un tap). Y trancher toute hesitation d'implementation ; le backlog en decoule.
 

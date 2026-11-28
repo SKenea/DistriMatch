@@ -11,7 +11,8 @@ L'utilisateur tape `/story <ID>` (ex. `/story SEC-02`). Ta seule source de véri
 ## Étapes
 
 1. Lire `docs/stories/README.md` puis `docs/stories/<ID>.md` en entier. Fiche absente : s'arrêter.
-2. `git checkout master && git pull github master`, puis créer la branche de la fiche. Des fichiers
+2. `git checkout dev && git pull github dev`, puis créer la branche de la fiche (toute story part de
+   `dev` ; `master` = prod, E5). Des fichiers
    non suivis ou modifiés hors fiche peuvent exister (réglages locaux) : ne pas y toucher, ne jamais les committer.
 3. Lire les fichiers de « Avant de coder ». Lancer chaque contrôle. **Un seul écart = STOP** :
    dire quel contrôle, ce qui était attendu, ce qui a été trouvé.
@@ -26,9 +27,11 @@ L'utilisateur tape `/story <ID>` (ex. `/story SEC-02`). Ta seule source de véri
 8. Cocher la story dans `BACKLOG.md` (absente : le noter dans la PR, ne pas l'ajouter).
    `git add` fichier par fichier (jamais `-A` ni `.`), vérifier `git diff --cached --stat`,
    commit (message conventionnel + ligne Co-Authored-By), `git push -u github <branche>`,
-   `gh pr create --body-file` (corps UTF-8, modèle de la fiche, chemins des captures).
+   `gh pr create --base dev --body-file` (corps UTF-8, modèle de la fiche, chemins des captures).
    **Ne pas fusionner.**
-9. Rapport court en français : PR, tests ajoutés, résultats des commandes, écarts éventuels.
+9. Rapport court en français, qui commence par un statut (FAIT / FAIT AVEC RÉSERVES / BESOIN DE
+   CONTEXTE / BLOQUÉ) : PR, test en échec avant puis en succès après (extraits de sortie), résultats
+   des commandes, écarts éventuels. Le test de la fiche ne se retouche jamais pour passer (règle E5).
 
 ## Interdits
 - Fusionner une PR, pousser sur `master`, `--force`, `--no-verify`.
